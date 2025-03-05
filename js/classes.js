@@ -41,6 +41,21 @@ export class Village {
 
     // 建築物配列を追加
     this.buildings = [];
+
+    // ソート状態の保存
+    this.tableSort = {
+      column: null,
+      isAsc: true
+    };
+
+    // 各種モーダルの状態
+    this.modalStates = {
+      miracle: false,
+      building: false,
+      conversation: false,
+      exchange: false,
+      raid: false
+    };
   }
 
   /**

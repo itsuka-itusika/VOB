@@ -406,8 +406,6 @@ export function openConversationModal(character) {
   // 会話テキストを設定
   text.innerHTML = `
     ${statusText}
-    <p><small>口調タイプ: ${character.speechType}</small></p>
-    <p><strong>現在の行動:</strong> ${character.action}</p>
   `;
 
   // ボタンの表示制御
