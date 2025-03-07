@@ -588,12 +588,10 @@ function openExchangeModal(personA, personB) {
   // 会話テキストを設定
   textA.innerHTML = `
     <p><strong>${personA.name}:</strong> ${getRandomLine(EXCHANGE_SPEECH_PATTERNS, speechTypeA)}</p>
-    <p><small>体の持ち主: ${personB.name}</small></p>
   `;
   
   textB.innerHTML = `
     <p><strong>${personB.name}:</strong> ${getRandomLine(EXCHANGE_SPEECH_PATTERNS, speechTypeB)}</p>
-    <p><small>体の持ち主: ${personA.name}</small></p>
   `;
   
   overlay.style.display = "block";

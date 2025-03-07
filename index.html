@@ -624,6 +624,29 @@ section h2 {
   border: 1px solid #ddd;
   min-height: 80px;
 }
+
+/* キャラクター情報のスタイルを調整 */
+.character-info {
+  margin-bottom: 12px;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 8px;
+}
+
+.character-name {
+  font-size: 1em;
+}
+
+.character-details {
+  display: flex;
+  justify-content: flex-start;
+  gap: 12px;
+  font-size: 0.9em;
+  color: #555;
+}
+
+.character-details span {
+  white-space: nowrap;
+}
   </style>
 </head>
 <body>
@@ -866,6 +889,7 @@ section h2 {
       <img id="conversationPortrait" src="" alt="portrait">
     </div>
     <div class="dialogue-area">
+      <div id="characterInfo" class="character-info"></div>
       <div id="conversationText"></div>
       <div id="actionButtons"></div>
     </div>
