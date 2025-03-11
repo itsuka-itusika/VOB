@@ -5,6 +5,7 @@ import { doLoverCheck, doMarriageCheck } from "./relationships.js";
 import { createRandomVillager, createRandomVisitor } from "./createVillagers.js";
 import { startRaidEvent } from "./raid.js";
 import { theVillage } from "./main.js";
+import { RandomEvents } from "./RandomEvents.js";
 
 /**
  * 固定イベント(前半) - 新年祭など
@@ -111,199 +112,10 @@ function starsFestival(v) {
 // ランダムイベント
 // -------------------------
 export function doRandomEventPre(village) {
-  doRandomEventMain(village, "前");
+  RandomEvents.execute(village, "前");
 }
 export function doRandomEventPost(village) {
-  doRandomEventMain(village, "後");
-}
-
-function doRandomEventMain(v, phase) {
-  let r=randInt(1,100);
-  if (r<=1) {
-    doMythicEvent(v);
-  } else if (r<=25) {
-    doGoodEvent(v);
-  } else if (r<=40) {
-    doBadEvent(v);
-  } else {
-    v.log(`[${phase}イベント] 何も起こらず`);
-  }
-}
-
-// --- ミシック(1%)
-function doMythicEvent(v) {
-  let cands=[];
-  v.villagers.forEach(p=>{
-    if (p.bodySex==="女" && p.bodyAge>=16 && p.bodyAge<=25 && p.sexdr<=5) {
-      cands.push({type:"狩猟神", vill:p});
-    }
-    if (p.bodySex==="女" && p.bodyAge>=16 && p.bodyAge<=25 && p.chr>=25) {
-      cands.push({type:"太陽神", vill:p});
-    }
-    if (p.bodySex==="女" && p.bodyAge>=16 && p.bodyAge<=28 && p.cou>=20 && p.int>=20) {
-      cands.push({type:"戦女神", vill:p});
-    }
-    if (p.bodySex==="女" && p.bodyAge>=16 && p.bodyAge<=28 && p.ind>=20 && p.eth>=20) {
-      cands.push({type:"地母神", vill:p});
-    }
-  });
-  if (cands.length===0) {
-    v.log("ミシックイベ:該当者なし");
-    return;
-  }
-  let c = randChoice(cands);
-  let p = c.vill;
-  switch(c.type) {
-    case "狩猟神":
-      p.bodyTraits.push("月の巫女");
-      p.dex+=10; p.chr+=10;
-      v.log(`${p.name}は狩女神の祝福を受けた！(器用+10,魅力+10)`);
-      break;
-    case "太陽神":
-      p.bodyTraits.push("太陽の巫女");
-      p.str+=15; p.chr+=5;
-      v.log(`${p.name}は太陽神の寵愛を受けた！(筋力+15,魅力+5)`);
-      break;
-    case "戦女神":
-      p.bodyTraits.push("梟の巫女");
-      p.mag+=10; p.chr+=10;
-      v.log(`${p.name}は戦女神の啓示を受けた！(魔力+10,魅力+10)`);
-      break;
-    case "地母神":
-      p.bodyTraits.push("大地の巫女");
-      p.vit+=10; p.chr+=10;
-      v.log(`${p.name}は地母神の慈愛を受けた！(耐久+10,魅力+10)`);
-      break;
-  }
-}
-
-// --- グッド(24%)
-function doGoodEvent(v) {
-  let pool=["cat","gold","strangeRain","fireworks","menFriendship","lover"];
-  let ev=randChoice(pool);
-  switch(ev) {
-    case "cat": {
-      if (v.villagers.length>0) {
-        let t=randChoice(v.villagers);
-        let inc=randInt(20,30);
-        t.happiness=clampValue(t.happiness+inc,0,100);
-        v.log(`子猫イベント:${t.name}幸福+${inc}`);
-      }
-      break;
-    }
-    case "gold": {
-      let amt=randInt(50,100);
-      v.funds=clampValue(v.funds+amt,0,99999);
-      v.log(`金貨発見:資金+${amt}`);
-      break;
-    }
-    case "strangeRain": {
-      let amt=randInt(10,60);
-      v.food=clampValue(v.food+amt,0,99999);
-      v.log(`空から魚が降り注いだ:食料+${amt}`);
-      break;
-    }
-    case "fireworks": {
-      let inc=randInt(5,10);
-      v.villagers.forEach(p=>{
-        p.happiness=clampValue(p.happiness+inc,0,100);
-      });
-      v.log(`花火師来訪:村全体幸福+${inc}`);
-      break;
-    }
-    case "menFriendship": {
-      let men=v.villagers.filter(x=> x.spiritSex==="男" && x.bodyAge>=16);
-      if (men.length>=2) {
-        let m1=randChoice(men);
-        let m2=randChoice(men.filter(x=>x!==m1));
-        let incc=randInt(10,15);
-        m1.happiness=clampValue(m1.happiness+incc,0,100);
-        m2.happiness=clampValue(m2.happiness+incc,0,100);
-        addRelationship(m1,`親友:${m2.name}`);
-        addRelationship(m2,`親友:${m1.name}`);
-        v.log(`男の友情:${m1.name}と${m2.name}は酒を酌み交わし友情を深めた。幸福+${incc}`);
-      } else {
-        v.log("男の友情:該当者(男2名以上)いない");
-      }
-      break;
-    }
-    case "lover": {
-      doLoverCheck(v);
-      break;
-    }
-  }
-}
-
-// --- バッド(15%)
-function doBadEvent(v) {
-  let pool=["storm","downpour","heat","fire","thief","rats","lightning1","lightning2","snow"];
-  let ev=randChoice(pool);
-  switch(ev) {
-    case "storm": {
-      let loss=Math.floor(v.food*0.1);
-      v.food=clampValue(v.food-loss,0,99999);
-      v.log(`春の嵐:食料-${loss}`);
-      break;
-    }
-    case "downpour": {
-      let loss=Math.floor(v.food*0.1);
-      v.food=clampValue(v.food-loss,0,99999);
-      v.log(`豪雨:食料-${loss}`);
-      break;
-    }
-    case "heat": {
-      v.villagers.forEach(p=>{
-        p.hp=clampValue(p.hp-10,0,100);
-      });
-      v.log("猛暑:全員体力-10");
-      break;
-    }
-    case "fire": {
-      let loss=Math.floor(v.materials*0.1);
-      v.materials=clampValue(v.materials-loss,0,99999);
-      v.log(`ボヤ:資材-${loss}`);
-      break;
-    }
-    case "thief": {
-      let loss=Math.floor(v.funds*0.1);
-      v.funds=clampValue(v.funds-loss,0,99999);
-      v.security=clampValue(v.security-5,0,100);
-      v.log(`窃盗団:資金-${loss},治安-5`);
-      break;
-    }
-    case "rats": {
-      let loss=Math.floor(v.food*0.3);
-      v.food=clampValue(v.food-loss,0,99999);
-      v.log(`ネズミ大発生:食料-${loss}`);
-      break;
-    }
-    case "lightning1": {
-      if (v.villagers.length>0) {
-        let t=randChoice(v.villagers);
-        t.hp=clampValue(t.hp-50,0,100);
-        t.bodyTraits.push("負傷");
-        v.log(`落雷1:${t.name}体力-50,負傷`);
-      }
-      break;
-    }
-    case "lightning2": {
-      if (v.villagers.length>=2) {
-        let a=randChoice(v.villagers);
-        let b=randChoice(v.villagers.filter(x=>x!==a));
-        doExchange(a,b,v,true);
-        v.log(`落雷2:${a.name}と${b.name}の肉体交換`);
-      }
-      break;
-    }
-    case "snow": {
-      v.villagers.forEach(p=>{
-        p.hp=clampValue(p.hp-5,0,100);
-        p.mp=clampValue(p.mp-5,0,100);
-      });
-      v.log("大雪:全員体力-5,メンタル-5");
-      break;
-    }
-  }
+  RandomEvents.execute(village, "後");
 }
 
 // -------------------------
@@ -312,7 +124,14 @@ function doBadEvent(v) {
 export function endOfMonthProcess(v) {
   v.log("【月末処理】");
 
-
+  // 治安31以上で荒廃状態解除
+  if (v.security > 30) {
+    let index = v.villageTraits.indexOf("荒廃");
+    if (index !== -1) {
+      v.villageTraits.splice(index, 1);
+      v.log("治安が回復し、村の荒廃状態が解消された");
+    }
+  }
 
   let totalF=0;
   let totalMat=0;
@@ -455,7 +274,17 @@ export function endOfMonthProcess(v) {
 export function doMonthStartProcess(v) {
   v.log("【月初処理】");
 
+  // 治安30以下で荒廃状態に
+  if (v.security <= 30 && !v.villageTraits.includes("荒廃")) {
+    v.villageTraits.push("荒廃");
+    v.log("治安悪化により村が荒廃状態になった！");
+  }
 
+  // 襲撃判定（荒廃時は確率2倍）
+  let raidProb = v.villageTraits.includes("荒廃") ? 0.4 : 0.2;
+  if (Math.random() < raidProb) {
+    startRaidEvent(v);
+  }
 
   // 幸福度由来の魔素増加
   let tot=0;
@@ -574,16 +403,6 @@ export function doMonthStartProcess(v) {
     let visitor = createRandomVisitor();
     v.visitors.push(visitor);
     v.log(`訪問者 ${visitor.name} が村を訪れました`);
-  }
-
-
-
-
-  // 既に"襲撃中"でなければ、20%で襲撃開始
-  if (!v.villageTraits.includes("襲撃中")) {
-    if (Math.random()<0.2) {
-      startRaidEvent(v);
-    }
   }
 
   // 全村人の行動テーブルを再構築

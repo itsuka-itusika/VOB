@@ -84,6 +84,10 @@ function convertVillageToObject(village) {
     hasDonePreEvent: village.hasDonePreEvent,
     hasDonePostEvent: village.hasDonePostEvent,
 
+    // 建築物関連のデータを追加
+    buildings: [...village.buildings],
+    buildingFlags: { ...village.buildingFlags },
+
     // 襲撃系
     isRaidProcessDone: village.isRaidProcessDone,
     raidTurnCount: village.raidTurnCount,
@@ -193,6 +197,14 @@ function convertObjectToVillage(dataObj) {
   v.gameOver = !!dataObj.gameOver;
   v.hasDonePreEvent = !!dataObj.hasDonePreEvent;
   v.hasDonePostEvent = !!dataObj.hasDonePostEvent;
+
+  // 建築物関連のデータを復元
+  if (Array.isArray(dataObj.buildings)) {
+    v.buildings = [...dataObj.buildings];
+  }
+  if (dataObj.buildingFlags) {
+    v.buildingFlags = { ...dataObj.buildingFlags };
+  }
 
   // 襲撃系
   v.isRaidProcessDone = !!dataObj.isRaidProcessDone;

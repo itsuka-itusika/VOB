@@ -41,6 +41,8 @@ export class Village {
 
     // 建築物配列を追加
     this.buildings = [];
+    // 建築物フラグを追加
+    this.buildingFlags = {};
 
     // ソート状態の保存
     this.tableSort = {

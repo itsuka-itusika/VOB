@@ -232,7 +232,12 @@ function selectRaiderType() {
  * 襲撃イベント開始を修正
  */
 export function startRaidEvent(village) {
-  village.log("【襲撃イベント発生】20%判定により発生");
+  // 荒廃状態かどうかでメッセージを変える
+  if (village.villageTraits.includes("荒廃")) {
+    village.log("【襲撃イベント発生】40%判定により発生(荒廃状態)");
+  } else {
+    village.log("【襲撃イベント発生】20%判定により発生");
+  }
   if (!village.villageTraits.includes("襲撃中")) {
     village.villageTraits.push("襲撃中");
   }
