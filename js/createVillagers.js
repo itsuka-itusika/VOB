@@ -508,7 +508,7 @@ const SPEECH_TYPE_MAPPING = {
 /**
  * 精神特性から口調タイプを決定
  */
-function determineSpeechType(character) {
+export function determineSpeechType(character) {  // export を追加
   // デフォルトの口調
   const defaultSpeechType = character.bodySex === "男" ? "普通Ｍ" : "普通Ｆ";
   
@@ -885,8 +885,8 @@ export function refreshJobTable(v) {
     ];
 
     // 建築物によって解放される仕事
-    const village = import("./main.js").then(m => m.theVillage);
-    const buildingFlags = village.buildingFlags || {};
+    // theVillageを直接参照する
+    const buildingFlags = theVillage.buildingFlags || {};
 
     // 建築物によって解放される共通の仕事
     if (buildingFlags.hasClinic) {

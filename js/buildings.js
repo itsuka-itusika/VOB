@@ -289,6 +289,11 @@ function constructBuilding(building, village) {
   // 効果を適用
   building.effect(village);
   
+  // 全村人の仕事テーブルを更新
+  village.villagers.forEach(villager => {
+    refreshJobTable(villager);
+  });
+  
   // UIを更新して閉じる
   import("./ui.js").then(m => m.updateUI(village));
   closeBuildingModal();

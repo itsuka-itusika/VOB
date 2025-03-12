@@ -2,6 +2,7 @@
 
 import { randInt, randFloat, clampValue, round3 } from "./util.js";
 import { HobbyEffects } from "./HobbyEffects.js";
+import { refreshJobTable } from "./createVillagers.js";
 
 /**
  * 全村人の「行動」を実行する
@@ -582,6 +583,12 @@ function doResearchJob(p, v) {
   p.mp = clampValue(p.mp-mc, 0, 100);
 
   let base = 15+30*((p.int/20)*(p.mag/20));
+  
+  // 図書館があれば効果1.2倍
+  if (v.buildingFlags && v.buildingFlags.hasLibrary) {
+    base = base * 1.2;
+  }
+  
   let gain = Math.round(base);
 
   v.tech = clampValue(v.tech+gain, 0, 99999);
@@ -784,6 +791,12 @@ function doNurse(p, v) {
   if (targets.length > 0) {
     let target = targets[Math.floor(Math.random() * targets.length)];
     let heal = Math.round(20 * p.mag * p.eth / 400);
+    
+    // 診療所があれば効果1.2倍
+    if (v.buildingFlags && v.buildingFlags.hasClinic) {
+      heal = Math.round(heal * 1.2);
+    }
+    
     target.hp = clampValue(target.hp + heal, 0, 100);
     logMsg = `${p.name}看護:${target.name}の体力+${heal},体力-${tc},メンタル-${mc}`;
   } else {

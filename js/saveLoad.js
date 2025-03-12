@@ -1,5 +1,6 @@
 // saveLoad.js
 import { Village, Villager } from "./classes.js";
+import { determineSpeechType, refreshJobTable } from "./createVillagers.js";
 
 /**
  * 村データをJSONファイルとしてダウンロードさせる
@@ -96,40 +97,10 @@ function convertVillageToObject(village) {
     raidEnemies: village.raidEnemies.map(vill => convertVillagerToObject(vill)),
 
     // villagers
-    villagers: village.villagers.map(vill => ({
-      name: vill.name,
-      bodySex: vill.bodySex,
-      bodyAge: vill.bodyAge,
-      hp: vill.hp,
-      mp: vill.mp,
-      happiness: vill.happiness,
-
-      str: vill.str,
-      vit: vill.vit,
-      dex: vill.dex,
-      mag: vill.mag,
-      chr: vill.chr,
-
-      int: vill.int,
-      ind: vill.ind,
-      eth: vill.eth,
-      cou: vill.cou,
-      sexdr: vill.sexdr,
-
-      spiritAge: vill.spiritAge,
-      spiritSex: vill.spiritSex,
-
-      bodyTraits: [...vill.bodyTraits],
-      mindTraits: [...vill.mindTraits],
-      hobby: vill.hobby,
-      relationships: [...vill.relationships],
-
-      job: vill.job,
-      jobTable: [...vill.jobTable],
-      action: vill.action,
-      actionTable: [...vill.actionTable],
-      bodyOwner: vill.bodyOwner
-    }))
+    villagers: village.villagers.map(vill => convertVillagerToObject(vill)),
+    
+    // 訪問者情報を追加
+    visitors: village.visitors.map(vill => convertVillagerToObject(vill))
   };
 }
 
@@ -144,6 +115,7 @@ function convertVillagerToObject(vill) {
     hp: vill.hp,
     mp: vill.mp,
     happiness: vill.happiness,
+    race: vill.race,
 
     str: vill.str,
     vit: vill.vit,
@@ -169,7 +141,11 @@ function convertVillagerToObject(vill) {
     jobTable: [...vill.jobTable],
     action: vill.action,
     actionTable: [...vill.actionTable],
-    bodyOwner: vill.bodyOwner
+    bodyOwner: vill.bodyOwner,
+    
+    // 口調タイプと顔グラフィック情報を追加
+    speechType: vill.speechType,
+    portraitFile: vill.portraitFile
   };
 }
 
@@ -217,6 +193,15 @@ function convertObjectToVillage(dataObj) {
   // villagers
   if (Array.isArray(dataObj.villagers)) {
     v.villagers = dataObj.villagers.map(o => convertObjectToVillager(o));
+    // 全村人の仕事テーブルを更新
+    v.villagers.forEach(villager => {
+      refreshJobTable(villager);
+    });
+  }
+  
+  // 訪問者情報を復元
+  if (Array.isArray(dataObj.visitors)) {
+    v.visitors = dataObj.visitors.map(o => convertObjectToVillager(o));
   }
 
   return v;
@@ -256,6 +241,15 @@ function convertObjectToVillager(obj) {
   vill.action = obj.action;
   vill.actionTable = Array.isArray(obj.actionTable) ? [...obj.actionTable] : [];
   vill.bodyOwner = obj.bodyOwner;
+  
+  // 口調タイプを保存・復元するように追加
+  vill.speechType = obj.speechType || determineSpeechType(vill);
+  
+  // 顔グラフィックのファイル名を復元
+  vill.portraitFile = obj.portraitFile || "DEFAULT.png";
+  
+  // 種族情報を復元
+  vill.race = obj.race || "人間";
 
   return vill;
 }

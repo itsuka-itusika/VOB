@@ -358,6 +358,7 @@ export function openConversationModal(character) {
 
   // 共通関数を使用して顔グラフィックのパスを取得
   const portraitPath = getPortraitPath(character);
+  console.log(`Character: ${character.name}, Portrait: ${portraitPath}`);
 
   // 顔グラフィックを設定（エラーハンドリング付き）
   try {
@@ -673,6 +674,17 @@ function getStatusLine(character, status) {
         return [...statusLines, ...seasonLines][Math.floor(Math.random() * (statusLines.length + seasonLines.length))];
       }
     }
+  }
+
+  // エラーハンドリングを追加
+  if (!pattern.status[status]) {
+    console.warn(`Status "${status}" not found in speech patterns for character ${character.name}`);
+    return "...";
+  }
+
+  if (!pattern.status[status][speechType]) {
+    console.warn(`Speech type "${speechType}" not found for status "${status}" for character ${character.name}`);
+    return pattern.status[status][character.bodySex === "男" ? "普通Ｍ" : "普通Ｆ"][0] || "...";
   }
 
   const statusLines = pattern.status[status][speechType] || 
