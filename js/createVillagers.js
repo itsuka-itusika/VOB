@@ -44,6 +44,13 @@ export const MALE_PORTRAIT_FILES = {
   // 痩せ型・普通グループ
   GROUP_E: [
     "ME1.png", "ME2.png", "ME3.png", "ME4.png", "ME5.png", "ME6.png", "ME7.png", "ME8.png", "ME9.png", "ME10.png", "ME11.png", "ME12.png", "ME13.png", "ME14.png", "ME15.png", "ME16.png", "ME17.png", "ME18.png", "ME19.png", "ME20.png", "ME21.png", "ME22.png"
+  ],
+
+  // 棄民グループ
+  GROUP_G: [
+    "GG1.png", "GG2.png", "GG3.png", "GG4.png", "GG5.png", "GG6.png", "GG7.png", "GG8.png", "GG9.png", "GG10.png",
+    "GG11.png", "GG12.png", "GG13.png", "GG14.png", "GG15.png", "GG16.png", "GG17.png", "GG18.png", "GG19.png", "GG20.png",
+    "GG21.png", "GG22.png", "GG23.png", "GG24.png", "GG25.png", "GG26.png", "GG27.png", "GG28.png"
   ]
 };
 
@@ -98,6 +105,21 @@ function selectPortraitByCharacter(character) {
   const filterUnusedPortraits = (portraitList) => {
     return portraitList.filter(portrait => !usedPortraits[character.bodySex === "男" ? "male" : "female"].has(portrait));
   };
+
+  // 棄民の場合は特別な顔グラフィックグループを使用（最優先）
+  if (character.name && typeof character.name === 'string' && character.name.includes("棄民の")) {
+    const availablePortraits = filterUnusedPortraits(MALE_PORTRAIT_FILES.GROUP_G);
+    if (availablePortraits.length > 0) {
+      const selected = randChoice(availablePortraits);
+      usedPortraits.male.add(selected);
+      return selected;
+    }
+    // 使用可能な顔グラフィックがない場合は使用済みリストをクリアして再選択
+    usedPortraits.male.clear();
+    const selected = randChoice(MALE_PORTRAIT_FILES.GROUP_G);
+    usedPortraits.male.add(selected);
+    return selected;
+  }
 
   if (character.bodySex === "男") {
     const bodyTraits = character.bodyTraits;
@@ -302,16 +324,13 @@ export function createRandomVillager({ sex, minAge, maxAge, params = {}, ranges 
   refreshJobTable(vill);
   
   // 顔グラフィックの設定
+  // 棄民の場合は専用グループから選択
+  if (vill.name && typeof vill.name === 'string' && vill.name.includes("棄民の")) {
+    vill.portraitFile = selectPortraitByCharacter(vill);
+  }
   // 襲撃者でない場合のみ顔グラフィックを設定
-  if (!params.job || !["野盗", "ゴブリン", "狼", "キュクロプス", "ハーピー"].includes(params.job)) {
-    if (sex === "男") {
-      // 男性の場合の処理
-      let selectedGroup = null;
-      // ... 既存の顔グラフィック選択ロジック ...
-    } else {
-      // 女性の場合の処理
-      // ... 既存の顔グラフィック選択ロジック ...
-    }
+  else if (!params.job || !["野盗", "ゴブリン", "狼", "キュクロプス", "ハーピー"].includes(params.job)) {
+    vill.portraitFile = selectPortraitByCharacter(vill);
   }
 
   return vill;
@@ -1091,6 +1110,26 @@ const VISITOR_TYPES = [
       int: [12, 20],  // やや高い知力
       ind: [18, 25]   // やや高い勤勉
     }
+  },
+  // 棄民タイプを追加
+  {
+    type: "棄民",
+    weight: 8,  // 出現率は低め
+    ageRange: { min: 60, max: 69 },  // 高齢者
+    forcedSex: "男", // 男性限定に変更
+    params: {
+      job: "棄民",
+      action: "訪問"
+    },
+    ranges: {
+      str: [5, 10],   // 低い筋力
+      vit: [5, 10],   // 低い体力
+      dex: [8, 16],   // 低い体力
+      mag: [8, 16],   // 低い体力
+      chr: [5, 12],   // 低い魅力
+      int: [20, 28],  // 高い知力
+      ind: [18, 25],  // 高い勤勉
+    }
   }
 ];
 
@@ -1137,6 +1176,17 @@ export function createRandomVisitor() {
   
   // 精神特性に訪問者を追加（1回のみ）
   visitor.mindTraits.push("訪問者");
+
+  // 棄民に特別な特性を追加
+  if (visitorType.type === "棄民") {
+    // 特別な精神特性をランダムで追加
+    const specialTraits = [
+      "達人農夫", "達人木樵", "達人狩人", "達人漁師", 
+      "森の知恵", "海の知恵", "歴戦"
+    ];
+    const randomTrait = specialTraits[Math.floor(Math.random() * specialTraits.length)];
+    visitor.mindTraits.push(randomTrait);
+  }
 
   // 顔グラフィックを設定
   visitor.portraitFile = selectPortraitByCharacter(visitor);

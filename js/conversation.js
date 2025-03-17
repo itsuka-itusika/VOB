@@ -330,6 +330,74 @@ const SPEECH_PATTERNS = {
       "バリバリこなしてるよ！",
       "完璧にこなしてまーす！"
     ]
+  },
+  "老人": {
+    // ... existing code ...
+    
+    // 必要な状態をすべて追加
+    normal: [
+      "わしは元気じゃよ。",
+      "村の様子はどうじゃろうな。",
+      "昔を思い出すのう...",
+      "この村は良い所じゃ。",
+      "若い者は元気でのう。"
+    ],
+    happy: [
+      "今日はわしも上機嫌じゃ。",
+      "何とも良い日じゃのう。",
+      "こんな日は心が若返るわい。",
+      "うむ、満足じゃ。",
+      "わしもまだまだ元気じゃぞ。"
+    ],
+    tired: [
+      "少し疲れたのう...",
+      "年には勝てんわい...",
+      "ひと休みさせてもらうかの。",
+      "昔に比べると疲れが取れんのう。",
+      "この老体にはきついのう..."
+    ],
+    starving: [
+      "腹が減って動けんわい...",
+      "何か食べるものはないかのう...",
+      "空腹じゃ...力が入らん...",
+      "若い頃は飢えにも強かったがのう...",
+      "食べ物が恋しいのう..."
+    ],
+    injured: [
+      "ふぅ...怪我はすぐには治らんのう...",
+      "この年で怪我をするとは情けないのう...",
+      "痛む痛む...昔のように回復せんわい...",
+      "この傷も経験のうちじゃな...",
+      "心配せんでもよい、わしはまだまだ大丈夫じゃ..."
+    ],
+    sick: [
+      "うむ...体調が優れんのう...",
+      "病は気からというが...なかなか辛いものじゃ...",
+      "薬草でも煎じるかのう...",
+      "年寄りの冷や水とはこのことよ...",
+      "少し休めば良くなるじゃろう..."
+    ],
+    dying: [
+      "わしの命も...もう長くはないのう...",
+      "長い人生じゃった...悔いはない...",
+      "村の皆に...感謝じゃ...",
+      "この世との別れも...近いようじゃな...",
+      "最期に...良い村に来られて...幸せじゃった..."
+    ],
+    good: [
+      "うむ、調子は良いぞよ。",
+      "わしにはまだまだ力が残っておるわい。",
+      "この年でも役に立ちたいものじゃ。",
+      "経験だけは誰にも負けんぞ。",
+      "村のために尽くせることは嬉しいのう。"
+    ],
+    bad: [
+      "むむ...今日は調子が優れんのう...",
+      "古傷が疼くわい...",
+      "年には勝てんものじゃ...",
+      "若い衆に迷惑をかけてはならんのだが...",
+      "ちと休ませてもらおうかのう..."
+    ]
   }
 };
 
@@ -341,7 +409,8 @@ const RECRUITMENT_COEFFICIENTS = {
   "学者": 0.2,    // 勧誘しにくい
   "観光客": 0.4,  // かなり勧誘しにくい
   "旅人": 0.4,    // 標準
-  "行商人": 0.2   // 勧誘しにくい
+  "行商人": 0.2,  // 勧誘しにくい
+  "棄民": 0.9     // 最も勧誘しやすい（村を追われた人なので）
 };
 
 /**
@@ -500,7 +569,14 @@ function getStatusLine(character, status) {
         "クールＦ": ["冷静に対処しましょう。", "慌てる必要はないわ。"],
         "ぶりっこ": ["こわいよ～", "みんな～助けて～"],
         "中性的": ["状況は深刻だね。", "できることをしよう。"],
-        "ギャル風": ["マジやばくない？", "なんとかなるっしょ！"]
+        "ギャル風": ["マジやばくない？", "なんとかなるっしょ！"],
+        "老人": [
+          "わしらの時代にもこんな事があったのう...",
+          "村を守らねばならんのう...",
+          "年寄りにもできることはあるはずじゃ...",
+          "若い衆、気をつけるのじゃぞ...",
+          "この老体に鞭打ってでも守らねばのう..."
+        ]
       },
       exhausted: {
         "普通Ｍ": ["もう限界かも...", "休みたいな..."],
@@ -523,7 +599,14 @@ function getStatusLine(character, status) {
         "クールＦ": ["休息が...必要ね...", "体調が思わしくないわ..."],
         "ぶりっこ": ["もう...むりぃ...", "休ませて...ほしいの..."],
         "中性的": ["もう...限界だよ...", "休ませて...もらえるかな..."],
-        "ギャル風": ["マジ...無理...", "ちょっと...休ませて..."]
+        "ギャル風": ["マジ...無理...", "ちょっと...休ませて..."],
+        "老人": [
+          "もう...この老いた体には...堪えるのう...",
+          "年には...勝てんものじゃ...",
+          "ちと...休ませてくれんか...",
+          "昔のように...動けんのう...",
+          "この年で...無理は...できんのう..."
+        ]
       },
       tired: {
         "普通Ｍ": ["ちょっと疲れてるかな。", "少し休憩したいな。"],
@@ -545,7 +628,14 @@ function getStatusLine(character, status) {
         "クールＦ": ["多少の疲労を感じるわ。", "休息も検討すべきね。"],
         "ぶりっこ": ["ちょっと疲れちゃった～", "休憩したいな～♪","うぅ…ちょっと疲れちゃったかも…"],
         "中性的": ["少し疲れてきたかな。", "休憩が必要かも。"],
-        "ギャル風": ["ちょー疲れた！", "休憩欲しいんだけど！"]
+        "ギャル風": ["ちょー疲れた！", "休憩欲しいんだけど！"],
+        "老人": [
+          "年寄りには少しきついのう...",
+          "昔ほどの体力はないのう...",
+          "ちと一息つかせてくれんか...",
+          "年には勝てんものよ...",
+          "この歳になると疲れが取れんのう..."
+        ]
       },
       healthy: {
         "普通Ｍ": ["調子はバッチリだよ！", "元気いっぱいだ！", 
@@ -605,7 +695,17 @@ function getStatusLine(character, status) {
                  "こんな日は充実した気分になるよ。"],
         "ギャル風": ["超元気！", "なんでもこなせちゃうよ！", 
                    "マジ最高の天気じゃん！", "村のみんなもイケてるよね！", 
-                   "今日も一日楽しんじゃおう！"]
+                   "今日も一日楽しんじゃおう！"],
+        "老人": [
+          "今日は調子がええのう。",
+          "まだまだ若い者には負けんぞ。",
+          "年寄りの経験も役に立つじゃろう。",
+          "村の様子を見て回るのが日課じゃ。",
+          "若い衆が元気そうで何よりじゃ。",
+          "昔を思い出すのう...",
+          "今日は天気が良いのう、骨が喜んでおる。",
+          "この村の発展が楽しみじゃのう。"
+        ]
       }
     };
   }
@@ -696,19 +796,8 @@ function getStatusLine(character, status) {
  * 訪問者タイプごとの専用セリフを返す
  */
 function getVisitorLine(character) {
-  // 訪問者の名前から訪問者タイプを抽出
-  const visitorTypes = ["流民", "冒険者", "巡礼者", "学者", "観光客", "旅人", "行商人"];
-  let visitorType = "";
-  
-  for (const type of visitorTypes) {
-    if (character.name.includes(type)) {
-      visitorType = type;
-      break;
-    }
-  }
-  
-  // 訪問者タイプごとのセリフ
-  const VISITOR_LINES = {
+  const visitorType = getVisitorType(character);
+  const visitorLines = {
     "流民": [
       "どうか助けてください…私たちは故郷を失いました。",
       "この村に住まわせていただけないでしょうか？",
@@ -757,12 +846,21 @@ function getVisitorLine(character) {
       "他の村では手に入らない品物ですよ。特別価格で。",
       "取引しませんか？あなたの村の特産品と交換できますよ。",
       "商売の話だけでなく、他の村の情報もお教えできますよ。"
+    ],
+    // 棄民のセリフを追加
+    "棄民": [
+      "年を取ったからと言うて、村を追い出されてしもうた...",
+      "もう働けんからと言われ、住み慣れた村を離れることになってしもうたわい...",
+      "この老いた知恵と経験も、まだ何かの役には立つはずじゃがのう...",
+      "朽ち果てかけた体でも、わしにもできることがあるはずじゃ...",
+      "若かりし頃は村の重要な仕事を任されておったのじゃが...",
+      "どうか、この老いぼれに住む場所をくだされ..."
     ]
   };
-  
-  // 訪問者タイプに合わせたセリフを返す
-  if (visitorType && VISITOR_LINES[visitorType]) {
-    return VISITOR_LINES[visitorType][Math.floor(Math.random() * VISITOR_LINES[visitorType].length)];
+
+  // 該当するタイプのセリフがあればランダムに選択、なければデフォルトを返す
+  if (visitorLines[visitorType]) {
+    return visitorLines[visitorType][Math.floor(Math.random() * visitorLines[visitorType].length)];
   }
   
   // タイプが不明な場合は汎用的なセリフを返す
@@ -804,7 +902,16 @@ function getLazyLines(character) {
     "クールＦ": ["今日は仕事より休息を優先したいわ。", "労働は最小限に留めたいわね。", "効率よりも休息を選ぶ日もあるわ。"],
     "ぶりっこ": ["仕事なんてしたくないよ～", "今日はのんびりしたいな～♪", "休みたい気分だよ～"],
     "中性的": ["仕事なんてしたくないな…", "今日はのんびりしたいな。", "休みたい気分だ。"],
-    "ギャル風": ["仕事とかマジ無理～", "今日はサボりたい気分～", "働くの疲れたわ～"]
+    "ギャル風": ["仕事とかマジ無理～", "今日はサボりたい気分～", "働くの疲れたわ～"],
+    
+    // 老人口調を追加
+    "老人": [
+      "わしも年じゃ...もう休ませてくれんかのう...",
+      "昔ほど働けんようになったのう...",
+      "年寄りにはゆっくり休ませてくれんとのう...",
+      "骨が疲れておるんじゃ...今日は休ませてくれ...",
+      "若い者に任せたいのう..."
+    ]
   };
   
   // 該当する口調タイプの会話を返す
@@ -845,7 +952,12 @@ function getSeasonalLines(character, season) {
       "クールＦ": ["春の訪れね。", "花が咲き始めたようね。", "春の陽気は悪くないわ。"],
       "ぶりっこ": ["春だよ～お花見しようよ～♪", "春の陽気って最高だよね～♪", "春は恋の季節だよね～♪"],
       "中性的": ["春の陽気は心地いいね。", "花が咲き始めて綺麗だね。", "春の訪れを感じるよ。"],
-      "ギャル風": ["春マジ最高！お花見行こうよ！", "春って恋の季節じゃん！誰かいい人いない？", "春の陽気マジ気持ちいい～！"]
+      "ギャル風": ["春マジ最高！お花見行こうよ！", "春って恋の季節じゃん！誰かいい人いない？", "春の陽気マジ気持ちいい～！"],
+      "老人": [
+        "春じゃのう...若い頃を思い出すわい。",
+        "桜の花が咲くのを見るのも何度目じゃろうか...",
+        "春の陽気は老いた体には優しいのう。"
+      ]
     },
     "夏": {
       "普通Ｍ": ["夏は暑いけど活気があるね。", "川で泳ぎたくなる季節だ。", "夏祭りが楽しみだな。"],
@@ -867,7 +979,12 @@ function getSeasonalLines(character, season) {
       "クールＦ": ["夏の暑さね。", "涼しい場所を確保しておきましょう。", "夏祭りか。悪くないわ。"],
       "ぶりっこ": ["夏だよ～海行きたいな～♪", "暑いけど夏は楽しいよね～♪", "夏祭り一緒に行こうよ～♪"],
       "中性的": ["夏の暑さも悪くないね。", "涼しい場所で過ごしたいね。", "夏祭りが待ち遠しいね。"],
-      "ギャル風": ["夏マジ最高！海行こうよ！", "暑いけど夏って楽しいじゃん！", "夏祭りでテンション上げてこ～！"]
+      "ギャル風": ["夏マジ最高！海行こうよ！", "暑いけど夏って楽しいじゃん！", "夏祭りでテンション上げてこ～！"],
+      "老人": [
+        "暑いのう...昔ほど暑さには耐えられんわい。",
+        "夏祭りの太鼓の音が懐かしいのう...",
+        "若い衆は元気じゃのう。わしらの若い頃のようじゃ。"
+      ]
     },
     "秋": {
       "普通Ｍ": ["秋の実りは豊かだね。", "紅葉が綺麗な季節だ。", "秋の夜長は読書に最適だ。"],
@@ -889,7 +1006,12 @@ function getSeasonalLines(character, season) {
       "クールＦ": ["秋の実りね。", "紅葉が始まったようね。", "秋の夜長は悪くないわ。"],
       "ぶりっこ": ["秋だよ～収穫祭楽しみだな～♪", "紅葉狩りに行きたいな～♪", "秋の夜長は何して過ごそうかな～♪"],
       "中性的": ["秋の実りは豊かだね。", "紅葉が綺麗な季節だね。", "秋の夜長は読書に最適だね。"],
-      "ギャル風": ["秋マジいいじゃん！収穫祭行こうよ！", "紅葉狩りとかインスタ映えするよね！", "夜長だし何かイベントないかな～？"]
+      "ギャル風": ["秋マジいいじゃん！収穫祭行こうよ！", "紅葉狩りとかインスタ映えするよね！", "夜長だし何かイベントないかな～？"],
+      "老人": [
+        "実りの秋じゃ...豊作は村の喜びじゃのう。",
+        "紅葉の美しさは年々しみじみと感じるようになったわい...",
+        "秋の夜長は昔話でもするかのう。"
+      ]
     },
     "冬": {
       "普通Ｍ": ["冬は寒いけど静かで良いね。", "雪景色は美しいものだ。", "暖かい部屋で過ごしたいな。"],
@@ -911,7 +1033,12 @@ function getSeasonalLines(character, season) {
       "クールＦ": ["冬の寒さね。", "雪景色は悪くないわ。", "暖かい場所を確保しておきましょう。"],
       "ぶりっこ": ["冬だよ～雪合戦したいな～♪", "寒いけど冬は楽しいよね～♪", "暖かい飲み物が美味しい季節だよね～♪"],
       "中性的": ["冬の寒さも悪くないね。", "雪景色は美しいものだね。", "暖かい部屋で過ごしたいね。"],
-      "ギャル風": ["冬マジ寒い！でも雪合戦楽しいじゃん！", "雪景色インスタ映えするよね～", "暖かいカフェでまったりしたい～！"]
+      "ギャル風": ["冬マジ寒い！でも雪合戦楽しいじゃん！", "雪景色インスタ映えするよね～", "暖かいカフェでまったりしたい～！"],
+      "老人": [
+        "寒さが身にしみるのう...",
+        "雪を見ると昔の冬を思い出すわい...",
+        "炉端で温まるのが一番じゃ。若い衆も来なさい。"
+      ]
     }
   };
   
@@ -959,6 +1086,29 @@ function changeCharacterAction(character, newAction) {
   }
 }
 
+/**
+ * 訪問者タイプを取得する関数
+ */
+function getVisitorType(visitor) {
+  // 「〜の」で名前が始まる場合、その部分を訪問者タイプとして抽出
+  const match = visitor.name.match(/^(.+)の/);
+  if (match) {
+    return match[1];
+  }
+  return null;
+}
+
+/**
+ * 訪問者の勧誘係数を取得する関数
+ */
+function getRecruitmentCoefficient(visitor) {
+  const visitorType = getVisitorType(visitor);
+  if (visitorType && RECRUITMENT_COEFFICIENTS[visitorType]) {
+    return RECRUITMENT_COEFFICIENTS[visitorType];
+  }
+  return 0.4; // デフォルト値
+}
+
 // 勧誘モーダルを開く
 function openRecruitmentModal(visitor) {
   const overlay = document.createElement("div");
@@ -971,7 +1121,7 @@ function openRecruitmentModal(visitor) {
   
   // 訪問者タイプを取得
   const visitorType = getVisitorType(visitor);
-  const coefficient = RECRUITMENT_COEFFICIENTS[visitorType] || 1.0;
+  const coefficient = getRecruitmentCoefficient(visitor);
   
   modal.innerHTML = `
     <h3 style="margin-top:0;">勧誘する村人を選択</h3>
@@ -1016,28 +1166,7 @@ function openRecruitmentModal(visitor) {
     
     // 勧誘判定
     if (Math.random() * 100 < successRate) {
-      // 成功
-      visitor.mindTraits = visitor.mindTraits.filter(t => t !== "訪問者");
-      visitor.job = "なし";
-      visitor.action = "休養";
-      visitor.jobTable = ["なし", "休養"];
-      visitor.actionTable = ["休養"];
-      
-      // 名前から「〜の」を削除
-      const visitorType = getVisitorType(visitor);
-      if (visitor.name.includes(`${visitorType}の`)) {
-        visitor.name = visitor.name.replace(`${visitorType}の`, "");
-      }
-      
-      // 訪問者リストから削除し、村人リストに追加
-      theVillage.visitors = theVillage.visitors.filter(v => v.name !== visitor.name);
-      theVillage.villagers.push(visitor);
-      
-      // 仕事テーブルを更新
-      refreshJobTable(visitor);
-      
-      theVillage.log(`${recruiter.name}の勧誘により、${visitor.name}が村人になりました。(成功率: ${Math.floor(successRate)}%)`);
-      alert(`勧誘成功！${visitor.name}が村人になりました。`);
+      handleRecruitmentSuccess(visitor, recruiter, successRate);
     } else {
       // 失敗
       visitor.mindTraits.push("勧誘失敗");
@@ -1074,17 +1203,6 @@ function closeRecruitmentModal() {
   if (modal) modal.remove();
 }
 
-// 訪問者タイプを取得する関数
-function getVisitorType(visitor) {
-  const visitorTypes = ["流民", "冒険者", "巡礼者", "学者", "観光客", "旅人", "行商人"];
-  for (const type of visitorTypes) {
-    if (visitor.name.includes(type)) {
-      return type;
-    }
-  }
-  return "旅人"; // デフォルト
-}
-
 // 誘惑モーダルを開く
 function openSeductionModal(visitor) {
   const overlay = document.createElement("div");
@@ -1097,7 +1215,7 @@ function openSeductionModal(visitor) {
   
   // 訪問者タイプを取得
   const visitorType = getVisitorType(visitor);
-  const coefficient = RECRUITMENT_COEFFICIENTS[visitorType] || 1.0;
+  const coefficient = getRecruitmentCoefficient(visitor);
   
   modal.innerHTML = `
     <h3 style="margin-top:0;">誘惑する村人を選択</h3>
@@ -1157,28 +1275,7 @@ function openSeductionModal(visitor) {
     
     // 誘惑判定
     if (Math.random() * 100 < successRate) {
-      // 成功
-      visitor.mindTraits = visitor.mindTraits.filter(t => t !== "訪問者");
-      visitor.job = "なし";
-      visitor.action = "休養";
-      visitor.jobTable = ["なし", "休養"];
-      visitor.actionTable = ["休養"];
-      
-      // 名前から「〜の」を削除
-      const visitorType = getVisitorType(visitor);
-      if (visitor.name.includes(`${visitorType}の`)) {
-        visitor.name = visitor.name.replace(`${visitorType}の`, "");
-      }
-      
-      // 訪問者リストから削除し、村人リストに追加
-      theVillage.visitors = theVillage.visitors.filter(v => v.name !== visitor.name);
-      theVillage.villagers.push(visitor);
-      
-      // 仕事テーブルを更新
-      refreshJobTable(visitor);
-      
-      theVillage.log(`${seducer.name}の誘惑により、${visitor.name}が村人になりました。(成功率: ${Math.floor(successRate)}%)`);
-      alert(`誘惑成功！${visitor.name}が村人になりました。`);
+      handleRecruitmentSuccess(visitor, seducer, successRate);
     } else {
       // 失敗
       visitor.mindTraits.push("勧誘失敗");
@@ -1213,4 +1310,39 @@ function closeSeductionModal() {
   const modal = document.getElementById("seductionModal");
   if (overlay) overlay.remove();
   if (modal) modal.remove();
+}
+
+// 勧誘成功時の処理を修正
+function handleRecruitmentSuccess(visitor, recruiter, successRate = 0) {
+  // 訪問者のタイプを取得（名前から抽出）
+  const visitorType = visitor.name.includes("の") ? visitor.name.split("の")[0] : null;
+  
+  visitor.mindTraits = visitor.mindTraits.filter(t => t !== "訪問者");
+  visitor.job = "なし";
+  visitor.action = "休養";
+  visitor.jobTable = ["なし", "休養"];
+  visitor.actionTable = ["休養"];
+  
+  // 棄民の場合は強制的に老人口調に設定
+  if (visitorType === "棄民" || visitor.name.includes("棄民の")) {
+    visitor.speechType = "老人";
+  }
+  
+  // 名前から「〜の」を削除
+  if (visitor.name.includes("の")) {
+    visitor.name = visitor.name.split("の")[1];
+  }
+  
+  // 訪問者リストから削除し、村人リストに追加
+  theVillage.visitors = theVillage.visitors.filter(v => v.name !== visitor.name);
+  theVillage.villagers.push(visitor);
+  
+  // 仕事テーブルを更新
+  refreshJobTable(visitor);
+  
+  theVillage.log(`${recruiter.name}の勧誘により、${visitor.name}が村人になりました。(成功率: ${Math.floor(successRate)}%)`);
+  alert(`勧誘成功！${visitor.name}が村人になりました。`);
+  
+  // モーダルを閉じる
+  closeConversationModal();
 }

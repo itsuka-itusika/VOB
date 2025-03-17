@@ -256,6 +256,16 @@ export function endOfMonthProcess(v) {
     });
   });
 
+  // 危篤者の死亡処理（危篤者は必ず死亡）
+  let deadPeople = v.villagers.filter(p => p.bodyTraits.includes("危篤"));
+  deadPeople.forEach(p => {
+    let index = v.villagers.indexOf(p);
+    if (index !== -1) {
+      v.villagers.splice(index, 1);
+      v.log(`${p.name}は老衰により死亡した...`);
+    }
+  });
+
   // ログ出力を元に戻す処理を削除
   // v.log = originalLog;
 
@@ -279,6 +289,16 @@ export function doMonthStartProcess(v) {
     v.villageTraits.push("荒廃");
     v.log("治安悪化により村が荒廃状態になった！");
   }
+
+  // 老人の危篤化判定（5%）
+  v.villagers.forEach(p => {
+    if (p.bodyTraits.includes("老人") && !p.bodyTraits.includes("危篤")) {
+      if (Math.random() < 0.05) {  // 5%の確率
+        p.bodyTraits.push("危篤");
+        v.log(`${p.name}は老衰により危篤状態になった...`);
+      }
+    }
+  });
 
   // 襲撃判定（荒廃時は確率2倍）
   let raidProb = v.villageTraits.includes("荒廃") ? 0.4 : 0.2;

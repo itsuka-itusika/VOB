@@ -32,16 +32,20 @@ export class RandomEvents {
   static doMythicEvent(v) {
     let cands = [];
     v.villagers.forEach(p => {
-      if (p.bodySex === "女" && p.bodyAge >= 16 && p.bodyAge <= 25 && p.sexdr <= 5) {
+      if (p.bodySex === "女" && p.bodyAge >= 16 && p.bodyAge <= 25 && p.sexdr <= 5 && 
+          !p.bodyTraits.includes("月の巫女")) {
         cands.push({ type: "狩猟神", vill: p });
       }
-      if (p.bodySex === "女" && p.bodyAge >= 16 && p.bodyAge <= 25 && p.chr >= 25) {
+      if (p.bodySex === "女" && p.bodyAge >= 16 && p.bodyAge <= 25 && p.chr >= 25 && 
+          !p.bodyTraits.includes("太陽の巫女")) {
         cands.push({ type: "太陽神", vill: p });
       }
-      if (p.bodySex === "女" && p.bodyAge >= 16 && p.bodyAge <= 28 && p.cou >= 20 && p.int >= 20) {
+      if (p.bodySex === "女" && p.bodyAge >= 16 && p.bodyAge <= 28 && p.cou >= 20 && p.int >= 20 && 
+          !p.bodyTraits.includes("梟の巫女")) {
         cands.push({ type: "戦女神", vill: p });
       }
-      if (p.bodySex === "女" && p.bodyAge >= 16 && p.bodyAge <= 28 && p.ind >= 20 && p.eth >= 20) {
+      if (p.bodySex === "女" && p.bodyAge >= 16 && p.bodyAge <= 28 && p.ind >= 20 && p.eth >= 20 && 
+          !p.bodyTraits.includes("大地の巫女")) {
         cands.push({ type: "地母神", vill: p });
       }
     });

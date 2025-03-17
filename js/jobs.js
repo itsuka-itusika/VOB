@@ -641,7 +641,7 @@ function doGuardJob(p, v) {
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
-  let inc = Math.round((p.cou+p.eth)/50);
+  let inc = Math.round(10 * (p.str/20) * (p.eth/20));
   if(inc<1) inc=1;
 
   v.security = clampValue(v.security+inc, 0, 100);

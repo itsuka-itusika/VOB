@@ -143,8 +143,8 @@ const RAIDER_TYPES = [
     },
     ranges: {
       hp: [90, 120],
-      str: [25, 35],
-      vit: [25, 35],
+      str: [28, 35],
+      vit: [28, 35],
       dex: [5, 15],
       mag: [5, 15],
       chr: [3, 12],
@@ -546,6 +546,18 @@ function doOneCombatAction(action, village) {
     let target=randChoice(village.raidEnemies);
     let result=calcAttackDamage(actor,target,false);
     let dmg=result.damage;
+    
+    // 精神特性による修正
+    if (actor.mindTraits.includes("歴戦")) {
+      dmg = Math.floor(dmg * 1.2);
+      logDiv.innerHTML+=`<br>【迎撃】${actor.name}は歴戦の経験で強力な攻撃！`;
+    }
+    
+    if (actor.mindTraits.includes("非戦主義")) {
+      dmg = 0;
+      logDiv.innerHTML+=`<br>【迎撃】${actor.name}は非戦主義のため攻撃を拒否！`;
+    }
+    
     let atkTypeText=result.isMagic? "魔法攻撃":"物理攻撃";
     target.hp-=dmg;
     logDiv.innerHTML+=`<br>【迎撃】${actor.name}の${atkTypeText}→${target.name}に ${dmg}ダメージ`;
