@@ -932,11 +932,11 @@ function doMassage(p, v) {
     logMsg = `${p.name}あんま:体力-${tc},メンタル-${mc}`;
     
     // ステータス上昇判定
-    if (Math.random() < 0.01) {
+    if (Math.random() < 0.05) {
       p.str++;
       logMsg += ",筋力+1";
     }
-    if (Math.random() < 0.01) {
+    if (Math.random() < 0.05) {
       p.dex++;
       logMsg += ",器用+1";
     }
@@ -946,11 +946,11 @@ function doMassage(p, v) {
     logMsg = `${p.name}あんま:体力-${tc},メンタル-${mc}`;
     
     // ステータス上昇判定
-    if (Math.random() < 0.01) {
+    if (Math.random() < 0.05) {
       p.chr++;
       logMsg += ",魅力+1";
     }
-    if (Math.random() < 0.01) {
+    if (Math.random() < 0.05) {
       p.sexdr++;
       logMsg += ",好色+1";
     }
@@ -992,11 +992,11 @@ function doMiko(p, v) {
   let logMsg = `${p.name}巫女:体力-${tc},メンタル-${mc},魔素+${manaGain}`;
   
   // ステータス上昇判定
-  if (Math.random() < 0.01) {
+  if (Math.random() < 0.05) {
     p.chr++;
     logMsg += ",魅力+1";
   }
-  if (Math.random() < 0.01) {
+  if (Math.random() < 0.05) {
     p.sexdr++;
     logMsg += ",好色+1";
   }
@@ -1025,11 +1025,11 @@ function doBunny(p, v) {
   let logMsg = `${p.name}バニー:男性${affected}人の幸福+${happinessInc},メンタル+${mentalHeal},体力-${tc},メンタル-${mc}`;
   
   // ステータス上昇判定
-  if (Math.random() < 0.01) {
+  if (Math.random() < 0.05) {
     p.chr++;
     logMsg += ",魅力+1";
   }
-  if (Math.random() < 0.01) {
+  if (Math.random() < 0.05) {
     p.sexdr++;
     logMsg += ",好色+1";
   }
@@ -1052,11 +1052,11 @@ function doAlchemy(p, v) {
   let logMsg = `${p.name}錬金:資金+${fundsGain},技術+${techGain},体力-${tc},メンタル-${mc}`;
   
   // ステータス上昇判定
-  if (Math.random() < 0.01) {
+  if (Math.random() < 0.05) {
     p.mag++;
     logMsg += ",魔力+1";
   }
-  if (Math.random() < 0.01) {
+  if (Math.random() < 0.05) {
     p.int++;
     logMsg += ",知力+1";
   }
@@ -1079,11 +1079,11 @@ function doCopyBook(p, v) {
   let logMsg = `${p.name}写本:資金+${fundsGain},技術+${techGain},体力-${tc},メンタル-${mc}`;
   
   // ステータス上昇判定
-  if (Math.random() < 0.01) {
+  if (Math.random() < 0.05) {
     p.dex++;
     logMsg += ",器用+1";
   }
-  if (Math.random() < 0.01) {
+  if (Math.random() < 0.05) {
     p.int++;
     logMsg += ",知力+1";
   }
@@ -1103,11 +1103,11 @@ function doWeaving(p, v) {
   let logMsg = `${p.name}機織り:資金+${fundsGain},体力-${tc},メンタル-${mc}`;
   
   // ステータス上昇判定
-  if (Math.random() < 0.01) {
+  if (Math.random() < 0.05) {
     p.dex++;
     logMsg += ",器用+1";
   }
-  if (Math.random() < 0.01) {
+  if (Math.random() < 0.05) {
     p.ind++;
     logMsg += ",勤勉+1";
   }
@@ -1130,11 +1130,11 @@ function doBrewing(p, v) {
   let logMsg = `${p.name}醸造:食料+${foodGain},魔素+${manaGain},体力-${tc},メンタル-${mc}`;
   
   // ステータス上昇判定
-  if (Math.random() < 0.01) {
+  if (Math.random() < 0.05) {
     p.mag++;
     logMsg += ",魔力+1";
   }
-  if (Math.random() < 0.01) {
+  if (Math.random() < 0.05) {
     p.ind++;
     logMsg += ",勤勉+1";
   }
