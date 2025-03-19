@@ -430,13 +430,11 @@ function hearthMiracle(v) {
 }
 
 /** 旅人の奇跡(1名来訪) */
-import { createRandomVillager } from "./createVillagers.js";
+import { createRandomVisitor } from "./createVillagers.js";
 function travelerMiracle(v) {
-  let newV = createRandomVillager();
+  let newV = createRandomVisitor();
+  v.visitors.push(newV);
   v.log(`【旅人の奇跡】${newV.name}が来訪(訪問者)`);
-  v.villageTraits.push("訪問者");
-  // ★ここでは村に追加するか不明(訪問のみ?)
-  // もし本当に村に加えるなら: v.villagers.push(newV); など
 }
 
 /** 出立の奇跡(対象を離脱→幸福度分魔素取得) */
