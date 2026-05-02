@@ -9,6 +9,8 @@ import { showRandomEventModal } from "./randomEventModal.js";
  * ランダムイベントを管理するクラス
  */
 export class RandomEvents {
+  static _forcedSpeakers = [];
+
   static announce(title, message, participants = []) {
     showRandomEventModal({ title, message, participants });
   }
@@ -79,6 +81,10 @@ export class RandomEvents {
 
   static getEventSubject(eventKey, kind) {
     const subjects = {
+      "狩猟神": "狩女神の祝福",
+      "太陽神": "太陽神の寵愛",
+      "戦女神": "戦女神の啓示",
+      "地母神": "地母神の慈愛",
       cat: "猫との出会い",
       gold: "金貨の発見",
       strangeRain: "不思議な雨",
@@ -110,6 +116,10 @@ export class RandomEvents {
 
   static getEventMood(eventKey, kind) {
     const moods = {
+      "狩猟神": "mythic",
+      "太陽神": "mythic",
+      "戦女神": "mythic",
+      "地母神": "mythic",
       cat: "happy",
       gold: "gain",
       strangeRain: "gain",
@@ -139,15 +149,17 @@ export class RandomEvents {
   }
 
   static getSpeechStyle(character) {
-    const speechType = character.speechType || (character.bodySex === "男" ? "普通Ｍ" : "普通Ｆ");
+    const spiritSex = character.spiritSex || character.bodySex || "女";
+    const speechType = character.speechType || (spiritSex === "男" ? "普通Ｍ" : "普通Ｆ");
     const mindTraits = Array.isArray(character.mindTraits) ? character.mindTraits : [];
 
+    // conversation.js の口調分類をベースに、精神特性で補正
     if (speechType.includes("丁寧") || speechType === "お嬢様" || mindTraits.some(t => ["善人", "マジメ", "優等生", "古風"].includes(t))) return "polite";
     if (speechType.includes("クール") || speechType === "中性的" || mindTraits.some(t => ["独善的", "策士", "現実主義", "計算高い"].includes(t))) return "cool";
     if (["乱暴", "蓮っ葉", "強気Ｍ", "強気Ｆ"].includes(speechType) || mindTraits.some(t => ["強気", "怒りっぽい", "粗暴", "好戦的"].includes(t))) return "bold";
     if (["陰気", "内気"].includes(speechType) || mindTraits.some(t => ["内向的", "臆病", "根暗", "無気力"].includes(t))) return "shy";
     if (["お調子者", "快活", "ギャル風", "ぶりっこ"].includes(speechType) || mindTraits.some(t => ["おしゃべり", "好奇心旺盛", "チャラい", "問題児"].includes(t))) return "bright";
-    return character.bodySex === "男" ? "male" : "female";
+    return spiritSex === "男" ? "male" : "female";
   }
 
   static createEventLine(kind, character, eventKey) {
@@ -165,22 +177,22 @@ export class RandomEvents {
         female: `${subject}……不思議なこともあるものですね。`
       },
       happy: {
-        polite: `${subject}のおかげで、村の空気が少し和らぎましたね。`,
-        cool: `${subject}か。悪くない結果だ。`,
-        bold: `${subject}だ！ こういう景気のいい話は歓迎だな！`,
-        shy: `${subject}……少し、うれしいです。`,
-        bright: `${subject}だよ！ 今日はいい日になりそう！`,
-        male: `${subject}か。少し気分が明るくなるな。`,
-        female: `${subject}ですね。村が明るくなった気がします。`
+        polite: `これは朗報ですね。村の空気が少し和らぎました。`,
+        cool: `悪くない流れだ。今日は少し期待できそうだな。`,
+        bold: `いい話だ！ こういう展開は大歓迎だな！`,
+        shy: `……なんだか、少しうれしいです。`,
+        bright: `わあ、いい感じ！ 今日はいい日になりそう！`,
+        male: `いい知らせだな。少し気分が明るくなる。`,
+        female: `うれしい出来事ですね。村が明るくなった気がします。`
       },
       gain: {
-        polite: `${subject}はありがたいですね。大切に使いましょう。`,
-        cool: `${subject}で余裕ができた。使い道は考えるべきだな。`,
-        bold: `${subject}だ！ これで一息つけるな！`,
-        shy: `${subject}……む、無駄にしないようにします。`,
-        bright: `${subject}だって！ ちょっと得した気分！`,
-        male: `${subject}は助かるな。`,
-        female: `${subject}は助かりますね。`
+        polite: `助かりますね。大切に使っていきましょう。`,
+        cool: `余裕ができたな。使い道は慎重に決めよう。`,
+        bold: `こいつは助かる！ これで一息つけるな！`,
+        shy: `……よかった。む、無駄にしないようにします。`,
+        bright: `やった！ ちょっと得した気分だね！`,
+        male: `これは助かるな。`,
+        female: `ありがたいですね。助かります。`
       },
       friendship: {
         polite: `${subject}ですか。人の縁は村の力になりますね。`,
@@ -237,22 +249,22 @@ export class RandomEvents {
         female: `${subject}なんて、物騒ですね。`
       },
       injury: {
-        polite: `${subject}で負傷者が出ました。すぐ手当てを。`,
-        cool: `${subject}か。被害者の治療を優先しよう。`,
-        bold: `${subject}だと？ すぐ助けに行くぞ！`,
-        shy: `${subject}……だ、大丈夫でしょうか……`,
-        bright: `${subject}！？ 早く手当てしなきゃ！`,
-        male: `${subject}で怪我か。放っておけないな。`,
-        female: `${subject}で怪我なんて……手当てしましょう。`
+        polite: `負傷者が出ています。まずは手当てを急ぎましょう。`,
+        cool: `負傷者が出たか。治療を最優先にするべきだ。`,
+        bold: `怪我人が出たのか！ すぐ助けに行くぞ！`,
+        shy: `……だ、大丈夫でしょうか。早く手当てを……`,
+        bright: `怪我人がいるよ！ 早く手当てしなきゃ！`,
+        male: `怪我か……放ってはおけないな。`,
+        female: `怪我人が出たんですね……早く手当てしましょう。`
       },
       shock: {
-        polite: `${subject}……常識では測れない出来事ですね。`,
-        cool: `${subject}か。状況確認を急ぐべきだ。`,
-        bold: `${subject}だと！？ 何がどうなってるんだ！`,
-        shy: `${subject}……え、えっと、私たち大丈夫ですか……？`,
-        bright: `${subject}！？ びっくりした、すごいことになってる！`,
-        male: `${subject}だと？ 混乱するな。`,
-        female: `${subject}なんて……驚きました。`
+        polite: `常識では測れない出来事ですね……状況確認を急ぎましょう。`,
+        cool: `想定外だな。まずは状況確認を急ぐべきだ。`,
+        bold: `なんだ今のは！？ すぐに状況を確かめるぞ！`,
+        shy: `……え、えっと……私たち、大丈夫でしょうか……？`,
+        bright: `びっくりした……！ 何が起きたか確認しよう！`,
+        male: `今のは予想外だな……状況を確認しよう。`,
+        female: `驚きました……まずは落ち着いて確認しましょう。`
       },
       conflict: {
         polite: `${subject}はよくありませんね。落ち着いて話し合いましょう。`,
@@ -266,13 +278,23 @@ export class RandomEvents {
     };
 
     const group = lines[mood] || lines[kind] || lines.happy;
-    return group[style] || group[character.bodySex === "男" ? "male" : "female"] || group.female;
+    const spiritSex = character.spiritSex || character.bodySex || "女";
+    return group[style] || group[spiritSex === "男" ? "male" : "female"] || group.female;
+  }
+
+  static addForcedSpeaker(character) {
+    if (!character) return;
+    if (!Array.isArray(this._forcedSpeakers)) this._forcedSpeakers = [];
+    if (!this._forcedSpeakers.includes(character)) {
+      this._forcedSpeakers.push(character);
+    }
   }
 
   static runWithAnnouncement(village, phase, kind, runEvent) {
     const beforeState = this.captureVillagerState(village);
     const originalLog = village.log.bind(village);
     const logs = [];
+    this._forcedSpeakers = [];
 
     village.log = (msg) => {
       logs.push(String(msg));
@@ -285,8 +307,16 @@ export class RandomEvents {
     } finally {
       village.log = originalLog;
     }
+    if (!eventKey) return;
 
-    const participants = this.collectChangedVillagers(village, beforeState)
+    const changedVillagers = this.collectChangedVillagers(village, beforeState);
+    const speakers = [...new Set([...changedVillagers, ...this._forcedSpeakers])];
+    if (speakers.length === 0 && village.villagers.length > 0) {
+      // 資源のみが変化したイベントでも代表者のセリフを表示
+      const rep = this.randChoice(village.villagers);
+      if (rep) speakers.push(rep);
+    }
+    const participants = speakers
       .map(p => this.participant(p, this.createEventLine(kind, p, eventKey)));
     const title = kind === "mythic" ? "神秘的なランダムイベント" :
       kind === "good" ? "良いランダムイベント" : "悪いランダムイベント";
@@ -338,8 +368,7 @@ export class RandomEvents {
     });
 
     if (cands.length === 0) {
-      v.log("ミシックイベ:該当者なし");
-      return "mythic_none";
+      return null;
     }
 
     let c = this.randChoice(cands);
@@ -418,7 +447,7 @@ export class RandomEvents {
           this.addRelationship(m2, `親友:${m1.name}`);
           v.log(`男の友情:${m1.name}と${m2.name}は酒を酌み交わし友情を深めた。幸福+${incc}`);
         } else {
-          v.log("男の友情:該当者(男2名以上)いない");
+          return null;
         }
         break;
       }
@@ -447,7 +476,7 @@ export class RandomEvents {
 
           v.log(`百合イベント:${a.name}と${b.name}は百合に目覚めた！ 幸福+50`);
         } else {
-          v.log("百合イベント:条件を満たす村人が足りません");
+          return null;
         }
         break;
       }
@@ -468,7 +497,7 @@ export class RandomEvents {
 
           v.log(`刺青イベント:${a.name}は刺青を入れてみた！ 魅力+1,幸福+20`);
         } else {
-          v.log("刺青イベント:条件を満たす村人がいません");
+          return null;
         }
         break;
       }
@@ -490,7 +519,7 @@ export class RandomEvents {
 
           v.log(`ファッションイベント:${a.name}は鏡の前でファッションショーを堪能した！ 魅力+3,幸福+20,趣味:${a.hobby}`);
         } else {
-          v.log("ファッションイベント:条件を満たす村人がいません");
+          return null;
         }
         break;
       }
@@ -510,7 +539,7 @@ export class RandomEvents {
 
           v.log(`筋トレイベント:${b.name}は筋トレにはまった！ 筋力+3,趣味:筋トレ`);
         } else {
-          v.log("筋トレイベント:条件を満たす村人がいません");
+          return null;
         }
         break;
       }
@@ -610,7 +639,7 @@ export class RandomEvents {
 
           v.log(`喧嘩イベント:${a.name}と${b.name}は殴り合いの大喧嘩をした！ 体力-20,治安-12`);
         } else {
-          v.log("喧嘩イベント:条件を満たす村人が足りません");
+          return null;
         }
         break;
       }
@@ -623,12 +652,13 @@ export class RandomEvents {
 
         if (candidates.length > 0) {
           let a = this.randChoice(candidates);
+          this.addForcedSpeaker(a);
           
           v.security = clampValue(v.security - 12, 0, 100);
 
           v.log(`飲酒イベント:${a.name}は飲んだくれて騒ぎを起こした！ 治安-12`);
         } else {
-          v.log("飲酒イベント:条件を満たす村人がいません");
+          return null;
         }
         break;
       }
