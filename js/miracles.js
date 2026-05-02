@@ -3,8 +3,7 @@
 import { clampValue, round3, getPortraitPath } from "./util.js";
 import { addRelationship, removeRelationship, checkHasRelationship, getRelationshipTargetName } from "./relationships.js";
 import { updateUI } from "./ui.js";  // 実行後にUIを更新する
-import { refreshJobTable } from "./createVillagers.js";
-
+import { doExchange } from "./exchange.js";
 /**
  * 奇跡リスト
  */
@@ -451,78 +450,6 @@ function departureMiracle(p,v) {
 /**
  * 肉体交換(雷/奇跡)
  */
-export function doExchange(a, b, v, isLightning) {
-  // 交換されるパラメータ（肉体に関連する要素）
-  let exchangeParams = {
-    // 基本情報
-    bodySex: a.bodySex,
-    bodyAge: a.bodyAge,
-    bodyOwner: a.bodyOwner,
-    race: a.race,  // 種族も交換
-    portraitFile: a.portraitFile,  // 顔グラフィック情報を追加
-    raiderPortrait: a.raiderPortrait, // 襲撃者用の顔グラフィック
-    visitorPortrait: a.visitorPortrait, // 訪問者用の顔グラフィック
-
-    // 肉体パラメータ
-    hp: a.hp,
-    str: a.str,
-    vit: a.vit,
-    dex: a.dex,
-    mag: a.mag,
-    chr: a.chr,
-
-    // 肉体特性
-    bodyTraits: [...a.bodyTraits]
-  };
-
-  // Aの肉体パラメータをBのものに
-  a.bodySex = b.bodySex;
-  a.bodyAge = b.bodyAge;
-  a.bodyOwner = b.bodyOwner;
-  a.race = b.race;
-  a.portraitFile = b.portraitFile;  // 顔グラフィック情報を交換
-  a.raiderPortrait = b.raiderPortrait; // 襲撃者用の顔グラフィック
-  a.visitorPortrait = b.visitorPortrait; // 訪問者用の顔グラフィック
-  a.hp = b.hp;
-  a.str = b.str;
-  a.vit = b.vit;
-  a.dex = b.dex;
-  a.mag = b.mag;
-  a.chr = b.chr;
-  a.bodyTraits = [...b.bodyTraits];
-
-  // Bの肉体パラメータをAのものに（一時保存したもの）
-  b.bodySex = exchangeParams.bodySex;
-  b.bodyAge = exchangeParams.bodyAge;
-  b.bodyOwner = exchangeParams.bodyOwner;
-  b.race = exchangeParams.race;
-  b.portraitFile = exchangeParams.portraitFile;  // 顔グラフィック情報を交換
-  b.raiderPortrait = exchangeParams.raiderPortrait; // 襲撃者用の顔グラフィック
-  b.visitorPortrait = exchangeParams.visitorPortrait; // 訪問者用の顔グラフィック
-  b.hp = exchangeParams.hp;
-  b.str = exchangeParams.str;
-  b.vit = exchangeParams.vit;
-  b.dex = exchangeParams.dex;
-  b.mag = exchangeParams.mag;
-  b.chr = exchangeParams.chr;
-  b.bodyTraits = [...exchangeParams.bodyTraits];
-
-  // 交換後に両者の仕事テーブルを更新
-  refreshJobTable(a);
-  refreshJobTable(b);
-  
-  // 現在の仕事と行動が新しいテーブルに含まれていない場合は「なし」に
-  if (!a.jobTable.includes(a.job)) a.job = "なし";
-  if (!a.actionTable.includes(a.action)) a.action = a.job;
-  if (!b.jobTable.includes(b.job)) b.job = "なし";
-  if (!b.actionTable.includes(b.action)) b.action = b.job;
-
-  // 交換のログ出力（雷の場合は簡略化）
-  if (!isLightning) {
-    v.log(`【交換の奇跡】${a.name}と${b.name}の肉体を交換しました`);
-  }
-}
-
 /**
  * 交換の奇跡モーダルを開く
  */

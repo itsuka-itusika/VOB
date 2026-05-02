@@ -21,7 +21,7 @@ export class Village {
     this.building = 0;
 
     this.villagers = [];
-    this.popLimit = 6;
+    this.popLimit = 8;
     this.villageTraits = ["春"];
 
     this.logs = [];

@@ -509,6 +509,7 @@ export function doMonthStartProcess(v) {
 
     // 襲撃関連の行動追加（状態異常がない場合のみ）
     if (v.villageTraits.includes("襲撃中")) {
+      p.actionTable = p.actionTable.filter(action => action !== "迎撃" && action !== "罠作成");
       p.actionTable.push("迎撃", "罠作成");
     }
 
@@ -710,46 +711,6 @@ function randChoice(arr) {
 
 // refreshJobTable が events.js 内で必要になったのでimport
 import { refreshJobTable } from "./createVillagers.js";
-// doExchange が lightning2 で必要
-import { doExchange } from "./raid.js";
+
 // randFloat (幸福度自然減衰で使用)
 function randFloat(min,max){ return Math.random()*(max-min)+min; }
-
-function finalizeRaid(isSuccess, reason, village) {
-  village.log(`【襲撃結果】${isSuccess?"防衛成功":"防衛失敗"} : ${reason}`);
-  let rlog=document.getElementById("raidLogArea");
-  rlog.innerHTML+=`<br>→ 襲撃結果: ${isSuccess?"防衛成功":"失敗"} (${reason})<br>モーダルを閉じます...`;
-  alert(`襲撃結果: ${isSuccess?"防衛成功":"失敗"} (${reason})`);
-  endRaidProcess(isSuccess, false, village);
-}
-
-/**
- * 迎撃モーダルを開く (nextTurnから呼ばれる)
- */
-export function openRaidModal(village) {
-  document.getElementById("raidOverlay").style.display="block";
-  document.getElementById("raidModal").style.display="block";
-
-  updateRaidTables(village);
-  const rlog=document.getElementById("raidLogArea");
-  rlog.innerHTML="襲撃が始まります。<br>「次のステップ」ボタンを押して進めてください。";
-
-  let trapMakers = village.villagers.filter(p=> p.action==="罠作成");
-  let defenders  = village.villagers.filter(p=> p.action==="迎撃");
-
-  if (trapMakers.length===0 && defenders.length===0) {
-    // 確認ダイアログを表示
-    if (confirm("迎撃および罠作成の村人が一人もいません。このまま進めると襲撃は自動的に失敗します。続けますか？")) {
-      rlog.innerHTML+=`<br>迎撃する者がいません！ → 自動的に襲撃成功(敵側)。`;
-      village.raidActionQueue=[ {type:"AUTO_FAIL"} ];
-      village.currentActionIndex=0;
-    } else {
-      // キャンセルした場合はモーダルを閉じる
-      closeRaidModal();
-      return;
-    }
-  } else {
-    village.raidTurnCount=1;
-    createTrapActionQueue(village);
-  }
-}

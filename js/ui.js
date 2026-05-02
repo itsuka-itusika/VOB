@@ -4,6 +4,8 @@ import { theVillage } from "./main.js"; // 注意: これにより循環参照�
 // ただし updateUI() の中で theVillage を参照するかどうかによっては構成要再検討
 import { refreshJobTable } from "./createVillagers.js";  // 追加
 import { openConversationModal } from "./conversation.js";
+import { showDictionaryEntry } from "./dictionary.js";
+import { getPortraitPath } from "./util.js";
 
 /**
  * メイン画面(村人一覧,資源パネルなど)を更新
@@ -39,12 +41,36 @@ export function updateUI(v) {
     <div class="resource-box">村特性<br>${v.villageTraits.join(",")}</div>
   `;
 
+  const autoAssignButton = document.getElementById("autoAssignButton");
+  if (autoAssignButton) {
+    const raidMode = v.villageTraits.includes("襲撃中")
+      && !v.isRaidProcessDone
+      && Array.isArray(v.raidEnemies)
+      && v.raidEnemies.length > 0;
+    autoAssignButton.textContent = raidMode ? "自動割り振り（迎撃）" : "自動割り振り";
+  }
+
   const tb = document.querySelector("#villagersTable tbody");
   if (!tb) return;
   tb.innerHTML="";
 
   v.villagers.forEach(person=>{
     let tr=document.createElement("tr");
+
+    let tdPortrait = document.createElement("td");
+    tdPortrait.classList.add("villager-portrait-cell");
+    tdPortrait.style.cursor = "pointer";
+    tdPortrait.onclick = () => openConversationModal(person);
+    let portraitFrame = document.createElement("div");
+    portraitFrame.classList.add("villager-portrait-frame");
+    let portrait = document.createElement("img");
+    portrait.classList.add("villager-portrait");
+    portrait.src = getPortraitPath(person);
+    portrait.alt = person.name;
+    portrait.loading = "lazy";
+    portraitFrame.appendChild(portrait);
+    tdPortrait.appendChild(portraitFrame);
+    tr.appendChild(tdPortrait);
 
     // 名前
     let tdName=document.createElement("td");
@@ -93,6 +119,7 @@ export function updateUI(v) {
     let selAction = document.createElement("select");
     selAction.onchange = () => {
       person.action = selAction.value;
+      showDictionaryEntry(selAction.value);
     };
     person.actionTable.forEach(act => {
       let op = document.createElement("option");
@@ -118,6 +145,7 @@ export function updateUI(v) {
       const newJob = this.value;
       person.job = newJob;
       person.action = newJob;
+      showDictionaryEntry(newJob);
       refreshJobTable(person);  // 仕事テーブルを更新
       updateUI(v);  // UI全体を更新
     };
@@ -203,7 +231,7 @@ export function updateUI(v) {
     tr.appendChild(tdFold);
 
     // 行スタイル等(例: 性別により色分け)
-    for (let i=0; i<=11; i++) {
+    for (let i=0; i<=12; i++) {
       if (person.bodySex==="男") {
         tr.cells[i].classList.add("male-basic");
       } else {
@@ -213,22 +241,22 @@ export function updateUI(v) {
 
     // 体力とメンタルが33以下の時赤字
     if (person.hp <= 33) {
-      tr.cells[5].classList.add("low-hpmp");
+      tr.cells[6].classList.add("low-hpmp");
     }
     if (person.mp <= 33) {
-      tr.cells[6].classList.add("low-hpmp");
+      tr.cells[7].classList.add("low-hpmp");
     }
 
     // 数値パラメータチェック（魅力と好色が20以上の時太字）
-    let checkCols = [10, 11, 12, 13, 14, 16, 17, 18, 19, 20];
+    let checkCols = [11, 12, 13, 14, 15, 17, 18, 19, 20, 21];
     checkCols.forEach(ci => {
       let val = parseInt(tr.cells[ci].textContent);
       // 魅力（14列目）と好色（20列目）は20以上で太字
-      if ((ci === 14 || ci === 20) && val >= 20) {
+      if ((ci === 15 || ci === 21) && val >= 20) {
         tr.cells[ci].classList.add("bold-value");
       }
       // その他のパラメータは従来通り
-      else if (ci !== 14 && ci !== 20 && val >= 20) {
+      else if (ci !== 15 && ci !== 21 && val >= 20) {
         tr.cells[ci].classList.add("bold-value");
       }
     });
@@ -254,6 +282,21 @@ export function updateUI(v) {
     visitorTb.innerHTML = "";
     v.visitors.forEach(person => {
       let tr = document.createElement("tr");
+
+      let tdPortrait = document.createElement("td");
+      tdPortrait.classList.add("villager-portrait-cell");
+      tdPortrait.style.cursor = "pointer";
+      tdPortrait.onclick = () => openConversationModal(person);
+      let portraitFrame = document.createElement("div");
+      portraitFrame.classList.add("villager-portrait-frame");
+      let portrait = document.createElement("img");
+      portrait.classList.add("villager-portrait");
+      portrait.src = getPortraitPath(person);
+      portrait.alt = person.name;
+      portrait.loading = "lazy";
+      portraitFrame.appendChild(portrait);
+      tdPortrait.appendChild(portraitFrame);
+      tr.appendChild(tdPortrait);
 
       // 名前
       let tdName = document.createElement("td");
@@ -386,7 +429,7 @@ export function updateUI(v) {
       tr.appendChild(tdFold);
 
       // スタイル適用
-      for (let i = 0; i <= 11; i++) {
+      for (let i = 0; i <= 12; i++) {
         if (person.bodySex === "男") {
           tr.cells[i].classList.add("male-basic");
         } else {
@@ -394,14 +437,14 @@ export function updateUI(v) {
         }
       }
       if (person.hp <= 33) {
-        tr.cells[5].classList.add("low-hpmp");
+        tr.cells[6].classList.add("low-hpmp");
       }
       if (person.mp <= 33) {
-        tr.cells[6].classList.add("low-hpmp");
+        tr.cells[7].classList.add("low-hpmp");
       }
 
       // 数値パラメータチェック
-      let checkCols = [10, 11, 12, 13, 14, 16, 17, 18, 19, 20];
+      let checkCols = [11, 12, 13, 14, 15, 17, 18, 19, 20, 21];
       checkCols.forEach(ci => {
         let val = parseInt(tr.cells[ci].textContent);
         if (val >= 20) tr.cells[ci].classList.add("bold-value");
@@ -432,6 +475,21 @@ export function updateUI(v) {
     if (v.villageTraits.includes("襲撃中") && v.raidEnemies.length > 0) {
       v.raidEnemies.forEach(person=>{
         let tr=document.createElement("tr");
+
+        let tdPortrait = document.createElement("td");
+        tdPortrait.classList.add("villager-portrait-cell");
+        tdPortrait.style.cursor = "pointer";
+        tdPortrait.onclick = () => openConversationModal(person);
+        let portraitFrame = document.createElement("div");
+        portraitFrame.classList.add("villager-portrait-frame");
+        let portrait = document.createElement("img");
+        portrait.classList.add("villager-portrait");
+        portrait.src = getPortraitPath(person);
+        portrait.alt = person.name;
+        portrait.loading = "lazy";
+        portraitFrame.appendChild(portrait);
+        tdPortrait.appendChild(portraitFrame);
+        tr.appendChild(tdPortrait);
 
         // 名前
         let tdName=document.createElement("td");
@@ -566,7 +624,7 @@ export function updateUI(v) {
         tr.appendChild(tdFold);
 
         // 行スタイル等(例: 性別により色分け)
-        for (let i=0; i<=11; i++) {
+        for (let i=0; i<=12; i++) {
           if (person.bodySex==="男") {
             tr.cells[i].classList.add("male-basic");
           } else {
@@ -574,13 +632,13 @@ export function updateUI(v) {
           }
         }
         if (person.hp<=33) {
-          tr.cells[5].classList.add("low-hpmp");
-        }
-        if (person.mp<=33) {
           tr.cells[6].classList.add("low-hpmp");
         }
+        if (person.mp<=33) {
+          tr.cells[7].classList.add("low-hpmp");
+        }
 
-        let checkCols=[10,11,12,13,14,16,17,18,19,20];
+        let checkCols=[11,12,13,14,15,17,18,19,20,21];
         checkCols.forEach(ci=>{
           let val=parseInt(tr.cells[ci].textContent);
           if (val>=20) tr.cells[ci].classList.add("bold-value");

@@ -215,12 +215,32 @@ const RAIDER_TYPES = [
 /**
  * 重み付き抽選で襲撃者タイプを選択
  */
-function selectRaiderType() {
-  const totalWeight = RAIDER_TYPES.reduce((sum, type) => sum + type.weight, 0);
+function getAdjustedRaiderWeight(village, raiderType) {
+  const baseWeight = raiderType.weight;
+  const population = Array.isArray(village.villagers) ? village.villagers.length : 0;
+  const scale = Number(village.building) || 0;
+
+  if (raiderType.type === "ハーピー") {
+    const bonus = Math.min(10, Math.floor(population / 3) + Math.floor(scale / 40));
+    return baseWeight + bonus;
+  }
+
+  if (raiderType.type === "キュクロプス") {
+    const bonus = Math.min(12, Math.floor(population / 4) + Math.floor(scale / 25));
+    return baseWeight + bonus;
+  }
+
+  return baseWeight;
+}
+
+function selectRaiderType(village) {
+  const totalWeight = RAIDER_TYPES.reduce((sum, type) => {
+    return sum + getAdjustedRaiderWeight(village, type);
+  }, 0);
   let random = Math.random() * totalWeight;
   
   for (const raiderType of RAIDER_TYPES) {
-    random -= raiderType.weight;
+    random -= getAdjustedRaiderWeight(village, raiderType);
     if (random <= 0) {
       return raiderType;
     }
@@ -242,7 +262,7 @@ export function startRaidEvent(village) {
     village.villageTraits.push("襲撃中");
   }
 
-  const raiderType = selectRaiderType();
+  const raiderType = selectRaiderType(village);
   const enemyCount = randInt(raiderType.minCount, raiderType.maxCount);
   village.raidEnemies = [];
 
@@ -348,6 +368,10 @@ export function startRaidEvent(village) {
   let nextBtn = document.getElementById("nextTurnButton");
   if (nextBtn) {
     nextBtn.innerHTML = `<b style="color:red;">迎撃開始</b>`;
+  }
+  let autoAssignBtn = document.getElementById("autoAssignButton");
+  if (autoAssignBtn) {
+    autoAssignBtn.textContent = "自動割り振り（迎撃）";
   }
 
   // アラートメッセージも数に応じて変更
@@ -718,6 +742,10 @@ function endRaidProcess(isSuccess, isPartSuccess, village) {
     if (btn) {
       btn.textContent="次の月へ";
     }
+    let autoAssignBtn = document.getElementById("autoAssignButton");
+    if (autoAssignBtn) {
+      autoAssignBtn.textContent = "自動割り振り";
+    }
 
     // 襲撃終了後、その月の残り処理を実行→次月へ
     village.hasDonePreEvent=false;
@@ -772,42 +800,6 @@ export function closeRaidModal() {
  * 肉体交換(雷/奇跡)
  *  - isLightning=true の場合はログを簡略化
  */
-export function doExchange(a, b, v, isLightning) {
-  let tmp={
-    bodySex: a.bodySex,
-    bodyAge: a.bodyAge,
-    hp: a.hp,
-    str: a.str, vit:a.vit, dex:a.dex, mag:a.mag, chr:a.chr,
-    bodyTraits: [...a.bodyTraits],
-    bodyOwner: a.bodyOwner,
-    race: a.race,  // 種族も交換
-    portraitFile: a.portraitFile,  // 顔グラフィック情報
-    raiderPortrait: a.raiderPortrait, // 襲撃者用の顔グラフィック
-    visitorPortrait: a.visitorPortrait // 訪問者用の顔グラフィック
-  };
-  a.bodySex=b.bodySex; 
-  a.bodyAge=b.bodyAge;
-  a.hp=b.hp;
-  a.str=b.str; a.vit=b.vit; a.dex=b.dex; a.mag=b.mag; a.chr=b.chr;
-  a.bodyTraits=[...b.bodyTraits];
-  a.bodyOwner=b.bodyOwner;
-  a.race=b.race;
-  a.portraitFile=b.portraitFile;
-  a.raiderPortrait=b.raiderPortrait;
-  a.visitorPortrait=b.visitorPortrait;
-
-  b.bodySex=tmp.bodySex;
-  b.bodyAge=tmp.bodyAge;
-  b.hp=tmp.hp;
-  b.str=tmp.str; b.vit=tmp.vit; b.dex=tmp.dex; b.mag=tmp.mag; b.chr=tmp.chr;
-  b.bodyTraits=[...tmp.bodyTraits];
-  b.bodyOwner=tmp.bodyOwner;
-  b.race=tmp.race;
-  b.portraitFile=tmp.portraitFile;
-  b.raiderPortrait=tmp.raiderPortrait;
-  b.visitorPortrait=tmp.visitorPortrait;
-}
-
 /** 迎撃画面更新 */
 export function updateRaidTables(village) {
   // 敵側

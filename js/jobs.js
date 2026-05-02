@@ -418,7 +418,6 @@ function doHunt(p, v) {
     v.log(`${p.name}狩猟:${result} 特性[達人狩人]獲得`);
   }
 
-  v.log(`${p.name}狩猟:${result} 食料+${amt},体力-${tc},メンタル-${mc}`);
 }
 
 function doFish(p, v) {
@@ -486,7 +485,6 @@ function doFish(p, v) {
     v.log(`${p.name}漁:${result} 特性[達人漁師]獲得`);
   }
 
-  v.log(`${p.name}漁:${result} 食料+${amt},体力-${tc},メンタル-${mc}`);
 }
 
 function doGather(p, v) {

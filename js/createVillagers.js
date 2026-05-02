@@ -1018,6 +1018,7 @@ export function refreshJobTable(v) {
 
   // 襲撃関連の行動追加（状態異常がない場合のみ）
   if (theVillage.villageTraits.includes("襲撃中")) {
+    v.actionTable = v.actionTable.filter(action => action !== "迎撃" && action !== "罠作成");
     v.actionTable.unshift("迎撃", "罠作成");
   }
 }

@@ -729,20 +729,108 @@ const dictionaryData = {
       "- 迎撃時に「非戦主義のため攻撃を拒否！」というログが表示される",
       "- 迎撃行動は選択可能だが、実質的な戦力にはならない"
     ]
+  },
+  "\u306a\u3057": {
+    description: "\u4ed5\u4e8b\u30fb\u884c\u52d5\u3092\u884c\u308f\u306a\u3044\u72b6\u614b\u3002",
+    details: [
+      "\u52b9\u679c: \u8cc7\u6e90\u30fb\u80fd\u529b\u30fb\u4f53\u529b\u30fb\u30e1\u30f3\u30bf\u30eb\u306e\u5909\u5316\u306a\u3057",
+      "\u751f\u7523\u91cf: 0",
+      "\u5e7c\u3044\u6751\u4eba\u3084\u884c\u52d5\u3067\u304d\u306a\u3044\u72b6\u6cc1\u3067\u9078\u3070\u308c\u308b"
+    ]
+  },
+  "\u5185\u8077": {
+    description: "\u5668\u7528\u3068\u52e4\u52c9\u3092\u6d3b\u304b\u3057\u3066\u5c0f\u3055\u306a\u4f5c\u696d\u3092\u884c\u3046\u751f\u7523\u7cfb\u306e\u4ed5\u4e8b\u3002",
+    details: [
+      "\u8cc7\u91d1\u5897\u52a0: round(5 + 10 * (\u5668\u7528/20) * (\u52e4\u52c9/20))",
+      "\u4f53\u529b\u6d88\u8cbb: round(15 * (1 - \u8010\u4e45/100) * \u30e9\u30f3\u30c0\u30e00.9\u301c1.1)",
+      "\u30e1\u30f3\u30bf\u30eb\u6d88\u8cbb: round(15 * (1 - \u52e4\u52c9/100) * \u30e9\u30f3\u30c0\u30e00.9\u301c1.1)",
+      "\u6210\u9577\u5224\u5b9a: 5%\u3067\u5668\u7528+1\u30015%\u3067\u52e4\u52c9+1"
+    ]
+  },
+  "\u9b54\u6cd5\u7d30\u5de5": {
+    description: "\u9b54\u529b\u3068\u5668\u7528\u3092\u4f7f\u3044\u3001\u9b54\u6cd5\u7684\u306a\u7d30\u5de5\u7269\u3092\u4f5c\u308b\u4ed5\u4e8b\u3002",
+    details: [
+      "\u8cc7\u91d1\u5897\u52a0: round(15 + 30 * (\u5668\u7528/20) * (\u9b54\u529b/20))",
+      "\u4f53\u529b\u6d88\u8cbb: round(15 * (1 - \u8010\u4e45/100) * \u30e9\u30f3\u30c0\u30e00.9\u301c1.1)",
+      "\u30e1\u30f3\u30bf\u30eb\u6d88\u8cbb: round(15 * (1 - \u52e4\u52c9/100) * \u30e9\u30f3\u30c0\u30e00.9\u301c1.1)",
+      "\u6210\u9577\u5224\u5b9a: \u306a\u3057"
+    ]
+  },
+  "\u7814\u7a76": {
+    description: "\u77e5\u529b\u3068\u9b54\u529b\u3092\u4f7f\u3063\u3066\u6751\u306e\u77e5\u8b58\u3084\u6280\u8853\u3092\u4f38\u3070\u3059\u4ed5\u4e8b\u3002",
+    details: [
+      "\u6280\u8853\u5897\u52a0: round(15 + 30 * (\u77e5\u529b/20) * (\u9b54\u529b/20))",
+      "\u56f3\u66f8\u9928\u304c\u3042\u308b\u5834\u5408: \u6280\u8853\u5897\u52a0\u30921.2\u500d",
+      "\u4f53\u529b\u6d88\u8cbb: round(15 * (1 - \u8010\u4e45/100) * \u30e9\u30f3\u30c0\u30e00.9\u301c1.1)",
+      "\u30e1\u30f3\u30bf\u30eb\u6d88\u8cbb: round(30 * (1 - \u77e5\u529b/100) * \u30e9\u30f3\u30c0\u30e00.9\u301c1.1)",
+      "\u6210\u9577\u5224\u5b9a: 5%\u3067\u9b54\u529b+1\u30015%\u3067\u77e5\u529b+1"
+    ]
+  },
+  "\u6559\u80b2": {
+    description: "\u77e5\u529b\u30fb\u9b45\u529b\u30fb\u502b\u7406\u3092\u6d3b\u304b\u3057\u3001\u6751\u4eba\u306e\u80b2\u6210\u3092\u652f\u3048\u308b\u4ed5\u4e8b\u3002",
+    details: [
+      "\u5bfe\u8c61: \u7cbe\u795e\u5e74\u9f6210\u301c15\u6b73\u306e\u6751\u4eba",
+      "\u6210\u9577\u5224\u5b9a: \u5bfe\u8c61\u3054\u3068\u306b\u77e5\u529b\u30fb\u52e4\u52c9\u30fb\u502b\u7406\u30fb\u52c7\u6c17\u304c\u305d\u308c\u305e\u308c20%\u3067\u4e0a\u6607",
+      "\u4e0a\u6607\u91cf: 1\u301cfloor(\u6559\u5e2b\u306e\u5bfe\u5fdc\u80fd\u529b/10)\u3001\u6700\u4f4e1",
+      "\u4f53\u529b\u6d88\u8cbb: round(15 * (1 - \u8010\u4e45/100) * \u30e9\u30f3\u30c0\u30e00.9\u301c1.1)",
+      "\u30e1\u30f3\u30bf\u30eb\u6d88\u8cbb: round(30 * (1 - \u502b\u7406/100) * \u30e9\u30f3\u30c0\u30e00.9\u301c1.1)"
+    ]
+  },
+  "\u8b66\u5099": {
+    description: "\u6751\u306e\u6cbb\u5b89\u3092\u5b88\u308b\u4ed5\u4e8b\u3002\u895f\u6483\u3084\u8352\u5ec3\u3078\u306e\u5099\u3048\u306b\u306a\u308b\u3002",
+    details: [
+      "\u6cbb\u5b89\u5897\u52a0: max(1, round(10 * (\u7b4b\u529b/20) * (\u502b\u7406/20)))",
+      "\u4f53\u529b\u6d88\u8cbb: round(15 * (1 - \u8010\u4e45/100) * \u30e9\u30f3\u30c0\u30e00.9\u301c1.1)",
+      "\u30e1\u30f3\u30bf\u30eb\u6d88\u8cbb: round(30 * (1 - \u52c7\u6c17/100) * \u30e9\u30f3\u30c0\u30e00.9\u301c1.1)",
+      "\u6210\u9577\u5224\u5b9a: 5%\u3067\u7b4b\u529b+1\u30015%\u3067\u502b\u7406+1"
+    ]
+  },
+  "\u7642\u990a": {
+    description: "\u8ca0\u50b7\u3084\u75b2\u52b4\u306e\u56de\u5fa9\u3092\u512a\u5148\u3059\u308b\u884c\u52d5\u3002",
+    details: [
+      "\u4f53\u529b\u56de\u5fa9: +20",
+      "\u30e1\u30f3\u30bf\u30eb\u56de\u5fa9: +20",
+      "\u88dc\u6b63: \u4e2d\u5e74\u306f\u56de\u5fa9\u91cf\u00d70.8\u3001\u8001\u4eba\u306f\u56de\u5fa9\u91cf\u00d70.6",
+      "\u8ca0\u50b7\u56de\u5fa9: \u8ca0\u50b7\u7279\u6027\u304c\u3042\u308b\u5834\u5408\u3001100%\u3067\u89e3\u9664"
+    ]
+  },
+  "\u81e8\u7d42": {
+    description: "\u5371\u7be4\u72b6\u614b\u306e\u6751\u4eba\u304c\u9078\u3076\u7279\u6b8a\u306a\u884c\u52d5\u3002",
+    details: [
+      "\u52b9\u679c: \u30ed\u30b0\u306b\u81e8\u7d42\u306e\u30e1\u30c3\u30bb\u30fc\u30b8\u3092\u8868\u793a",
+      "\u751f\u7523\u91cf: 0",
+      "\u4f53\u529b\u30fb\u30e1\u30f3\u30bf\u30eb\u30fb\u80fd\u529b\u5024\u306e\u5909\u5316: \u306a\u3057",
+      "\u4e3b\u306b\u5371\u7be4\u7279\u6027\u3092\u6301\u3064\u6751\u4eba\u306e\u72b6\u614b\u8868\u793a\u7528"
+    ]
+  },
+  "\u884c\u5546": {
+    description: "\u9b45\u529b\u3068\u52e4\u52c9\u3092\u6d3b\u304b\u3057\u3001\u4ea4\u6613\u3067\u8cc7\u91d1\u3092\u5f97\u308b\u4ed5\u4e8b\u3002",
+    details: [
+      "\u8cc7\u91d1\u5897\u52a0: round(20 * (\u9b45\u529b/20) * (\u77e5\u529b/20))",
+      "\u4f53\u529b\u6d88\u8cbb: round(20 * (1 - \u8010\u4e45/100) * \u30e9\u30f3\u30c0\u30e00.9\u301c1.1)",
+      "\u30e1\u30f3\u30bf\u30eb\u6d88\u8cbb: round(20 * (1 - \u52e4\u52c9/100) * \u30e9\u30f3\u30c0\u30e00.9\u301c1.1)",
+      "\u6210\u9577\u5224\u5b9a: 5%\u3067\u9b45\u529b+1\u30015%\u3067\u77e5\u529b+1"
+    ]
   }
 };
 
-export function searchDictionary() {
-  const searchTerm = document.getElementById("dictionarySearch").value.trim();
+export function showDictionaryEntry(searchTerm) {
+  const searchInput = document.getElementById("dictionarySearch");
   const contentDiv = document.getElementById("dictionaryContent");
-  
-  if (!searchTerm) {
+  const term = (searchTerm || "").trim();
+
+  if (!contentDiv) return;
+  if (searchInput) {
+    searchInput.value = term;
+  }
+
+  if (!term) {
     contentDiv.innerHTML = "<p>キーワードを入力してください</p>";
     return;
   }
 
   const matches = Object.entries(dictionaryData)
-    .filter(([key]) => key.includes(searchTerm));
+    .filter(([key]) => key.includes(term));
 
   if (matches.length === 0) {
     contentDiv.innerHTML = "<p>該当する項目が見つかりません</p>";
@@ -760,5 +848,11 @@ export function searchDictionary() {
   `).join("");
 }
 
-// グローバルに公開
-window.searchDictionary = searchDictionary; 
+export function searchDictionary() {
+  const searchTerm = document.getElementById("dictionarySearch").value.trim();
+  showDictionaryEntry(searchTerm);
+}
+
+// Expose dictionary helpers for inline HTML handlers.
+window.searchDictionary = searchDictionary;
+window.showDictionaryEntry = showDictionaryEntry;

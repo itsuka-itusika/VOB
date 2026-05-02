@@ -2,12 +2,299 @@
 
 import { randInt, clampValue } from "./util.js";
 import { doLoverCheck } from "./relationships.js";
-import { doExchange } from "./raid.js";
+import { doExchange } from "./exchange.js";
+import { showRandomEventModal } from "./randomEventModal.js";
 
 /**
  * ランダムイベントを管理するクラス
  */
 export class RandomEvents {
+  static announce(title, message, participants = []) {
+    showRandomEventModal({ title, message, participants });
+  }
+
+  static participant(character, line) {
+    return { character, line };
+  }
+
+  static captureVillagerState(village) {
+    return new Map(village.villagers.map(p => [p, JSON.stringify({
+      hp: p.hp,
+      mp: p.mp,
+      happiness: p.happiness,
+      str: p.str,
+      vit: p.vit,
+      dex: p.dex,
+      mag: p.mag,
+      chr: p.chr,
+      int: p.int,
+      ind: p.ind,
+      eth: p.eth,
+      cou: p.cou,
+      sexdr: p.sexdr,
+      bodyTraits: p.bodyTraits,
+      mindTraits: p.mindTraits,
+      relationships: p.relationships,
+      hobby: p.hobby,
+      bodySex: p.bodySex,
+      bodyAge: p.bodyAge,
+      bodyOwner: p.bodyOwner,
+      race: p.race,
+      portraitFile: p.portraitFile
+    })]));
+  }
+
+  static collectChangedVillagers(village, beforeState) {
+    return village.villagers.filter(p => beforeState.get(p) !== JSON.stringify({
+      hp: p.hp,
+      mp: p.mp,
+      happiness: p.happiness,
+      str: p.str,
+      vit: p.vit,
+      dex: p.dex,
+      mag: p.mag,
+      chr: p.chr,
+      int: p.int,
+      ind: p.ind,
+      eth: p.eth,
+      cou: p.cou,
+      sexdr: p.sexdr,
+      bodyTraits: p.bodyTraits,
+      mindTraits: p.mindTraits,
+      relationships: p.relationships,
+      hobby: p.hobby,
+      bodySex: p.bodySex,
+      bodyAge: p.bodyAge,
+      bodyOwner: p.bodyOwner,
+      race: p.race,
+      portraitFile: p.portraitFile
+    }));
+  }
+
+  static createEventLine(kind) {
+    if (kind === "mythic") return "……いまのは、ただごとではなかった。";
+    if (kind === "good") return "少し、村の空気が明るくなった気がする。";
+    return "これは放っておけないな……。";
+  }
+
+  static getEventSubject(eventKey, kind) {
+    const subjects = {
+      cat: "猫との出会い",
+      gold: "金貨の発見",
+      strangeRain: "不思議な雨",
+      fireworks: "花火師の来訪",
+      menFriendship: "男同士の友情",
+      lover: "恋の気配",
+      yuri: "百合の恋",
+      tattoo: "刺青",
+      fashion: "ファッションショー",
+      muscle: "筋トレ",
+      storm: "春の嵐",
+      downpour: "豪雨",
+      heat: "猛暑",
+      fire: "ボヤ",
+      thief: "盗賊団",
+      rats: "ネズミの大発生",
+      lightning1: "落雷",
+      lightning2: "落雷による肉体交換",
+      snow: "大雪",
+      fight: "喧嘩",
+      drunk: "飲酒騒ぎ"
+    };
+
+    if (subjects[eventKey]) return subjects[eventKey];
+    if (kind === "mythic") return "神の祝福";
+    if (kind === "good") return "良い出来事";
+    return "悪い出来事";
+  }
+
+  static getEventMood(eventKey, kind) {
+    const moods = {
+      cat: "happy",
+      gold: "gain",
+      strangeRain: "gain",
+      fireworks: "happy",
+      menFriendship: "friendship",
+      lover: "romance",
+      yuri: "romance",
+      tattoo: "selfChange",
+      fashion: "selfChange",
+      muscle: "selfChange",
+      storm: "loss",
+      downpour: "loss",
+      heat: "hardship",
+      fire: "loss",
+      thief: "threat",
+      rats: "loss",
+      lightning1: "injury",
+      lightning2: "shock",
+      snow: "hardship",
+      fight: "conflict",
+      drunk: "conflict"
+    };
+
+    if (moods[eventKey]) return moods[eventKey];
+    if (kind === "mythic") return "mythic";
+    return kind === "good" ? "happy" : "hardship";
+  }
+
+  static getSpeechStyle(character) {
+    const speechType = character.speechType || (character.bodySex === "男" ? "普通Ｍ" : "普通Ｆ");
+    const mindTraits = Array.isArray(character.mindTraits) ? character.mindTraits : [];
+
+    if (speechType.includes("丁寧") || speechType === "お嬢様" || mindTraits.some(t => ["善人", "マジメ", "優等生", "古風"].includes(t))) return "polite";
+    if (speechType.includes("クール") || speechType === "中性的" || mindTraits.some(t => ["独善的", "策士", "現実主義", "計算高い"].includes(t))) return "cool";
+    if (["乱暴", "蓮っ葉", "強気Ｍ", "強気Ｆ"].includes(speechType) || mindTraits.some(t => ["強気", "怒りっぽい", "粗暴", "好戦的"].includes(t))) return "bold";
+    if (["陰気", "内気"].includes(speechType) || mindTraits.some(t => ["内向的", "臆病", "根暗", "無気力"].includes(t))) return "shy";
+    if (["お調子者", "快活", "ギャル風", "ぶりっこ"].includes(speechType) || mindTraits.some(t => ["おしゃべり", "好奇心旺盛", "チャラい", "問題児"].includes(t))) return "bright";
+    return character.bodySex === "男" ? "male" : "female";
+  }
+
+  static createEventLine(kind, character, eventKey) {
+    const subject = this.getEventSubject(eventKey, kind);
+    const mood = this.getEventMood(eventKey, kind);
+    const style = this.getSpeechStyle(character);
+    const lines = {
+      mythic: {
+        polite: `${subject}……これは、軽々しく語ってよい出来事ではありませんね。`,
+        cool: `${subject}か。記録しておく価値はありそうだ。`,
+        bold: `${subject}だと？ すげえな、体が熱くなるぜ！`,
+        shy: `${subject}……こ、怖いけど、少しだけ綺麗でした……`,
+        bright: `${subject}ってすごいね！ なんだか特別な日になったよ！`,
+        male: `${subject}か……ただごとじゃなかったな。`,
+        female: `${subject}……不思議なこともあるものですね。`
+      },
+      happy: {
+        polite: `${subject}のおかげで、村の空気が少し和らぎましたね。`,
+        cool: `${subject}か。悪くない結果だ。`,
+        bold: `${subject}だ！ こういう景気のいい話は歓迎だな！`,
+        shy: `${subject}……少し、うれしいです。`,
+        bright: `${subject}だよ！ 今日はいい日になりそう！`,
+        male: `${subject}か。少し気分が明るくなるな。`,
+        female: `${subject}ですね。村が明るくなった気がします。`
+      },
+      gain: {
+        polite: `${subject}はありがたいですね。大切に使いましょう。`,
+        cool: `${subject}で余裕ができた。使い道は考えるべきだな。`,
+        bold: `${subject}だ！ これで一息つけるな！`,
+        shy: `${subject}……む、無駄にしないようにします。`,
+        bright: `${subject}だって！ ちょっと得した気分！`,
+        male: `${subject}は助かるな。`,
+        female: `${subject}は助かりますね。`
+      },
+      friendship: {
+        polite: `${subject}ですか。人の縁は村の力になりますね。`,
+        cool: `${subject}か。信頼関係は実利にもなる。`,
+        bold: `${subject}だな！ 仲間ってのはいいもんだ！`,
+        shy: `${subject}……仲良くできるの、うらやましいです。`,
+        bright: `${subject}っていいね！ みんなで飲みたい気分！`,
+        male: `${subject}か。悪くないな。`,
+        female: `${subject}ですね。少し微笑ましいです。`
+      },
+      romance: {
+        polite: `${subject}……そっと見守るのがよさそうですね。`,
+        cool: `${subject}か。感情の動きは予測しづらいな。`,
+        bold: `${subject}だと？ ははっ、熱いじゃないか！`,
+        shy: `${subject}……な、なんだか照れます……`,
+        bright: `${subject}だよ！ きゃー、いい感じじゃない？`,
+        male: `${subject}か。人の心は不思議だな。`,
+        female: `${subject}ですね。少し胸が騒ぎます。`
+      },
+      selfChange: {
+        polite: `${subject}ですか。新しい自分を試すのも悪くありませんね。`,
+        cool: `${subject}か。変化が能力に出るなら意味はある。`,
+        bold: `${subject}だ！ もっと派手にやってやろうぜ！`,
+        shy: `${subject}……ちょっと恥ずかしいけど、変われるなら……`,
+        bright: `${subject}だよ！ なんか楽しくなってきた！`,
+        male: `${subject}か。気分転換にはなるな。`,
+        female: `${subject}ですね。少し新鮮な気持ちです。`
+      },
+      loss: {
+        polite: `${subject}の被害は痛いですね。早めに立て直しましょう。`,
+        cool: `${subject}か。損失を計算して次に備えるべきだ。`,
+        bold: `${subject}だと？ くそ、すぐ取り返すぞ！`,
+        shy: `${subject}……こ、困りましたね……`,
+        bright: `${subject}は大変だけど、まだなんとかなるよ！`,
+        male: `${subject}は痛いな。対策しないと。`,
+        female: `${subject}は困りますね。備えが必要です。`
+      },
+      hardship: {
+        polite: `${subject}は体に堪えますね。無理は禁物です。`,
+        cool: `${subject}か。消耗を抑えて動こう。`,
+        bold: `${subject}くらいでへばってられないな！`,
+        shy: `${subject}……今日は休んだ方がいいかも……`,
+        bright: `${subject}はきついけど、がんばって乗り切ろう！`,
+        male: `${subject}はこたえるな。`,
+        female: `${subject}はつらいですね。`
+      },
+      threat: {
+        polite: `${subject}とは物騒ですね。警戒を強めましょう。`,
+        cool: `${subject}か。治安の低下は見過ごせない。`,
+        bold: `${subject}だと？ 見つけたらただじゃおかない！`,
+        shy: `${subject}……こ、怖いです……戸締まりします。`,
+        bright: `${subject}！？ みんな、気をつけようね！`,
+        male: `${subject}か。警戒が必要だな。`,
+        female: `${subject}なんて、物騒ですね。`
+      },
+      injury: {
+        polite: `${subject}で負傷者が出ました。すぐ手当てを。`,
+        cool: `${subject}か。被害者の治療を優先しよう。`,
+        bold: `${subject}だと？ すぐ助けに行くぞ！`,
+        shy: `${subject}……だ、大丈夫でしょうか……`,
+        bright: `${subject}！？ 早く手当てしなきゃ！`,
+        male: `${subject}で怪我か。放っておけないな。`,
+        female: `${subject}で怪我なんて……手当てしましょう。`
+      },
+      shock: {
+        polite: `${subject}……常識では測れない出来事ですね。`,
+        cool: `${subject}か。状況確認を急ぐべきだ。`,
+        bold: `${subject}だと！？ 何がどうなってるんだ！`,
+        shy: `${subject}……え、えっと、私たち大丈夫ですか……？`,
+        bright: `${subject}！？ びっくりした、すごいことになってる！`,
+        male: `${subject}だと？ 混乱するな。`,
+        female: `${subject}なんて……驚きました。`
+      },
+      conflict: {
+        polite: `${subject}はよくありませんね。落ち着いて話し合いましょう。`,
+        cool: `${subject}か。感情的な衝突は損失が大きい。`,
+        bold: `${subject}だと？ 暴れるなら外でやれってんだ！`,
+        shy: `${subject}……け、喧嘩は苦手です……`,
+        bright: `${subject}はだめだよ！ みんな落ち着いて！`,
+        male: `${subject}か。仲裁が要りそうだ。`,
+        female: `${subject}は困りますね。止めないと。`
+      }
+    };
+
+    const group = lines[mood] || lines[kind] || lines.happy;
+    return group[style] || group[character.bodySex === "男" ? "male" : "female"] || group.female;
+  }
+
+  static runWithAnnouncement(village, phase, kind, runEvent) {
+    const beforeState = this.captureVillagerState(village);
+    const originalLog = village.log.bind(village);
+    const logs = [];
+
+    village.log = (msg) => {
+      logs.push(String(msg));
+      originalLog(msg);
+    };
+
+    let eventKey = null;
+    try {
+      eventKey = runEvent();
+    } finally {
+      village.log = originalLog;
+    }
+
+    const participants = this.collectChangedVillagers(village, beforeState)
+      .map(p => this.participant(p, this.createEventLine(kind, p, eventKey)));
+    const title = kind === "mythic" ? "神秘的なランダムイベント" :
+      kind === "good" ? "良いランダムイベント" : "悪いランダムイベント";
+    const message = logs.length > 0 ? logs.join("\n") : `${phase}ランダムイベントが発生しました。`;
+
+    this.announce(title, message, participants);
+  }
+
   /**
    * ランダムイベントを実行
    * @param {Village} v - 村オブジェクト
@@ -16,11 +303,11 @@ export class RandomEvents {
   static execute(v, phase) {
     let r = randInt(1, 100);
     if (r <= 1) {
-      this.doMythicEvent(v);
+      this.runWithAnnouncement(v, phase, "mythic", () => this.doMythicEvent(v));
     } else if (r <= 25) {
-      this.doGoodEvent(v);
+      this.runWithAnnouncement(v, phase, "good", () => this.doGoodEvent(v));
     } else if (r <= 40) {
-      this.doBadEvent(v);
+      this.runWithAnnouncement(v, phase, "bad", () => this.doBadEvent(v));
     } else {
       v.log(`[${phase}イベント] 何も起こらず`);
     }
@@ -52,7 +339,7 @@ export class RandomEvents {
 
     if (cands.length === 0) {
       v.log("ミシックイベ:該当者なし");
-      return;
+      return "mythic_none";
     }
 
     let c = this.randChoice(cands);
@@ -79,6 +366,7 @@ export class RandomEvents {
         v.log(`${p.name}は地母神の慈愛を受けた！(耐久+10,魅力+10)`);
         break;
     }
+    return c.type;
   }
 
   /**
@@ -227,6 +515,7 @@ export class RandomEvents {
         break;
       }
     }
+    return ev;
   }
 
   /**
@@ -344,6 +633,7 @@ export class RandomEvents {
         break;
       }
     }
+    return ev;
   }
 
   /**
