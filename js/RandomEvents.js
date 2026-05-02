@@ -139,15 +139,17 @@ export class RandomEvents {
   }
 
   static getSpeechStyle(character) {
-    const speechType = character.speechType || (character.bodySex === "男" ? "普通Ｍ" : "普通Ｆ");
+    const spiritSex = character.spiritSex || character.bodySex || "女";
+    const speechType = character.speechType || (spiritSex === "男" ? "普通Ｍ" : "普通Ｆ");
     const mindTraits = Array.isArray(character.mindTraits) ? character.mindTraits : [];
 
+    // conversation.js の口調分類をベースに、精神特性で補正
     if (speechType.includes("丁寧") || speechType === "お嬢様" || mindTraits.some(t => ["善人", "マジメ", "優等生", "古風"].includes(t))) return "polite";
     if (speechType.includes("クール") || speechType === "中性的" || mindTraits.some(t => ["独善的", "策士", "現実主義", "計算高い"].includes(t))) return "cool";
     if (["乱暴", "蓮っ葉", "強気Ｍ", "強気Ｆ"].includes(speechType) || mindTraits.some(t => ["強気", "怒りっぽい", "粗暴", "好戦的"].includes(t))) return "bold";
     if (["陰気", "内気"].includes(speechType) || mindTraits.some(t => ["内向的", "臆病", "根暗", "無気力"].includes(t))) return "shy";
     if (["お調子者", "快活", "ギャル風", "ぶりっこ"].includes(speechType) || mindTraits.some(t => ["おしゃべり", "好奇心旺盛", "チャラい", "問題児"].includes(t))) return "bright";
-    return character.bodySex === "男" ? "male" : "female";
+    return spiritSex === "男" ? "male" : "female";
   }
 
   static createEventLine(kind, character, eventKey) {
@@ -266,7 +268,8 @@ export class RandomEvents {
     };
 
     const group = lines[mood] || lines[kind] || lines.happy;
-    return group[style] || group[character.bodySex === "男" ? "male" : "female"] || group.female;
+    const spiritSex = character.spiritSex || character.bodySex || "女";
+    return group[style] || group[spiritSex === "男" ? "male" : "female"] || group.female;
   }
 
   static runWithAnnouncement(village, phase, kind, runEvent) {
