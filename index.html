@@ -195,6 +195,78 @@ tr td:nth-child(22) {
   font-weight: bold;
 }
 
+.villager-portrait-cell {
+  width: 42px;
+  min-width: 42px;
+  padding: 2px;
+  background: #fff;
+}
+.villager-portrait-frame {
+  width: 34px;
+  height: 34px;
+  overflow: hidden;
+  border-radius: 4px;
+  border: 1px solid #bbb;
+  background: #fff;
+  margin: 0 auto;
+}
+.villager-portrait {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+  display: block;
+  transform: scale(1.34);
+  transform-origin: center 28%;
+}
+#villagersTable td:nth-child(11) {
+  background: inherit;
+}
+#visitorsTable td:nth-child(11),
+#raidEnemiesTable td:nth-child(11) {
+  background: inherit;
+}
+#villagersTable td:nth-child(12),
+#villagersTable td:nth-child(13),
+#villagersTable td:nth-child(14),
+#villagersTable td:nth-child(15),
+#villagersTable td:nth-child(16),
+#villagersTable td:nth-child(17),
+#visitorsTable td:nth-child(12),
+#visitorsTable td:nth-child(13),
+#visitorsTable td:nth-child(14),
+#visitorsTable td:nth-child(15),
+#visitorsTable td:nth-child(16),
+#visitorsTable td:nth-child(17),
+#raidEnemiesTable td:nth-child(12),
+#raidEnemiesTable td:nth-child(13),
+#raidEnemiesTable td:nth-child(14),
+#raidEnemiesTable td:nth-child(15),
+#raidEnemiesTable td:nth-child(16),
+#raidEnemiesTable td:nth-child(17) {
+  background: #faf2d3;
+}
+#villagersTable td:nth-child(18),
+#villagersTable td:nth-child(19),
+#villagersTable td:nth-child(20),
+#villagersTable td:nth-child(21),
+#villagersTable td:nth-child(22),
+#villagersTable td:nth-child(23),
+#visitorsTable td:nth-child(18),
+#visitorsTable td:nth-child(19),
+#visitorsTable td:nth-child(20),
+#visitorsTable td:nth-child(21),
+#visitorsTable td:nth-child(22),
+#visitorsTable td:nth-child(23),
+#raidEnemiesTable td:nth-child(18),
+#raidEnemiesTable td:nth-child(19),
+#raidEnemiesTable td:nth-child(20),
+#raidEnemiesTable td:nth-child(21),
+#raidEnemiesTable td:nth-child(22),
+#raidEnemiesTable td:nth-child(23) {
+  background: #e2f9d8;
+}
+
 /* 折りたたみ */
 .foldable-info {
   text-align: left;
@@ -659,9 +731,10 @@ section h2 {
     <div class="resource-panel" id="resourcePanel"></div>
 
     <!-- 追加: セーブ/ロード ボタン群 -->
+    <button id="autoAssignButton" onclick="onAutoAssignJobs()">自動割り振り</button>
+    <button id="nextTurnButton" onclick="onNextTurn()">次の月へ</button>
     <button onclick="openMiracleModal()">奇跡の行使</button>
     <button onclick="openBuildingModal()">建築</button>
-    <button id="nextTurnButton" onclick="onNextTurn()">次の月へ</button>
     <button onclick="onSaveAsJsonFile()">JSON保存</button>
     <button onclick="onLoadFromJsonFile()">JSON読込</button>
     <button onclick="onSaveToLocalStorage()">ローカル保存</button>
@@ -675,7 +748,8 @@ section h2 {
     <table id="villagersTable">
       <thead>
         <tr>
-          <th>名前</th>      <!--0-->
+          <th>顔</th>        <!--0-->
+          <th>名前</th>      <!--1-->
           <th>肉体</th>      <!--1-->
           <th>種族</th>      <!--2-->
           <th>性別</th>      <!--3-->
@@ -710,7 +784,8 @@ section h2 {
     <table id="visitorsTable">
       <thead>
         <tr>
-          <th>名前</th>      <!--0-->
+          <th>顔</th>        <!--0-->
+          <th>名前</th>      <!--1-->
           <th>肉体</th>      <!--1-->
           <th>種族</th>      <!--2-->
           <th>性別</th>      <!--3-->
@@ -745,7 +820,8 @@ section h2 {
     <table id="raidEnemiesTable">
       <thead>
         <tr>
-          <th>名前</th>      <!--0-->
+          <th>顔</th>        <!--0-->
+          <th>名前</th>      <!--1-->
           <th>肉体</th>      <!--1-->
           <th>種族</th>      <!--2-->
           <th>性別</th>      <!--3-->
@@ -953,6 +1029,7 @@ import {
 import { openBuildingModal, closeBuildingModal } from "./js/buildings.js";
 import { closeConversationModal } from "./js/conversation.js";
 import { closeExchangeModal } from "./js/miracles.js";
+import { autoAssignJobs } from "./js/autoAssign.js";
 
 /** "次の月へ" */
 window.onNextTurn = onNextTurn;
@@ -1013,6 +1090,11 @@ import { updateUI } from "./js/ui.js";
 
 window.openBuildingModal = () => openBuildingModal(theVillage);
 window.closeBuildingModal = closeBuildingModal;
+
+window.onAutoAssignJobs = () => {
+  autoAssignJobs(theVillage);
+  updateUI(theVillage);
+};
 
 /** 会話モーダル */
 window.closeConversationModal = closeConversationModal;
