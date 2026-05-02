@@ -9,6 +9,8 @@ import { showRandomEventModal } from "./randomEventModal.js";
  * ランダムイベントを管理するクラス
  */
 export class RandomEvents {
+  static _forcedSpeakers = [];
+
   static announce(title, message, participants = []) {
     showRandomEventModal({ title, message, participants });
   }
@@ -79,6 +81,10 @@ export class RandomEvents {
 
   static getEventSubject(eventKey, kind) {
     const subjects = {
+      "狩猟神": "狩女神の祝福",
+      "太陽神": "太陽神の寵愛",
+      "戦女神": "戦女神の啓示",
+      "地母神": "地母神の慈愛",
       cat: "猫との出会い",
       gold: "金貨の発見",
       strangeRain: "不思議な雨",
@@ -110,6 +116,10 @@ export class RandomEvents {
 
   static getEventMood(eventKey, kind) {
     const moods = {
+      "狩猟神": "mythic",
+      "太陽神": "mythic",
+      "戦女神": "mythic",
+      "地母神": "mythic",
       cat: "happy",
       gold: "gain",
       strangeRain: "gain",
@@ -139,15 +149,17 @@ export class RandomEvents {
   }
 
   static getSpeechStyle(character) {
-    const speechType = character.speechType || (character.bodySex === "男" ? "普通Ｍ" : "普通Ｆ");
+    const spiritSex = character.spiritSex || character.bodySex || "女";
+    const speechType = character.speechType || (spiritSex === "男" ? "普通Ｍ" : "普通Ｆ");
     const mindTraits = Array.isArray(character.mindTraits) ? character.mindTraits : [];
 
+    // conversation.js の口調分類をベースに、精神特性で補正
     if (speechType.includes("丁寧") || speechType === "お嬢様" || mindTraits.some(t => ["善人", "マジメ", "優等生", "古風"].includes(t))) return "polite";
     if (speechType.includes("クール") || speechType === "中性的" || mindTraits.some(t => ["独善的", "策士", "現実主義", "計算高い"].includes(t))) return "cool";
     if (["乱暴", "蓮っ葉", "強気Ｍ", "強気Ｆ"].includes(speechType) || mindTraits.some(t => ["強気", "怒りっぽい", "粗暴", "好戦的"].includes(t))) return "bold";
     if (["陰気", "内気"].includes(speechType) || mindTraits.some(t => ["内向的", "臆病", "根暗", "無気力"].includes(t))) return "shy";
     if (["お調子者", "快活", "ギャル風", "ぶりっこ"].includes(speechType) || mindTraits.some(t => ["おしゃべり", "好奇心旺盛", "チャラい", "問題児"].includes(t))) return "bright";
-    return character.bodySex === "男" ? "male" : "female";
+    return spiritSex === "男" ? "male" : "female";
   }
 
   static createEventLine(kind, character, eventKey) {
@@ -266,13 +278,23 @@ export class RandomEvents {
     };
 
     const group = lines[mood] || lines[kind] || lines.happy;
-    return group[style] || group[character.bodySex === "男" ? "male" : "female"] || group.female;
+    const spiritSex = character.spiritSex || character.bodySex || "女";
+    return group[style] || group[spiritSex === "男" ? "male" : "female"] || group.female;
+  }
+
+  static addForcedSpeaker(character) {
+    if (!character) return;
+    if (!Array.isArray(this._forcedSpeakers)) this._forcedSpeakers = [];
+    if (!this._forcedSpeakers.includes(character)) {
+      this._forcedSpeakers.push(character);
+    }
   }
 
   static runWithAnnouncement(village, phase, kind, runEvent) {
     const beforeState = this.captureVillagerState(village);
     const originalLog = village.log.bind(village);
     const logs = [];
+    this._forcedSpeakers = [];
 
     village.log = (msg) => {
       logs.push(String(msg));
@@ -286,7 +308,9 @@ export class RandomEvents {
       village.log = originalLog;
     }
 
-    const participants = this.collectChangedVillagers(village, beforeState)
+    const changedVillagers = this.collectChangedVillagers(village, beforeState);
+    const speakers = [...new Set([...changedVillagers, ...this._forcedSpeakers])];
+    const participants = speakers
       .map(p => this.participant(p, this.createEventLine(kind, p, eventKey)));
     const title = kind === "mythic" ? "神秘的なランダムイベント" :
       kind === "good" ? "良いランダムイベント" : "悪いランダムイベント";
@@ -623,6 +647,7 @@ export class RandomEvents {
 
         if (candidates.length > 0) {
           let a = this.randChoice(candidates);
+          this.addForcedSpeaker(a);
           
           v.security = clampValue(v.security - 12, 0, 100);
 
