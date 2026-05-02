@@ -9,6 +9,8 @@ import { showRandomEventModal } from "./randomEventModal.js";
  * ランダムイベントを管理するクラス
  */
 export class RandomEvents {
+  static _forcedSpeakers = [];
+
   static announce(title, message, participants = []) {
     showRandomEventModal({ title, message, participants });
   }
@@ -79,6 +81,10 @@ export class RandomEvents {
 
   static getEventSubject(eventKey, kind) {
     const subjects = {
+      "狩猟神": "狩女神の祝福",
+      "太陽神": "太陽神の寵愛",
+      "戦女神": "戦女神の啓示",
+      "地母神": "地母神の慈愛",
       cat: "猫との出会い",
       gold: "金貨の発見",
       strangeRain: "不思議な雨",
@@ -110,6 +116,10 @@ export class RandomEvents {
 
   static getEventMood(eventKey, kind) {
     const moods = {
+      "狩猟神": "mythic",
+      "太陽神": "mythic",
+      "戦女神": "mythic",
+      "地母神": "mythic",
       cat: "happy",
       gold: "gain",
       strangeRain: "gain",
@@ -272,10 +282,19 @@ export class RandomEvents {
     return group[style] || group[spiritSex === "男" ? "male" : "female"] || group.female;
   }
 
+  static addForcedSpeaker(character) {
+    if (!character) return;
+    if (!Array.isArray(this._forcedSpeakers)) this._forcedSpeakers = [];
+    if (!this._forcedSpeakers.includes(character)) {
+      this._forcedSpeakers.push(character);
+    }
+  }
+
   static runWithAnnouncement(village, phase, kind, runEvent) {
     const beforeState = this.captureVillagerState(village);
     const originalLog = village.log.bind(village);
     const logs = [];
+    this._forcedSpeakers = [];
 
     village.log = (msg) => {
       logs.push(String(msg));
@@ -289,7 +308,9 @@ export class RandomEvents {
       village.log = originalLog;
     }
 
-    const participants = this.collectChangedVillagers(village, beforeState)
+    const changedVillagers = this.collectChangedVillagers(village, beforeState);
+    const speakers = [...new Set([...changedVillagers, ...this._forcedSpeakers])];
+    const participants = speakers
       .map(p => this.participant(p, this.createEventLine(kind, p, eventKey)));
     const title = kind === "mythic" ? "神秘的なランダムイベント" :
       kind === "good" ? "良いランダムイベント" : "悪いランダムイベント";
@@ -626,6 +647,7 @@ export class RandomEvents {
 
         if (candidates.length > 0) {
           let a = this.randChoice(candidates);
+          this.addForcedSpeaker(a);
           
           v.security = clampValue(v.security - 12, 0, 100);
 
