@@ -7,6 +7,31 @@ import { openConversationModal } from "./conversation.js";
 import { showDictionaryEntry } from "./dictionary.js";
 import { getPortraitPath } from "./util.js";
 
+function appendDictionaryTerm(parent, term) {
+  const label = String(term || "").trim();
+  if (!label) return;
+
+  const span = document.createElement("span");
+  span.className = "dictionary-term";
+  span.tabIndex = 0;
+  span.textContent = label;
+  span.title = `${label}の辞書を表示`;
+  span.onmouseenter = () => showDictionaryEntry(label);
+  span.onfocus = () => showDictionaryEntry(label);
+  parent.appendChild(span);
+}
+
+function setDictionaryTerms(cell, terms) {
+  cell.textContent = "";
+  const list = Array.isArray(terms) ? terms.filter(Boolean) : [];
+  if (list.length === 0) return;
+
+  list.forEach((term, index) => {
+    if (index > 0) cell.appendChild(document.createTextNode(","));
+    appendDictionaryTerm(cell, term);
+  });
+}
+
 /**
  * メイン画面(村人一覧,資源パネルなど)を更新
  */
@@ -179,7 +204,7 @@ export function updateUI(v) {
 
     // 肉体特性
     let tdBod=document.createElement("td");
-    tdBod.textContent=person.bodyTraits.join(",");
+    setDictionaryTerms(tdBod, person.bodyTraits);
     tr.appendChild(tdBod);
 
     // 知力
@@ -209,12 +234,12 @@ export function updateUI(v) {
 
     // 精神特性
     let tdMind=document.createElement("td");
-    tdMind.textContent=person.mindTraits.join(",");
+    setDictionaryTerms(tdMind, person.mindTraits);
     tr.appendChild(tdMind);
 
     // 趣味
     let tdHobby=document.createElement("td");
-    tdHobby.textContent=person.hobby;
+    setDictionaryTerms(tdHobby, [person.hobby]);
     tr.appendChild(tdHobby);
 
     // 詳細(折り畳み)
@@ -377,7 +402,7 @@ export function updateUI(v) {
 
       // 肉体特性
       let tdBod = document.createElement("td");
-      tdBod.textContent = person.bodyTraits.join(",");
+      setDictionaryTerms(tdBod, person.bodyTraits);
       tr.appendChild(tdBod);
 
       // 知力
@@ -407,12 +432,12 @@ export function updateUI(v) {
 
       // 精神特性
       let tdMind = document.createElement("td");
-      tdMind.textContent = person.mindTraits.join(",");
+      setDictionaryTerms(tdMind, person.mindTraits);
       tr.appendChild(tdMind);
 
       // 趣味
       let tdHobby = document.createElement("td");
-      tdHobby.textContent = person.hobby;
+      setDictionaryTerms(tdHobby, [person.hobby]);
       tr.appendChild(tdHobby);
 
       // 詳細(折り畳み)
@@ -572,7 +597,7 @@ export function updateUI(v) {
 
         // 肉体特性
         let tdBod=document.createElement("td");
-        tdBod.textContent=person.bodyTraits.join(",");
+        setDictionaryTerms(tdBod, person.bodyTraits);
         tr.appendChild(tdBod);
 
         // 知力
@@ -602,12 +627,12 @@ export function updateUI(v) {
 
         // 精神特性
         let tdMind=document.createElement("td");
-        tdMind.textContent=person.mindTraits.join(",");
+        setDictionaryTerms(tdMind, person.mindTraits);
         tr.appendChild(tdMind);
 
         // 趣味
         let tdHobby=document.createElement("td");
-        tdHobby.textContent=person.hobby;
+        setDictionaryTerms(tdHobby, [person.hobby]);
         tr.appendChild(tdHobby);
 
         // 詳細(折り畳み)

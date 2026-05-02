@@ -18,7 +18,7 @@ export function doLoverCheck(village) {
   );
   if (candF.length===0||candM.length===0) {
     village.log("恋人判定:未婚男女なし");
-    return;
+    return false;
   }
   let f = randChoice(candF);
   let m = randChoice(candM);
@@ -26,17 +26,17 @@ export function doLoverCheck(village) {
   let dAge = m.bodyAge - f.bodyAge;
   if (dAge < -5 || dAge>9) {
     village.log("年齢差大きすぎ:恋人失敗");
-    return;
+    return false;
   }
   let dEth = m.eth - f.eth;
   if (dEth<-9||dEth>9) {
     village.log("倫理差大きすぎ:恋人失敗");
-    return;
+    return false;
   }
   let dChr = f.chr - m.chr;
   if (dChr<-12||dChr>12) {
     village.log("魅力差大きすぎ:恋人失敗");
-    return;
+    return false;
   }
   let p1=Math.min(100, m.sexdr*4);
   let p2=Math.min(100, f.sexdr*4);
@@ -47,8 +47,10 @@ export function doLoverCheck(village) {
     f.happiness=clampValue(f.happiness+50,0,100);
     m.happiness=clampValue(m.happiness+50,0,100);
     village.log(`${f.name}と${m.name}恋人成立(成功率${(sc*100).toFixed(1)}%)`);
+    return true;
   } else {
     village.log(`${f.name}と${m.name}恋愛失敗`);
+    return false;
   }
 }
 
