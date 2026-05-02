@@ -233,7 +233,13 @@ function convertObjectToVillager(obj) {
 
   vill.bodyTraits = Array.isArray(obj.bodyTraits) ? [...obj.bodyTraits] : [];
   vill.mindTraits = Array.isArray(obj.mindTraits) ? [...obj.mindTraits] : [];
-  vill.hobby = obj.hobby;
+  if (obj.hobby === "大食い") {
+    vill.hobby = "ドカ食い";
+  } else if (obj.hobby === "狩猟") {
+    vill.hobby = "ハンティング";
+  } else {
+    vill.hobby = obj.hobby;
+  }
   vill.relationships = Array.isArray(obj.relationships) ? [...obj.relationships] : [];
 
   vill.job = obj.job;

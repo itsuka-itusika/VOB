@@ -385,6 +385,7 @@ function doHunt(p, v) {
   if (p.bodyTraits.includes("飛行")) mul *= 1.2;
   if (p.mindTraits.includes("熟練狩人")) mul *= 1.3;
   if (p.mindTraits.includes("達人狩人")) mul *= 1.5;
+  if (p.hobby === "ハンティング" || p.hobby === "狩猟") mul *= 1.2;
 
   let amt = Math.round(base * mul);
 

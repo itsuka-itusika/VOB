@@ -14,6 +14,8 @@ export class HobbyEffects {
         msg = this.applyTraining(p, v);
         break;
       case "ドカ食い":
+      case "大食い":
+        p.hobby = "ドカ食い";
         msg = this.applyEating(p, v);
         break;
       case "露出":
@@ -45,9 +47,6 @@ export class HobbyEffects {
         break;
       case "瞑想":
         msg = this.applyMeditation(p, v);
-        break;
-      case "大食い":
-        msg = this.applyBigEating(p, v);
         break;
       case "美食":
         msg = this.applyFineDining(p, v);
@@ -86,6 +85,8 @@ export class HobbyEffects {
         msg = this.applyStargazing(p, v);
         break;
       case "狩猟":
+      case "ハンティング":
+        p.hobby = "ハンティング";
         msg = this.applyHuntingHobby(p, v);
         break;
       case "お茶会":
@@ -263,14 +264,6 @@ export class HobbyEffects {
     return `(瞑想:メンタル+25,魔素+${gain}${this.maybeRaiseStat(p, "mag", 0.3)})`;
   }
 
-  static applyBigEating(p, v) {
-    if (v.food < 6) return "(大食いしたが食料不足)";
-    v.food -= 6;
-    p.hp = clampValue(p.hp + 25, 0, 100);
-    p.happiness = clampValue(p.happiness + 5, 0, 100);
-    return `(大食い:食料-6,体力+25,幸福+5${this.maybeRaiseStat(p, "vit", 0.25)})`;
-  }
-
   static applyFineDining(p, v) {
     if (v.food < 8) return "(美食を楽しみたかったが食料不足)";
     v.food -= 8;
@@ -361,7 +354,7 @@ export class HobbyEffects {
     const gain = randInt(8, 16);
     p.hp = clampValue(p.hp - 8, 0, 100);
     v.food = clampValue(v.food + gain, 0, 99999);
-    return `(狩猟:体力-8,食料+${gain}${this.maybeRaiseStat(p, "cou", 0.25)}${this.maybeRaiseStat(p, "dex", 0.15)})`;
+    return `(ハンティング:体力-8,食料+${gain}${this.maybeRaiseStat(p, "cou", 0.25)}${this.maybeRaiseStat(p, "dex", 0.15)})`;
   }
 
   static applyTeaParty(p, v) {
