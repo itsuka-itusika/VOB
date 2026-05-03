@@ -354,17 +354,17 @@ function doFarm(p, v) {
   if (p.bodyTraits.includes("緑の指")) mul*=1.2;
 
   let amt=Math.round(base*mul);
+  let resourceLabel = "食料";
   
   // ミダスの奇跡の効果
   if (v.villageTraits.includes("ミダス")) {
     v.funds = clampValue(v.funds+amt, 0, 99999);
-    v.log(`${p.name}農作業:資金+${amt},体力-${tc},メンタル-${mc}`);
+    resourceLabel = "資金";
   } else {
     v.food = clampValue(v.food+amt, 0, 99999);
-    v.log(`${p.name}農作業:食料+${amt},体力-${tc},メンタル-${mc}`);
   }
 
-  let logMsg = `${p.name}農作業:食料+${amt},体力-${tc},メンタル-${mc}`;
+  let logMsg = `${p.name}農作業:${resourceLabel}+${amt},体力-${tc},メンタル-${mc}`;
 
   // ステータス上昇判定
   if (Math.random() < 0.05) {
@@ -609,8 +609,6 @@ function doGather(p, v) {
     p.mindTraits.push("森の知恵");
     v.log(`${p.name}採集:特性[森の知恵]獲得`);
   }
-
-  v.log(`${p.name}採集:食料+${f},資材+${mm},体力-${tc},メンタル-${mc}`);
 }
 
 function doHandiwork(p, v) {
