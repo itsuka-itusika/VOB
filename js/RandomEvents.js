@@ -503,26 +503,26 @@ const EVENT_SPEECH_TYPE_LINES = {
 
 function makeEventSpecificLines(c) {
   return speechTypeLines({
-    normalM: `${c.subject}か。${c.normalM}`,
-    politeM: `${c.subject}ですね。${c.politeM}`,
-    strongM: `${c.subject}だ！ ${c.strongM}`,
-    roughM: `${c.subject}だと？ ${c.roughM}`,
-    playfulM: `${c.subject}っすね！ ${c.playfulM}`,
-    darkM: `${c.subject}……${c.darkM}`,
-    coolM: `${c.subject}か。${c.coolM}`,
-    normalF: `${c.subject}ですね。${c.normalF}`,
-    politeF: `${c.subject}ですね。${c.politeF}`,
-    lady: `${c.subject}ですわね。${c.lady}`,
-    livelyF: `${c.subject}だ！ ${c.livelyF}`,
-    shyF: `${c.subject}……${c.shyF}`,
-    strongF: `${c.subject}ね！ ${c.strongF}`,
-    roughF: `${c.subject}じゃない。${c.roughF}`,
-    softF: `${c.subject}ですね。${c.softF}`,
-    cuteF: `${c.subject}だね。${c.cuteF}`,
-    coolF: `${c.subject}ね。${c.coolF}`,
-    neutral: `${c.subject}か。${c.neutral}`,
-    gal: `${c.subject}じゃん。${c.gal}`,
-    elder: `${c.subject}かのう。${c.elder}`
+    normalM: c.normalM,
+    politeM: c.politeM,
+    strongM: c.strongM,
+    roughM: c.roughM,
+    playfulM: c.playfulM,
+    darkM: c.darkM,
+    coolM: c.coolM,
+    normalF: c.normalF,
+    politeF: c.politeF,
+    lady: c.lady,
+    livelyF: c.livelyF,
+    shyF: c.shyF,
+    strongF: c.strongF,
+    roughF: c.roughF,
+    softF: c.softF,
+    cuteF: c.cuteF,
+    coolF: c.coolF,
+    neutral: c.neutral,
+    gal: c.gal,
+    elder: c.elder
   });
 }
 
