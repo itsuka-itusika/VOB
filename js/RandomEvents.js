@@ -1178,10 +1178,7 @@ export class RandomEvents {
     const speechType = this.getSpeechType(character);
     const eventLine = this.getLineBySpeechType(EVENT_LINES_BY_SPEECH_TYPE[eventKey], speechType, character);
     if (eventLine) {
-      return this.randChoice([
-        eventLine,
-        this.createSecondEventLine(eventKey, speechType, character)
-      ].filter(Boolean));
+      return this.resolveLineValue(eventLine);
     }
 
     const lines = {

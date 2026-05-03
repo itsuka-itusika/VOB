@@ -462,64 +462,10 @@ export function doMonthStartProcess(v) {
       return;
     }
     
-    // 通常の行動テーブル構築
-    let sa = p.spiritAge;
-    if (sa <= 9) {
-      p.jobTable = ["なし"];
-      p.actionTable = ["なし"];
-    } else if (sa <= 15) {
-      p.jobTable = ["学業", "鍛錬", "なし"];
-      p.actionTable = ["学業", "鍛錬", "休養", "余暇"];
-    } else {
-      // 基本の仕事テーブル（共通）
-      let commonJobs = [
-        "なし",
-        "農作業", "狩猟", "漁",
-        "伐採",
-        "採集", "内職", "行商",
-        "研究", "警備", "看護"
-      ];
-
-      // 性別に応じた仕事テーブル
-      if (p.bodySex === "男") {
-        p.jobTable = [
-          ...commonJobs,
-          "詩人", "神官"
-        ];
-      } else {
-        p.jobTable = [
-          ...commonJobs,
-          "踊り子", "シスター"
-        ];
-      }
-
-      // 性別に応じた行動テーブル
-      if (p.bodySex === "男") {
-        p.actionTable = [
-          "休養", "余暇",
-          ...p.jobTable
-        ];
-      } else {
-        p.actionTable = [
-          "休養", "余暇",
-          ...p.jobTable
-        ];
-      }
-    }
-
-    // 襲撃関連の行動追加（状態異常がない場合のみ）
-    if (v.villageTraits.includes("襲撃中")) {
-      p.actionTable = p.actionTable.filter(action => action !== "迎撃" && action !== "罠作成");
-      p.actionTable.push("迎撃", "罠作成");
-    }
-
-    // jobTableに現在のjobが含まれている場合は維持
-    if (p.jobTable.includes(currentJob)) {
-      p.job = currentJob;
-    }
+    refreshJobTable(p);
 
     // 現在の行動と仕事が一致している場合は維持
-    if (currentAction === currentJob) {
+    if (currentAction === currentJob && p.actionTable.includes(currentAction)) {
       p.action = currentAction;
     } else {
       // 現在の行動と仕事が一致していない場合は仕事と同じにする

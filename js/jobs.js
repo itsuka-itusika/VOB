@@ -10,18 +10,124 @@ import { refreshJobTable } from "./createVillagers.js";
 export function handleAllVillagerJobs(village) {
   village.log("【村人の行動フェーズ】");
 
-  village.villagers.forEach(p => {
-    let saboProb = 40 - p.ind * 2;
-    if (saboProb < 0) saboProb = 0;
+  const actionLogs = [];
+  const originalLog = village.log;
+  const writeLog = originalLog.bind(village);
 
-    let roll = randInt(1, 100);
-    // サボり判定
-    if (roll <= saboProb && p.action !== "休養" && p.action !== "余暇" && p.action !== "なし" && p.action !== "迎撃" && p.action !== "罠作成" && p.action !== "療養" && p.action !== "臨終") {
-      doSabori(p, village);
-    } else {
-      doJobAction(p, village);
-    }
+  village.log = (msg) => {
+    writeLog(msg);
+    actionLogs.push(String(msg));
+  };
+
+  try {
+    village.villagers.forEach(p => {
+      let saboProb = 40 - p.ind * 2;
+      if (saboProb < 0) saboProb = 0;
+
+      let roll = randInt(1, 100);
+      // サボり判定
+      if (roll <= saboProb && p.action !== "休養" && p.action !== "余暇" && p.action !== "なし" && p.action !== "迎撃" && p.action !== "罠作成" && p.action !== "療養" && p.action !== "臨終") {
+        doSabori(p, village);
+      } else {
+        doJobAction(p, village);
+      }
+    });
+  } finally {
+    village.log = originalLog;
+  }
+
+  showActionPhaseResultModal(village, actionLogs);
+}
+
+function showActionPhaseResultModal(village, messages) {
+  if (typeof document === "undefined" || messages.length === 0) return;
+
+  document.getElementById("actionPhaseOverlay")?.remove();
+  document.getElementById("actionPhaseModal")?.remove();
+
+  const overlay = document.createElement("div");
+  overlay.id = "actionPhaseOverlay";
+  overlay.style.cssText = `
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 2200;
+  `;
+
+  const modal = document.createElement("div");
+  modal.id = "actionPhaseModal";
+  modal.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(720px, calc(100vw - 32px));
+    max-height: min(76vh, 720px);
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    color: #222;
+    border: 1px solid #7a5c32;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    z-index: 2201;
+  `;
+
+  const header = document.createElement("div");
+  header.style.cssText = `
+    padding: 12px 16px;
+    font-weight: bold;
+    border-bottom: 1px solid #d8c7a8;
+    background: #f5ead7;
+  `;
+  header.textContent = `${village.year}年${village.month}月 行動フェーズ結果`;
+
+  const list = document.createElement("div");
+  list.style.cssText = `
+    padding: 10px 16px;
+    overflow-y: auto;
+    line-height: 1.55;
+  `;
+
+  messages.forEach(msg => {
+    const row = document.createElement("div");
+    row.style.cssText = `
+      padding: 6px 0;
+      border-bottom: 1px dotted #d8c7a8;
+      word-break: break-word;
+    `;
+    row.textContent = msg;
+    list.appendChild(row);
   });
+
+  const footer = document.createElement("div");
+  footer.style.cssText = `
+    padding: 10px 16px;
+    text-align: right;
+    border-top: 1px solid #d8c7a8;
+    background: #faf6ee;
+  `;
+
+  const closeButton = document.createElement("button");
+  closeButton.type = "button";
+  closeButton.textContent = "閉じる";
+  closeButton.style.cssText = `
+    padding: 6px 18px;
+    cursor: pointer;
+  `;
+
+  const close = () => {
+    overlay.remove();
+    modal.remove();
+  };
+  closeButton.addEventListener("click", close);
+  overlay.addEventListener("click", close);
+
+  footer.appendChild(closeButton);
+  modal.appendChild(header);
+  modal.appendChild(list);
+  modal.appendChild(footer);
+  document.body.appendChild(overlay);
+  document.body.appendChild(modal);
 }
 
 function doSabori(p, v) {
@@ -146,44 +252,13 @@ function calcBodyCost(base, vit) {
   val *= randFloat(0.9, 1.1);
   return Math.round(val);
 }
-function calcMindCost(base, ind) {
-  let val = base * (1 - (ind/100));
-  val *= randFloat(0.9, 1.1);
-  return Math.round(val);
-}
-
-/**
- * 仕事によるメンタル消費を計算
- */
-function calcMentalCost(person, jobData) {
-  // ワーカホリックは仕事のメンタル消費なし
-  if (person.mindTraits.includes("ワーカホリック")) {
+function calcMindCost(base, stat, person = null) {
+  if (person && person.mindTraits.includes("ワーカホリック")) {
     return 0;
   }
-
-  let cost = jobData.mentalCost || 0;
-  
-  // 既存の他の計算ロジックがあればそのまま維持
-  if (person.job === "休暇") {
-    cost = 0;
-  }
-  // ... その他の条件分岐があれば維持
-
-  return cost;
-}
-
-/**
- * 村人の仕事を処理
- */
-function handleVillagerJob(person, village) {
-  const jobData = JOB_DATA[person.job];
-  if (!jobData) return;
-
-  // メンタル消費を計算して適用
-  const mentalCost = calcMentalCost(person, jobData);
-  person.mp = clampValue(person.mp - mentalCost, 0, 100);
-
-  // ... 残りの仕事処理ロジック
+  let val = base * (1 - (stat/100));
+  val *= randFloat(0.9, 1.1);
+  return Math.round(val);
 }
 
 // -------------------------
@@ -240,7 +315,7 @@ function doLeisureJob(p, v) {
 
 function doStudy(p, v) {
   let tc=calcBodyCost(10, p.vit);
-  let mc=calcMindCost(10, p.ind);
+  let mc=calcMindCost(10, p.ind, p);
   p.hp=clampValue(p.hp-tc,0,100);
   p.mp=clampValue(p.mp-mc,0,100);
 
@@ -251,7 +326,7 @@ function doStudy(p, v) {
 
 function doTraining(p, v) {
   let tc=calcBodyCost(20, p.vit);
-  let mc=calcMindCost(15, p.ind);
+  let mc=calcMindCost(15, p.ind, p);
   p.hp=clampValue(p.hp-tc,0,100);
   p.mp=clampValue(p.mp-mc,0,100);
 
@@ -263,7 +338,7 @@ function doTraining(p, v) {
 
 function doFarm(p, v) {
   let tc=calcBodyCost(30, p.vit);
-  let mc=calcMindCost(15, p.ind);
+  let mc=calcMindCost(15, p.ind, p);
   p.hp=clampValue(p.hp-tc,0,100);
   p.mp=clampValue(p.mp-mc,0,100);
 
@@ -276,6 +351,7 @@ function doFarm(p, v) {
   if (p.mindTraits.includes("熟練農夫")) mul*=1.3;
   if (p.mindTraits.includes("達人農夫")) mul*=1.5;
   if (p.bodyTraits.includes("大地の巫女")) mul*=1.5;
+  if (p.bodyTraits.includes("緑の指")) mul*=1.2;
 
   let amt=Math.round(base*mul);
   
@@ -316,7 +392,7 @@ function doFarm(p, v) {
 
 function doLumber(p, v) {
   let tc=calcBodyCost(30, p.vit);
-  let mc=calcMindCost(15, p.ind);
+  let mc=calcMindCost(15, p.ind, p);
   p.hp=clampValue(p.hp-tc,0,100);
   p.mp=clampValue(p.mp-mc,0,100);
 
@@ -326,6 +402,7 @@ function doLumber(p, v) {
   if (v.villageTraits.includes("冷夏")) mul*=0.5;
   if (p.mindTraits.includes("熟練木樵")) mul*=1.3;
   if (p.mindTraits.includes("達人木樵")) mul*=1.5;
+  if (p.bodyTraits.includes("緑の指")) mul*=1.2;
 
   let amt=Math.round(base*mul);
   v.materials=clampValue(v.materials+amt,0,99999);
@@ -358,7 +435,7 @@ function doLumber(p, v) {
 
 function doHunt(p, v) {
   let tc=calcBodyCost(30, p.vit);
-  let mc=calcMindCost(15, p.ind);
+  let mc=calcMindCost(15, p.ind, p);
   p.hp=clampValue(p.hp-tc,0,100);
   p.mp=clampValue(p.mp-mc,0,100);
 
@@ -423,7 +500,7 @@ function doHunt(p, v) {
 
 function doFish(p, v) {
   let tc=calcBodyCost(30, p.vit);
-  let mc=calcMindCost(15, p.ind);
+  let mc=calcMindCost(15, p.ind, p);
   p.hp=clampValue(p.hp-tc,0,100);
   p.mp=clampValue(p.mp-mc,0,100);
 
@@ -490,7 +567,7 @@ function doFish(p, v) {
 
 function doGather(p, v) {
   let tc=calcBodyCost(15, p.vit);
-  let mc=calcMindCost(15, p.ind);
+  let mc=calcMindCost(15, p.ind, p);
   p.hp=clampValue(p.hp-tc,0,100);
   p.mp=clampValue(p.mp-mc,0,100);
 
@@ -500,6 +577,7 @@ function doGather(p, v) {
   if (v.villageTraits.includes("豊穣")) mul*=2;
   if (v.villageTraits.includes("秋"))   mul*=1.5;
   if (p.bodyTraits.includes("飛行")) mul*=1.2;
+  if (p.bodyTraits.includes("緑の指")) mul*=1.2;
   if (p.mindTraits.includes("森の知恵")) mul*=1.5;
 
   let f = Math.round(baseF*mul);
@@ -537,7 +615,7 @@ function doGather(p, v) {
 
 function doHandiwork(p, v) {
   let tc = calcBodyCost(15, p.vit);
-  let mc = calcMindCost(15, p.ind);
+  let mc = calcMindCost(15, p.ind, p);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
@@ -562,7 +640,7 @@ function doHandiwork(p, v) {
 
 function doMagicCraft(p, v) {
   let tc=calcBodyCost(15, p.vit);
-  let mc=calcMindCost(15, p.ind);
+  let mc=calcMindCost(15, p.ind, p);
   p.hp=clampValue(p.hp-tc,0,100);
   p.mp=clampValue(p.mp-mc,0,100);
 
@@ -575,8 +653,7 @@ function doMagicCraft(p, v) {
 
 function doResearchJob(p, v) {
   let tc = calcBodyCost(15, p.vit);
-  let val = 30*(1-(p.int/100))*randFloat(0.9,1.1);
-  let mc = Math.round(val);
+  let mc = calcMindCost(30, p.int, p);
 
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
@@ -609,8 +686,7 @@ function doResearchJob(p, v) {
 
 function doEducationJob(p, v) {
   let tc=calcBodyCost(15, p.vit);
-  let val=30*(1-(p.eth/100))*randFloat(0.9,1.1);
-  let mc=Math.round(val);
+  let mc=calcMindCost(30, p.eth, p);
 
   p.hp=clampValue(p.hp-tc,0,100);
   p.mp=clampValue(p.mp-mc,0,100);
@@ -634,8 +710,7 @@ function doEducationJob(p, v) {
 
 function doGuardJob(p, v) {
   let tc = calcBodyCost(15, p.vit);
-  let val = 30*(1-(p.cou/100))*randFloat(0.9,1.1);
-  let mc = Math.round(val);
+  let mc = calcMindCost(30, p.cou, p);
 
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
@@ -693,7 +768,7 @@ function doLastMomentsJob(p, v) {
 
 function doDancer(p, v) {
   let tc = calcBodyCost(20, p.vit);
-  let mc = calcBodyCost(20, p.sexdr);
+  let mc = calcMindCost(20, p.sexdr, p);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
@@ -734,7 +809,7 @@ function doDancer(p, v) {
 
 function doPoet(p, v) {
   let tc = calcBodyCost(20, p.vit);
-  let mc = calcBodyCost(20, p.ind);
+  let mc = calcMindCost(20, p.ind, p);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
@@ -771,7 +846,7 @@ function doPoet(p, v) {
 
 function doNurse(p, v) {
   let tc = calcBodyCost(20, p.vit);
-  let mc = calcBodyCost(20, p.eth);
+  let mc = calcMindCost(20, p.eth, p);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
@@ -817,7 +892,7 @@ function doNurse(p, v) {
 
 function doSister(p, v) {
   let tc = calcBodyCost(10, p.vit);
-  let mc = calcBodyCost(30, p.eth);
+  let mc = calcMindCost(30, p.eth, p);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
@@ -856,7 +931,7 @@ function doSister(p, v) {
 
 function doPriest(p, v) {
   let tc = calcBodyCost(10, p.vit);
-  let mc = calcBodyCost(30, p.eth);
+  let mc = calcMindCost(30, p.eth, p);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
@@ -895,7 +970,7 @@ function doPriest(p, v) {
 
 function doTrading(p, v) {
   let tc = calcBodyCost(20, p.vit);
-  let mc = calcMindCost(20, p.ind);
+  let mc = calcMindCost(20, p.ind, p);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
@@ -926,7 +1001,7 @@ function doMassage(p, v) {
   let logMsg;
 
   if (p.bodySex === "男") {
-    mc = calcMindCost(20, p.ind);
+    mc = calcMindCost(20, p.ind, p);
     heal = Math.round(20 * p.str/20 * p.dex/20);
     logMsg = `${p.name}あんま:体力-${tc},メンタル-${mc}`;
     
@@ -940,7 +1015,7 @@ function doMassage(p, v) {
       logMsg += ",器用+1";
     }
   } else {
-    mc = calcMindCost(20, p.sexdr);
+    mc = calcMindCost(20, p.sexdr, p);
     heal = Math.round(20 * p.chr/20 * p.sexdr/20);
     logMsg = `${p.name}あんま:体力-${tc},メンタル-${mc}`;
     
@@ -981,7 +1056,7 @@ function doMassage(p, v) {
 
 function doMiko(p, v) {
   let tc = calcBodyCost(20, p.vit);
-  let mc = calcMindCost(20, p.sexdr);
+  let mc = calcMindCost(20, p.sexdr, p);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
@@ -1005,7 +1080,7 @@ function doMiko(p, v) {
 
 function doBunny(p, v) {
   let tc = calcBodyCost(20, p.vit);
-  let mc = calcMindCost(20, p.sexdr);
+  let mc = calcMindCost(20, p.sexdr, p);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
@@ -1038,7 +1113,7 @@ function doBunny(p, v) {
 
 function doAlchemy(p, v) {
   let tc = calcBodyCost(20, p.vit);
-  let mc = calcMindCost(20, p.int);
+  let mc = calcMindCost(20, p.int, p);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
@@ -1065,7 +1140,7 @@ function doAlchemy(p, v) {
 
 function doCopyBook(p, v) {
   let tc = calcBodyCost(20, p.vit);
-  let mc = calcMindCost(20, p.ind);
+  let mc = calcMindCost(20, p.ind, p);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
@@ -1092,7 +1167,7 @@ function doCopyBook(p, v) {
 
 function doWeaving(p, v) {
   let tc = calcBodyCost(20, p.vit);
-  let mc = calcMindCost(20, p.ind);
+  let mc = calcMindCost(20, p.ind, p);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
@@ -1116,7 +1191,7 @@ function doWeaving(p, v) {
 
 function doBrewing(p, v) {
   let tc = calcBodyCost(20, p.vit);
-  let mc = calcMindCost(20, p.ind);
+  let mc = calcMindCost(20, p.ind, p);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 

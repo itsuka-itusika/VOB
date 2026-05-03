@@ -746,6 +746,7 @@ export function assignBodyMindTraits(v) {
     { name: "聖女の輝き", condition: (v)=>(v.bodySex==="女" && v.eth>=23 && v.sexdr<=12), chance:0.5, target:"body" },
     { name: "酒豪", condition: (v)=>(v.vit>=25 && v.chr>=16 && v.sexdr>=18), chance:0.1, target:"body" },
     { name: "繊細な指", condition: (v)=>(v.dex>=22 && v.chr>=22), chance:0.1, target:"body" },
+    { name: "緑の指", condition: (v)=>(v.mag>=21), chance:0.15, target:"body" },
     { name: "色白", condition: (v)=>(v.vit<=12 && v.chr>=25), chance:0.1, target:"body" },
     { name: "寒がり", condition: (v)=>(v.str<=12 && v.vit<=12), chance:0.1, target:"mind" },
     { name: "大食い", condition: (v) =>(v.vit >= 22 && v.chr<=16), chance:0.1, target:"mind" },
