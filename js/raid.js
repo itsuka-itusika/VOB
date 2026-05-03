@@ -105,7 +105,7 @@ const RAIDER_TYPES = [
       str: [20, 30],
       vit: [5, 15],
       dex: [3, 8],
-      mag: [3, 12],
+      mag: [10, 18],
       chr: [3, 12],
       int: [1, 5],
       ind: [1, 5],
@@ -299,6 +299,7 @@ export function startRaidEvent(village) {
         ...raiderType.forcedBodyTraits,
         randChoice(raiderType.bodyTraits)
       ];
+      e.mag = randInt(10, Math.min(18, Math.floor(e.str) - 1));
       // 狼の趣味を設定
       e.hobby = randChoice(raiderType.hobbies);
     }
