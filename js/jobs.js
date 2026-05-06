@@ -289,6 +289,12 @@ function doRestJob(p, v) {
   hpG=Math.floor(hpG*multi);
   mpG=Math.floor(mpG*multi);
 
+  if (v.buildingFlags && v.buildingFlags.hasPublicBath) {
+    hpG += 10;
+    mpG += 10;
+    msg += "(公衆浴場)";
+  }
+
   p.hp=clampValue(p.hp+hpG,0,100);
   p.mp=clampValue(p.mp+mpG,0,100);
 
@@ -303,14 +309,20 @@ function doRestJob(p, v) {
 
 function doLeisureJob(p, v) {
   let base=50;
+  let bathMsg = "";
   if (p.mindTraits.includes("ニート")) {
     base=100;
     p.happiness=clampValue(p.happiness+20,0,100);
   }
+  if (v.buildingFlags && v.buildingFlags.hasPublicBath) {
+    base += 10;
+    p.hp=clampValue(p.hp+10,0,100);
+    bathMsg = ",体力+10(公衆浴場)";
+  }
   p.mp=clampValue(p.mp+base,0,100);
 
   let hobbyMsg = HobbyEffects.apply(p, v);
-  v.log(`${p.name}余暇:メンタル+${base}${hobbyMsg}`);
+  v.log(`${p.name}余暇:メンタル+${base}${bathMsg}${hobbyMsg}`);
 }
 
 function doStudy(p, v) {

@@ -69,15 +69,16 @@ export function onSelectMiracleChange(village) {
   // 特定のIDは対象選択が必要
   if (["3","6","7","11","12","13"].includes(mid)) {
     if (mid==="3"||mid==="12"||mid==="13") {
-      div.appendChild(createVillagerSelect("targetA", village));
-      div.appendChild(createVillagerSelect("targetB", village));
+      const selectOptions = mid === "12" ? { normalExchangeOnly: true } : {};
+      div.appendChild(createVillagerSelect("targetA", village, selectOptions));
+      div.appendChild(createVillagerSelect("targetB", village, selectOptions));
     } else {
       div.appendChild(createVillagerSelect("targetA", village));
     }
   }
 }
 
-function createVillagerSelect(id, village) {
+function createVillagerSelect(id, village, options = {}) {
   let sel=document.createElement("select");
   sel.id=id;
   let op0=document.createElement("option");
@@ -86,12 +87,18 @@ function createVillagerSelect(id, village) {
   sel.appendChild(op0);
 
   // 村人を追加
-  village.villagers.forEach(vv=>{
+  village.villagers
+    .filter(vv => !options.normalExchangeOnly || isNormalExchangeCandidate(vv, village))
+    .forEach(vv=>{
     let opp=document.createElement("option");
     opp.value=vv.name;
     opp.textContent=vv.name;
     sel.appendChild(opp);
   });
+
+  if (options.normalExchangeOnly) {
+    return sel;
+  }
 
   // 訪問者を追加
   village.visitors.forEach(vv=>{
@@ -110,6 +117,10 @@ function createVillagerSelect(id, village) {
   });
 
   return sel;
+}
+
+function isNormalExchangeCandidate(person, village) {
+  return village.villagers.includes(person);
 }
 
 /**
@@ -257,7 +268,7 @@ export function performMiracle(village) {
             return;
           }
           // 通常の交換は村人同士のみ
-          if (!village.villagers.includes(vA) || !village.villagers.includes(vB)) {
+          if (!isNormalExchangeCandidate(vA, village) || !isNormalExchangeCandidate(vB, village)) {
             village.log("【交換の奇跡】村人以外は対象外です");
             village.mana+=cost;
             return;

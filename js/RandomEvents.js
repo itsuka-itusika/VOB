@@ -18,7 +18,7 @@ const EVENT_KIND_TITLES = {
 };
 
 const EVENT_POOLS = {
-  good: ["cat", "gold", "strangeRain", "fireworks", "menFriendship", "lover", "yuri", "tattoo", "fashion", "muscle", "selfPleasure"],
+  good: ["cat", "gold", "strangeRain", "fireworks", "hotSpring", "menFriendship", "lover", "yuri", "tattoo", "fashion", "muscle", "selfPleasure"],
   bad: ["storm", "downpour", "heat", "fire", "thief", "rats", "lightning1", "lightning2", "snow", "fight", "drunk"]
 };
 
@@ -31,6 +31,7 @@ const EVENT_SUBJECTS = {
   gold: "金貨の発見",
   strangeRain: "不思議な雨",
   fireworks: "花火師の来訪",
+  hotSpring: "秘湯発見",
   menFriendship: "男同士の友情",
   lover: "恋の気配",
   yuri: "百合の恋",
@@ -60,6 +61,7 @@ const EVENT_MOODS = {
   gold: "gain",
   strangeRain: "gain",
   fireworks: "happy",
+  hotSpring: "happy",
   menFriendship: "friendship",
   lover: "romance",
   yuri: "romance",
@@ -1103,6 +1105,7 @@ const EVENT_SECOND_LINE_BASES = {
   gold: "思わぬ拾い物で村に余裕ができる",
   strangeRain: "空を見上げても理由は分からないが食料は食料だ",
   fireworks: "夜空が明るくなって、皆の顔も緩んでいる",
+  hotSpring: "湯けむりの奥から、村の新しい楽しみが見つかった",
   menFriendship: "こういう相手がいると少し強くなれる気がする",
   lover: "あの人のことが妙に頭から離れない",
   yuri: "この気持ちは相手が女でも変わらない",
@@ -1508,6 +1511,16 @@ export class RandomEvents {
           p.happiness = clampValue(p.happiness + inc, 0, 100);
         });
         v.log(`花火師来訪:村全体幸福+${inc}`);
+        break;
+      }
+      case "hotSpring": {
+        const hpGain = 15;
+        v.villagers.forEach(p => {
+          p.hp = clampValue(p.hp + hpGain, 0, 100);
+        });
+        if (!v.buildingFlags) v.buildingFlags = {};
+        v.buildingFlags.canBuildPublicBath = true;
+        v.log(`秘湯発見:全員体力+${hpGain},公衆浴場建設解放`);
         break;
       }
       case "menFriendship": {

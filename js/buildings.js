@@ -149,6 +149,21 @@ export const BUILDINGS = [
       village.building += 20;
       village.log("水車小屋建設完了: 規模+20");
     }
+  },
+  {
+    id: "publicBath",
+    name: "公衆浴場",
+    materials: 80,
+    funds: 80,
+    tech: 50,
+    desc: "秘湯発見で解放。休養と余暇の回復量が上がる。規模+20",
+    isUnlocked: (village) => !!(village.buildingFlags && village.buildingFlags.canBuildPublicBath),
+    effect: (village) => {
+      village.building += 20;
+      if (!village.buildingFlags) village.buildingFlags = {};
+      village.buildingFlags.hasPublicBath = true;
+      village.log("公衆浴場建設完了: 休養と余暇の回復量上昇、規模+20");
+    }
   }
 ];
 
@@ -201,7 +216,7 @@ export function openBuildingModal(village) {
   }
 
   // 建築物リストを表示
-  BUILDINGS.forEach(b => {
+  BUILDINGS.filter(b => !b.isUnlocked || b.isUnlocked(village)).forEach(b => {
     const div = document.createElement("div");
     div.className = "building-item";
     
