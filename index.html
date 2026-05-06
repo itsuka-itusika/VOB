@@ -73,6 +73,51 @@ button {
   margin-right: 6px;
   cursor: pointer;
 }
+.top-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.action-buttons {
+  flex: 1 1 auto;
+}
+.message-window {
+  flex: 1 1 520px;
+  min-height: 0;
+  max-height: 96px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #b8a36d;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+.message-item {
+  border-top: 1px dotted #d8c7a8;
+  padding: 3px 0;
+}
+.message-item:first-of-type {
+  border-top: 0;
+}
+.message-item.warning {
+  color: #8a4b00;
+}
+.message-item.danger {
+  color: #a40000;
+  font-weight: bold;
+}
+.message-empty {
+  color: #666;
+}
+@media (max-width: 760px) {
+  .top-actions {
+    flex-direction: column;
+  }
+  .message-window {
+    flex-basis: auto;
+    width: calc(100% - 18px);
+  }
+}
 table {
   width: 100%;
   border-collapse: collapse;
@@ -740,16 +785,23 @@ section h2 {
     <h2>村情報</h2>
     <div class="resource-panel" id="resourcePanel"></div>
 
-    <!-- 追加: セーブ/ロード ボタン群 -->
-    <button id="autoAssignButton" onclick="onAutoAssignJobs()">自動割り振り</button>
-    <button id="nextTurnButton" onclick="onNextTurn()">次の月へ</button>
-    <button onclick="openMiracleModal()">奇跡の行使</button>
-    <button onclick="openBuildingModal()">建築</button>
-    <button onclick="onSaveAsJsonFile()">JSON保存</button>
-    <button onclick="onLoadFromJsonFile()">JSON読込</button>
-    <button onclick="onSaveToLocalStorage()">ローカル保存</button>
-    <button onclick="onLoadFromLocalStorage()">ローカル読込</button>
-    <button onclick="window.open('Readme.txt', '_blank')" style="margin-left: 0px;">更新履歴・説明</button>
+    <div class="top-actions">
+      <div class="action-buttons">
+        <!-- 追加: セーブ/ロード ボタン群 -->
+        <button id="autoAssignButton" onclick="onAutoAssignJobs()">自動割り振り</button>
+        <button id="nextTurnButton" onclick="onNextTurn()">次の月へ</button>
+        <button onclick="openMiracleModal()">奇跡の行使</button>
+        <button onclick="openBuildingModal()">建築</button>
+        <button onclick="onSaveAsJsonFile()">JSON保存</button>
+        <button onclick="onLoadFromJsonFile()">JSON読込</button>
+        <button onclick="onSaveToLocalStorage()">ローカル保存</button>
+        <button onclick="onLoadFromLocalStorage()">ローカル読込</button>
+        <button onclick="window.open('Readme.txt', '_blank')" style="margin-left: 0px;">更新履歴・説明</button>
+      </div>
+      <div class="message-window" id="messageWindow">
+        <div class="message-empty">警告はありません</div>
+      </div>
+    </div>
     <!-- ファイル読込用 input (非表示) -->
     <input type="file" id="fileInput" style="display:none;" accept=".json">
   </section>
