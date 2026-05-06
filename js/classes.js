@@ -38,6 +38,7 @@ export class Village {
 
     // 訪問者配列を追加
     this.visitors = [];
+    this.visitorLimit = 1;
 
     // 建築物配列を追加
     this.buildings = [];

@@ -23,7 +23,7 @@ export const BUILDINGS = [
     materials: 50,
     funds: 50,
     tech: 0,
-    desc: "娯楽施設。詩人・踊り子の効果1.2倍、訪問者最大2人、女性限定「バニー」解放。規模+20",
+    desc: "娯楽施設。詩人・踊り子の効果1.2倍、毎月の訪問者判定枠が最大2人、女性限定「バニー」解放。規模+20",
     effect: (village) => {
       village.building += 20;
       // 訪問者の最大人数を2人に設定
@@ -33,7 +33,7 @@ export const BUILDINGS = [
       village.buildingFlags.hasTavern = true;
       // 村人の仕事テーブルを更新
       village.villagers.forEach(v => refreshJobTable(v));
-      village.log("酒場建設完了: 詩人・踊り子の効果1.2倍、訪問者最大2人、女性限定「バニー」解放、規模+20");
+      village.log("酒場建設完了: 詩人・踊り子の効果1.2倍、毎月の訪問者判定枠が最大2人、女性限定「バニー」解放、規模+20");
     }
   },
   {

@@ -6,7 +6,6 @@ const JOB_LEISURE = "\u4f59\u6687";
 const JOB_HEAL = "\u7642\u990a";
 const JOB_LAST_MOMENTS = "\u81e8\u7d42";
 const TRAIT_CRITICAL = "\u5371\u7be4";
-const TRAIT_WOUNDED = "\u8ca0\u50b7";
 const TRAIT_PACIFIST = "\u975e\u6226\u4e3b\u7fa9";
 const TRAIT_UNDER_RAID = "\u8972\u6483\u4e2d";
 const ACTION_DEFEND = "\u8fce\u6483";
@@ -38,7 +37,8 @@ const JOB_FUNDS_SET = new Set([
   "\u6a5f\u7e54\u308a"
 ]);
 const JOB_RECOVERY_SET = new Set([
-  "\u770b\u8b77"
+  "\u770b\u8b77",
+  "\u3042\u3093\u307e"
 ]);
 const ACTION_RECOVERY_SET = [
   "\u7642\u990a",
@@ -52,7 +52,7 @@ const JOB_WEIGHTS = {
   "\u5b66\u696d": { int: 2, ind: 2, eth: 0.5 },
   "\u935b\u932c": { str: 2, vit: 1.5, cou: 1.5 },
   "\u8fb2\u4f5c\u696d": { vit: 2.1, str: 1.1, ind: 1.1 },
-  "\u4f10\u63a1": { str: 2.05, vit: 1.55, cou: 0.5 },
+  "\u4f10\u63a1": { str: 2.05, ind: 1.55, cou: 0.5 },
   "\u72e9\u731f": { str: 2.1, cou: 2.1, vit: 0.35 },
   "\u6f01": { vit: 2.15, cou: 1.85, int: 0.35 },
   "\u63a1\u96c6": { dex: 1.7, int: 1.7, ind: 1.1 },
@@ -82,12 +82,12 @@ const JOB_BASE_SCORES = {
   "\u72e9\u731f": 14,
   "\u6f01": 14,
   "\u63a1\u96c6": 18,
-  "\u5185\u8077": 14,
-  "\u9b54\u6cd5\u7d30\u5de5": 12,
-  "\u884c\u5546": 12,
-  "\u932c\u91d1\u8853": 12,
-  "\u5199\u672c": 12,
-  "\u6a5f\u7e54\u308a": 14,
+  "\u5185\u8077": 2,
+  "\u9b54\u6cd5\u7d30\u5de5": 0,
+  "\u884c\u5546": 0,
+  "\u932c\u91d1\u8853": 0,
+  "\u5199\u672c": 0,
+  "\u6a5f\u7e54\u308a": 2,
   "\u91b8\u9020": 14,
   "\u8b66\u5099": -8,
   "\u8e0a\u308a\u5b50": -8,
@@ -160,6 +160,16 @@ function getPriorityBonus(job, context) {
   }
   if (JOB_RECOVERY_SET.has(job)) {
     bonus += context.recoverySeverity * 85;
+  }
+  if (JOB_MATERIAL_SET.has(job)) {
+    bonus += context.materialSeverity * 55;
+  }
+  if (JOB_FUNDS_SET.has(job)) {
+    bonus -= 24;
+    bonus += Math.max(0, context.fundsSeverity - 1.05) * 45;
+    if (context.foodSeverity > 0.35 || context.materialSeverity > 0.35 || context.recoverySeverity > 0.35) {
+      bonus -= 18;
+    }
   }
 
   return bonus;
@@ -285,51 +295,86 @@ function getDefenderScore(person) {
 
 function getTrapScore(person) {
   return (
-    (Number(person.dex) || 0) * 2.4
-    + (Number(person.int) || 0) * 2.2
-    + (Number(person.ind) || 0) * 0.9
+    (Number(person.dex) || 0) * 2.65
+    + (Number(person.int) || 0) * 2.45
+    + (Number(person.ind) || 0) * 1.0
     + (Number(person.cou) || 0) * 0.4
-    + (Number(person.hp) || 0) * 0.2
-  ) * getHealthFactor(person);
+    + (Number(person.mp) || 0) * 0.1
+  );
 }
 
-function chooseRaidAssignment(person) {
+function getRaidAssignmentProfile(person) {
   refreshJobTable(person);
 
   const normal = chooseAssignment(person, null, null);
   const bodyTraits = Array.isArray(person.bodyTraits) ? person.bodyTraits : [];
 
-  if (bodyTraits.includes(TRAIT_CRITICAL) || person.hp <= 33) {
-    return normal;
+  const canDefend = canUseAction(person, ACTION_DEFEND);
+  const canTrap = canUseAction(person, ACTION_TRAP);
+
+  return {
+    person,
+    normal,
+    forcedNormal: bodyTraits.includes(TRAIT_CRITICAL),
+    canDefend,
+    canTrap,
+    defenderScore: canDefend ? getDefenderScore(person) : -Infinity,
+    trapScore: canTrap ? getTrapScore(person) : -Infinity
+  };
+}
+
+function getMinimumDefenders(village, profiles) {
+  const enemyCount = Array.isArray(village.raidEnemies) ? village.raidEnemies.length : 0;
+  const activeProfiles = profiles.filter(profile => !profile.forcedNormal && (profile.canDefend || profile.canTrap));
+  const defenderOptions = activeProfiles.filter(profile => profile.canDefend && Number.isFinite(profile.defenderScore));
+
+  if (defenderOptions.length === 0 || activeProfiles.length === 0) {
+    return 0;
   }
 
-  if (bodyTraits.includes(TRAIT_WOUNDED) && person.hp <= 55) {
-    return normal;
-  }
+  return Math.min(
+    defenderOptions.length,
+    Math.max(1, Math.ceil(Math.min(enemyCount || 1, activeProfiles.length) / 2))
+  );
+}
 
-  if (!canUseAction(person, ACTION_DEFEND) && !canUseAction(person, ACTION_TRAP)) {
-    return normal;
-  }
+function buildRaidAssignments(village, targets) {
+  const assignments = new Map();
+  const profiles = targets.map(person => getRaidAssignmentProfile(person));
+  const minimumDefenders = getMinimumDefenders(village, profiles);
+  const defenderSlots = new Set(
+    profiles
+      .filter(profile => !profile.forcedNormal && profile.canDefend && Number.isFinite(profile.defenderScore))
+      .sort((a, b) => b.defenderScore - a.defenderScore)
+      .slice(0, minimumDefenders)
+      .map(profile => profile.person)
+  );
 
-  const defenderScore = canUseAction(person, ACTION_DEFEND) ? getDefenderScore(person) : -Infinity;
-  const trapScore = canUseAction(person, ACTION_TRAP) ? getTrapScore(person) : -Infinity;
-
-  if (person.hp <= 48 || person.mp <= 20) {
-    if (trapScore >= 90 && trapScore > defenderScore) {
-      return { job: normal.job, action: ACTION_TRAP };
+  profiles.forEach(profile => {
+    if (profile.forcedNormal || (!profile.canDefend && !profile.canTrap)) {
+      assignments.set(profile.person, profile.normal);
+      return;
     }
-    return normal;
-  }
 
-  if (trapScore >= 74 && trapScore >= defenderScore * 0.88) {
-    return { job: normal.job, action: ACTION_TRAP };
-  }
+    if (defenderSlots.has(profile.person)) {
+      assignments.set(profile.person, { job: profile.normal.job, action: ACTION_DEFEND });
+      return;
+    }
 
-  if (defenderScore >= 82) {
-    return { job: normal.job, action: ACTION_DEFEND };
-  }
+    if (profile.canTrap && profile.trapScore >= 68 && profile.trapScore >= profile.defenderScore * 0.78) {
+      assignments.set(profile.person, { job: profile.normal.job, action: ACTION_TRAP });
+      return;
+    }
 
-  return normal;
+    if (profile.canDefend && profile.defenderScore >= 82) {
+      assignments.set(profile.person, { job: profile.normal.job, action: ACTION_DEFEND });
+      return;
+    }
+
+    assignments.set(profile.person, profile.normal);
+  });
+
+  return assignments;
 }
 
 export function autoAssignJobs(village) {
@@ -340,13 +385,29 @@ export function autoAssignJobs(village) {
   let trapMakers = 0;
   let nonParticipants = 0;
 
-  village.villagers.forEach(person => {
-    const next = raidMode ? chooseRaidAssignment(person) : chooseAssignment(person, village, priorityContext);
-    if (person.job !== next.job || person.action !== next.action) {
-      changed++;
+  const targets = raidMode
+    ? village.villagers
+    : village.villagers.filter(person => person.job === JOB_NONE);
+  const raidAssignments = raidMode ? buildRaidAssignments(village, targets) : null;
+
+  targets.forEach(person => {
+    const currentJob = person.job;
+    const currentAction = person.action;
+    const next = raidMode ? raidAssignments.get(person) : chooseAssignment(person, village, priorityContext);
+
+    if (raidMode) {
+      person.job = currentJob;
+      if (currentAction !== next.action) {
+        changed++;
+      }
+      person.action = next.action;
+    } else {
+      if (person.job !== next.job || person.action !== next.action) {
+        changed++;
+      }
+      person.job = next.job;
+      person.action = next.action;
     }
-    person.job = next.job;
-    person.action = next.action;
 
     if (raidMode) {
       if (person.action === ACTION_DEFEND) defenders++;

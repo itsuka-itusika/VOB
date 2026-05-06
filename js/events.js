@@ -118,6 +118,12 @@ export function doRandomEventPost(village) {
   RandomEvents.execute(village, "後");
 }
 
+function getVisitorLimit(village) {
+  const savedLimit = Number(village.visitorLimit) || 1;
+  const tavernLimit = village.buildingFlags && village.buildingFlags.hasTavern ? 2 : 1;
+  return Math.max(1, savedLimit, tavernLimit);
+}
+
 // -------------------------
 // 月末処理
 // -------------------------
@@ -418,11 +424,16 @@ export function doMonthStartProcess(v) {
   // 既存の訪問者をクリア
   v.visitors = [];
 
-  // 50%の確率で訪問者を生成
-  if (Math.random() < 0.5) {
-    let visitor = createRandomVisitor();
-    v.visitors.push(visitor);
-    v.log(`訪問者 ${visitor.name} が村を訪れました`);
+  const visitorLimit = getVisitorLimit(v);
+  v.visitorLimit = visitorLimit;
+
+  // 各訪問者枠ごとに50%の確率で訪問者を生成
+  for (let i = 0; i < visitorLimit; i++) {
+    if (Math.random() < 0.5) {
+      let visitor = createRandomVisitor();
+      v.visitors.push(visitor);
+      v.log(`訪問者 ${visitor.name} が村を訪れました`);
+    }
   }
 
   // 全村人の行動テーブルを再構築
@@ -589,6 +600,24 @@ function showSeasonChangeDialog(season) {
     "秋": "実りの秋を迎え、収穫の季節となりました。",
     "冬": "寒さが厳しくなり、静かな季節となりました。"
   };
+  let tips = {
+    "春": [
+      "大きな補正は少ない安定した季節です。",
+      "食料や資材を整え、夏以降に備えるのに向いています。"
+    ],
+    "夏": [
+      "夏至祭では体力・メンタル・幸福が回復し、結婚判定があります。",
+      "ランダムイベントの猛暑や冷夏には注意してください。"
+    ],
+    "秋": [
+      "農作業と採集の生産量が1.5倍になります。",
+      "冬に備えて食料と資材を厚めに蓄える好機です。"
+    ],
+    "冬": [
+      "農作業の生産量が0.5倍、狩猟の生産量が1.2倍になります。",
+      "月末に村人1人あたり資材10を消費します。資材0だと凍えが発生します。"
+    ]
+  };
 
   let dialog = document.createElement("div");
   dialog.style.cssText = `
@@ -621,6 +650,20 @@ function showSeasonChangeDialog(season) {
     line-height: 1.5;
   `;
 
+  let tipList = document.createElement("ul");
+  tipList.style.cssText = `
+    margin: 0 0 1.5em 0;
+    padding-left: 1.2em;
+    text-align: left;
+    line-height: 1.5;
+    color: #f0f0f0;
+  `;
+  (tips[season] || []).forEach(tip => {
+    const item = document.createElement("li");
+    item.textContent = tip;
+    tipList.appendChild(item);
+  });
+
   let closeButton = document.createElement("button");
   closeButton.textContent = "閉じる";
   closeButton.style.cssText = `
@@ -638,6 +681,7 @@ function showSeasonChangeDialog(season) {
 
   dialog.appendChild(seasonText);
   dialog.appendChild(message);
+  dialog.appendChild(tipList);
   dialog.appendChild(closeButton);
   document.body.appendChild(dialog);
 

@@ -18,7 +18,7 @@ const EVENT_KIND_TITLES = {
 };
 
 const EVENT_POOLS = {
-  good: ["cat", "gold", "strangeRain", "fireworks", "hotSpring", "menFriendship", "lover", "yuri", "tattoo", "fashion", "muscle", "selfPleasure"],
+  good: ["cat", "gold", "strangeRain", "fireworks", "hotSpring", "hobbyFriends", "menFriendship", "lover", "yuri", "tattoo", "fashion", "muscle", "selfPleasure"],
   bad: ["storm", "downpour", "heat", "fire", "thief", "rats", "lightning1", "lightning2", "snow", "fight", "drunk"]
 };
 
@@ -32,6 +32,7 @@ const EVENT_SUBJECTS = {
   strangeRain: "不思議な雨",
   fireworks: "花火師の来訪",
   hotSpring: "秘湯発見",
+  hobbyFriends: "趣味仲間",
   menFriendship: "男同士の友情",
   lover: "恋の気配",
   yuri: "百合の恋",
@@ -62,6 +63,7 @@ const EVENT_MOODS = {
   strangeRain: "gain",
   fireworks: "happy",
   hotSpring: "happy",
+  hobbyFriends: "friendship",
   menFriendship: "friendship",
   lover: "romance",
   yuri: "romance",
@@ -643,6 +645,29 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     neutral: "友情は性別よりも相性だな。よい縁だ。",
     gal: "男同士の友情って熱いじゃん。青春って感じ！",
     elder: "男の友情はええぞ。長く残る縁になるわい。"
+  }),
+  hobbyFriends: makeEventSpecificLines({
+    subject: "趣味仲間",
+    normalM: "同じ趣味の相手がいると、話が早いな。",
+    politeM: "同じ楽しみを分かち合える方がいるのは、ありがたいことです。",
+    strongM: "いいじゃないか！ 好きなことを語れる仲間は貴重だ！",
+    roughM: "へっ、こいつとは趣味の話が合うじゃねえか。",
+    playfulM: "趣味仲間できちゃったっすね。これは語り明かせるっす！",
+    darkM: "同じものを好きな相手がいると、少しだけ息がしやすい。",
+    coolM: "趣味の一致は関係構築に有効だ。悪くない。",
+    normalF: "同じ趣味の人がいると、余暇がもっと楽しみになりますね。",
+    politeF: "好きなものを語り合える相手がいるのは、素敵です。",
+    lady: "趣味を語り合える方がいるなんて、よい縁ですわ。",
+    livelyF: "同じ趣味の仲間だ！ これからもっと楽しくなりそう！",
+    shyF: "お、同じ趣味の話なら……私も少し話せそうです。",
+    strongF: "趣味が合う相手は大事よ。遠慮なく語れるもの。",
+    roughF: "趣味が合うじゃない。ちょっと見直したわ。",
+    softF: "同じ楽しみを分け合えるのは、うれしいですね。",
+    cuteF: "趣味仲間っていいね。次の余暇が楽しみかも。",
+    coolF: "趣味の一致ね。会話の取っかかりとしては十分だわ。",
+    neutral: "同じ趣味は、よい縁の入口になるな。",
+    gal: "趣味合うじゃん！ これは絶対盛り上がるやつ！",
+    elder: "同じ楽しみを持つ相手は大事じゃ。長い付き合いになるぞ。"
   })
 });
 
@@ -1521,6 +1546,31 @@ export class RandomEvents {
         if (!v.buildingFlags) v.buildingFlags = {};
         v.buildingFlags.canBuildPublicBath = true;
         v.log(`秘湯発見:全員体力+${hpGain},公衆浴場建設解放`);
+        break;
+      }
+      case "hobbyFriends": {
+        const pairs = [];
+        v.villagers.forEach((a, i) => {
+          if (!a.hobby) return;
+          v.villagers.slice(i + 1).forEach(b => {
+            if (a.hobby !== b.hobby) return;
+            const relA = `${a.hobby}仲間:${b.name}`;
+            const relB = `${b.hobby}仲間:${a.name}`;
+            if (a.relationships.includes(relA) && b.relationships.includes(relB)) return;
+            pairs.push({ a, b, hobby: a.hobby, relA, relB });
+          });
+        });
+
+        if (pairs.length > 0) {
+          const pair = this.randChoice(pairs);
+          pair.a.happiness = clampValue(pair.a.happiness + 10, 0, 100);
+          pair.b.happiness = clampValue(pair.b.happiness + 10, 0, 100);
+          this.addRelationship(pair.a, pair.relA);
+          this.addRelationship(pair.b, pair.relB);
+          v.log(`趣味仲間:${pair.a.name}と${pair.b.name}は${pair.hobby}の話で盛り上がった。幸福+10、${pair.hobby}の余暇メンタル回復1.5倍`);
+        } else {
+          return null;
+        }
         break;
       }
       case "menFriendship": {

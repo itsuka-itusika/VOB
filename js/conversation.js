@@ -413,6 +413,62 @@ const RECRUITMENT_COEFFICIENTS = {
   "棄民": 0.9     // 最も勧誘しやすい（村を追われた人なので）
 };
 
+const MERCHANT_TRADE = {
+  food: { label: "食料", stockKey: "food", unit: 10, price: 8, initialStock: 100 },
+  materials: { label: "資材", stockKey: "materials", unit: 10, price: 12, initialStock: 80 }
+};
+
+function createConversationStatusHtml(character) {
+  const isExhausted = character.hp <= 33 || character.mp <= 33;
+  const isTired = (character.hp > 33 && character.hp <= 59) || (character.mp > 33 && character.mp <= 59);
+  const isHealthy = character.hp > 59 && character.mp > 59;
+  const isUnderRaid = theVillage.villageTraits.includes("襲撃中");
+
+  if (character.mindTraits && character.mindTraits.includes("襲撃者") && character.raiderDialogues) {
+    const raiderLine = character.raiderDialogues[Math.floor(Math.random() * character.raiderDialogues.length)];
+    return `<p><strong></strong> ${raiderLine}</p>`;
+  }
+  if (isUnderRaid) {
+    return `<p><strong></strong> ${getStatusLine(character, "raid")}</p>`;
+  }
+  if (isExhausted) {
+    return `<p><strong></strong> ${getStatusLine(character, "exhausted")}</p>`;
+  }
+  if (isTired) {
+    return `<p><strong></strong> ${getStatusLine(character, "tired")}</p>`;
+  }
+  if (isHealthy) {
+    return `<p><strong></strong> ${getStatusLine(character, "healthy")}</p>`;
+  }
+  return "";
+}
+
+function refreshConversationText(character) {
+  const text = document.getElementById("conversationText");
+  if (!text) return;
+  text.innerHTML = createConversationStatusHtml(character);
+}
+
+function isMerchantVisitor(character) {
+  return getVisitorType(character) === "行商人";
+}
+
+function ensureMerchantStock(visitor) {
+  if (!visitor.merchantStock) {
+    visitor.merchantStock = {
+      food: MERCHANT_TRADE.food.initialStock,
+      materials: MERCHANT_TRADE.materials.initialStock
+    };
+  }
+  if (typeof visitor.merchantStock.food !== "number") {
+    visitor.merchantStock.food = MERCHANT_TRADE.food.initialStock;
+  }
+  if (typeof visitor.merchantStock.materials !== "number") {
+    visitor.merchantStock.materials = MERCHANT_TRADE.materials.initialStock;
+  }
+  return visitor.merchantStock;
+}
+
 /**
  * 会話モーダルを開く
  */
@@ -440,6 +496,9 @@ export function openConversationModal(character) {
     console.error('Error loading portrait:', error);
     portrait.src = 'images/portraits/DEFAULT.png';
   }
+  portrait.style.cursor = "pointer";
+  portrait.title = "クリックで会話を更新";
+  portrait.onclick = () => refreshConversationText(character);
   
   // キャラクター情報を表示するためのHTML要素を追加
   const characterInfo = document.getElementById("characterInfo");
@@ -456,56 +515,49 @@ export function openConversationModal(character) {
   const isUnderRaid = theVillage.villageTraits.includes("襲撃中");
   const isVisitor = character.mindTraits && character.mindTraits.includes("訪問者");
   const hasFailedRecruitment = character.mindTraits && character.mindTraits.includes("勧誘失敗");
-
-  // 口調タイプに応じた会話テキストを設定
-  const speechPattern = SPEECH_PATTERNS[character.speechType] || 
-                       SPEECH_PATTERNS[character.bodySex === "男" ? "普通Ｍ" : "普通Ｆ"];
-  
-  // 各カテゴリからランダムにセリフを選択
-  const getRandomLine = (lines) => lines[Math.floor(Math.random() * lines.length)];
-
-  // 状態に応じたセリフを生成
-  let statusText = "";
-  
-  // 襲撃者の場合は専用のセリフを表示
-  if (character.mindTraits && character.mindTraits.includes("襲撃者") && character.raiderDialogues) {
-    const raiderLine = character.raiderDialogues[Math.floor(Math.random() * character.raiderDialogues.length)];
-    statusText = `<p><strong></strong> ${raiderLine}</p>`;
-  } else if (isUnderRaid) {
-    statusText = `<p><strong></strong> ${getStatusLine(character, "raid")}</p>`;
-  } else if (isExhausted) {
-    statusText = `<p><strong></strong> ${getStatusLine(character, "exhausted")}</p>`;
-  } else if (isTired) {
-    statusText = `<p><strong></strong> ${getStatusLine(character, "tired")}</p>`;
-  } else if (isHealthy) {
-    statusText = `<p><strong></strong> ${getStatusLine(character, "healthy")}</p>`;
-  }
   
   // 会話テキストを設定
-  text.innerHTML = `
-    ${statusText}
-  `;
+  refreshConversationText(character);
 
   // ボタンの表示制御
   actionButtons.innerHTML = "";
   
-  if (isVisitor && !hasFailedRecruitment) {
+  if (isVisitor) {
     // 訪問者で、かつ勧誘失敗フラグがない場合は勧誘と誘惑ボタンを表示
-    actionButtons.innerHTML = `
-      <button id="recruitButton">勧誘する</button>
-      <button id="seduceButton">誘惑する</button>
-    `;
-    actionButtons.style.display = "block";
+    const buttons = [];
+    if (!hasFailedRecruitment) {
+      buttons.push('<button id="recruitButton">勧誘する</button>');
+      buttons.push('<button id="seduceButton">誘惑する</button>');
+    }
+    if (isMerchantVisitor(character)) {
+      ensureMerchantStock(character);
+      buttons.push('<button id="merchantTradeButton">取引する</button>');
+    }
+    actionButtons.innerHTML = buttons.join("");
+    actionButtons.style.display = buttons.length > 0 ? "block" : "none";
     
     // 勧誘ボタンのイベントリスナーを設定
-    document.getElementById("recruitButton").addEventListener("click", () => {
-      openRecruitmentModal(character);
-    });
+    const recruitButton = document.getElementById("recruitButton");
+    if (recruitButton) {
+      recruitButton.addEventListener("click", () => {
+        openRecruitmentModal(character);
+      });
+    }
     
     // 誘惑ボタンのイベントリスナーを設定
-    document.getElementById("seduceButton").addEventListener("click", () => {
-      openSeductionModal(character);
-    });
+    const seduceButton = document.getElementById("seduceButton");
+    if (seduceButton) {
+      seduceButton.addEventListener("click", () => {
+        openSeductionModal(character);
+      });
+    }
+
+    const merchantTradeButton = document.getElementById("merchantTradeButton");
+    if (merchantTradeButton) {
+      merchantTradeButton.addEventListener("click", () => {
+        openMerchantTradeModal(character);
+      });
+    }
   } else if (isUnderRaid && theVillage.villagers.includes(character)) {
     // 襲撃中の村人の場合は迎撃・罠作成ボタンを表示
     actionButtons.innerHTML = `
@@ -1108,6 +1160,32 @@ function getRecruitmentCoefficient(visitor) {
   return 0.4; // デフォルト値
 }
 
+function calculateRecruitmentSuccessRate(visitor, recruiter) {
+  const coefficient = getRecruitmentCoefficient(visitor);
+  return Math.min(100, Math.max(0,
+    coefficient * (recruiter.chr / 20) * (recruiter.int / 20) * 100
+  ));
+}
+
+function canAttemptSeduction(visitor, seducer) {
+  if (visitor.spiritSex === seducer.bodySex) {
+    return { ok: false, reason: "性別不一致" };
+  }
+  if (seducer.sexdr < 21) {
+    return { ok: false, reason: "好色不足" };
+  }
+  return { ok: true, reason: "" };
+}
+
+function calculateSeductionSuccessRate(visitor, seducer) {
+  const check = canAttemptSeduction(visitor, seducer);
+  if (!check.ok) return 0;
+  const coefficient = getRecruitmentCoefficient(visitor);
+  return Math.min(100, Math.max(0,
+    coefficient * (seducer.chr / 20) * (seducer.sexdr / 20) * 100
+  ));
+}
+
 // 勧誘モーダルを開く
 function openRecruitmentModal(visitor) {
   const overlay = document.createElement("div");
@@ -1118,19 +1196,16 @@ function openRecruitmentModal(visitor) {
   modal.id = "recruitmentModal";
   modal.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:20px;z-index:3001;min-width:300px;border-radius:5px;box-shadow:0 2px 10px rgba(0,0,0,0.1);";
   
-  // 訪問者タイプを取得
-  const visitorType = getVisitorType(visitor);
-  const coefficient = getRecruitmentCoefficient(visitor);
-  
   modal.innerHTML = `
     <h3 style="margin-top:0;">勧誘する村人を選択</h3>
     <p style="margin-bottom:15px;">${visitor.name}を勧誘します。</p>
     <select id="recruiterSelect" style="width:100%;padding:5px;margin-bottom:15px;">
       <option value="">勧誘する村人を選択してください</option>
       ${theVillage.villagers.map(v => `
-        <option value="${v.name}">${v.name} (魅力:${Math.floor(v.chr)} 知力:${Math.floor(v.int)})</option>
+        <option value="${v.name}">${v.name} (魅力:${Math.floor(v.chr)} 知力:${Math.floor(v.int)} 成功率:${Math.floor(calculateRecruitmentSuccessRate(visitor, v))}%)</option>
       `).join('')}
     </select>
+    <div id="recruitmentSuccessRate" style="margin:-5px 0 15px 0;color:#555;">成功率: -</div>
     <div style="display:flex;justify-content:flex-end;gap:10px;">
       <button id="cancelRecruitment" style="padding:5px 15px;">キャンセル</button>
       <button id="doRecruitment" style="padding:5px 15px;">勧誘する</button>
@@ -1141,6 +1216,15 @@ function openRecruitmentModal(visitor) {
   document.body.appendChild(modal);
   
   // イベントリスナーを設定
+  const recruiterSelect = document.getElementById("recruiterSelect");
+  const recruitmentSuccessRate = document.getElementById("recruitmentSuccessRate");
+  recruiterSelect.addEventListener("change", () => {
+    const recruiter = theVillage.villagers.find(v => v.name === recruiterSelect.value);
+    recruitmentSuccessRate.textContent = recruiter
+      ? `成功率: ${Math.floor(calculateRecruitmentSuccessRate(visitor, recruiter))}%`
+      : "成功率: -";
+  });
+
   document.getElementById("doRecruitment").addEventListener("click", () => {
     const recruiterName = document.getElementById("recruiterSelect").value;
     if (!recruiterName) {
@@ -1158,10 +1242,7 @@ function openRecruitmentModal(visitor) {
     const recruiter = theVillage.villagers.find(v => v.name === recruiterName);
     if (!recruiter) return;
     
-    // 勧誘成功率を計算
-    const successRate = Math.min(100, Math.max(0, 
-      coefficient * (recruiter.chr / 20) * (recruiter.int / 20) * 100
-    ));
+    const successRate = calculateRecruitmentSuccessRate(visitor, recruiter);
     
     // 勧誘判定
     if (Math.random() * 100 < successRate) {
@@ -1212,19 +1293,19 @@ function openSeductionModal(visitor) {
   modal.id = "seductionModal";
   modal.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:20px;z-index:3001;min-width:300px;border-radius:5px;box-shadow:0 2px 10px rgba(0,0,0,0.1);";
   
-  // 訪問者タイプを取得
-  const visitorType = getVisitorType(visitor);
-  const coefficient = getRecruitmentCoefficient(visitor);
-  
   modal.innerHTML = `
     <h3 style="margin-top:0;">誘惑する村人を選択</h3>
     <p style="margin-bottom:15px;">${visitor.name}を誘惑します。</p>
     <select id="seducerSelect" style="width:100%;padding:5px;margin-bottom:15px;">
       <option value="">誘惑する村人を選択してください</option>
-      ${theVillage.villagers.map(v => `
-        <option value="${v.name}">${v.name} (魅力:${Math.floor(v.chr)} 好色:${Math.floor(v.sexdr)})</option>
-      `).join('')}
+      ${theVillage.villagers.map(v => {
+        const check = canAttemptSeduction(visitor, v);
+        const rate = Math.floor(calculateSeductionSuccessRate(visitor, v));
+        const rateText = check.ok ? `成功率:${rate}%` : `不可:${check.reason}`;
+        return `<option value="${v.name}">${v.name} (魅力:${Math.floor(v.chr)} 好色:${Math.floor(v.sexdr)} ${rateText})</option>`;
+      }).join('')}
     </select>
+    <div id="seductionSuccessRate" style="margin:-5px 0 15px 0;color:#555;">成功率: -</div>
     <div style="display:flex;justify-content:flex-end;gap:10px;">
       <button id="cancelSeduction" style="padding:5px 15px;">キャンセル</button>
       <button id="doSeduction" style="padding:5px 15px;">誘惑する</button>
@@ -1235,6 +1316,20 @@ function openSeductionModal(visitor) {
   document.body.appendChild(modal);
   
   // イベントリスナーを設定
+  const seducerSelect = document.getElementById("seducerSelect");
+  const seductionSuccessRate = document.getElementById("seductionSuccessRate");
+  seducerSelect.addEventListener("change", () => {
+    const seducer = theVillage.villagers.find(v => v.name === seducerSelect.value);
+    if (!seducer) {
+      seductionSuccessRate.textContent = "成功率: -";
+      return;
+    }
+    const check = canAttemptSeduction(visitor, seducer);
+    seductionSuccessRate.textContent = check.ok
+      ? `成功率: ${Math.floor(calculateSeductionSuccessRate(visitor, seducer))}%`
+      : `誘惑不可: ${check.reason}`;
+  });
+
   document.getElementById("doSeduction").addEventListener("click", () => {
     const seducerName = document.getElementById("seducerSelect").value;
     if (!seducerName) {
@@ -1255,22 +1350,20 @@ function openSeductionModal(visitor) {
     // 条件チェック
     // 1. 精神性別と肉体性別が異なるか
     // 2. 誘惑者の好色が21以上か
-    if (visitor.spiritSex === seducer.bodySex) {
+    const seductionCheck = canAttemptSeduction(visitor, seducer);
+    if (!seductionCheck.ok && seductionCheck.reason === "性別不一致") {
       alert("誘惑者の肉体性別と訪問者の精神性別が同じです。誘惑できません。");
       theVillage.log(`${seducer.name}の誘惑は失敗しました。(理由: 性別の不一致)`);
       return;
     }
     
-    if (seducer.sexdr < 21) {
+    if (!seductionCheck.ok && seductionCheck.reason === "好色不足") {
       alert("誘惑者の好色が足りません。誘惑できません。");
       theVillage.log(`${seducer.name}の誘惑は失敗しました。(理由: 誘惑者の好色不足)`);
       return;
     }
     
-    // 誘惑成功率を計算
-    const successRate = Math.min(100, Math.max(0, 
-      coefficient * (seducer.chr / 20) * (seducer.sexdr / 20) * 100
-    ));
+    const successRate = calculateSeductionSuccessRate(visitor, seducer);
     
     // 誘惑判定
     if (Math.random() * 100 < successRate) {
@@ -1307,6 +1400,100 @@ function openSeductionModal(visitor) {
 function closeSeductionModal() {
   const overlay = document.getElementById("seductionOverlay");
   const modal = document.getElementById("seductionModal");
+  if (overlay) overlay.remove();
+  if (modal) modal.remove();
+}
+
+function openMerchantTradeModal(visitor) {
+  const overlay = document.createElement("div");
+  overlay.id = "merchantTradeOverlay";
+  overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:3000;";
+
+  const modal = document.createElement("div");
+  modal.id = "merchantTradeModal";
+  modal.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:20px;z-index:3001;min-width:360px;border-radius:5px;box-shadow:0 2px 10px rgba(0,0,0,0.1);";
+
+  document.body.appendChild(overlay);
+  document.body.appendChild(modal);
+
+  const render = () => {
+    const stock = ensureMerchantStock(visitor);
+    modal.innerHTML = `
+      <h3 style="margin-top:0;">行商人と取引</h3>
+      <p style="margin-bottom:12px;">所持資金: ${theVillage.funds}</p>
+      <div id="merchantTradeRows"></div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:15px;">
+        <button id="closeMerchantTrade" style="padding:5px 15px;">閉じる</button>
+      </div>
+    `;
+
+    const rows = document.getElementById("merchantTradeRows");
+    Object.values(MERCHANT_TRADE).forEach(item => {
+      const canBuy = stock[item.stockKey] >= item.unit && theVillage.funds >= item.price;
+      const row = document.createElement("div");
+      row.style.cssText = "display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #ddd;";
+      row.innerHTML = `
+        <div>
+          <div><strong>${item.label}</strong> ${item.unit}個 / 資金${item.price}</div>
+          <div style="font-size:0.85em;color:#555;">在庫: ${stock[item.stockKey]}</div>
+        </div>
+        <button data-buy="${item.stockKey}" ${canBuy ? "" : "disabled"}>購入</button>
+        <button data-buy-max="${item.stockKey}" ${canBuy ? "" : "disabled"}>買えるだけ</button>
+      `;
+      rows.appendChild(row);
+    });
+
+    rows.querySelectorAll("[data-buy]").forEach(button => {
+      button.addEventListener("click", () => {
+        buyFromMerchant(visitor, button.dataset.buy, 1);
+        render();
+      });
+    });
+    rows.querySelectorAll("[data-buy-max]").forEach(button => {
+      button.addEventListener("click", () => {
+        buyFromMerchant(visitor, button.dataset.buyMax, Infinity);
+        render();
+      });
+    });
+
+    document.getElementById("closeMerchantTrade").addEventListener("click", closeMerchantTradeModal);
+  };
+
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) {
+      closeMerchantTradeModal();
+    }
+  });
+
+  render();
+}
+
+function buyFromMerchant(visitor, stockKey, packs) {
+  const item = Object.values(MERCHANT_TRADE).find(entry => entry.stockKey === stockKey);
+  if (!item) return;
+
+  const stock = ensureMerchantStock(visitor);
+  const maxByStock = Math.floor(stock[item.stockKey] / item.unit);
+  const maxByFunds = Math.floor(theVillage.funds / item.price);
+  const count = Math.min(packs, maxByStock, maxByFunds);
+
+  if (count <= 0) {
+    alert("購入できません。資金または在庫が不足しています。");
+    return;
+  }
+
+  const amount = item.unit * count;
+  const cost = item.price * count;
+  stock[item.stockKey] -= amount;
+  theVillage.funds -= cost;
+  theVillage[item.stockKey] = Math.min(99999, theVillage[item.stockKey] + amount);
+  theVillage.log(`行商人から${item.label}${amount}を購入: 資金-${cost}`);
+  updateUI(theVillage);
+}
+
+function closeMerchantTradeModal() {
+  const overlay = document.getElementById("merchantTradeOverlay");
+  const modal = document.getElementById("merchantTradeModal");
   if (overlay) overlay.remove();
   if (modal) modal.remove();
 }

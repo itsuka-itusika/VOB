@@ -84,6 +84,7 @@ function convertVillageToObject(village) {
     gameOver: village.gameOver,
     hasDonePreEvent: village.hasDonePreEvent,
     hasDonePostEvent: village.hasDonePostEvent,
+    visitorLimit: village.visitorLimit ?? 1,
 
     // 建築物関連のデータを追加
     buildings: [...village.buildings],
@@ -145,7 +146,8 @@ function convertVillagerToObject(vill) {
     
     // 口調タイプと顔グラフィック情報を追加
     speechType: vill.speechType,
-    portraitFile: vill.portraitFile
+    portraitFile: vill.portraitFile,
+    merchantStock: vill.merchantStock ? { ...vill.merchantStock } : undefined
   };
 }
 
@@ -173,6 +175,7 @@ function convertObjectToVillage(dataObj) {
   v.gameOver = !!dataObj.gameOver;
   v.hasDonePreEvent = !!dataObj.hasDonePreEvent;
   v.hasDonePostEvent = !!dataObj.hasDonePostEvent;
+  v.visitorLimit = Math.max(1, dataObj.visitorLimit ?? 1);
 
   // 建築物関連のデータを復元
   if (Array.isArray(dataObj.buildings)) {
@@ -180,6 +183,9 @@ function convertObjectToVillage(dataObj) {
   }
   if (dataObj.buildingFlags) {
     v.buildingFlags = { ...dataObj.buildingFlags };
+  }
+  if (v.buildingFlags.hasTavern || v.buildings.includes("tavern")) {
+    v.visitorLimit = Math.max(v.visitorLimit, 2);
   }
 
   // 襲撃系
@@ -195,7 +201,7 @@ function convertObjectToVillage(dataObj) {
     v.villagers = dataObj.villagers.map(o => convertObjectToVillager(o));
     // 全村人の仕事テーブルを更新
     v.villagers.forEach(villager => {
-      refreshJobTable(villager);
+      refreshJobTable(villager, v);
     });
   }
   
@@ -256,6 +262,9 @@ function convertObjectToVillager(obj) {
   
   // 種族情報を復元
   vill.race = obj.race || "人間";
+  if (obj.merchantStock) {
+    vill.merchantStock = { ...obj.merchantStock };
+  }
 
   return vill;
 }

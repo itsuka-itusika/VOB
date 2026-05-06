@@ -872,7 +872,7 @@ export function assignHobby(v) {
 /**
  * 精神年齢に応じて jobTable を組み立てる
  */
-export function refreshJobTable(v) {
+export function refreshJobTable(v, village = theVillage) {
   let sa = v.spiritAge;
   if (sa <= 9) {
     v.jobTable = ["なし"];
@@ -905,8 +905,7 @@ export function refreshJobTable(v) {
     ];
 
     // 建築物によって解放される仕事
-    // theVillageを直接参照する
-    const buildingFlags = theVillage.buildingFlags || {};
+    const buildingFlags = village.buildingFlags || {};
 
     // 建築物によって解放される共通の仕事
     if (buildingFlags.hasClinic) {
@@ -1018,7 +1017,7 @@ export function refreshJobTable(v) {
   }
 
   // 襲撃関連の行動追加（状態異常がない場合のみ）
-  if (theVillage.villageTraits.includes("襲撃中")) {
+  if (village.villageTraits.includes("襲撃中")) {
     v.actionTable = v.actionTable.filter(action => action !== "迎撃" && action !== "罠作成");
     v.actionTable.unshift("迎撃", "罠作成");
   }
@@ -1178,6 +1177,13 @@ export function createRandomVisitor() {
   
   // 精神特性に訪問者を追加（1回のみ）
   visitor.mindTraits.push("訪問者");
+
+  if (visitorType.type === "行商人") {
+    visitor.merchantStock = {
+      food: 100,
+      materials: 80
+    };
+  }
 
   // 棄民に特別な特性を追加
   if (visitorType.type === "棄民") {

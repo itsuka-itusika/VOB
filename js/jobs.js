@@ -307,9 +307,15 @@ function doRestJob(p, v) {
   v.log(`${p.name}休養:${msg} 体力+${hpG},メンタル+${mpG}`);
 }
 
+function hasCurrentHobbyMate(p) {
+  if (!p.hobby || !Array.isArray(p.relationships)) return false;
+  return p.relationships.some(rel => rel.startsWith(`${p.hobby}仲間:`));
+}
+
 function doLeisureJob(p, v) {
   let base=50;
   let bathMsg = "";
+  let hobbyMateMsg = "";
   if (p.mindTraits.includes("ニート")) {
     base=100;
     p.happiness=clampValue(p.happiness+20,0,100);
@@ -319,10 +325,14 @@ function doLeisureJob(p, v) {
     p.hp=clampValue(p.hp+10,0,100);
     bathMsg = ",体力+10(公衆浴場)";
   }
+  if (hasCurrentHobbyMate(p)) {
+    base = Math.round(base * 1.5);
+    hobbyMateMsg = ",趣味仲間効果";
+  }
   p.mp=clampValue(p.mp+base,0,100);
 
   let hobbyMsg = HobbyEffects.apply(p, v);
-  v.log(`${p.name}余暇:メンタル+${base}${bathMsg}${hobbyMsg}`);
+  v.log(`${p.name}余暇:メンタル+${base}${bathMsg}${hobbyMateMsg}${hobbyMsg}`);
 }
 
 function doStudy(p, v) {
@@ -408,7 +418,7 @@ function doLumber(p, v) {
   p.hp=clampValue(p.hp-tc,0,100);
   p.mp=clampValue(p.mp-mc,0,100);
 
-  let base=10+20*((p.vit/20)*(p.str/20));
+  let base=10+20*((p.str/20)*(p.ind/20));
   let mul=1;
   if (v.villageTraits.includes("豊穣")) mul*=2;
   if (v.villageTraits.includes("冷夏")) mul*=0.5;
