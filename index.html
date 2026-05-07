@@ -250,6 +250,21 @@ tr td:nth-child(22) {
   outline-offset: 2px;
 }
 
+.spirit-column {
+  display: none;
+}
+table.show-spirit-columns .spirit-column {
+  display: table-cell;
+}
+.table-tools {
+  margin: 2px 0 6px;
+  font-size: 0.85rem;
+}
+.table-tools label {
+  cursor: pointer;
+  user-select: none;
+}
+
 .villager-portrait-cell {
   width: 42px;
   min-width: 42px;
@@ -322,6 +337,58 @@ tr td:nth-child(22) {
   background: #e2f9d8;
 }
 
+#villagersTable td:nth-child(11),
+#villagersTable td:nth-child(12),
+#villagersTable td:nth-child(13),
+#visitorsTable td:nth-child(11),
+#visitorsTable td:nth-child(12),
+#visitorsTable td:nth-child(13),
+#raidEnemiesTable td:nth-child(11),
+#raidEnemiesTable td:nth-child(12),
+#raidEnemiesTable td:nth-child(13) {
+  background: inherit;
+}
+#villagersTable td:nth-child(14),
+#villagersTable td:nth-child(15),
+#villagersTable td:nth-child(16),
+#villagersTable td:nth-child(17),
+#villagersTable td:nth-child(18),
+#villagersTable td:nth-child(19),
+#visitorsTable td:nth-child(14),
+#visitorsTable td:nth-child(15),
+#visitorsTable td:nth-child(16),
+#visitorsTable td:nth-child(17),
+#visitorsTable td:nth-child(18),
+#visitorsTable td:nth-child(19),
+#raidEnemiesTable td:nth-child(14),
+#raidEnemiesTable td:nth-child(15),
+#raidEnemiesTable td:nth-child(16),
+#raidEnemiesTable td:nth-child(17),
+#raidEnemiesTable td:nth-child(18),
+#raidEnemiesTable td:nth-child(19) {
+  background: #faf2d3;
+}
+#villagersTable td:nth-child(20),
+#villagersTable td:nth-child(21),
+#villagersTable td:nth-child(22),
+#villagersTable td:nth-child(23),
+#villagersTable td:nth-child(24),
+#villagersTable td:nth-child(25),
+#visitorsTable td:nth-child(20),
+#visitorsTable td:nth-child(21),
+#visitorsTable td:nth-child(22),
+#visitorsTable td:nth-child(23),
+#visitorsTable td:nth-child(24),
+#visitorsTable td:nth-child(25),
+#raidEnemiesTable td:nth-child(20),
+#raidEnemiesTable td:nth-child(21),
+#raidEnemiesTable td:nth-child(22),
+#raidEnemiesTable td:nth-child(23),
+#raidEnemiesTable td:nth-child(24),
+#raidEnemiesTable td:nth-child(25) {
+  background: #e2f9d8;
+}
+
 /* 折りたたみ */
 .foldable-info {
   text-align: left;
@@ -371,7 +438,7 @@ tr td:nth-child(22) {
   line-height: 1.4em;
 }
 .raid-buttons {
-  text-align: right;
+  text-align: left;
   margin-top: 10px;
 }
 
@@ -816,6 +883,8 @@ section h2 {
           <th>種族</th>      <!--2-->
           <th>性別</th>      <!--3-->
           <th>年齢</th>      <!--4-->
+          <th class="spirit-column">精神性別</th>
+          <th class="spirit-column">精神年齢</th>
           <th>体力</th>      <!--5-->
           <th>メンタル</th>  <!--6-->
           <th>幸福</th>      <!--7-->
@@ -840,6 +909,9 @@ section h2 {
       <tbody>
       </tbody>
     </table>
+    <div class="table-tools">
+      <label><input type="checkbox" id="spiritColumnsToggle" onchange="toggleSpiritColumns(this.checked)"> 精神情報を表示</label>
+    </div>
   </section>
   <section id="visitorsSection" style="display:none;">
     <h2>訪問者一覧</h2>
@@ -852,6 +924,8 @@ section h2 {
           <th>種族</th>      <!--2-->
           <th>性別</th>      <!--3-->
           <th>年齢</th>      <!--4-->
+          <th class="spirit-column">精神性別</th>
+          <th class="spirit-column">精神年齢</th>
           <th>体力</th>      <!--5-->
           <th>メンタル</th>  <!--6-->
           <th>幸福</th>      <!--7-->
@@ -888,6 +962,8 @@ section h2 {
           <th>種族</th>      <!--2-->
           <th>性別</th>      <!--3-->
           <th>年齢</th>      <!--4-->
+          <th class="spirit-column">精神性別</th>
+          <th class="spirit-column">精神年齢</th>
           <th>体力</th>      <!--5-->
           <th>メンタル</th>  <!--6-->
           <th>幸福</th>      <!--7-->
@@ -949,6 +1025,9 @@ section h2 {
 <div id="raidOverlay"></div>
 <div id="raidModal">
   <h2>襲撃発生中！ 迎撃フェーズ</h2>
+  <div class="raid-buttons">
+    <button onclick="proceedRaidAction()">次のステップ</button>
+  </div>
   <div class="raid-section">
     <h3>罠作成部隊</h3>
     <table id="defenderTable">
@@ -1002,9 +1081,6 @@ section h2 {
   <div class="raid-section">
     <h3>迎撃ログ</h3>
     <div id="raidLogArea"></div>
-  </div>
-  <div class="raid-buttons">
-    <button onclick="proceedRaidAction()">次のステップ</button>
   </div>
 </div>
 
@@ -1156,6 +1232,13 @@ window.closeBuildingModal = closeBuildingModal;
 window.onAutoAssignJobs = () => {
   autoAssignJobs(theVillage);
   updateUI(theVillage);
+};
+
+window.toggleSpiritColumns = (visible) => {
+  ["villagersTable", "visitorsTable", "raidEnemiesTable"].forEach(id => {
+    const table = document.getElementById(id);
+    if (table) table.classList.toggle("show-spirit-columns", Boolean(visible));
+  });
 };
 
 /** 会話モーダル */
