@@ -877,8 +877,8 @@ export function refreshJobTable(v, village = theVillage) {
   const bodyTraits = Array.isArray(v.bodyTraits) ? v.bodyTraits : [];
   const mindTraits = Array.isArray(v.mindTraits) ? v.mindTraits : [];
   const isBabyStage = bodyTraits.includes("赤子") || mindTraits.includes("無垢") || sa <= 3;
-  const isToddlerStage = bodyTraits.includes("幼児") || mindTraits.includes("萌芽") || sa <= 9;
-  const isAdolescentStage = bodyTraits.includes("少年") || bodyTraits.includes("少女") || mindTraits.includes("思春期") || sa <= 15;
+  const isToddlerStage = mindTraits.includes("萌芽") || sa <= 9;
+  const isAdolescentStage = mindTraits.includes("思春期") || sa <= 15;
 
   if (isBabyStage) {
     v.jobTable = ["なし"];
