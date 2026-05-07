@@ -440,13 +440,14 @@ function giveBirth(village, mother) {
 
   const father = village.villagers.find(person => person.name === data.geneticFatherName);
   if (father) {
-    addRelationship(father, `${child.name}の${father.bodySex === "女" ? "母" : "父"}`);
+    addRelationship(father, `${child.name}の父`);
     father.happiness = clampValue(father.happiness + 30, 0, 100);
   }
 
   mother.pregnancy = null;
+  village.popLimit = (Number(village.popLimit) || 0) + 1;
   village.villagers.push(child);
-  village.log(`${mother.name}が${child.name}を出産しました`);
+  village.log(`${mother.name}が${child.name}を出産しました。人口上限+1`);
   showBirthModal(village, mother, father, child);
 }
 
@@ -588,7 +589,7 @@ function showBirthModal(village, mother, father, child) {
     <h2>出産</h2>
     <p>${mother.name}が${child.name}を出産しました。</p>
     ${renderPortraitLine(mother, getBirthLine(mother, "母"))}
-    ${father ? renderPortraitLine(father, getBirthLine(father, father.bodySex === "女" ? "母" : "父")) : ""}
+    ${father ? renderPortraitLine(father, getBirthLine(father, "父")) : ""}
     ${renderPortraitLine(child, "……すやすや眠っている。")}
     <button id="closeBirthModal">閉じる</button>
   `;

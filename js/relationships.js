@@ -132,7 +132,16 @@ function getSpeechType(person) {
   return person.speechType || (person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ");
 }
 
+function getChildlikeRelationshipLine(person) {
+  const mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
+  if (mindTraits.includes("無垢")) return randChoice(["あうー。", "んま。", "ばぶ。", "すやすや……"]);
+  if (mindTraits.includes("萌芽")) return randChoice(["わあ……。", "えへへ。", "これ、なあに？"]);
+  return null;
+}
+
 function getLoverLine(person, partner) {
+  const childLine = getChildlikeRelationshipLine(person);
+  if (childLine) return childLine;
   const type = getSpeechType(person);
   const lines = {
     "普通Ｍ": [`${partner.name}と恋人か。大事にしたいな。`, "少し照れるけど、嬉しいよ。"],
@@ -152,6 +161,8 @@ function getLoverLine(person, partner) {
 }
 
 function getMarriageLine(person, partner) {
+  const childLine = getChildlikeRelationshipLine(person);
+  if (childLine) return childLine;
   const type = getSpeechType(person);
   const lines = {
     "普通Ｍ": [`${partner.name}と夫婦か……大切にしよう。`, "今日から家族だな。よろしく。"],

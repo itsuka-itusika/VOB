@@ -1197,10 +1197,20 @@ export class RandomEvents {
   }
 
   static getSpeechType(character) {
-    return character.speechType || (character.bodySex === "男" ? "普通Ｍ" : "普通Ｆ");
+    return character.speechType || (character.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ");
+  }
+
+  static getChildlikeEventLine(character) {
+    const mindTraits = Array.isArray(character?.mindTraits) ? character.mindTraits : [];
+    if (mindTraits.includes("無垢")) return this.randChoice(["あうー。", "んま。", "ばぶ。", "すやすや……"]);
+    if (mindTraits.includes("萌芽")) return this.randChoice(["わあ……。", "えへへ。", "これ、なあに？"]);
+    return null;
   }
 
   static createEventLine(kind, character, eventKey) {
+    const childLine = this.getChildlikeEventLine(character);
+    if (childLine) return childLine;
+
     const subject = this.getEventSubject(eventKey, kind);
     const mood = this.getEventMood(eventKey, kind);
     const speechType = this.getSpeechType(character);
@@ -1326,7 +1336,7 @@ export class RandomEvents {
 
   static getLineBySpeechType(group, speechType, character) {
     if (!group) return null;
-    const genderFallback = character.bodySex === "男" ? "普通Ｍ" : "普通Ｆ";
+    const genderFallback = character.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ";
     const keys = [
       speechType,
       ...(SPEECH_TYPE_LINE_FALLBACKS[speechType] || []),
@@ -1346,11 +1356,14 @@ export class RandomEvents {
   }
 
   static createSecondEventLine(eventKey, speechType, character) {
+    const childLine = this.getChildlikeEventLine(character);
+    if (childLine) return childLine;
+
     const base = EVENT_SECOND_LINE_BASES[eventKey];
     if (!base) return null;
 
-    const style = SPEECH_TYPE_TONES[speechType] || (character.bodySex === "男" ? "male" : "female");
-    const isMale = character.bodySex === "男";
+    const style = SPEECH_TYPE_TONES[speechType] || (character.spiritSex === "女" ? "female" : "male");
+    const isMale = character.spiritSex !== "女";
 
     if (eventKey === "fight") {
       if (style === "polite") return `${base}のです。そこをどいてください。`;

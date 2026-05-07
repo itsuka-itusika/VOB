@@ -430,20 +430,28 @@ function createConversationStatusHtml(character) {
     return `<p><strong></strong> ${raiderLine}</p>`;
   }
   const reproductiveLine = getReproductiveStatusLine(character);
-  if (reproductiveLine) {
+  const isPregnancyLine = reproductiveLine &&
+    character.bodyTraits &&
+    (character.bodyTraits.includes("妊娠") || character.bodyTraits.includes("臨月"));
+  if (reproductiveLine && !isPregnancyLine) {
     return `<p><strong></strong> ${reproductiveLine}</p>`;
   }
+  const pickLine = (status) => {
+    const statusLine = getStatusLine(character, status);
+    if (isPregnancyLine && Math.random() < 0.5) return reproductiveLine;
+    return statusLine;
+  };
   if (isUnderRaid) {
-    return `<p><strong></strong> ${getStatusLine(character, "raid")}</p>`;
+    return `<p><strong></strong> ${pickLine("raid")}</p>`;
   }
   if (isExhausted) {
-    return `<p><strong></strong> ${getStatusLine(character, "exhausted")}</p>`;
+    return `<p><strong></strong> ${pickLine("exhausted")}</p>`;
   }
   if (isTired) {
-    return `<p><strong></strong> ${getStatusLine(character, "tired")}</p>`;
+    return `<p><strong></strong> ${pickLine("tired")}</p>`;
   }
   if (isHealthy) {
-    return `<p><strong></strong> ${getStatusLine(character, "healthy")}</p>`;
+    return `<p><strong></strong> ${pickLine("healthy")}</p>`;
   }
   return "";
 }
@@ -790,7 +798,7 @@ function getStatusLine(character, status) {
     if (lazyLines.length > 0) {
       // 通常の会話と勤勉度が低い場合の会話を組み合わせる
       const statusLines = pattern.status[status][speechType] || 
-                         pattern.status[status][character.bodySex === "男" ? "普通Ｍ" : "普通Ｆ"];
+                         pattern.status[status][character.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"];
       
       // 季節の会話も取得
       let seasonalLines = [];
@@ -837,7 +845,7 @@ function getStatusLine(character, status) {
       if (seasonLines.length > 0) {
         // 通常の会話と季節の会話を組み合わせる
         const statusLines = pattern.status[status][speechType] || 
-                           pattern.status[status][character.bodySex === "男" ? "普通Ｍ" : "普通Ｆ"];
+                           pattern.status[status][character.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"];
         
         // 季節の会話を追加
         return [...statusLines, ...seasonLines][Math.floor(Math.random() * (statusLines.length + seasonLines.length))];
@@ -853,11 +861,11 @@ function getStatusLine(character, status) {
 
   if (!pattern.status[status][speechType]) {
     console.warn(`Speech type "${speechType}" not found for status "${status}" for character ${character.name}`);
-    return pattern.status[status][character.bodySex === "男" ? "普通Ｍ" : "普通Ｆ"][0] || "...";
+    return pattern.status[status][character.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"][0] || "...";
   }
 
   const statusLines = pattern.status[status][speechType] || 
-                     pattern.status[status][character.bodySex === "男" ? "普通Ｍ" : "普通Ｆ"];
+                     pattern.status[status][character.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"];
   return statusLines[Math.floor(Math.random() * statusLines.length)];
 }
 
@@ -988,7 +996,7 @@ function getLazyLines(character) {
   }
   
   // 該当するものがない場合は性別に応じたデフォルトを返す
-  const defaultType = character.bodySex === "男" ? "普通Ｍ" : "普通Ｆ";
+  const defaultType = character.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ";
   return LAZY_LINES[defaultType] || [];
 }
 
@@ -1116,7 +1124,7 @@ function getSeasonalLines(character, season) {
   }
   
   // 該当するものがない場合は性別に応じたデフォルトを返す
-  const defaultType = character.bodySex === "男" ? "普通Ｍ" : "普通Ｆ";
+  const defaultType = character.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ";
   return SEASONAL_LINES[season][defaultType] || [];
 } 
 
@@ -1124,6 +1132,11 @@ function getSeasonalLines(character, season) {
  * キャラクターの行動を変更する
  */
 function changeCharacterAction(character, newAction) {
+  if (isForcedHealingAction(character) && newAction !== "療養") {
+    console.error(`Action ${newAction} is not available for this character`);
+    return;
+  }
+
   if ((newAction === "迎撃" || newAction === "罠作成") && isForcedHealingAction(character)) {
     console.error(`Action ${newAction} is not available for this character`);
     return;

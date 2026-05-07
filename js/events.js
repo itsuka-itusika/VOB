@@ -344,6 +344,11 @@ export function doMonthStartProcess(v) {
   if (v.villageTraits.includes("冬") && v.materials<=0) {
     v.log("冬なのに資材0→凍え");
     v.villagers.forEach(p=>{
+      if (p.bodyTraits.includes("モフモフ")) {
+        v.log(`${p.name}はモフモフに守られて凍えを免れた`);
+        return;
+      }
+
       // 凍えの身体特性を付与（まだ持っていない場合のみ）
       if (!p.bodyTraits.includes("凍え")) {
         p.bodyTraits.push("凍え");
@@ -462,6 +467,8 @@ export function doMonthStartProcess(v) {
       p.mindTraits.includes("抑鬱")
     ) {
       p.actionTable = ["療養"];
+      p.jobTable = ["なし"];
+      p.job = "なし";
       p.action = "療養";
       let abnormalities = [];
       if (p.bodyTraits.includes("病気")) abnormalities.push("病気");

@@ -74,7 +74,7 @@ export function onSelectMiracleChange(village) {
       div.appendChild(createVillagerSelect("targetA", village, selectOptions));
       div.appendChild(createVillagerSelect("targetB", village, selectOptions));
     } else {
-      div.appendChild(createVillagerSelect("targetA", village));
+      div.appendChild(createVillagerSelect("targetA", village, { villagersOnly: true }));
     }
   }
 }
@@ -97,7 +97,7 @@ function createVillagerSelect(id, village, options = {}) {
     sel.appendChild(opp);
   });
 
-  if (options.normalExchangeOnly) {
+  if (options.normalExchangeOnly || options.villagersOnly) {
     return sel;
   }
 
@@ -185,6 +185,7 @@ export function performMiracle(village) {
         p.happiness=clampValue(p.happiness+20,0,100);
       });
       village.log(`【宴会】全員体力/メンタル+30,幸福+20(費用:${cost})`);
+      showMiracleResultModal(village, "宴会の奇跡", "村中に賑やかな宴が開かれました。", village.villagers);
       break;
 
     case "5": // 狂宴
@@ -202,6 +203,7 @@ export function performMiracle(village) {
         }
       });
       village.log(`【狂宴】全員体力/メンタル+100,幸福+50,狂乱付与(倫理*0.2,好色+15)`);
+      showMiracleResultModal(village, "狂宴の奇跡", "理性を揺らす熱気が村を満たしました。", village.villagers);
       break;
 
     default:
@@ -211,10 +213,12 @@ export function performMiracle(village) {
         case "1": // 豊穣
           village.villageTraits.push("豊穣");
           village.log("【豊穣の奇跡】収穫2倍1ヶ月付与");
+          showMiracleResultModal(village, "豊穣の奇跡", "畑と森に豊かな気配が満ちました。", village.villagers);
           break;
         case "2": // マナの奇跡
           village.food=clampValue(village.food+80,0,99999);
           village.log("【マナの奇跡】食料+80");
+          showMiracleResultModal(village, "マナの奇跡", "食料庫に恵みが満ちました。", village.villagers);
           break;
         case "3": // クピド(2人強制結婚)
           if (!vA||!vB||vA===vB) {
@@ -225,7 +229,7 @@ export function performMiracle(village) {
           forceMarriage(vA,vB,village);
           break;
         case "6": // 癒し(1人回復)
-          if (!vA) {
+          if (!vA || !village.villagers.includes(vA)) {
             village.log("【癒し】対象1人を選択");
             village.mana+=cost; 
             return;
@@ -233,7 +237,7 @@ export function performMiracle(village) {
           healMiracle(vA,village);
           break;
         case "7": // 戦神(1人)
-          if (!vA) {
+          if (!vA || !village.villagers.includes(vA)) {
             village.log("【戦神】対象1人を選択");
             village.mana+=cost;
             return;
@@ -250,12 +254,13 @@ export function performMiracle(village) {
             village.villageTraits.push("春");
           }
           village.log("【常春の奇跡】春に固定");
+          showMiracleResultModal(village, "常春の奇跡", "村に穏やかな春の気配が定着しました。", village.villagers);
           break;
         case "10": // 旅人
           travelerMiracle(village);
           break;
         case "11": // 出立
-          if (!vA) {
+          if (!vA || !village.villagers.includes(vA)) {
             village.log("【出立の奇跡】対象1人を選択");
             village.mana+=cost;
             return;
@@ -293,11 +298,11 @@ export function performMiracle(village) {
           openExchangeModal(vA, vB);
           break;
         case "14": // ミダスの奇跡
-          village.mana -= cost;
           if (!village.villageTraits.includes("ミダス")) {
             village.villageTraits.push("ミダス");
           }
           village.log("【ミダスの奇跡】1ヶ月間、食料を得る行動が資金を得る");
+          showMiracleResultModal(village, "ミダスの奇跡", "収穫の価値が黄金へと傾きました。", village.villagers);
           break;
       }
       break;
@@ -386,6 +391,7 @@ function healMiracle(p,v) {
   let recoveryMsg = recoveredTraits.length > 0 ? 
     `${recoveredTraits.join(",")}を回復,` : "";
   v.log(`【癒しの奇跡】${p.name}${recoveryMsg}体力/メンタル+50`);
+  showMiracleResultModal(v, "癒しの奇跡", `${p.name}の傷と疲れが癒されました。`, [p]);
 }
 
 /** 戦神(戦神の加護) */
@@ -401,6 +407,7 @@ function warMiracle(p, v) {
   p.int = round3(p.int * 0.2);
   p.eth = round3(p.eth * 0.2);
   p.ind = round3(p.ind * 0.2);
+  showMiracleResultModal(v, "戦神の奇跡", `${p.name}に戦神の加護が宿りました。`, [p]);
 }
 
 /** 竈女神(恋人を結婚100%) */
@@ -447,6 +454,7 @@ function travelerMiracle(v) {
   let newV = createRandomVisitor();
   v.visitors.push(newV);
   v.log(`【旅人の奇跡】${newV.name}が来訪(訪問者)`);
+  showMiracleResultModal(v, "旅人の奇跡", `${newV.name}が村を訪れました。`, [newV]);
 }
 
 /** 出立の奇跡(対象を離脱→幸福度分魔素取得) */
@@ -459,9 +467,69 @@ function departureMiracle(p,v) {
     clearRelationshipsForDepartedVillager(v, p);
     v.villagers.splice(idx,1);
   }
+  showMiracleResultModal(v, "出立の奇跡", `${p.name}は村を去りました。`, [p]);
+}
+
+function getChildlikeMiracleLine(person) {
+  const mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
+  if (mindTraits.includes("無垢")) return randFrom(["あうー。", "んま。", "ばぶ。", "すやすや……"]);
+  if (mindTraits.includes("萌芽")) return randFrom(["わあ……きらきらしてる。", "これ、なあに？", "えへへ、ふしぎだね。"]);
+  return null;
+}
+
+function getGenericMiracleLine(person, miracleName) {
+  const childLine = getChildlikeMiracleLine(person);
+  if (childLine) return childLine;
+  const type = person.speechType || determineSpeechType(person);
+  const lines = {
+    "普通Ｍ": [`${miracleName}か……本当に不思議な力だな。`, "今の光、見えたか？"],
+    "普通Ｆ": [`${miracleName}ですね。不思議で、少し温かい感じがします。`, "これが奇跡の力なんですね。"],
+    "強気Ｍ": ["すごい力だな。これならやれる。", "神の力だろうが、使えるものは使うさ。"],
+    "強気Ｆ": ["悪くないわね。これで前に進める。", "奇跡に頼った分、結果を出すわよ。"],
+    "内気": ["す、すごいです……少し怖いくらい。", "今のが奇跡……なんですね。"],
+    "陰気": ["……眩しいな。", "……奇跡なんてものも、あるんだな。"],
+    "お調子者": ["うわー、すごいっすね！奇跡って感じっす！", "これは効いてるっすよ、たぶん！"],
+    "快活": ["すごいね！なんだか元気が出る！", "奇跡って本当にあるんだね！"],
+    "お嬢様": ["まあ……神々しい輝きですわ。", "この恵みに感謝いたしますわ。"],
+    "クールＭ": ["現象を確認した。効果は明確だ。", "奇跡の発動を確認した。"],
+    "クールＦ": ["発動したわね。効果を見極めましょう。", "不思議だけれど、結果は確かね。"],
+    "老人": ["ありがたいことじゃのう。", "長く生きても、奇跡には驚かされるわい。"]
+  };
+  return randFrom(lines[type] || lines[person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
+}
+
+function showMiracleResultModal(village, miracleName, message, people) {
+  if (typeof document === "undefined") return;
+  const entries = (people || []).filter(Boolean);
+  if (entries.length === 0) return;
+  const overlay = document.createElement("div");
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;";
+  const modal = document.createElement("div");
+  modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;max-width:620px;width:calc(100% - 32px);max-height:min(80vh,720px);overflow:auto;border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
+  const rows = entries.map(person => `
+    <div style="display:grid;grid-template-columns:72px 1fr;gap:12px;margin:12px 0;align-items:center;">
+      <img src="${getPortraitPath(person)}" alt="${person.name}" style="width:72px;height:72px;object-fit:cover;border:1px solid #ddd;background:#f6f0e6;">
+      <p><strong>${person.name}</strong>: ${getGenericMiracleLine(person, miracleName)}</p>
+    </div>
+  `).join("");
+  modal.innerHTML = `
+    <h2>${miracleName}</h2>
+    <p>${message}</p>
+    ${rows}
+    <button id="closeMiracleResultModal">閉じる</button>
+  `;
+  document.body.appendChild(overlay);
+  document.body.appendChild(modal);
+  document.getElementById("closeMiracleResultModal").onclick = () => {
+    overlay.remove();
+    modal.remove();
+    updateUI(village);
+  };
 }
 
 function getMarriageMiracleLine(person, partner, miracleName) {
+  const childLine = getChildlikeMiracleLine(person);
+  if (childLine) return childLine;
   const type = person.speechType || determineSpeechType(person);
   const lines = {
     "普通Ｍ": [`${partner.name}と夫婦か……不思議だけど、悪くないな。`, "急な話だけど、ちゃんと向き合うよ。"],
@@ -486,7 +554,7 @@ function showMarriageMiracleModal(village, miracleName, pairs) {
   const overlay = document.createElement("div");
   overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;";
   const modal = document.createElement("div");
-  modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;max-width:620px;width:calc(100% - 32px);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
+  modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;max-width:620px;width:calc(100% - 32px);max-height:min(80vh,720px);overflow:auto;border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
 
   const rows = pairs.map(([a, b]) => `
     <div style="display:grid;grid-template-columns:72px 1fr;gap:12px;margin:12px 0;padding-bottom:12px;border-bottom:1px solid #ddd;align-items:center;">
@@ -569,25 +637,27 @@ function openExchangeModal(personA, personB) {
       }
     }
     // 通常のキャラクターは既存の口調を使用
-    return person.speechType || (person.bodySex === "男" ? "普通Ｍ" : "普通Ｆ");
+    return person.speechType || (person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ");
   };
 
   const speechTypeA = getSpeechType(personA);
   const speechTypeB = getSpeechType(personB);
   
   // 入れ替わり時のセリフをランダムに選択
-  const getRandomLine = (patterns, type) => {
-    const lines = patterns[type] || patterns[personA.bodySex === "男" ? "普通Ｍ" : "普通Ｆ"];
+  const getRandomLine = (patterns, type, person) => {
+    const childLine = getChildlikeMiracleLine(person);
+    if (childLine) return childLine;
+    const lines = patterns[type] || patterns[person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"];
     return lines[Math.floor(Math.random() * lines.length)];
   };
   
   // 会話テキストを設定
   textA.innerHTML = `
-    <p><strong>${personA.name}:</strong> ${getRandomLine(EXCHANGE_SPEECH_PATTERNS, speechTypeA)}</p>
+    <p><strong>${personA.name}:</strong> ${getRandomLine(EXCHANGE_SPEECH_PATTERNS, speechTypeA, personA)}</p>
   `;
   
   textB.innerHTML = `
-    <p><strong>${personB.name}:</strong> ${getRandomLine(EXCHANGE_SPEECH_PATTERNS, speechTypeB)}</p>
+    <p><strong>${personB.name}:</strong> ${getRandomLine(EXCHANGE_SPEECH_PATTERNS, speechTypeB, personB)}</p>
   `;
   
   overlay.style.display = "block";
