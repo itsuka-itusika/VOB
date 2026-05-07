@@ -160,6 +160,52 @@ function hasTrait(person, trait) {
     || (Array.isArray(person.mindTraits) && person.mindTraits.includes(trait));
 }
 
+const STAT_CELL_INDEXES = {
+  str: 13,
+  vit: 14,
+  dex: 15,
+  mag: 16,
+  chr: 17,
+  int: 19,
+  ind: 20,
+  eth: 21,
+  cou: 22,
+  sexdr: 23
+};
+
+function getDebuffedStats(person) {
+  const debuffed = new Set();
+  const add = (...stats) => stats.forEach(stat => debuffed.add(stat));
+
+  if (hasTrait(person, "飢餓")) add("str", "vit", "dex");
+  if (hasTrait(person, "凍え")) add("str", "vit", "dex");
+  if (hasTrait(person, "疲労")) add("str", "vit", "dex");
+  if (hasTrait(person, "過労")) add("str", "vit", "dex");
+  if (hasTrait(person, "臨月")) add("str", "vit");
+  if (hasTrait(person, "産褥")) add("str", "vit");
+  if (hasTrait(person, "心労")) add("int", "ind", "eth", "cou", "sexdr");
+  if (hasTrait(person, "抑鬱")) add("int", "ind", "eth", "cou", "sexdr");
+
+  return debuffed;
+}
+
+function applyStatusHighlights(row, person) {
+  const debuffedStats = getDebuffedStats(person);
+  Object.entries(STAT_CELL_INDEXES).forEach(([stat, cellIndex]) => {
+    const cell = row.cells[cellIndex];
+    if (!cell) return;
+    const value = parseInt(cell.textContent, 10);
+    if (debuffedStats.has(stat)) {
+      cell.classList.add("status-debuff");
+    } else if (value >= 20) {
+      cell.classList.add("bold-value");
+    }
+  });
+
+  const happinessCell = row.cells[10];
+  if (happinessCell) happinessCell.style.color = "#000";
+}
+
 function bodyCost(base, person) {
   return Math.round(base * (1 - ((Number(person.vit) || 0) / 100)));
 }
@@ -671,19 +717,7 @@ export function updateUI(v) {
       tr.cells[9].classList.add("low-hpmp");
     }
 
-    // 数値パラメータチェック（魅力と好色が20以上の時太字）
-    let checkCols = [13, 14, 15, 16, 17, 19, 20, 21, 22, 23];
-    checkCols.forEach(ci => {
-      let val = parseInt(tr.cells[ci].textContent);
-      // 魅力（14列目）と好色（20列目）は20以上で太字
-      if ((ci === 17 || ci === 23) && val >= 20) {
-        tr.cells[ci].classList.add("bold-value");
-      }
-      // その他のパラメータは従来通り
-      else if (ci !== 17 && ci !== 23 && val >= 20) {
-        tr.cells[ci].classList.add("bold-value");
-      }
-    });
+    applyStatusHighlights(tr, person);
 
     tb.appendChild(tr);
   });
@@ -870,12 +904,7 @@ export function updateUI(v) {
         tr.cells[9].classList.add("low-hpmp");
       }
 
-      // 数値パラメータチェック
-      let checkCols = [13, 14, 15, 16, 17, 19, 20, 21, 22, 23];
-      checkCols.forEach(ci => {
-        let val = parseInt(tr.cells[ci].textContent);
-        if (val >= 20) tr.cells[ci].classList.add("bold-value");
-      });
+      applyStatusHighlights(tr, person);
 
       visitorTb.appendChild(tr);
     });
@@ -1068,11 +1097,7 @@ export function updateUI(v) {
           tr.cells[9].classList.add("low-hpmp");
         }
 
-        let checkCols=[13,14,15,16,17,19,20,21,22,23];
-        checkCols.forEach(ci=>{
-          let val=parseInt(tr.cells[ci].textContent);
-          if (val>=20) tr.cells[ci].classList.add("bold-value");
-        });
+        applyStatusHighlights(tr, person);
 
         raidTb.appendChild(tr);
       });

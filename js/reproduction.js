@@ -571,8 +571,7 @@ function giveBirth(village, mother) {
   }
   mother.bodyTraits = mother.bodyTraits.filter(trait => trait !== "妊娠" && trait !== "臨月");
 
-  const birthParentName = mother.bodyOwner || mother.name;
-  const familyParent = village.villagers.find(person => person.name === birthParentName) || mother;
+  const birthParentName = mother.name;
   const childName = generateRandomName(data.childSex, {
     existingNames: village.villagers.map(person => person.name),
     fallbackParentName: birthParentName
@@ -605,14 +604,14 @@ function giveBirth(village, mother) {
   updateChildGrowthStage(child, village);
 
   addRelationship(child, `母:${birthParentName}`);
-  addRelationship(familyParent, `子:${child.name}`);
+  addRelationship(mother, `子:${child.name}`);
   addRelationship(child, `遺伝母:${data.motherSnapshot?.bodyOwner || data.motherSnapshot?.name || "不明"}`);
   addRelationship(child, `遺伝父:${data.geneticFatherUnknown ? "不明" : (data.fatherSnapshot?.bodyOwner || data.fatherSnapshot?.name || "不明")}`);
 
-  const spouse = getSpouse(familyParent, village);
+  const spouse = getSpouse(mother, village);
   if (spouse) {
     const spouseParentPrefix = spouse.bodySex === "女" ? "母" : "父";
-    addRelationship(child, `${spouseParentPrefix}:${spouse.bodyOwner || spouse.name}`);
+    addRelationship(child, `${spouseParentPrefix}:${spouse.name}`);
     addRelationship(spouse, `子:${child.name}`);
   }
 
