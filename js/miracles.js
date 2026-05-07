@@ -1,9 +1,10 @@
 // miracles.js
 
 import { clampValue, round3, getPortraitPath } from "./util.js";
-import { addRelationship, removeRelationship, checkHasRelationship, getRelationshipTargetName, clearRelationshipsForDepartedVillager } from "./relationships.js";
+import { addRelationship, removeRelationship, checkHasRelationship, getRelationshipTargetName, clearRelationshipsForDepartedVillager, addSpouseRelationships } from "./relationships.js";
 import { updateUI } from "./ui.js";  // 実行後にUIを更新する
 import { doExchange } from "./exchange.js";
+import { createRandomVisitor, determineSpeechType } from "./createVillagers.js";
 /**
  * 奇跡リスト
  */
@@ -315,12 +316,10 @@ function forceMarriage(a,b,v) {
   a.happiness=clampValue(a.happiness+50,0,100);
   b.happiness=clampValue(b.happiness+50,0,100);
 
-  if (a.spiritSex==="男") addRelationship(a,`夫:${b.name}`);
-  else if (a.spiritSex==="女") addRelationship(a,`妻:${b.name}`);
-  if (b.spiritSex==="男") addRelationship(b,`夫:${a.name}`);
-  else if (b.spiritSex==="女") addRelationship(b,`妻:${a.name}`);
+  addSpouseRelationships(a, b);
 
   v.log(`【クピドの奇跡】${a.name}と${b.name}強制結婚`);
+  showMarriageMiracleModal(v, "クピドの奇跡", [[a, b]]);
 }
 
 /** 癒し: 負傷など回復 */
@@ -426,10 +425,7 @@ function hearthMiracle(v) {
           a.happiness=clampValue(a.happiness+50,0,100);
           b.happiness=clampValue(b.happiness+50,0,100);
 
-          if (a.spiritSex==="男") addRelationship(a,`夫:${b.name}`);
-          else if (a.spiritSex==="女") addRelationship(a,`妻:${b.name}`);
-          if (b.spiritSex==="男") addRelationship(b,`夫:${a.name}`);
-          else if (b.spiritSex==="女") addRelationship(b,`妻:${a.name}`);
+          addSpouseRelationships(a, b);
 
           v.log(`【竈女神の奇跡】${a.name}と${b.name}結婚100%`);
           done.push(a,b);
@@ -437,10 +433,16 @@ function hearthMiracle(v) {
       }
     }
   });
+  if (done.length > 0) {
+    const pairs = [];
+    for (let i = 0; i < done.length; i += 2) {
+      pairs.push([done[i], done[i + 1]]);
+    }
+    showMarriageMiracleModal(v, "竈女神の奇跡", pairs);
+  }
 }
 
 /** 旅人の奇跡(1名来訪) */
-import { createRandomVisitor } from "./createVillagers.js";
 function travelerMiracle(v) {
   let newV = createRandomVisitor();
   v.visitors.push(newV);
@@ -457,6 +459,62 @@ function departureMiracle(p,v) {
     clearRelationshipsForDepartedVillager(v, p);
     v.villagers.splice(idx,1);
   }
+}
+
+function getMarriageMiracleLine(person, partner, miracleName) {
+  const type = person.speechType || determineSpeechType(person);
+  const lines = {
+    "普通Ｍ": [`${partner.name}と夫婦か……不思議だけど、悪くないな。`, "急な話だけど、ちゃんと向き合うよ。"],
+    "普通Ｆ": [`${partner.name}さんと夫婦になるんですね。大切にします。`, "驚きましたけど、嬉しいです。"],
+    "強気Ｍ": [`${partner.name}を守る。それだけだ。`, "奇跡だろうが何だろうが、覚悟は決めた。"],
+    "強気Ｆ": [`${partner.name}となら悪くないわ。私が支えるから。`, "いきなりだけど、逃げる気はないわ。"],
+    "内気": [`${partner.name}さんと……緊張します。でも、頑張ります。`, "急でびっくりしました……でも、嫌ではないです。"],
+    "陰気": [`……${partner.name}と夫婦か。奇跡とは妙なものだ。`, "……こうなったなら、捨て置けないな。"],
+    "お調子者": [`${partner.name}と結婚っすか！？いやー、奇跡ってすごいっすね！`, "これはもう盛り上げるしかないっす！"],
+    "快活": [`${partner.name}と夫婦だね！よろしく！`, "びっくりしたけど、なんだか楽しくなってきた！"],
+    "お嬢様": [`${partner.name}様と結ばれるとは……奇跡とは優雅なものですわ。`, "突然ではありますけれど、心を込めて歩みますわ。"],
+    "クールＭ": [`${miracleName}の結果は理解した。${partner.name}との関係を大切にする。`, "状況は急だが、責任は果たす。"],
+    "クールＦ": [`${partner.name}と夫婦ね。冷静に受け止めるわ。`, "奇跡の結果なら、これからを考えるだけよ。"],
+    "老人": [`ほう、${partner.name}と夫婦とはのう。長く生きても驚きは尽きん。`, "奇跡とはまこと不思議なものじゃな。"]
+  };
+  return randFrom(lines[type] || lines[person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
+}
+
+function showMarriageMiracleModal(village, miracleName, pairs) {
+  if (typeof document === "undefined" || !pairs.length) return;
+
+  const overlay = document.createElement("div");
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;";
+  const modal = document.createElement("div");
+  modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;max-width:620px;width:calc(100% - 32px);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
+
+  const rows = pairs.map(([a, b]) => `
+    <div style="display:grid;grid-template-columns:72px 1fr;gap:12px;margin:12px 0;padding-bottom:12px;border-bottom:1px solid #ddd;">
+      <img src="${getPortraitPath(a)}" alt="${a.name}" style="width:72px;height:72px;object-fit:cover;">
+      <div>
+        <p><strong>${a.name}</strong>: ${getMarriageMiracleLine(a, b, miracleName)}</p>
+        <p><strong>${b.name}</strong>: ${getMarriageMiracleLine(b, a, miracleName)}</p>
+      </div>
+    </div>
+  `).join("");
+
+  modal.innerHTML = `
+    <h2>${miracleName}</h2>
+    <p>奇跡により新たな夫婦が結ばれました。</p>
+    ${rows}
+    <button id="closeMarriageMiracleModal">閉じる</button>
+  `;
+  document.body.appendChild(overlay);
+  document.body.appendChild(modal);
+  document.getElementById("closeMarriageMiracleModal").onclick = () => {
+    overlay.remove();
+    modal.remove();
+    updateUI(village);
+  };
+}
+
+function randFrom(lines) {
+  return lines[Math.floor(Math.random() * lines.length)];
 }
 
 /**

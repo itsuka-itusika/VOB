@@ -86,10 +86,7 @@ export function doMarriageCheck(village) {
     a.happiness=clampValue(a.happiness+50,0,100);
     b.happiness=clampValue(b.happiness+50,0,100);
 
-    if (a.spiritSex==="男") addRelationship(a,`夫:${b.name}`);
-    else if (a.spiritSex==="女") addRelationship(a,`妻:${b.name}`);
-    if (b.spiritSex==="男") addRelationship(b,`夫:${a.name}`);
-    else if (b.spiritSex==="女") addRelationship(b,`妻:${a.name}`);
+    addSpouseRelationships(a, b);
 
     village.log(`${a.name}と${b.name}結婚成功`);
   } else {
@@ -112,6 +109,15 @@ export function addRelationship(p, rel) {
 export function removeRelationship(p, rel) {
   let i = p.relationships.indexOf(rel);
   if (i>=0) p.relationships.splice(i,1);
+}
+
+export function getSpouseRelationshipPrefix(spouse) {
+  return spouse?.bodySex === "女" ? "妻" : "夫";
+}
+
+export function addSpouseRelationships(a, b) {
+  addRelationship(a, `${getSpouseRelationshipPrefix(b)}:${b.name}`);
+  addRelationship(b, `${getSpouseRelationshipPrefix(a)}:${a.name}`);
 }
 
 /**

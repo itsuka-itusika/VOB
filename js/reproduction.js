@@ -347,7 +347,8 @@ function processPregnancyChecks(village) {
     const father = getSpouse(mother, village);
     if (!father || !canBeFather(father)) return;
 
-    const chance = Math.min(1, ((Number(mother.sexdr) || 0) / 30) * ((Number(father.sexdr) || 0) / 30));
+    const baseChance = ((Number(mother.sexdr) || 0) / 30) * ((Number(father.sexdr) || 0) / 30);
+    const chance = clampValue(baseChance * 0.5, 0.05, 0.5);
     if (Math.random() <= chance) {
       startPregnancy(village, mother, father);
     }
@@ -374,6 +375,7 @@ function startPregnancy(village, mother, father) {
   };
   addUnique(mother.bodyTraits, "妊娠");
   village.log(`${mother.name}が妊娠しました`);
+  showPregnancyModal(village, mother, father);
 }
 
 function giveBirth(village, mother) {
@@ -460,6 +462,47 @@ function getPregnancyLine(character, fullTerm) {
     "老人": fullTerm ? ["この年で命を迎えるとは、不思議なものじゃ。", "もうすぐじゃな……静かに待とう。"] : ["命とは巡るものじゃのう。", "大事にせねばならんのう。"]
   };
   return randChoice(lines[type] || lines[character.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
+}
+
+function getPregnancyNoticeLine(character, role, partner) {
+  const type = character.speechType || determineSpeechType(character);
+  const lines = {
+    "普通Ｍ": role === "mother" ? ["まだ実感が追いつかないな。でも、大事にするよ。", "驚いたけど、守るものが増えたんだな。"] : [`${partner.name}を支えないとな。`, "無事に育ってほしい。できることをするよ。"],
+    "普通Ｆ": role === "mother" ? ["新しい命がいるんですね。大切にします。", "少し不思議ですけど、嬉しいです。"] : [`${partner.name}さんを支えます。`, "無事に産まれてきてほしいですね。"],
+    "強気Ｍ": role === "mother" ? ["戸惑いはあるが、守り抜く。", "腹をくくるしかないな。"] : [`${partner.name}は俺が支える。`, "子も親も守ってみせる。"],
+    "強気Ｆ": role === "mother" ? ["驚いたけど、覚悟はできてるわ。", "大丈夫、私がしっかりする。"] : [`${partner.name}を支えるわ。任せて。`, "無事に迎える準備をするわよ。"],
+    "内気": role === "mother" ? ["まだ少し、信じられません……。", "ちゃんとできるか、不安です……でも嬉しいです。"] : [`${partner.name}さんの力に、なりたいです……。`, "こ、これから大切にしないと……。"],
+    "陰気": role === "mother" ? ["……妙な気分だ。", "……自分に務まるのか。"] : [`……${partner.name}を放ってはおけないな。`, "……無事なら、それでいい。"],
+    "お調子者": role === "mother" ? ["いやー、びっくりっすね！", "これは頑張らないとっすね！"] : [`${partner.name}を全力で支えるっす！`, "いやー、急に責任重大っすね！"],
+    "快活": role === "mother" ? ["びっくりしたけど、なんだか嬉しい！", "無理せず元気にいこう！"] : [`${partner.name}、一緒に頑張ろう！`, "元気な子だといいね！"],
+    "お嬢様": role === "mother" ? ["まあ……不思議な気持ちですわ。", "大切に過ごしますわ。"] : [`${partner.name}様を丁寧に支えますわ。`, "新たな命に祝福がありますように。"],
+    "クールＭ": role === "mother" ? ["状況は理解した。無理は避ける。", "冷静に備えるべきだな。"] : [`${partner.name}の体調管理を優先する。`, "必要な準備を始めよう。"],
+    "クールＦ": role === "mother" ? ["理解したわ。慎重に過ごす。", "少し不思議な感覚ね。"] : [`${partner.name}を支える。今はそれが最優先ね。`, "落ち着いて準備しましょう。"],
+    "老人": role === "mother" ? ["命とは巡るものじゃのう。", "大事にせねばならんのう。"] : [`${partner.name}を労わらねばのう。`, "新しい命とは、めでたいものじゃ。"]
+  };
+  return randChoice(lines[type] || lines[character.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
+}
+
+function showPregnancyModal(village, mother, father) {
+  if (typeof document === "undefined") return;
+  const overlay = document.createElement("div");
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;";
+  const modal = document.createElement("div");
+  modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;max-width:560px;width:calc(100% - 32px);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
+  modal.innerHTML = `
+    <h2>妊娠</h2>
+    <p>${mother.name}が妊娠しました。</p>
+    <p><strong>${mother.name}</strong>: ${getPregnancyNoticeLine(mother, "mother", father)}</p>
+    ${father ? `<p><strong>${father.name}</strong>: ${getPregnancyNoticeLine(father, "father", mother)}</p>` : ""}
+    <button id="closePregnancyModal">閉じる</button>
+  `;
+  document.body.appendChild(overlay);
+  document.body.appendChild(modal);
+  document.getElementById("closePregnancyModal").onclick = () => {
+    overlay.remove();
+    modal.remove();
+    import("./ui.js").then(module => module.updateUI(village));
+  };
 }
 
 function getBirthLine(character, role) {
