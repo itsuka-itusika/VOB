@@ -1,7 +1,7 @@
 // miracles.js
 
 import { clampValue, round3, getPortraitPath } from "./util.js";
-import { addRelationship, removeRelationship, checkHasRelationship, getRelationshipTargetName } from "./relationships.js";
+import { addRelationship, removeRelationship, checkHasRelationship, getRelationshipTargetName, clearRelationshipsForDepartedVillager } from "./relationships.js";
 import { updateUI } from "./ui.js";  // 実行後にUIを更新する
 import { doExchange } from "./exchange.js";
 /**
@@ -454,6 +454,7 @@ function departureMiracle(p,v) {
   v.log(`【出立の奇跡】${p.name}離脱,魔素+${bonus}`);
   let idx=v.villagers.indexOf(p);
   if (idx>=0) {
+    clearRelationshipsForDepartedVillager(v, p);
     v.villagers.splice(idx,1);
   }
 }

@@ -1,11 +1,12 @@
 // events.js
 
-import { randInt, clampValue, round3 } from "./util.js";
-import { doLoverCheck, doMarriageCheck } from "./relationships.js";
+import { randInt, clampValue, round3, getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "./util.js";
+import { doLoverCheck, doMarriageCheck, clearRelationshipsForDepartedVillager } from "./relationships.js";
 import { createRandomVillager, createRandomVisitor } from "./createVillagers.js";
 import { startRaidEvent } from "./raid.js";
 import { theVillage } from "./main.js";
 import { RandomEvents } from "./RandomEvents.js";
+import { handlePregnancyAndBirth, updateChildGrowthStage } from "./reproduction.js";
 
 /**
  * 固定イベント(前半) - 新年祭など
@@ -144,13 +145,10 @@ export function endOfMonthProcess(v) {
   let isWinter = v.villageTraits.includes("冬");
 
   v.villagers.forEach(p=>{
-    let cost=10;
-    if (p.mindTraits.includes("大食い")) cost=12;
-    if (p.mindTraits.includes("小食"))  cost=8;
-    totalF+=cost;
+    totalF += getVillagerFoodConsumption(p);
 
     if (isWinter) {
-      totalMat+=10;
+      totalMat += getVillagerWinterMaterialConsumption(p);
     }
   });
   v.food=clampValue(v.food - totalF,0,99999);
@@ -200,7 +198,7 @@ export function endOfMonthProcess(v) {
   // 状態異常の解除処理
   v.villagers.forEach(p => {
     // 身体特性からの状態異常解除
-    let bodyTraitsToRemove = ["飢餓", "凍え", "疲労", "過労", "病気", "産褥"];
+    let bodyTraitsToRemove = ["飢餓", "凍え", "疲労", "過労", "病気"];
     bodyTraitsToRemove.forEach(trait => {
       if (p.bodyTraits.includes(trait)) {
         // 特性を解除
@@ -267,10 +265,13 @@ export function endOfMonthProcess(v) {
   deadPeople.forEach(p => {
     let index = v.villagers.indexOf(p);
     if (index !== -1) {
+      clearRelationshipsForDepartedVillager(v, p);
       v.villagers.splice(index, 1);
       v.log(`${p.name}は老衰により死亡した...`);
     }
   });
+
+  handlePregnancyAndBirth(v);
 
   // ログ出力を元に戻す処理を削除
   // v.log = originalLog;
@@ -566,6 +567,7 @@ export function doAgingProcess(v) {
       }
     }
     v.log(`${p.name}:${p.bodyAge}歳(精神年齢${p.spiritAge})`);
+    updateChildGrowthStage(p, v, { announce: true });
   });
 }
 

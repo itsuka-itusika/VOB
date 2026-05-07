@@ -147,7 +147,21 @@ function convertVillagerToObject(vill) {
     // 口調タイプと顔グラフィック情報を追加
     speechType: vill.speechType,
     portraitFile: vill.portraitFile,
-    merchantStock: vill.merchantStock ? { ...vill.merchantStock } : undefined
+    merchantStock: vill.merchantStock ? { ...vill.merchantStock } : undefined,
+    pregnancy: vill.pregnancy ? JSON.parse(JSON.stringify(vill.pregnancy)) : null,
+    postpartumMonths: vill.postpartumMonths || 0,
+    potentialStats: vill.potentialStats ? { ...vill.potentialStats } : null,
+    adultBodyTraits: Array.isArray(vill.adultBodyTraits) ? [...vill.adultBodyTraits] : [],
+    adultMindTraits: Array.isArray(vill.adultMindTraits) ? [...vill.adultMindTraits] : [],
+    adultHobby: vill.adultHobby || "",
+    adultPortraitFile: vill.adultPortraitFile || "",
+    childMindTrait: vill.childMindTrait || "",
+    adultBodyReached: vill.adultBodyReached !== undefined
+      ? !!vill.adultBodyReached
+      : !!(vill.potentialStats && Number(vill.bodyAge) >= 16),
+    adultMindReached: vill.adultMindReached !== undefined
+      ? !!vill.adultMindReached
+      : !!(vill.potentialStats && Number(vill.spiritAge) >= 16)
   };
 }
 
@@ -265,6 +279,20 @@ function convertObjectToVillager(obj) {
   if (obj.merchantStock) {
     vill.merchantStock = { ...obj.merchantStock };
   }
+  vill.pregnancy = obj.pregnancy ? JSON.parse(JSON.stringify(obj.pregnancy)) : null;
+  vill.postpartumMonths = obj.postpartumMonths || 0;
+  vill.potentialStats = obj.potentialStats ? { ...obj.potentialStats } : null;
+  vill.adultBodyTraits = Array.isArray(obj.adultBodyTraits) ? [...obj.adultBodyTraits] : [];
+  vill.adultMindTraits = Array.isArray(obj.adultMindTraits) ? [...obj.adultMindTraits] : [];
+  vill.adultHobby = obj.adultHobby || "";
+  vill.adultPortraitFile = obj.adultPortraitFile || "";
+  vill.childMindTrait = obj.childMindTrait || "";
+  vill.adultBodyReached = obj.adultBodyReached !== undefined
+    ? !!obj.adultBodyReached
+    : !!(vill.potentialStats && Number(vill.bodyAge) >= 16);
+  vill.adultMindReached = obj.adultMindReached !== undefined
+    ? !!obj.adultMindReached
+    : !!(vill.potentialStats && Number(vill.spiritAge) >= 16);
 
   return vill;
 }

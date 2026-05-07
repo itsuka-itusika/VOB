@@ -154,6 +154,9 @@ function doJobAction(p, v) {
     case "余暇":
       doLeisureJob(p, v);
       break;
+    case "遊び":
+      doPlayJob(p, v);
+      break;
     case "学業":
       doStudy(p, v);
       break;
@@ -261,6 +264,11 @@ function calcMindCost(base, stat, person = null) {
   return Math.round(val);
 }
 
+function youthWorkMultiplier(p) {
+  const mindTraits = Array.isArray(p.mindTraits) ? p.mindTraits : [];
+  return mindTraits.includes("思春期") ? 0.8 : 1;
+}
+
 // -------------------------
 // 各ジョブの具体処理
 // -------------------------
@@ -335,6 +343,14 @@ function doLeisureJob(p, v) {
   v.log(`${p.name}余暇:メンタル+${base}${bathMsg}${hobbyMateMsg}${hobbyMsg}`);
 }
 
+function doPlayJob(p, v) {
+  const tc = calcBodyCost(5, p.vit);
+  p.hp = clampValue(p.hp - tc, 0, 100);
+  p.mp = clampValue(p.mp + 20, 0, 100);
+  p.happiness = clampValue(p.happiness + 15, 0, 100);
+  v.log(`${p.name}遊び:体力-${tc},メンタル+20,幸福+15`);
+}
+
 function doStudy(p, v) {
   let tc=calcBodyCost(10, p.vit);
   let mc=calcMindCost(10, p.ind, p);
@@ -375,7 +391,7 @@ function doFarm(p, v) {
   if (p.bodyTraits.includes("大地の巫女")) mul*=1.5;
   if (p.bodyTraits.includes("緑の指")) mul*=1.2;
 
-  let amt=Math.round(base*mul);
+  let amt=Math.round(base*mul*youthWorkMultiplier(p));
   let resourceLabel = "食料";
   
   // ミダスの奇跡の効果
@@ -426,7 +442,7 @@ function doLumber(p, v) {
   if (p.mindTraits.includes("達人木樵")) mul*=1.5;
   if (p.bodyTraits.includes("緑の指")) mul*=1.2;
 
-  let amt=Math.round(base*mul);
+  let amt=Math.round(base*mul*youthWorkMultiplier(p));
   v.materials=clampValue(v.materials+amt,0,99999);
 
   let logMsg = `${p.name}伐採:資材+${amt},体力-${tc},メンタル-${mc}`;
@@ -486,7 +502,7 @@ function doHunt(p, v) {
   if (p.mindTraits.includes("達人狩人")) mul *= 1.5;
   if (p.hobby === "ハンティング" || p.hobby === "狩猟") mul *= 1.2;
 
-  let amt = Math.round(base * mul);
+  let amt = Math.round(base * mul * youthWorkMultiplier(p));
 
   // ミダスの奇跡の効果
   if (v.villageTraits.includes("ミダス")) {
@@ -549,7 +565,7 @@ function doFish(p, v) {
   if (p.mindTraits.includes("熟練漁師")) mul *= 1.3;
   if (p.mindTraits.includes("達人漁師")) mul *= 1.5;
 
-  let amt = Math.round(base * mul);
+  let amt = Math.round(base * mul * youthWorkMultiplier(p));
 
   // ミダスの奇跡の効果
   if (v.villageTraits.includes("ミダス")) {
@@ -602,8 +618,8 @@ function doGather(p, v) {
   if (p.bodyTraits.includes("緑の指")) mul*=1.2;
   if (p.mindTraits.includes("森の知恵")) mul*=1.5;
 
-  let f = Math.round(baseF*mul);
-  let mm= Math.round(baseM*mul);
+  let f = Math.round(baseF*mul*youthWorkMultiplier(p));
+  let mm= Math.round(baseM*mul*youthWorkMultiplier(p));
 
   // ミダスの奇跡の効果
   if (v.villageTraits.includes("ミダス")) {
@@ -640,7 +656,7 @@ function doHandiwork(p, v) {
   p.mp = clampValue(p.mp-mc, 0, 100);
 
   let base = 5+10*((p.dex/20)*(p.ind/20));
-  let amt = Math.round(base);
+  let amt = Math.round(base*youthWorkMultiplier(p));
   v.funds = clampValue(v.funds+amt, 0, 99999);
 
   let logMsg = `${p.name}内職:資金+${amt},体力-${tc},メンタル-${mc}`;

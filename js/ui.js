@@ -5,7 +5,7 @@ import { theVillage } from "./main.js"; // 注意: これにより循環参照�
 import { refreshJobTable } from "./createVillagers.js";  // 追加
 import { openConversationModal } from "./conversation.js";
 import { showDictionaryEntry } from "./dictionary.js";
-import { getPortraitPath } from "./util.js";
+import { getPortraitPath, getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "./util.js";
 
 function appendDictionaryTerm(parent, term) {
   const label = String(term || "").trim();
@@ -34,10 +34,7 @@ function setDictionaryTerms(cell, terms) {
 
 function getMonthlyFoodCost(village) {
   return village.villagers.reduce((sum, person) => {
-    const traits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
-    if (traits.includes("大食い")) return sum + 12;
-    if (traits.includes("小食")) return sum + 8;
-    return sum + 10;
+    return sum + getVillagerFoodConsumption(person);
   }, 0);
 }
 
@@ -55,7 +52,7 @@ function buildWarningMessages(village) {
   const villagers = Array.isArray(village.villagers) ? village.villagers : [];
   const foodCost = getMonthlyFoodCost(village);
   const monthsOfFood = foodCost > 0 ? village.food / foodCost : Infinity;
-  const winterNeed = villagers.length * 10 * getWinterMonthsToPrepare(village.month);
+  const winterNeed = villagers.reduce((sum, person) => sum + getVillagerWinterMaterialConsumption(person), 0) * getWinterMonthsToPrepare(village.month);
   const lowHpCount = villagers.filter(person => Number(person.hp) <= 33).length;
   const lowMpCount = villagers.filter(person => Number(person.mp) <= 33).length;
   const noJobCount = villagers.filter(person => person.job === "なし").length;
@@ -171,6 +168,10 @@ function seasonWorkMultiplier(village, job, person) {
   if (hasTrait(person, "海の知恵") && job === "漁") mul *= 1.5;
   if (person.hobby === "ハンティング" && job === "狩猟") mul *= 1.2;
   if (person.hobby === "狩猟" && job === "狩猟") mul *= 1.2;
+  if ((Array.isArray(person.mindTraits) && person.mindTraits.includes("思春期")) &&
+    ["農作業", "伐採", "狩猟", "漁", "採集", "内職"].includes(job)) {
+    mul *= 0.8;
+  }
   return mul;
 }
 
@@ -246,6 +247,9 @@ function getTaskEstimate(person, task, village) {
       parts = [bath ? "体力+10" : "", `メンタル+${mp}`];
       break;
     }
+    case "遊び":
+      parts = [`体力-${bodyCost(5, person)}`, "メンタル+20", "幸福+15"];
+      break;
     case "療養":
       parts = [`体力+${Math.floor(20 * (hasTrait(person, "老人") ? 0.6 : hasTrait(person, "中年") ? 0.8 : 1))}`, `メンタル+${Math.floor(20 * (hasTrait(person, "老人") ? 0.6 : hasTrait(person, "中年") ? 0.8 : 1))}`];
       break;
@@ -270,7 +274,7 @@ function getTaskEstimate(person, task, village) {
       parts = [`${resourceName(village, "食料")}+${gain}`, `資材+${Math.round(2 * seasonWorkMultiplier(village, task, person))}`, `体力-${bodyCost(15, person)}`, `メンタル-${mindCost(15, "ind", person)}`];
       break;
     case "内職":
-      parts = [`資金+${Math.round(5 + 10 * ((dex / 20) * (ind / 20)))}`, `体力-${bodyCost(15, person)}`, `メンタル-${mindCost(15, "ind", person)}`];
+      parts = [`資金+${Math.round((5 + 10 * ((dex / 20) * (ind / 20))) * seasonWorkMultiplier(village, task, person))}`, `体力-${bodyCost(15, person)}`, `メンタル-${mindCost(15, "ind", person)}`];
       break;
     case "行商":
       parts = [`資金+${Math.round(20 * ((chr / 20) * (intv / 20)))}`, `体力-${bodyCost(20, person)}`, `メンタル-${mindCost(20, "ind", person)}`];

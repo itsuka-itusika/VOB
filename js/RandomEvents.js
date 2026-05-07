@@ -1623,6 +1623,7 @@ export class RandomEvents {
       case "tattoo": {
         let candidates = v.villagers.filter(x => 
           x.spiritSex === "男" &&
+          x.bodyAge >= 12 &&
           x.spiritAge >= 16 &&
           x.eth <= 12 &&
           !x.bodyTraits.includes("刺青")
@@ -1687,6 +1688,8 @@ export class RandomEvents {
         let candidates = v.villagers.filter(x =>
           x.spiritSex === "男" &&
           x.bodySex === "女" &&
+          x.spiritAge >= 16 &&
+          x.bodyAge >= 12 &&
           x.chr >= 16 &&
           x.sexdr >= 20
         );
@@ -1808,6 +1811,7 @@ export class RandomEvents {
       case "drunk": {
         let candidates = v.villagers.filter(x => 
           x.spiritSex === "男" &&
+          x.bodyAge >= 12 &&
           x.eth <= 14 &&
           x.spiritAge >= 16
         );

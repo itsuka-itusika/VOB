@@ -115,6 +115,40 @@ export function removeRelationship(p, rel) {
 }
 
 /**
+ * 村人が死亡・出立などで村を去る時、残った村人側の関係を整理する
+ */
+export function clearRelationshipsForDepartedVillager(village, departed) {
+  if (!village || !Array.isArray(village.villagers) || !departed) return;
+
+  const departedName = departed.name;
+  if (!departedName) return;
+
+  village.villagers.forEach(person => {
+    if (person === departed || !Array.isArray(person.relationships)) return;
+
+    let removedSpouse = false;
+    person.relationships = person.relationships.filter(rel => {
+      if (rel === "既婚") return true;
+
+      const [prefix, targetName] = String(rel).split(":");
+      const referencesDeparted = targetName === departedName || String(rel).startsWith(`${departedName}の`);
+      const isSpouseReference = prefix === "夫" ||
+        prefix === "妻" ||
+        rel === `${departedName}の夫` ||
+        rel === `${departedName}の妻`;
+      if (referencesDeparted && isSpouseReference) {
+        removedSpouse = true;
+      }
+      return !referencesDeparted;
+    });
+
+    if (removedSpouse) {
+      person.relationships = person.relationships.filter(rel => rel !== "既婚");
+    }
+  });
+}
+
+/**
  * 特定キーワードを含む関係を持っているか
  */
 export function checkHasRelationship(p, kw) {

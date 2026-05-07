@@ -1,11 +1,17 @@
 // raid.js
 
 import { createRandomVillager } from "./createVillagers.js";
-import { randInt, randChoice, clampValue, shuffleArray } from "./util.js";
+import { randInt, randChoice, clampValue, shuffleArray, isForcedHealingAction } from "./util.js";
 import { endOfMonthProcess, doFixedEventPre, doFixedEventPost, doRandomEventPre, doRandomEventPost, doMonthStartProcess, doAgingProcess, updateSeason } from "./events.js";
 import { handleAllVillagerJobs } from "./jobs.js";
 import { updateUI } from "./ui.js";
 import { MALE_PORTRAIT_FILES, usedPortraits } from "./createVillagers.js";
+
+function canPerformRaidAction(person, action) {
+  return Array.isArray(person?.actionTable) &&
+    person.actionTable.includes(action) &&
+    !isForcedHealingAction(person);
+}
 
 /**
  * 襲撃者タイプの定義
@@ -397,8 +403,8 @@ export function openRaidModal(village) {
   const rlog=document.getElementById("raidLogArea");
   rlog.innerHTML="襲撃が始まります。<br>「次のステップ」ボタンを押して進めてください。";
 
-  let trapMakers = village.villagers.filter(p=> p.action==="罠作成");
-  let defenders  = village.villagers.filter(p=> p.action==="迎撃");
+  let trapMakers = village.villagers.filter(p=> p.action==="罠作成" && canPerformRaidAction(p, "罠作成"));
+  let defenders  = village.villagers.filter(p=> p.action==="迎撃" && canPerformRaidAction(p, "迎撃"));
 
   if (trapMakers.length===0 && defenders.length===0) {
     rlog.innerHTML+=`<br>迎撃する者がいません！ → 自動的に襲撃成功(敵側)。`;
@@ -414,7 +420,7 @@ export function openRaidModal(village) {
  * 罠作成(最初の行動)のキューを作成
  */
 function createTrapActionQueue(village) {
-  let trapMakers = village.villagers.filter(p=>p.action==="罠作成" && p.hp>0);
+  let trapMakers = village.villagers.filter(p=>p.action==="罠作成" && p.hp>0 && canPerformRaidAction(p, "罠作成"));
   trapMakers = shuffleArray(trapMakers);
 
   village.raidActionQueue=[];
@@ -457,7 +463,7 @@ export function proceedRaidAction(village) {
 function doOneTrapAction(action, village) {
   let p=action.actor;
   let logDiv=document.getElementById("raidLogArea");
-  if (!p||p.hp<=0) {
+  if (!p||p.hp<=0 || !canPerformRaidAction(p, "罠作成")) {
     logDiv.innerHTML+=`<br>【罠作成】${p?p.name:"??"} は行動不能`;
     updateRaidTables(village);
     return;
@@ -482,7 +488,7 @@ function doOneTrapAction(action, village) {
 export function setupCombatPhase(village) {
   const logDiv=document.getElementById("raidLogArea");
 
-  let defenders = village.villagers.filter(p=> p.action==="迎撃" && p.hp>0);
+  let defenders = village.villagers.filter(p=> p.action==="迎撃" && p.hp>0 && canPerformRaidAction(p, "迎撃"));
   let enemies   = village.raidEnemies.filter(e=> e.hp>0);
 
   if (enemies.length===0) {
@@ -523,14 +529,14 @@ function createCombatActions(defenders, enemies) {
 function doOneCombatAction(action, village) {
   let actor=action.actor;
   let logDiv=document.getElementById("raidLogArea");
-  if (!actor||actor.hp<=0) {
+  if (!actor||actor.hp<=0 || (!village.raidEnemies.includes(actor) && !canPerformRaidAction(actor, "迎撃"))) {
     logDiv.innerHTML+=`<br>【迎撃】${actor?actor.name:"??"}は行動不能`;
     updateRaidTables(village);
     return;
   }
   let isEnemy = village.raidEnemies.includes(actor);
 
-  let defenders = village.villagers.filter(p=> p.action==="迎撃" && p.hp>0);
+  let defenders = village.villagers.filter(p=> p.action==="迎撃" && p.hp>0 && canPerformRaidAction(p, "迎撃"));
   let enemies   = village.raidEnemies.filter(e=> e.hp>0);
 
   if (isEnemy) {
@@ -628,7 +634,7 @@ function calcAttackDamage(atk, def, isCounter) {
 function finalizeCombatTurn(village) {
   let logDiv=document.getElementById("raidLogArea");
 
-  let defenders = village.villagers.filter(p=> p.action==="迎撃" && p.hp>0);
+  let defenders = village.villagers.filter(p=> p.action==="迎撃" && p.hp>0 && canPerformRaidAction(p, "迎撃"));
   let enemies   = village.raidEnemies.filter(e=> e.hp>0);
 
   if (defenders.length===0) {
@@ -650,7 +656,7 @@ function finalizeCombatTurn(village) {
 
 /** 全員の行動終了時に敵 or 迎撃側が全滅したかどうか確認 */
 function checkCombatEndOfActions(village) {
-  let defenders = village.villagers.filter(p=> p.action==="迎撃" && p.hp>0);
+  let defenders = village.villagers.filter(p=> p.action==="迎撃" && p.hp>0 && canPerformRaidAction(p, "迎撃"));
   let enemies   = village.raidEnemies.filter(e=> e.hp>0);
 
   if (defenders.length===0) {
@@ -823,7 +829,7 @@ export function updateRaidTables(village) {
   }
   
   // 罠作成部隊
-  let trapMakers = village.villagers.filter(v => v.action === "罠作成");
+  let trapMakers = village.villagers.filter(v => v.action === "罠作成" && canPerformRaidAction(v, "罠作成"));
   let defenderTbody = document.querySelector("#defenderTable tbody");
   if (defenderTbody) {
     defenderTbody.innerHTML = "";
@@ -843,7 +849,7 @@ export function updateRaidTables(village) {
   }
   
   // 迎撃部隊
-  let raiders = village.villagers.filter(v => v.action === "迎撃");
+  let raiders = village.villagers.filter(v => v.action === "迎撃" && canPerformRaidAction(v, "迎撃"));
   let raidersTbody = document.querySelector("#raidersTable tbody");
   if (raidersTbody) {
     raidersTbody.innerHTML = "";

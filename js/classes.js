@@ -131,6 +131,18 @@ export class Villager {
 
     /** 口調タイプ */
     this.speechType = "";
+
+    /** 妊娠・出産・成長関連 */
+    this.pregnancy = null;
+    this.postpartumMonths = 0;
+    this.potentialStats = null;
+    this.adultBodyTraits = [];
+    this.adultMindTraits = [];
+    this.adultHobby = "";
+    this.adultPortraitFile = "";
+    this.childMindTrait = "";
+    this.adultBodyReached = false;
+    this.adultMindReached = false;
   }
 
   setPortrait(portraitFile) {

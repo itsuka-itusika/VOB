@@ -1,7 +1,7 @@
 // createVillagers.js
 
 import { Villager } from "./classes.js";
-import { randInt, randChoice, randNormalInRange } from "./util.js";
+import { randInt, randChoice, randNormalInRange, isForcedHealingAction } from "./util.js";
 import { theVillage } from "./main.js";
 
 /**
@@ -100,7 +100,7 @@ const FEMALE_PORTRAIT_FILES = {
 /**
  * 性別と能力値に応じて顔グラフィックを選択
  */
-function selectPortraitByCharacter(character) {
+export function selectPortraitByCharacter(character) {
   // グループから選択する前に、使用可能な顔グラフィックをフィルタリング
   const filterUnusedPortraits = (portraitList) => {
     return portraitList.filter(portrait => !usedPortraits[character.bodySex === "男" ? "male" : "female"].has(portrait));
@@ -874,24 +874,43 @@ export function assignHobby(v) {
  */
 export function refreshJobTable(v, village = theVillage) {
   let sa = v.spiritAge;
-  if (sa <= 9) {
+  const bodyTraits = Array.isArray(v.bodyTraits) ? v.bodyTraits : [];
+  const mindTraits = Array.isArray(v.mindTraits) ? v.mindTraits : [];
+  const isBabyStage = bodyTraits.includes("赤子") || mindTraits.includes("無垢") || sa <= 3;
+  const isToddlerStage = bodyTraits.includes("幼児") || mindTraits.includes("萌芽") || sa <= 9;
+  const isAdolescentStage = bodyTraits.includes("少年") || bodyTraits.includes("少女") || mindTraits.includes("思春期") || sa <= 15;
+
+  if (isBabyStage) {
     v.jobTable = ["なし"];
-    v.actionTable = ["なし"];
+    v.actionTable = ["休養", "療養"];
     if (!v.jobTable.includes(v.job)) {
       v.job = "なし";
     }
     if (!v.actionTable.includes(v.action)) {
-      v.action = v.job;
+      v.action = "休養";
     }
     return;
-  } else if (sa <= 15) {
-    v.jobTable = ["学業","鍛錬","なし"];
-    v.actionTable = ["学業","鍛錬","休養","余暇"];
+  } else if (isToddlerStage) {
+    v.jobTable = ["なし"];
+    v.actionTable = ["休養", "遊び", "療養"];
     if (!v.jobTable.includes(v.job)) {
       v.job = "なし";
     }
     if (!v.actionTable.includes(v.action)) {
-      v.action = v.job;
+      v.action = "遊び";
+    }
+    return;
+  } else if (isAdolescentStage) {
+    v.jobTable = ["鍛錬", "農作業", "伐採", "狩猟", "漁", "採集", "内職", "なし"];
+    v.actionTable = ["休養", "遊び", "療養", "鍛錬", "農作業", "伐採", "狩猟", "漁", "採集", "内職"];
+    if (village.villageTraits.includes("襲撃中") && !isForcedHealingAction(v)) {
+      v.actionTable.unshift("罠作成");
+    }
+    if (!v.jobTable.includes(v.job)) {
+      v.job = "なし";
+    }
+    if (!v.actionTable.includes(v.action)) {
+      v.action = v.jobTable.includes(v.job) && v.actionTable.includes(v.job) ? v.job : "遊び";
     }
     return;
   } else {
@@ -1016,8 +1035,8 @@ export function refreshJobTable(v, village = theVillage) {
     }
   }
 
-  // 襲撃関連の行動追加（状態異常がない場合のみ）
-  if (village.villageTraits.includes("襲撃中")) {
+  // 襲撃関連の行動追加（療養制限がない場合のみ）
+  if (village.villageTraits.includes("襲撃中") && !isForcedHealingAction(v)) {
     v.actionTable = v.actionTable.filter(action => action !== "迎撃" && action !== "罠作成");
     v.actionTable.unshift("迎撃", "罠作成");
   }

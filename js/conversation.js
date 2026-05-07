@@ -1,7 +1,8 @@
 import { theVillage } from "./main.js";
 import { updateUI } from "./ui.js";
-import { randInt, randChoice, getPortraitPath } from "./util.js";
+import { randInt, randChoice, getPortraitPath, isForcedHealingAction } from "./util.js";
 import { refreshJobTable } from "./createVillagers.js";  // refreshJobTableをインポート
+import { getReproductiveStatusLine } from "./reproduction.js";
 
 // 口調タイプごとのテンプレート
 const SPEECH_PATTERNS = {
@@ -428,6 +429,10 @@ function createConversationStatusHtml(character) {
     const raiderLine = character.raiderDialogues[Math.floor(Math.random() * character.raiderDialogues.length)];
     return `<p><strong></strong> ${raiderLine}</p>`;
   }
+  const reproductiveLine = getReproductiveStatusLine(character);
+  if (reproductiveLine) {
+    return `<p><strong></strong> ${reproductiveLine}</p>`;
+  }
   if (isUnderRaid) {
     return `<p><strong></strong> ${getStatusLine(character, "raid")}</p>`;
   }
@@ -558,21 +563,33 @@ export function openConversationModal(character) {
         openMerchantTradeModal(character);
       });
     }
-  } else if (isUnderRaid && theVillage.villagers.includes(character)) {
-    // 襲撃中の村人の場合は迎撃・罠作成ボタンを表示
-    actionButtons.innerHTML = `
-      <button id="assignDefender" class="${character.action === '迎撃' ? 'active-action' : ''}">迎撃任命</button>
-      <button id="assignTrapMaker" class="${character.action === '罠作成' ? 'active-action' : ''}">罠作成任命</button>
-    `;
-    actionButtons.style.display = "block";
-    
-    document.getElementById("assignDefender").addEventListener("click", () => {
-      changeCharacterAction(character, "迎撃");
-    });
-    
-    document.getElementById("assignTrapMaker").addEventListener("click", () => {
-      changeCharacterAction(character, "罠作成");
-    });
+  } else if (isUnderRaid && theVillage.villagers.includes(character) && !isForcedHealingAction(character)) {
+    const actionTable = Array.isArray(character.actionTable) ? character.actionTable : [];
+    const canDefend = actionTable.includes("迎撃");
+    const canMakeTrap = actionTable.includes("罠作成");
+    const buttons = [];
+    if (canDefend) {
+      buttons.push(`<button id="assignDefender" class="${character.action === '迎撃' ? 'active-action' : ''}">迎撃任命</button>`);
+    }
+    if (canMakeTrap) {
+      buttons.push(`<button id="assignTrapMaker" class="${character.action === '罠作成' ? 'active-action' : ''}">罠作成任命</button>`);
+    }
+    actionButtons.innerHTML = buttons.join("");
+    actionButtons.style.display = buttons.length > 0 ? "block" : "none";
+
+    const defenderButton = document.getElementById("assignDefender");
+    if (defenderButton) {
+      defenderButton.addEventListener("click", () => {
+        changeCharacterAction(character, "迎撃");
+      });
+    }
+
+    const trapMakerButton = document.getElementById("assignTrapMaker");
+    if (trapMakerButton) {
+      trapMakerButton.addEventListener("click", () => {
+        changeCharacterAction(character, "罠作成");
+      });
+    }
   } else {
     actionButtons.style.display = "none";
   }
@@ -1107,6 +1124,11 @@ function getSeasonalLines(character, season) {
  * キャラクターの行動を変更する
  */
 function changeCharacterAction(character, newAction) {
+  if ((newAction === "迎撃" || newAction === "罠作成") && isForcedHealingAction(character)) {
+    console.error(`Action ${newAction} is not available for this character`);
+    return;
+  }
+
   if (character.actionTable.includes(newAction)) {
     character.action = newAction;
     

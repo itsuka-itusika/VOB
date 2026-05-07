@@ -1,4 +1,5 @@
 import { refreshJobTable } from "./createVillagers.js";
+import { getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "./util.js";
 
 const JOB_NONE = "\u306a\u3057";
 const JOB_REST = "\u4f11\u990a";
@@ -101,16 +102,15 @@ function firstAvailable(candidates, table) {
 function estimateMonthlyFoodCost(village) {
   const villagers = Array.isArray(village.villagers) ? village.villagers : [];
   return villagers.reduce((sum, person) => {
-    const traits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
-    if (traits.includes("\u5927\u98df\u3044")) return sum + 12;
-    if (traits.includes("\u5c11\u98df")) return sum + 8;
-    return sum + 10;
+    return sum + getVillagerFoodConsumption(person);
   }, 0);
 }
 
 function estimateMonthlyMaterialCost(village) {
   const villagers = Array.isArray(village.villagers) ? village.villagers : [];
-  return village.villageTraits.includes("\u51ac") ? villagers.length * 10 : 0;
+  return village.villageTraits.includes("\u51ac")
+    ? villagers.reduce((sum, person) => sum + getVillagerWinterMaterialConsumption(person), 0)
+    : 0;
 }
 
 function normalizeSeverity(value) {
