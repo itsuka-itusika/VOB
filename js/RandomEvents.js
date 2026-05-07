@@ -1,9 +1,10 @@
 // RandomEvents.js
 
 import { randInt, clampValue } from "./util.js";
-import { doLoverCheck } from "./relationships.js";
+import { doLoverCheck, addRelationship as addCategorizedRelationship } from "./relationships.js";
 import { doExchange } from "./exchange.js";
 import { showRandomEventModal } from "./randomEventModal.js";
+import { scheduleGoldenRainPregnancy } from "./reproduction.js";
 
 const EVENT_KIND_TABLE = [
   { maxRoll: 1, kind: "mythic" },
@@ -21,12 +22,14 @@ const EVENT_POOLS = {
   good: ["cat", "gold", "strangeRain", "fireworks", "hotSpring", "hobbyFriends", "menFriendship", "lover", "yuri", "tattoo", "fashion", "muscle", "selfPleasure"],
   bad: ["storm", "downpour", "heat", "fire", "thief", "rats", "lightning1", "lightning2", "snow", "fight", "drunk"]
 };
+const GOLDEN_RAIN_RACES = new Set(["人間", "ハーピー", "半神", "キュクロプス", "サイクロプス"]);
 
 const EVENT_SUBJECTS = {
   "狩猟神": "狩女神の祝福",
   "太陽神": "太陽神の寵愛",
   "戦女神": "戦女神の啓示",
   "地母神": "地母神の慈愛",
+  goldenRain: "黄金の雨",
   cat: "猫との出会い",
   gold: "金貨の発見",
   strangeRain: "不思議な雨",
@@ -58,6 +61,7 @@ const EVENT_MOODS = {
   "太陽神": "mythic",
   "戦女神": "mythic",
   "地母神": "mythic",
+  goldenRain: "mythic",
   cat: "happy",
   gold: "gain",
   strangeRain: "gain",
@@ -1482,6 +1486,17 @@ export class RandomEvents {
           !p.bodyTraits.includes("大地の巫女")) {
         cands.push({ type: "地母神", vill: p });
       }
+      if (p.bodySex === "女" &&
+          Number(p.bodyAge) >= 16 &&
+          Number(p.bodyAge) <= 29 &&
+          Number(p.chr) >= 25 &&
+          GOLDEN_RAIN_RACES.has(p.race || "人間") &&
+          !p.pregnancy &&
+          !p.bodyTraits.includes("妊娠") &&
+          !p.bodyTraits.includes("臨月") &&
+          !p.bodyTraits.includes("産褥")) {
+        cands.push({ type: "goldenRain", vill: p });
+      }
     });
 
     if (cands.length === 0) {
@@ -1510,6 +1525,10 @@ export class RandomEvents {
         p.bodyTraits.push("大地の巫女");
         p.vit += 10; p.chr += 10;
         v.log(`${p.name}は地母神の慈愛を受けた！(耐久+10,魅力+10)`);
+        break;
+      case "goldenRain":
+        if (!scheduleGoldenRainPregnancy(v, p)) return null;
+        this.addForcedSpeaker(p);
         break;
     }
     return c.type;
@@ -1857,8 +1876,6 @@ export class RandomEvents {
    * 人間関係を追加
    */
   static addRelationship(person, rel) {
-    if (!person.relationships.includes(rel)) {
-      person.relationships.push(rel);
-    }
+    addCategorizedRelationship(person, rel);
   }
 } 

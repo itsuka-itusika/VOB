@@ -4,7 +4,7 @@ import { clampValue, round3, getPortraitPath } from "./util.js";
 import { addRelationship, removeRelationship, checkHasRelationship, getRelationshipTargetName, clearRelationshipsForDepartedVillager, addSpouseRelationships } from "./relationships.js";
 import { updateUI } from "./ui.js";  // 実行後にUIを更新する
 import { doExchange } from "./exchange.js";
-import { createRandomVisitor, determineSpeechType } from "./createVillagers.js";
+import { createRandomVisitor, determineSpeechType, refreshJobTable } from "./createVillagers.js";
 /**
  * 奇跡リスト
  */
@@ -70,7 +70,7 @@ export function onSelectMiracleChange(village) {
   // 特定のIDは対象選択が必要
   if (["3","6","7","11","12","13"].includes(mid)) {
     if (mid==="3"||mid==="12"||mid==="13") {
-      const selectOptions = mid === "12" ? { normalExchangeOnly: true } : {};
+      const selectOptions = mid === "12" ? { normalExchangeOnly: true } : (mid === "3" ? { villagersOnly: true } : {});
       div.appendChild(createVillagerSelect("targetA", village, selectOptions));
       div.appendChild(createVillagerSelect("targetB", village, selectOptions));
     } else {
@@ -226,6 +226,11 @@ export function performMiracle(village) {
             village.mana+=cost; // 戻す
             return;
           }
+          if (!village.villagers.includes(vA) || !village.villagers.includes(vB)) {
+            village.log("【クピド】村人以外は対象外です");
+            village.mana+=cost;
+            return;
+          }
           forceMarriage(vA,vB,village);
           break;
         case "6": // 癒し(1人回復)
@@ -332,7 +337,7 @@ function healMiracle(p,v) {
   p.hp=clampValue(p.hp+50,0,100);
   p.mp=clampValue(p.mp+50,0,100);
 
-  let arr=["負傷","疲労","過労","飢餓","心労","抑鬱"];
+  let arr=["負傷","疲労","過労","飢餓","産褥","心労","抑鬱"];
   let recoveredTraits = [];
 
   // 身体特性からの状態異常回復
@@ -357,6 +362,12 @@ function healMiracle(p,v) {
           p.str = round3(p.str / 0.25);  // 25%から回復
           p.vit = round3(p.vit / 0.25);
           p.dex = round3(p.dex / 0.25);
+          break;
+        case "産褥":
+          p.str = round3(p.str / 0.5);
+          p.vit = round3(p.vit / 0.5);
+          p.postpartumMonths = 0;
+          refreshJobTable(p, v);
           break;
       }
     }
@@ -480,6 +491,7 @@ function getChildlikeMiracleLine(person) {
 function getGenericMiracleLine(person, miracleName) {
   const childLine = getChildlikeMiracleLine(person);
   if (childLine) return childLine;
+  if (miracleName === "出立の奇跡") return getDepartureMiracleLine(person);
   const type = person.speechType || determineSpeechType(person);
   const lines = {
     "普通Ｍ": [`${miracleName}か……本当に不思議な力だな。`, "今の光、見えたか？"],
@@ -494,6 +506,25 @@ function getGenericMiracleLine(person, miracleName) {
     "クールＭ": ["現象を確認した。効果は明確だ。", "奇跡の発動を確認した。"],
     "クールＦ": ["発動したわね。効果を見極めましょう。", "不思議だけれど、結果は確かね。"],
     "老人": ["ありがたいことじゃのう。", "長く生きても、奇跡には驚かされるわい。"]
+  };
+  return randFrom(lines[type] || lines[person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
+}
+
+function getDepartureMiracleLine(person) {
+  const type = person.speechType || determineSpeechType(person);
+  const lines = {
+    "普通Ｍ": ["行かなきゃならない気がするんだ。怖いけど、足はもう前を向いてる。", "世話になったな。いつか胸を張って、この旅の意味を話せるようにするよ。"],
+    "普通Ｆ": ["急でごめんなさい。でも、遠くから呼ばれているみたいなんです。", "別れは寂しいですけど、この旅にはきっと意味があるんだと思います。"],
+    "強気Ｍ": ["理由はうまく言えない。だが行く。止めても無駄だ。", "別れは苦手だが、俺には俺の道ができた。必ず生きて進む。"],
+    "強気Ｆ": ["胸の奥がうるさいの。行けって言うなら、行ってやるわ。", "泣かないで。私が選んだ旅よ。半端な覚悟で出ていくわけじゃない。"],
+    "内気": ["こ、怖いです……でも、ここにいたらいけない気がして……。", "皆さんと離れるのはつらいです。でも、行かなきゃって、ずっと聞こえるんです。"],
+    "陰気": ["……妙な衝動だ。俺らしくもないのに、外へ出ろと急かされる。", "別れの言葉は得意じゃない。……世話になった。"],
+    "お調子者": ["いやー、急に旅立ちっすよ。自分でもびっくりしてるっす。", "寂しくなるっすけど、土産話を山ほど抱えて戻るつもりっす！"],
+    "快活": ["わからないけど、行きたいんだ。胸がどきどきして止まらない！", "みんな、ありがとう！この先で何か見つけてくるね！"],
+    "お嬢様": ["名残惜しいですわ。けれど、この胸の導きを無視できませんの。", "皆様のご恩は忘れませんわ。私の旅路に、どうか祝福を。"],
+    "クールＭ": ["衝動の発生源は不明だ。だが、進むべき方向だけは明確だ。", "村を離れる。感傷はあるが、使命を優先する。"],
+    "クールＦ": ["説明しきれない感覚ね。けれど、行くべきだと判断したわ。", "別れは惜しいけれど、迷っている時間はない。旅立つわ。"],
+    "老人": ["この年でまた旅支度とはのう。奇跡とは人を落ち着かせてくれん。", "世話になったのう。残りの道を、もう少し歩いてみるとするか。"]
   };
   return randFrom(lines[type] || lines[person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
 }

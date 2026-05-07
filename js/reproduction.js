@@ -8,15 +8,33 @@ import {
   refreshJobTable,
   selectPortraitByCharacter
 } from "./createVillagers.js";
-import { addRelationship, checkHasRelationship, getRelationshipTargetName } from "./relationships.js";
+import { addRelationship, checkHasRelationship, getRelationshipTargetName, normalizeRelationship } from "./relationships.js";
 
-const HUMANOID_RACES = new Set(["人間", "ハーピー", "キュクロプス", "サイクロプス", "巨人"]);
+const HUMANOID_RACES = new Set(["人間", "ハーピー", "半神", "キュクロプス", "サイクロプス", "巨人"]);
 const PHYSICAL_STATS = ["str", "vit", "dex", "mag", "chr"];
 const MENTAL_STATS = ["int", "ind", "eth", "cou", "sexdr"];
 const CHILD_BODY_TRAITS = ["赤子", "幼児", "少年", "少女"];
 const CHILD_MIND_TRAITS = ["無垢", "萌芽", "思春期"];
 const PREGNANCY_FULL_TERM_MONTHS = 10;
 const POSTPARTUM_MONTHS = 3;
+const THUNDER_BLESSING_TRAIT = "雷霆神の加護";
+const VIRTUAL_THUNDER_FATHER = {
+  name: "不明",
+  bodyOwner: "不明",
+  race: "半神",
+  bodySex: "男",
+  bodyTraits: [],
+  str: 30,
+  vit: 30,
+  dex: 30,
+  mag: 30,
+  chr: 30,
+  int: 30,
+  ind: 30,
+  eth: 30,
+  cou: 30,
+  sexdr: 40
+};
 
 function hasTrait(person, trait) {
   return Array.isArray(person?.bodyTraits) && person.bodyTraits.includes(trait);
@@ -46,6 +64,7 @@ function normalizeChildRace(race) {
 function snapshotParent(person) {
   const snap = {
     name: person.name,
+    bodyOwner: person.bodyOwner || person.name,
     race: person.race || "人間",
     bodySex: person.bodySex,
     bodyTraits: Array.isArray(person.bodyTraits) ? [...person.bodyTraits] : []
@@ -131,19 +150,14 @@ function applyInheritedBodyTraits(child, traits) {
   if (traits.includes("月の加護")) addBodyStatBonus(child, "dex", 5);
   if (traits.includes("太陽の加護")) addBodyStatBonus(child, "str", 5);
   if (traits.includes("梟の加護")) addBodyStatBonus(child, "mag", 5);
-}
-
-function childRelationshipSuffix(child) {
-  return child.bodySex === "男" ? "息子" : "娘";
+  if (traits.includes(THUNDER_BLESSING_TRAIT)) {
+    PHYSICAL_STATS.forEach(stat => addBodyStatBonus(child, stat, 3));
+  }
 }
 
 function hasOwnChildInVillage(village, parent) {
-  const parentName = parent.name;
-  return village.villagers.some(person => {
-    if (person === parent || !Array.isArray(person.relationships)) return false;
-    return person.relationships.includes(`${parentName}の息子`) ||
-      person.relationships.includes(`${parentName}の娘`);
-  });
+  if (!Array.isArray(parent?.relationships)) return false;
+  return parent.relationships.some(rel => normalizeRelationship(rel).startsWith("【家族関係】子："));
 }
 
 function getSpouse(person, village) {
@@ -168,6 +182,44 @@ function canBeFather(person) {
   return isHumanoid(person) &&
     person.bodySex === "男" &&
     Number(person.bodyAge) >= 12;
+}
+
+function canReceiveGoldenRainPregnancy(person) {
+  return isHumanoid(person) &&
+    person.bodySex === "女" &&
+    Number(person.bodyAge) >= 16 &&
+    Number(person.bodyAge) <= 29 &&
+    !person.pregnancy &&
+    !hasTrait(person, "妊娠") &&
+    !hasTrait(person, "臨月") &&
+    !hasTrait(person, "産褥");
+}
+
+function getNextMonthDate(village) {
+  const month = Number(village.month) || 1;
+  const year = Number(village.year) || 1;
+  return month >= 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
+}
+
+function isDue(village, due) {
+  const year = Number(village.year) || 0;
+  const month = Number(village.month) || 0;
+  return year > due.year || (year === due.year && month >= due.month);
+}
+
+export function scheduleGoldenRainPregnancy(village, mother) {
+  if (!village || !mother || !canReceiveGoldenRainPregnancy(mother)) return false;
+  if (!Array.isArray(village.pendingGoldenRainPregnancies)) {
+    village.pendingGoldenRainPregnancies = [];
+  }
+  const due = getNextMonthDate(village);
+  village.pendingGoldenRainPregnancies.push({
+    targetName: mother.name,
+    dueYear: due.year,
+    dueMonth: due.month
+  });
+  village.log(`${mother.name}は黄金の雨を浴びました。来月、神秘の妊娠が訪れるかもしれません。`);
+  return true;
 }
 
 function decideChildSex(race) {
@@ -318,7 +370,11 @@ function chooseChildMindTrait(child) {
 
 function setChildPortrait(child) {
   if (child.bodyAge < 10) {
-    child.portraitFile = child.bodyAge <= 3 ? "CHILD_SHADOW_BABY.svg" : "CHILD_SHADOW.svg";
+    if (child.bodyAge <= 3) {
+      child.portraitFile = child.bodySex === "男" ? "../malebaby.png" : "../femalebaby.png";
+    } else {
+      child.portraitFile = "CHILD_SHADOW.svg";
+    }
   } else if (child.adultPortraitFile) {
     child.portraitFile = child.adultPortraitFile;
   }
@@ -427,6 +483,7 @@ export function handlePregnancyAndBirth(village) {
     }
   });
 
+  processPendingGoldenRainPregnancies(village);
   processPregnancyChecks(village);
 }
 
@@ -444,23 +501,59 @@ function processPregnancyChecks(village) {
   });
 }
 
-function startPregnancy(village, mother, father) {
+function processPendingGoldenRainPregnancies(village) {
+  if (!Array.isArray(village.pendingGoldenRainPregnancies)) {
+    village.pendingGoldenRainPregnancies = [];
+    return;
+  }
+
+  const remaining = [];
+  village.pendingGoldenRainPregnancies.forEach(entry => {
+    const due = { year: Number(entry.dueYear) || 0, month: Number(entry.dueMonth) || 0 };
+    if (!isDue(village, due)) {
+      remaining.push(entry);
+      return;
+    }
+
+    const mother = village.villagers.find(person => person.name === entry.targetName);
+    if (!mother || !canReceiveGoldenRainPregnancy(mother)) {
+      if (mother) village.log(`${mother.name}への黄金の雨の兆しは、妊娠には至りませんでした。`);
+      return;
+    }
+
+    startPregnancy(village, mother, null, {
+      fatherSnapshot: VIRTUAL_THUNDER_FATHER,
+      childRace: "半神",
+      inheritedBodyTraits: [THUNDER_BLESSING_TRAIT],
+      geneticFatherUnknown: true
+    });
+  });
+
+  village.pendingGoldenRainPregnancies = remaining;
+}
+
+function startPregnancy(village, mother, father, options = {}) {
   const motherSnapshot = snapshotParent(mother);
-  const fatherSnapshot = snapshotParent(father);
-  const childRace = normalizeChildRace(mother.race);
+  const fatherSnapshot = options.fatherSnapshot || snapshotParent(father);
+  const childRace = normalizeChildRace(options.childRace || mother.race);
   const childSex = decideChildSex(childRace);
   const potentialStats = buildPotentialStats(motherSnapshot, fatherSnapshot, childSex, childRace);
+  const inheritedBodyTraits = [
+    ...rollInheritedTraits({ motherSnapshot, fatherSnapshot, childSex }),
+    ...(Array.isArray(options.inheritedBodyTraits) ? options.inheritedBodyTraits : [])
+  ];
 
   mother.pregnancy = {
     months: 0,
     motherName: mother.name,
-    geneticFatherName: father.name,
+    geneticFatherName: father?.name || null,
+    geneticFatherUnknown: !!options.geneticFatherUnknown,
     motherSnapshot,
     fatherSnapshot,
     childRace,
     childSex,
     potentialStats,
-    inheritedBodyTraits: rollInheritedTraits({ motherSnapshot, fatherSnapshot, childSex }),
+    inheritedBodyTraits,
     fullTermApplied: false
   };
   addUnique(mother.bodyTraits, "妊娠");
@@ -478,7 +571,13 @@ function giveBirth(village, mother) {
   }
   mother.bodyTraits = mother.bodyTraits.filter(trait => trait !== "妊娠" && trait !== "臨月");
 
-  const child = new Villager(generateRandomName(data.childSex), data.childSex, 0);
+  const birthParentName = mother.bodyOwner || mother.name;
+  const familyParent = village.villagers.find(person => person.name === birthParentName) || mother;
+  const childName = generateRandomName(data.childSex, {
+    existingNames: village.villagers.map(person => person.name),
+    fallbackParentName: birthParentName
+  });
+  const child = new Villager(childName, data.childSex, 0);
   child.race = normalizeChildRace(data.childRace);
   child.spiritAge = 0;
   child.spiritSex = data.childSex;
@@ -505,8 +604,18 @@ function giveBirth(village, mother) {
   child.adultPortraitFile = adult.portraitFile;
   updateChildGrowthStage(child, village);
 
-  addRelationship(child, `${mother.name}の${childRelationshipSuffix(child)}`);
-  addRelationship(mother, `${child.name}の母`);
+  addRelationship(child, `母:${birthParentName}`);
+  addRelationship(familyParent, `子:${child.name}`);
+  addRelationship(child, `遺伝母:${data.motherSnapshot?.bodyOwner || data.motherSnapshot?.name || "不明"}`);
+  addRelationship(child, `遺伝父:${data.geneticFatherUnknown ? "不明" : (data.fatherSnapshot?.bodyOwner || data.fatherSnapshot?.name || "不明")}`);
+
+  const spouse = getSpouse(familyParent, village);
+  if (spouse) {
+    const spouseParentPrefix = spouse.bodySex === "女" ? "母" : "父";
+    addRelationship(child, `${spouseParentPrefix}:${spouse.bodyOwner || spouse.name}`);
+    addRelationship(spouse, `子:${child.name}`);
+  }
+
   mother.happiness = clampValue(mother.happiness + 50, 0, 100);
   mother.hp = Math.floor(mother.hp * 0.25);
   addUnique(mother.bodyTraits, "産褥");
@@ -518,17 +627,15 @@ function giveBirth(village, mother) {
   mother.jobTable = ["なし"];
   mother.actionTable = ["療養"];
 
-  const father = village.villagers.find(person => person.name === data.geneticFatherName);
-  if (father) {
-    addRelationship(father, `${child.name}の父`);
-    father.happiness = clampValue(father.happiness + 30, 0, 100);
+  if (spouse) {
+    spouse.happiness = clampValue(spouse.happiness + 30, 0, 100);
   }
 
   mother.pregnancy = null;
   village.popLimit = (Number(village.popLimit) || 0) + 1;
   village.villagers.push(child);
   village.log(`${mother.name}が${child.name}を出産しました。人口上限+1`);
-  showBirthModal(village, mother, father, child);
+  showBirthModal(village, mother, spouse, child);
 }
 
 export function getReproductiveStatusLine(character) {
@@ -542,16 +649,16 @@ export function getReproductiveStatusLine(character) {
 function getPregnancyLine(character, fullTerm) {
   const type = character.speechType || determineSpeechType(character);
   const lines = {
-    "普通Ｍ": fullTerm ? ["体が重いな……もうすぐなのか。", "落ち着かないけど、迎える準備はできているよ。"] : ["まだ実感が追いつかないな。", "大事に過ごさないとね。"],
+    "普通Ｍ": fullTerm ? ["腹が重い……本当に、もうすぐなんだな。まだ頭が追いつかない。", "怖くないと言えば嘘になるけど、ここまで来たなら迎えるしかない。"] : ["まさか俺が妊娠するなんてな……まだ実感が追いつかない。", "体の中に命があるって、こんなに落ち着かないものなんだな。"],
     "普通Ｆ": fullTerm ? ["もうすぐ会えるんですね。少し緊張します。", "体は重いですが、楽しみです。"] : ["新しい命がいるんですね。大切にします。", "無理はしないようにします。"],
-    "強気Ｍ": fullTerm ? ["このくらいで音を上げるものか。", "もうすぐだな。腹をくくるさ。"] : ["戸惑いはあるが、守るものが増えたな。", "やれることをやるだけだ。"],
+    "強気Ｍ": fullTerm ? ["くそ、体が思うように動かねぇ……だが音は上げない。", "もうすぐだな。怖くないわけじゃないが、腹はくくった。"] : ["は？ 俺が妊娠？ ……冗談じゃないが、逃げる気もない。", "戸惑いはある。苛立ちもある。だが守るものができたなら守る。"],
     "強気Ｆ": fullTerm ? ["もうすぐね。弱音なんて吐かないわ。", "大丈夫、ちゃんと産んでみせる。"] : ["驚いたけど、覚悟はできてるわ。", "私がしっかりしないとね。"],
     "内気": fullTerm ? ["こ、怖いです……でも、会いたいです。", "もうすぐなんですね……どきどきします。"] : ["まだ少し、信じられません……。", "ちゃんとできるか、不安です……。"],
-    "陰気": fullTerm ? ["……重い。けど、ここまで来た。", "……終わりじゃなくて、始まりか。"] : ["……妙な気分だ。", "……自分に務まるのか。"],
-    "お調子者": fullTerm ? ["いよいよっすね、さすがに緊張するっす！", "もうすぐ会えるとか、すごいっすね。"] : ["いやー、びっくりっすね！", "これは頑張らないとっすね。"],
+    "陰気": fullTerm ? ["……重い。怖い。けど、ここまで来てしまった。", "……終わりじゃなくて、始まりか。正直、まだ受け止めきれていない。"] : ["……妙な気分だ。自分の体じゃないみたいで落ち着かない。", "……自分に務まるのか。考えるほど胃が沈む。"],
+    "お調子者": fullTerm ? ["いよいよっすね、さすがに笑ってごまかせないっす！", "もうすぐ会えるとか、すごいっすね……いや、めちゃくちゃ緊張するっす。"] : ["いやー、びっくりっすね！ っていうか本当に自分がっすか！？", "これは頑張らないとっすね。まだ全然落ち着かないっすけど！"],
     "快活": fullTerm ? ["もうすぐだね！ちょっと怖いけど楽しみ！", "元気な子だといいな！"] : ["びっくりしたけど、なんだか嬉しい！", "無理せず元気にいこう！"],
     "お嬢様": fullTerm ? ["いよいよですわね……心を整えますわ。", "少し怖いですけれど、楽しみですわ。"] : ["まあ……不思議な気持ちですわ。", "大切に過ごしますわ。"],
-    "クールＭ": fullTerm ? ["出産が近い。準備を確認しておこう。", "体調管理を最優先にする。"] : ["状況は理解した。無理は避ける。", "冷静に備えるべきだな。"],
+    "クールＭ": fullTerm ? ["出産が近い。体の違和感は強いが、手順を確認しておこう。", "動揺は残っている。だからこそ体調管理を最優先にする。"] : ["状況は理解した。俺の体で妊娠が進行している、という事実にな。", "想定外だ。感情は後で処理する。今は無理を避ける。"],
     "クールＦ": fullTerm ? ["もうすぐね。落ち着いて臨むわ。", "体は重いけれど、問題ないわ。"] : ["理解したわ。慎重に過ごす。", "少し不思議な感覚ね。"],
     "老人": fullTerm ? ["この年で命を迎えるとは、不思議なものじゃ。", "もうすぐじゃな……静かに待とう。"] : ["命とは巡るものじゃのう。", "大事にせねばならんのう。"]
   };
@@ -561,16 +668,16 @@ function getPregnancyLine(character, fullTerm) {
 function getPregnancyNoticeLine(character, role, partner) {
   const type = character.speechType || determineSpeechType(character);
   const lines = {
-    "普通Ｍ": role === "mother" ? ["まだ実感が追いつかないな。でも、大事にするよ。", "驚いたけど、守るものが増えたんだな。"] : [`${partner.name}を支えないとな。`, "無事に育ってほしい。できることをするよ。"],
+    "普通Ｍ": role === "mother" ? ["まさか俺が妊娠するなんてな……驚きすぎて、まだ言葉が出ない。", "戸惑ってる。でも、体の中にいるなら大事にしないとな。"] : [`${partner.name}を支えないとな。`, "無事に育ってほしい。できることをするよ。"],
     "普通Ｆ": role === "mother" ? ["新しい命がいるんですね。大切にします。", "少し不思議ですけど、嬉しいです。"] : [`${partner.name}さんを支えます。`, "無事に産まれてきてほしいですね。"],
-    "強気Ｍ": role === "mother" ? ["戸惑いはあるが、守り抜く。", "腹をくくるしかないな。"] : [`${partner.name}は俺が支える。`, "子も親も守ってみせる。"],
+    "強気Ｍ": role === "mother" ? ["冗談みたいな話だな……腹は立つが、投げ出す気はない。", "戸惑いも苛立ちもある。だが、宿ったなら守り抜く。"] : [`${partner.name}は俺が支える。`, "子も親も守ってみせる。"],
     "強気Ｆ": role === "mother" ? ["驚いたけど、覚悟はできてるわ。", "大丈夫、私がしっかりする。"] : [`${partner.name}を支えるわ。任せて。`, "無事に迎える準備をするわよ。"],
     "内気": role === "mother" ? ["まだ少し、信じられません……。", "ちゃんとできるか、不安です……でも嬉しいです。"] : [`${partner.name}さんの力に、なりたいです……。`, "こ、これから大切にしないと……。"],
-    "陰気": role === "mother" ? ["……妙な気分だ。", "……自分に務まるのか。"] : [`……${partner.name}を放ってはおけないな。`, "……無事なら、それでいい。"],
-    "お調子者": role === "mother" ? ["いやー、びっくりっすね！", "これは頑張らないとっすね！"] : [`${partner.name}を全力で支えるっす！`, "いやー、急に責任重大っすね！"],
+    "陰気": role === "mother" ? ["……妙な気分だ。驚くより先に、怖さが来る。", "……自分に務まるのか。正直、わからない。"] : [`……${partner.name}を放ってはおけないな。`, "……無事なら、それでいい。"],
+    "お調子者": role === "mother" ? ["いやー、びっくりっすね！ 自分のことなのに現実味がないっす！", "これは頑張らないとっすね！ まず落ち着くところからっすけど！"] : [`${partner.name}を全力で支えるっす！`, "いやー、急に責任重大っすね！"],
     "快活": role === "mother" ? ["びっくりしたけど、なんだか嬉しい！", "無理せず元気にいこう！"] : [`${partner.name}、一緒に頑張ろう！`, "元気な子だといいね！"],
     "お嬢様": role === "mother" ? ["まあ……不思議な気持ちですわ。", "大切に過ごしますわ。"] : [`${partner.name}様を丁寧に支えますわ。`, "新たな命に祝福がありますように。"],
-    "クールＭ": role === "mother" ? ["状況は理解した。無理は避ける。", "冷静に備えるべきだな。"] : [`${partner.name}の体調管理を優先する。`, "必要な準備を始めよう。"],
+    "クールＭ": role === "mother" ? ["状況は理解した。理解したが、動揺していないわけではない。", "想定外の妊娠だ。感情より先に、必要な備えを始める。"] : [`${partner.name}の体調管理を優先する。`, "必要な準備を始めよう。"],
     "クールＦ": role === "mother" ? ["理解したわ。慎重に過ごす。", "少し不思議な感覚ね。"] : [`${partner.name}を支える。今はそれが最優先ね。`, "落ち着いて準備しましょう。"],
     "老人": role === "mother" ? ["命とは巡るものじゃのう。", "大事にせねばならんのう。"] : [`${partner.name}を労わらねばのう。`, "新しい命とは、めでたいものじゃ。"]
   };

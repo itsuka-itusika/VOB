@@ -21,6 +21,7 @@ export class Village {
     this.building = 0;
 
     this.villagers = [];
+    this.pendingGoldenRainPregnancies = [];
     this.popLimit = 8;
     this.villageTraits = ["春"];
 

@@ -105,9 +105,81 @@ export function doMarriageCheck(village) {
 /**
  * 関係追加 (重複しない)
  */
+const FRIEND_RELATION_PREFIXES = new Set(["恋人", "親友", "天敵"]);
+const FAMILY_RELATION_PREFIXES = new Set(["夫", "妻", "母", "父", "子"]);
+const GENETIC_RELATION_PREFIXES = new Set(["遺伝母", "遺伝父"]);
+
+function getRelationshipCategory(prefix) {
+  if (FRIEND_RELATION_PREFIXES.has(prefix) || String(prefix).endsWith("仲間")) return "交友関係";
+  if (FAMILY_RELATION_PREFIXES.has(prefix)) return "家族関係";
+  if (GENETIC_RELATION_PREFIXES.has(prefix)) return "遺伝関係";
+  return null;
+}
+
+export function parseRelationship(rel) {
+  const raw = String(rel ?? "").trim();
+  if (!raw) return null;
+  if (raw === "既婚") return { raw, flag: "既婚", category: null, prefix: "既婚", target: null };
+
+  const oldParent = raw.match(/^(.+)の(母|父)$/);
+  if (oldParent) return { raw, category: "家族関係", prefix: "子", target: oldParent[1] };
+
+  const oldChild = raw.match(/^(.+)の(息子|娘)$/);
+  if (oldChild) return { raw, category: "家族関係", prefix: "母", target: oldChild[1] };
+
+  const categorized = raw.match(/^【([^】]+)】(.+)$/);
+  const categoryFromText = categorized ? categorized[1] : null;
+  const body = categorized ? categorized[2] : raw;
+  const separator = body.includes("：") ? "：" : ":";
+  const idx = body.indexOf(separator);
+  if (idx < 0) return { raw, category: null, prefix: body, target: null };
+
+  const prefix = body.slice(0, idx).trim();
+  const target = body.slice(idx + 1).trim();
+  const category = categoryFromText || getRelationshipCategory(prefix);
+  return { raw, category, prefix, target };
+}
+
+export function normalizeRelationship(rel) {
+  const parsed = parseRelationship(rel);
+  if (!parsed) return "";
+  if (parsed.flag) return parsed.flag;
+  if (!parsed.target) return parsed.raw;
+  const category = parsed.category || getRelationshipCategory(parsed.prefix);
+  const body = `${parsed.prefix}：${parsed.target}`;
+  return category ? `【${category}】${body}` : body;
+}
+
+export function normalizeRelationships(person) {
+  if (!person) return [];
+  const source = Array.isArray(person.relationships) ? person.relationships : [];
+  person.relationships = [...new Set(source.map(normalizeRelationship).filter(Boolean))];
+  return person.relationships;
+}
+
+export function formatRelationshipsForDisplay(person) {
+  const groups = new Map();
+  normalizeRelationships(person).forEach(rel => {
+    if (rel === "既婚") return;
+    const parsed = parseRelationship(rel);
+    if (!parsed?.target) return;
+    const category = parsed.category || getRelationshipCategory(parsed.prefix) || "その他";
+    const item = `${parsed.prefix}：${parsed.target}`;
+    if (!groups.has(category)) groups.set(category, []);
+    groups.get(category).push(item);
+  });
+  if (groups.size === 0) return "なし";
+  return Array.from(groups.entries())
+    .map(([category, items]) => `【${category}】${items.join("、")}`)
+    .join("、");
+}
+
 export function addRelationship(p, rel) {
-  if (!p.relationships.includes(rel)) {
-    p.relationships.push(rel);
+  if (!p) return;
+  if (!Array.isArray(p.relationships)) p.relationships = [];
+  const normalized = normalizeRelationship(rel);
+  if (normalized && !p.relationships.some(existing => normalizeRelationship(existing) === normalized)) {
+    p.relationships.push(normalized);
   }
 }
 
@@ -115,8 +187,11 @@ export function addRelationship(p, rel) {
  * 関係削除
  */
 export function removeRelationship(p, rel) {
-  let i = p.relationships.indexOf(rel);
-  if (i>=0) p.relationships.splice(i,1);
+  if (!p || !Array.isArray(p.relationships)) return;
+  const normalized = normalizeRelationship(rel);
+  p.relationships = p.relationships.filter(existing =>
+    existing !== rel && normalizeRelationship(existing) !== normalized
+  );
 }
 
 export function getSpouseRelationshipPrefix(spouse) {
@@ -220,13 +295,14 @@ export function clearRelationshipsForDepartedVillager(village, departed) {
     if (person === departed || !Array.isArray(person.relationships)) return;
 
     let removedSpouse = false;
+    normalizeRelationships(person);
     person.relationships = person.relationships.filter(rel => {
       if (rel === "既婚") return true;
 
-      const [prefix, targetName] = String(rel).split(":");
-      const referencesDeparted = targetName === departedName || String(rel).startsWith(`${departedName}の`);
-      const isSpouseReference = prefix === "夫" ||
-        prefix === "妻" ||
+      const parsed = parseRelationship(rel);
+      const referencesDeparted = parsed?.target === departedName || String(rel).startsWith(`${departedName}の`);
+      const isSpouseReference = parsed?.prefix === "夫" ||
+        parsed?.prefix === "妻" ||
         rel === `${departedName}の夫` ||
         rel === `${departedName}の妻`;
       if (referencesDeparted && isSpouseReference) {
@@ -245,18 +321,19 @@ export function clearRelationshipsForDepartedVillager(village, departed) {
  * 特定キーワードを含む関係を持っているか
  */
 export function checkHasRelationship(p, kw) {
-  return p.relationships.some(r => r.includes(kw));
+  if (!p || !Array.isArray(p.relationships)) return false;
+  return normalizeRelationships(p).some(r => r.includes(kw));
 }
 
 /**
  * "prefix:相手名" の相手名を返す
  */
 export function getRelationshipTargetName(p, prefix) {
-  let r = p.relationships.find(rr => rr.startsWith(prefix+":"));
-  if (r) {
-    let arr = r.split(":");
-    if (arr.length===2) return arr[1];
-  }
+  if (!p || !Array.isArray(p.relationships)) return null;
+  let r = normalizeRelationships(p)
+    .map(parseRelationship)
+    .find(parsed => parsed?.prefix === prefix && parsed.target);
+  if (r) return r.target;
   return null;
 }
 

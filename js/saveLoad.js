@@ -1,6 +1,7 @@
 // saveLoad.js
 import { Village, Villager } from "./classes.js";
-import { determineSpeechType, refreshJobTable } from "./createVillagers.js";
+import { determineSpeechType, refreshJobTable, registerUsedName } from "./createVillagers.js";
+import { normalizeRelationships } from "./relationships.js";
 
 /**
  * 村データをJSONファイルとしてダウンロードさせる
@@ -99,6 +100,9 @@ function convertVillageToObject(village) {
 
     // villagers
     villagers: village.villagers.map(vill => convertVillagerToObject(vill)),
+    pendingGoldenRainPregnancies: Array.isArray(village.pendingGoldenRainPregnancies)
+      ? JSON.parse(JSON.stringify(village.pendingGoldenRainPregnancies))
+      : [],
     
     // 訪問者情報を追加
     visitors: village.visitors.map(vill => convertVillagerToObject(vill))
@@ -136,7 +140,7 @@ function convertVillagerToObject(vill) {
     bodyTraits: [...vill.bodyTraits],
     mindTraits: [...vill.mindTraits],
     hobby: vill.hobby,
-    relationships: [...vill.relationships],
+    relationships: [...normalizeRelationships(vill)],
 
     job: vill.job,
     jobTable: [...vill.jobTable],
@@ -204,6 +208,9 @@ function convertObjectToVillage(dataObj) {
   if (v.buildingFlags.hasTavern || v.buildings.includes("tavern")) {
     v.visitorLimit = Math.max(v.visitorLimit, 2);
   }
+  v.pendingGoldenRainPregnancies = Array.isArray(dataObj.pendingGoldenRainPregnancies)
+    ? JSON.parse(JSON.stringify(dataObj.pendingGoldenRainPregnancies))
+    : [];
 
   // 襲撃系
   v.isRaidProcessDone = !!dataObj.isRaidProcessDone;
@@ -264,6 +271,8 @@ function convertObjectToVillager(obj) {
     vill.hobby = obj.hobby;
   }
   vill.relationships = Array.isArray(obj.relationships) ? [...obj.relationships] : [];
+  normalizeRelationships(vill);
+  registerUsedName(vill.name);
 
   vill.job = obj.job;
   vill.jobTable = Array.isArray(obj.jobTable) ? [...obj.jobTable] : [];

@@ -5,6 +5,10 @@ export class HobbyEffects {
     let h = p.hobby;
     if (!h) return "";
 
+    if (this.isAgeRestrictedHobby(p, h)) {
+      return `(趣味[${h}]:肉体年齢12歳未満のため効果なし)`;
+    }
+
     let msg = "";
     switch(h) {
       case "喧嘩": 
@@ -106,6 +110,11 @@ export class HobbyEffects {
         break;
     }
     return msg;
+  }
+
+  static isAgeRestrictedHobby(p, hobby) {
+    const bodyAge = Number(p.bodyAge) || 0;
+    return bodyAge < 12 && ["自家発電", "飲酒", "ハンティング", "狩猟"].includes(hobby);
   }
 
   static applyFighting(p, v) {

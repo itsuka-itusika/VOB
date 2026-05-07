@@ -148,7 +148,8 @@ function buildVillagePriorityContext(village) {
     avgMp,
     avgRecovery,
     monthlyFoodCost,
-    monthlyMaterialCost
+    monthlyMaterialCost,
+    village
   };
 }
 
@@ -175,6 +176,43 @@ function getPriorityBonus(job, context) {
   return bonus;
 }
 
+function hasTrait(person, trait) {
+  return (Array.isArray(person.bodyTraits) && person.bodyTraits.includes(trait))
+    || (Array.isArray(person.mindTraits) && person.mindTraits.includes(trait));
+}
+
+function getJobTraitMultiplier(person, job, village) {
+  let mul = 1;
+  const villageTraits = Array.isArray(village?.villageTraits) ? village.villageTraits : [];
+  if (villageTraits.includes("豊穣") && ["農作業", "伐採", "狩猟", "漁", "採集"].includes(job)) mul *= 2;
+  if (villageTraits.includes("秋") && ["農作業", "採集"].includes(job)) mul *= 1.5;
+  if (villageTraits.includes("冬") && job === "農作業") mul *= 0.5;
+  if (villageTraits.includes("冬") && job === "狩猟") mul *= 1.2;
+  if (villageTraits.includes("冷夏") && ["農作業", "伐採"].includes(job)) mul *= 0.5;
+
+  if (hasTrait(person, "緑の指") && ["農作業", "伐採", "採集"].includes(job)) mul *= 1.2;
+  if (hasTrait(person, "大地の巫女") && job === "農作業") mul *= 1.5;
+  if (hasTrait(person, "大地の加護") && job === "農作業") mul *= 1.2;
+  if (hasTrait(person, "熟練農夫") && job === "農作業") mul *= 1.3;
+  if (hasTrait(person, "達人農夫") && job === "農作業") mul *= 1.5;
+  if (hasTrait(person, "熟練木樵") && job === "伐採") mul *= 1.3;
+  if (hasTrait(person, "達人木樵") && job === "伐採") mul *= 1.5;
+  if (hasTrait(person, "熟練狩人") && job === "狩猟") mul *= 1.3;
+  if (hasTrait(person, "達人狩人") && job === "狩猟") mul *= 1.5;
+  if (hasTrait(person, "熟練漁師") && job === "漁") mul *= 1.3;
+  if (hasTrait(person, "達人漁師") && job === "漁") mul *= 1.5;
+  if (hasTrait(person, "飛行") && ["狩猟", "採集"].includes(job)) mul *= 1.2;
+  if (hasTrait(person, "月の巫女") && job === "狩猟") mul *= 1.5;
+  if (hasTrait(person, "月の加護") && job === "狩猟") mul *= 1.2;
+  if (hasTrait(person, "夜目") && ["警備", "狩猟"].includes(job)) mul *= 1.2;
+  if (hasTrait(person, "水中呼吸") && job === "漁") mul *= 1.5;
+  if (hasTrait(person, "森の知恵") && job === "採集") mul *= 1.5;
+  if (hasTrait(person, "海の知恵") && job === "漁") mul *= 1.5;
+  if ((person.hobby === "ハンティング" || person.hobby === "狩猟") && job === "狩猟") mul *= 1.2;
+  if (hasTrait(person, "思春期") && ["農作業", "伐採", "狩猟", "漁", "採集", "内職"].includes(job)) mul *= 0.8;
+  return mul;
+}
+
 function scoreJob(person, job, context) {
   const weights = JOB_WEIGHTS[job];
   if (!weights) return -Infinity;
@@ -182,9 +220,10 @@ function scoreJob(person, job, context) {
   const baseScore = JOB_BASE_SCORES[job] || 0;
   const priorityBonus = context ? getPriorityBonus(job, context) : 0;
 
-  return Object.entries(weights).reduce((score, [stat, weight]) => {
+  const rawScore = Object.entries(weights).reduce((score, [stat, weight]) => {
     return score + (Number(person[stat]) || 0) * weight;
   }, baseScore + priorityBonus);
+  return rawScore * getJobTraitMultiplier(person, job, context?.village);
 }
 
 function chooseBestJob(person, context) {
@@ -225,7 +264,7 @@ function chooseRecoveryAction(person, actionTable, context) {
 }
 
 function chooseAssignment(person, village, context) {
-  refreshJobTable(person);
+  refreshJobTable(person, village || undefined);
 
   const jobTable = Array.isArray(person.jobTable) ? person.jobTable : [];
   const actionTable = Array.isArray(person.actionTable) ? person.actionTable : [];

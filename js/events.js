@@ -436,7 +436,10 @@ export function doMonthStartProcess(v) {
   // 各訪問者枠ごとに50%の確率で訪問者を生成
   for (let i = 0; i < visitorLimit; i++) {
     if (Math.random() < 0.5) {
-      let visitor = createRandomVisitor();
+      let visitor = createRandomVisitor([
+        ...v.villagers.map(person => person.name),
+        ...v.visitors.map(person => person.name)
+      ]);
       v.visitors.push(visitor);
       v.log(`訪問者 ${visitor.name} が村を訪れました`);
     }

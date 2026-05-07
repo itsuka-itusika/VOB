@@ -7,6 +7,19 @@ import { updateUI } from "./ui.js";
 import { doFixedEventPre, doFixedEventPost, doRandomEventPre, doRandomEventPost, endOfMonthProcess, doMonthStartProcess, doAgingProcess, updateSeason } from "./events.js";
 import { handleAllVillagerJobs } from "./jobs.js";
 
+function isRestrictedNoJobVillager(person) {
+  const bodyTraits = Array.isArray(person.bodyTraits) ? person.bodyTraits : [];
+  const mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
+  const hasChildLimit = bodyTraits.includes("赤子") ||
+    bodyTraits.includes("幼児") ||
+    mindTraits.includes("無垢") ||
+    mindTraits.includes("萌芽");
+  const onlyNoJob = Array.isArray(person.jobTable) &&
+    person.jobTable.length > 0 &&
+    person.jobTable.every(job => job === "なし");
+  return hasChildLimit || onlyNoJob;
+}
+
 // Villageインスタンスを生成
 export const theVillage = new Village();
 theVillage.villagers = createInitialVillagers();
@@ -28,7 +41,7 @@ export function onNextTurn() {
     return;
   }
 
-  const noJobVillagers = theVillage.villagers.filter(person => person.job === "なし");
+  const noJobVillagers = theVillage.villagers.filter(person => person.job === "なし" && !isRestrictedNoJobVillager(person));
   if (noJobVillagers.length > 0 && typeof window !== "undefined") {
     const names = noJobVillagers.map(person => person.name).join("、");
     const ok = window.confirm(`仕事が「なし」の村人がいます。\n${names}\nこのまま月を進めますか？`);

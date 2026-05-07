@@ -6,6 +6,20 @@ import { refreshJobTable } from "./createVillagers.js";  // 追加
 import { openConversationModal } from "./conversation.js";
 import { showDictionaryEntry } from "./dictionary.js";
 import { getPortraitPath, getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "./util.js";
+import { formatRelationshipsForDisplay, normalizeRelationship } from "./relationships.js";
+
+function isRestrictedNoJobVillager(person) {
+  const bodyTraits = Array.isArray(person.bodyTraits) ? person.bodyTraits : [];
+  const mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
+  const hasChildLimit = bodyTraits.includes("赤子") ||
+    bodyTraits.includes("幼児") ||
+    mindTraits.includes("無垢") ||
+    mindTraits.includes("萌芽");
+  const onlyNoJob = Array.isArray(person.jobTable) &&
+    person.jobTable.length > 0 &&
+    person.jobTable.every(job => job === "なし");
+  return hasChildLimit || onlyNoJob;
+}
 
 function appendDictionaryTerm(parent, term) {
   const label = String(term || "").trim();
@@ -32,6 +46,19 @@ function setDictionaryTerms(cell, terms) {
   });
 }
 
+function renderFoldableDetails(person) {
+  const relationships = formatRelationshipsForDisplay(person);
+  const relationshipLine = relationships === "なし" ? "" : `<div>${relationships}</div>`;
+  return `
+    <details>
+      <summary>詳細</summary>
+      <div>精神性別: ${person.spiritSex}</div>
+      <div>精神年齢: ${person.spiritAge}</div>
+      ${relationshipLine}
+    </details>
+  `;
+}
+
 function getMonthlyFoodCost(village) {
   return village.villagers.reduce((sum, person) => {
     return sum + getVillagerFoodConsumption(person);
@@ -55,7 +82,7 @@ function buildWarningMessages(village) {
   const winterNeed = villagers.reduce((sum, person) => sum + getVillagerWinterMaterialConsumption(person), 0) * getWinterMonthsToPrepare(village.month);
   const lowHpCount = villagers.filter(person => Number(person.hp) <= 33).length;
   const lowMpCount = villagers.filter(person => Number(person.mp) <= 33).length;
-  const noJobCount = villagers.filter(person => person.job === "なし").length;
+  const noJobCount = villagers.filter(person => person.job === "なし" && !isRestrictedNoJobVillager(person)).length;
 
   if (foodCost > 0 && monthsOfFood <= 3) {
     warnings.push({
@@ -150,7 +177,10 @@ function ageRestMultiplier(person) {
 
 function hasCurrentHobbyMate(person) {
   if (!person.hobby || !Array.isArray(person.relationships)) return false;
-  return person.relationships.some(rel => rel.startsWith(`${person.hobby}仲間:`));
+  return person.relationships.some(rel => {
+    const normalized = normalizeRelationship(rel);
+    return normalized.includes(`${person.hobby}仲間：`);
+  });
 }
 
 function seasonWorkMultiplier(village, job, person) {
@@ -161,7 +191,16 @@ function seasonWorkMultiplier(village, job, person) {
   if (village.villageTraits.includes("冬") && job === "狩猟") mul *= 1.2;
   if (village.villageTraits.includes("冷夏") && ["農作業", "伐採"].includes(job)) mul *= 0.5;
   if (hasTrait(person, "緑の指") && ["農作業", "伐採", "採集"].includes(job)) mul *= 1.2;
+  if (hasTrait(person, "熟練農夫") && job === "農作業") mul *= 1.3;
+  if (hasTrait(person, "達人農夫") && job === "農作業") mul *= 1.5;
+  if (hasTrait(person, "熟練木樵") && job === "伐採") mul *= 1.3;
+  if (hasTrait(person, "達人木樵") && job === "伐採") mul *= 1.5;
+  if (hasTrait(person, "熟練狩人") && job === "狩猟") mul *= 1.3;
+  if (hasTrait(person, "達人狩人") && job === "狩猟") mul *= 1.5;
+  if (hasTrait(person, "熟練漁師") && job === "漁") mul *= 1.3;
+  if (hasTrait(person, "達人漁師") && job === "漁") mul *= 1.5;
   if (hasTrait(person, "飛行") && ["狩猟", "採集"].includes(job)) mul *= 1.2;
+  if (hasTrait(person, "大地の巫女") && job === "農作業") mul *= 1.5;
   if (hasTrait(person, "月の巫女") && job === "狩猟") mul *= 1.5;
   if (hasTrait(person, "月の加護") && job === "狩猟") mul *= 1.2;
   if (hasTrait(person, "夜目") && ["警備", "狩猟"].includes(job)) mul *= 1.2;
@@ -412,8 +451,12 @@ export function updateUI(v) {
     <div class="resource-box">治安<br>${v.security}</div>
     <div class="resource-box">規模<br>${v.building}</div>
     <div class="resource-box">人口/上限<br>${v.villagers.length}/${v.popLimit}</div>
-    <div class="resource-box">村特性<br>${v.villageTraits.join(",")}</div>
+    <div class="resource-box">村特性<br><span id="villageTraitsTerms"></span></div>
   `;
+  const villageTraitsTerms = document.getElementById("villageTraitsTerms");
+  if (villageTraitsTerms) {
+    setDictionaryTerms(villageTraitsTerms, v.villageTraits);
+  }
 
   updateMessageWindow(v);
 
@@ -474,6 +517,16 @@ export function updateUI(v) {
     let tdAge=document.createElement("td");
     tdAge.textContent=person.bodyAge;
     tr.appendChild(tdAge);
+
+    let tdSpiritSex=document.createElement("td");
+    tdSpiritSex.classList.add("spirit-column");
+    tdSpiritSex.textContent=person.spiritSex;
+    tr.appendChild(tdSpiritSex);
+
+    let tdSpiritAge=document.createElement("td");
+    tdSpiritAge.classList.add("spirit-column");
+    tdSpiritAge.textContent=person.spiritAge;
+    tr.appendChild(tdSpiritAge);
 
     // hp
     let tdHP=document.createElement("td");
@@ -598,18 +651,11 @@ export function updateUI(v) {
     // 詳細(折り畳み)
     let tdFold=document.createElement("td");
     tdFold.classList.add("foldable-info");
-    tdFold.innerHTML=`
-      <details>
-        <summary>詳細</summary>
-        <div>精神性別: ${person.spiritSex}</div>
-        <div>精神年齢: ${person.spiritAge}</div>
-        <div>人間関係: ${person.relationships}</div>
-      </details>
-    `;
+    tdFold.innerHTML = renderFoldableDetails(person);
     tr.appendChild(tdFold);
 
     // 行スタイル等(例: 性別により色分け)
-    for (let i=0; i<=12; i++) {
+    for (let i=0; i<=14; i++) {
       if (person.bodySex==="男") {
         tr.cells[i].classList.add("male-basic");
       } else {
@@ -619,22 +665,22 @@ export function updateUI(v) {
 
     // 体力とメンタルが33以下の時赤字
     if (person.hp <= 33) {
-      tr.cells[6].classList.add("low-hpmp");
+      tr.cells[8].classList.add("low-hpmp");
     }
     if (person.mp <= 33) {
-      tr.cells[7].classList.add("low-hpmp");
+      tr.cells[9].classList.add("low-hpmp");
     }
 
     // 数値パラメータチェック（魅力と好色が20以上の時太字）
-    let checkCols = [11, 12, 13, 14, 15, 17, 18, 19, 20, 21];
+    let checkCols = [13, 14, 15, 16, 17, 19, 20, 21, 22, 23];
     checkCols.forEach(ci => {
       let val = parseInt(tr.cells[ci].textContent);
       // 魅力（14列目）と好色（20列目）は20以上で太字
-      if ((ci === 15 || ci === 21) && val >= 20) {
+      if ((ci === 17 || ci === 23) && val >= 20) {
         tr.cells[ci].classList.add("bold-value");
       }
       // その他のパラメータは従来通り
-      else if (ci !== 15 && ci !== 21 && val >= 20) {
+      else if (ci !== 17 && ci !== 23 && val >= 20) {
         tr.cells[ci].classList.add("bold-value");
       }
     });
@@ -702,6 +748,16 @@ export function updateUI(v) {
       let tdAge = document.createElement("td");
       tdAge.textContent = person.bodyAge;
       tr.appendChild(tdAge);
+
+      let tdSpiritSex = document.createElement("td");
+      tdSpiritSex.classList.add("spirit-column");
+      tdSpiritSex.textContent = person.spiritSex;
+      tr.appendChild(tdSpiritSex);
+
+      let tdSpiritAge = document.createElement("td");
+      tdSpiritAge.classList.add("spirit-column");
+      tdSpiritAge.textContent = person.spiritAge;
+      tr.appendChild(tdSpiritAge);
 
       // hp
       let tdHP = document.createElement("td");
@@ -796,18 +852,11 @@ export function updateUI(v) {
       // 詳細(折り畳み)
       let tdFold = document.createElement("td");
       tdFold.classList.add("foldable-info");
-      tdFold.innerHTML = `
-        <details>
-          <summary>詳細</summary>
-          <div>精神性別: ${person.spiritSex}</div>
-          <div>精神年齢: ${person.spiritAge}</div>
-          <div>人間関係: ${person.relationships}</div>
-        </details>
-      `;
+      tdFold.innerHTML = renderFoldableDetails(person);
       tr.appendChild(tdFold);
 
       // スタイル適用
-      for (let i = 0; i <= 12; i++) {
+      for (let i = 0; i <= 14; i++) {
         if (person.bodySex === "男") {
           tr.cells[i].classList.add("male-basic");
         } else {
@@ -815,14 +864,14 @@ export function updateUI(v) {
         }
       }
       if (person.hp <= 33) {
-        tr.cells[6].classList.add("low-hpmp");
+        tr.cells[8].classList.add("low-hpmp");
       }
       if (person.mp <= 33) {
-        tr.cells[7].classList.add("low-hpmp");
+        tr.cells[9].classList.add("low-hpmp");
       }
 
       // 数値パラメータチェック
-      let checkCols = [11, 12, 13, 14, 15, 17, 18, 19, 20, 21];
+      let checkCols = [13, 14, 15, 16, 17, 19, 20, 21, 22, 23];
       checkCols.forEach(ci => {
         let val = parseInt(tr.cells[ci].textContent);
         if (val >= 20) tr.cells[ci].classList.add("bold-value");
@@ -897,6 +946,16 @@ export function updateUI(v) {
         let tdAge=document.createElement("td");
         tdAge.textContent=person.bodyAge;
         tr.appendChild(tdAge);
+
+        let tdSpiritSex=document.createElement("td");
+        tdSpiritSex.classList.add("spirit-column");
+        tdSpiritSex.textContent=person.spiritSex;
+        tr.appendChild(tdSpiritSex);
+
+        let tdSpiritAge=document.createElement("td");
+        tdSpiritAge.classList.add("spirit-column");
+        tdSpiritAge.textContent=person.spiritAge;
+        tr.appendChild(tdSpiritAge);
 
         // hp
         let tdHP=document.createElement("td");
@@ -991,18 +1050,11 @@ export function updateUI(v) {
         // 詳細(折り畳み)
         let tdFold=document.createElement("td");
         tdFold.classList.add("foldable-info");
-        tdFold.innerHTML=`
-          <details>
-            <summary>詳細</summary>
-            <div>精神性別: ${person.spiritSex}</div>
-            <div>精神年齢: ${person.spiritAge}</div>
-            <div>人間関係: ${person.relationships}</div>
-          </details>
-        `;
+        tdFold.innerHTML = renderFoldableDetails(person);
         tr.appendChild(tdFold);
 
         // 行スタイル等(例: 性別により色分け)
-        for (let i=0; i<=12; i++) {
+        for (let i=0; i<=14; i++) {
           if (person.bodySex==="男") {
             tr.cells[i].classList.add("male-basic");
           } else {
@@ -1010,13 +1062,13 @@ export function updateUI(v) {
           }
         }
         if (person.hp<=33) {
-          tr.cells[6].classList.add("low-hpmp");
+          tr.cells[8].classList.add("low-hpmp");
         }
         if (person.mp<=33) {
-          tr.cells[7].classList.add("low-hpmp");
+          tr.cells[9].classList.add("low-hpmp");
         }
 
-        let checkCols=[11,12,13,14,15,17,18,19,20,21];
+        let checkCols=[13,14,15,16,17,19,20,21,22,23];
         checkCols.forEach(ci=>{
           let val=parseInt(tr.cells[ci].textContent);
           if (val>=20) tr.cells[ci].classList.add("bold-value");
@@ -1055,20 +1107,22 @@ function setupTableSort() {
   const sortableColumns = [
     4,  // 性別
     5,  // 年齢
-    6,  // 体力
-    7,  // メンタル
-    8,  // 幸福
-    10, // 仕事
-    11, // 筋力
-    12, // 耐久
-    13, // 器用
-    14, // 魔力
-    15, // 魅力
-    17, // 知力
-    18, // 勤勉
-    19, // 倫理
-    20, // 勇気
-    21  // 好色
+    6,  // 精神性別
+    7,  // 精神年齢
+    8,  // 体力
+    9,  // メンタル
+    10, // 幸福
+    12, // 仕事
+    13, // 筋力
+    14, // 耐久
+    15, // 器用
+    16, // 魔力
+    17, // 魅力
+    19, // 知力
+    20, // 勤勉
+    21, // 倫理
+    22, // 勇気
+    23  // 好色
   ];
 
   sortableColumns.forEach(colIndex => {
@@ -1105,7 +1159,7 @@ function sortVillagerTable(colIndex, isAsc) {
     let bVal = b.cells[colIndex].textContent;
 
     // 数値の場合は数値としてソート
-    if ([5,6,7,8,11,12,13,14,15,17,18,19,20,21].includes(colIndex)) {
+    if ([5,7,8,9,10,13,14,15,16,17,19,20,21,22,23].includes(colIndex)) {
       aVal = Number(aVal);
       bVal = Number(bVal);
     }

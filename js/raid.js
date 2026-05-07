@@ -277,6 +277,10 @@ export function startRaidEvent(village) {
       sex: raiderType.forcedSex || (Math.random() < 0.5 ? "男" : "女"),
       minAge: raiderType.ageRange.min,
       maxAge: raiderType.ageRange.max,
+      existingNames: [
+        ...village.villagers.map(person => person.name),
+        ...village.raidEnemies.map(person => person.name)
+      ],
       params: {
         ...raiderType.params,
         race: raiderType.race

@@ -13,6 +13,28 @@ const INITIAL_FEMALE_COUNT = 3; // 初期女性の人数
 // 使用済みの名前を追跡する Set を追加
 const usedNames = new Set();
 
+export function registerUsedName(name) {
+  const normalized = String(name || "").trim();
+  if (normalized) usedNames.add(normalized);
+}
+
+function getReservedNames(extraNames = []) {
+  return new Set([
+    ...usedNames,
+    ...Array.from(extraNames || []).map(name => String(name || "").trim()).filter(Boolean)
+  ]);
+}
+
+function buildFallbackChildName(baseName, reservedNames) {
+  const base = String(baseName || "").trim() || "誰か";
+  for (let i = 1; i <= 9999; i++) {
+    const suffix = String(i).padStart(2, "0");
+    const candidate = `${base}の子${suffix}`;
+    if (!reservedNames.has(candidate)) return candidate;
+  }
+  return `${base}の子${Date.now()}`;
+}
+
 // 使用済みの顔グラフィックを追跡するSetを追加
 export const usedPortraits = {
   male: new Set(),
@@ -256,7 +278,7 @@ export function createInitialVillagers() {
     if (femaleCount >= INITIAL_FEMALE_COUNT) isMale = true;
 
     if (isMale) {
-      let male = new Villager(generateRandomName("男"), "男", randInt(18, 29));
+      let male = new Villager(generateRandomName("男", { existingNames: villagers.map(v => v.name) }), "男", randInt(18, 29));
       initRandomParams(male);
       assignBodyMindTraits(male);
       applyTraitParameterBonuses(male);
@@ -266,7 +288,7 @@ export function createInitialVillagers() {
       villagers.push(male);
       maleCount++;
     } else {
-      let female = new Villager(generateRandomName("女"), "女", randInt(18, 25));
+      let female = new Villager(generateRandomName("女", { existingNames: villagers.map(v => v.name) }), "女", randInt(18, 25));
       initRandomParams(female);
       assignBodyMindTraits(female);
       applyTraitParameterBonuses(female);
@@ -290,10 +312,10 @@ export function createInitialVillagers() {
  * @param {Object} [options.params] - 固定パラメータ設定
  * @param {Object} [options.ranges] - パラメータ範囲設定 { param: [min, max] }
  */
-export function createRandomVillager({ sex, minAge, maxAge, params = {}, ranges = {} }) {
+export function createRandomVillager({ sex, minAge, maxAge, params = {}, ranges = {}, existingNames = [], fallbackParentName = "" }) {
   let age = randInt(minAge, maxAge);
 
-  let nm = generateRandomName(sex);
+  let nm = generateRandomName(sex, { existingNames, fallbackParentName });
   let vill = new Villager(nm, sex, age);
   
   if (params || ranges) {
@@ -339,7 +361,7 @@ export function createRandomVillager({ sex, minAge, maxAge, params = {}, ranges 
 /**
  * ランダム名前生成(男/女)を修正
  */
-export function generateRandomName(sex) {
+export function generateRandomName(sex, options = {}) {
   const maleNames = [
     "アルフ","ガルド","レオン","エルネスト","ヨハン","ハイン","グレン","ディルク","ロベルト","シュテファン",
     "オスカー","フィン","ルーカス","ヴィクトール","ベルトラン","ライオネル","ガブリエル","セルジオ","ミハエル","リッツ",
@@ -349,7 +371,7 @@ export function generateRandomName(sex) {
     "ギルベルト","エドムント",
     "ロタール","バルタザール","テオドール","ラインハルト","ヴォルフガング","アーサー","ランスロット","ガウェイン",
     "パーシヴァル","ベディヴィア","ケイ","トリストラム",
-    "アストラル","ファイアル","ソラリス","ルミナス","セレスト","ドラゴ","エオス","オリオン","アルテミス","クロノス",
+    "アストラル","ファイアル","ソラリス","ルミナス","セレスト","ドラゴ","エオス","オリオン","クロノス",
     "アイオロス","テラス","ブラギ"
   ];
   const femaleNames = [
@@ -368,18 +390,19 @@ export function generateRandomName(sex) {
   // 性別に応じた名前リストを選択
   const nameList = sex === "男" ? maleNames : femaleNames;
   
-  // 使用可能な名前をフィルタリング
-  const availableNames = nameList.filter(name => !usedNames.has(name));
+  const reservedNames = getReservedNames(options.existingNames);
+  const availableNames = nameList.filter(name => !reservedNames.has(name));
   
-  // 使用可能な名前がない場合、全ての名前を再利用可能にする
   if (availableNames.length === 0) {
-    usedNames.clear();
-    return randChoice(nameList);
+    const baseName = options.fallbackParentName || randChoice(nameList);
+    const fallbackName = buildFallbackChildName(baseName, reservedNames);
+    registerUsedName(fallbackName);
+    return fallbackName;
   }
   
   // ランダムに名前を選択して使用済みとしてマーク
   const chosenName = randChoice(availableNames);
-  usedNames.add(chosenName);
+  registerUsedName(chosenName);
   return chosenName;
 }
 
@@ -877,7 +900,8 @@ export function refreshJobTable(v, village = theVillage) {
   let sa = v.spiritAge;
   const bodyTraits = Array.isArray(v.bodyTraits) ? v.bodyTraits : [];
   const mindTraits = Array.isArray(v.mindTraits) ? v.mindTraits : [];
-  const isBabyStage = bodyTraits.includes("赤子") || mindTraits.includes("無垢") || sa <= 3;
+  const isBabyBodyWithNonBabyMind = bodyTraits.includes("赤子") && !mindTraits.includes("無垢") && sa > 3;
+  const isBabyStage = !isBabyBodyWithNonBabyMind && (bodyTraits.includes("赤子") || mindTraits.includes("無垢") || sa <= 3);
   const isToddlerStage = mindTraits.includes("萌芽") || sa <= 9;
   const isAdolescentStage = mindTraits.includes("思春期") || sa <= 15;
   const addHealingActionIfNeeded = () => {
@@ -903,6 +927,17 @@ export function refreshJobTable(v, village = theVillage) {
     }
     if (!v.actionTable.includes(v.action)) {
       v.action = "休養";
+    }
+    return;
+  } else if (isBabyBodyWithNonBabyMind) {
+    v.jobTable = ["採集", "内職", "研究", "なし"];
+    v.actionTable = ["休養", "余暇", "採集", "内職", "研究"];
+    addHealingActionIfNeeded();
+    if (!v.jobTable.includes(v.job)) {
+      v.job = "なし";
+    }
+    if (!v.actionTable.includes(v.action)) {
+      v.action = v.jobTable.includes(v.job) && v.actionTable.includes(v.job) ? v.job : "余暇";
     }
     return;
   } else if (isToddlerStage) {
@@ -1191,7 +1226,7 @@ function selectVisitorType() {
 /**
  * 訪問者を生成する関数
  */
-export function createRandomVisitor() {
+export function createRandomVisitor(existingNames = []) {
   const visitorType = selectVisitorType();
   
   // 性別を明示的に設定（visitorTypeに指定がなければランダム）
@@ -1204,11 +1239,17 @@ export function createRandomVisitor() {
     params: {
       ...visitorType.params
     },
-    ranges: visitorType.ranges
+    ranges: visitorType.ranges,
+    existingNames
   });
 
   // 訪問者の名前を修正
-  visitor.name = `${visitorType.type}の${visitor.name}`;
+  const visitorName = `${visitorType.type}の${visitor.name}`;
+  const reservedNames = getReservedNames(existingNames);
+  visitor.name = reservedNames.has(visitorName)
+    ? buildFallbackChildName(visitorName, reservedNames)
+    : visitorName;
+  registerUsedName(visitor.name);
   
   // 行動テーブルを訪問のみに制限
   visitor.actionTable = ["訪問"];
