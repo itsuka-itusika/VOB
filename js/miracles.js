@@ -489,10 +489,11 @@ function showMarriageMiracleModal(village, miracleName, pairs) {
   modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;max-width:620px;width:calc(100% - 32px);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
 
   const rows = pairs.map(([a, b]) => `
-    <div style="display:grid;grid-template-columns:72px 1fr;gap:12px;margin:12px 0;padding-bottom:12px;border-bottom:1px solid #ddd;">
+    <div style="display:grid;grid-template-columns:72px 1fr;gap:12px;margin:12px 0;padding-bottom:12px;border-bottom:1px solid #ddd;align-items:center;">
       <img src="${getPortraitPath(a)}" alt="${a.name}" style="width:72px;height:72px;object-fit:cover;">
+      <p><strong>${a.name}</strong>: ${getMarriageMiracleLine(a, b, miracleName)}</p>
+      <img src="${getPortraitPath(b)}" alt="${b.name}" style="width:72px;height:72px;object-fit:cover;">
       <div>
-        <p><strong>${a.name}</strong>: ${getMarriageMiracleLine(a, b, miracleName)}</p>
         <p><strong>${b.name}</strong>: ${getMarriageMiracleLine(b, a, miracleName)}</p>
       </div>
     </div>

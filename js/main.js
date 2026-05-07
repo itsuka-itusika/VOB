@@ -28,6 +28,13 @@ export function onNextTurn() {
     return;
   }
 
+  const noJobVillagers = theVillage.villagers.filter(person => person.job === "なし");
+  if (noJobVillagers.length > 0 && typeof window !== "undefined") {
+    const names = noJobVillagers.map(person => person.name).join("、");
+    const ok = window.confirm(`仕事が「なし」の村人がいます。\n${names}\nこのまま月を進めますか？`);
+    if (!ok) return;
+  }
+
   // 通常ターン進行
   doFixedEventPre(theVillage);
   doRandomEventPre(theVillage);

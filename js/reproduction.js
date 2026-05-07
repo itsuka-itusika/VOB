@@ -1,5 +1,5 @@
 import { Villager } from "./classes.js";
-import { randChoice, clampValue, round3, randFloat } from "./util.js";
+import { randChoice, clampValue, round3, randFloat, getPortraitPath } from "./util.js";
 import {
   generateRandomName,
   assignBodyMindTraits,
@@ -150,21 +150,23 @@ function getGrowthRatio(age, stat) {
 }
 
 function applyGrowthStats(child) {
-  if (!child.potentialStats) return;
+  const bodyPotential = child.bodyPotentialStats !== undefined ? child.bodyPotentialStats : child.potentialStats;
+  const mindPotential = child.mindPotentialStats !== undefined ? child.mindPotentialStats : child.potentialStats;
+  if (!bodyPotential && !mindPotential) return;
   const bodyAge = Number(child.bodyAge) || 0;
   const spiritAge = Number(child.spiritAge) || 0;
   const shouldApplyPhysicalGrowth = bodyAge <= 16 || !child.adultBodyReached;
   const shouldApplyMentalGrowth = spiritAge <= 16 || !child.adultMindReached;
 
-  if (shouldApplyPhysicalGrowth) {
+  if (bodyPotential && shouldApplyPhysicalGrowth) {
     PHYSICAL_STATS.forEach(stat => {
-      child[stat] = Math.max(1, Math.round(child.potentialStats[stat] * getGrowthRatio(bodyAge, stat)));
+      child[stat] = Math.max(1, Math.round(bodyPotential[stat] * getGrowthRatio(bodyAge, stat)));
     });
     if (bodyAge >= 16) child.adultBodyReached = true;
   }
-  if (shouldApplyMentalGrowth) {
+  if (mindPotential && shouldApplyMentalGrowth) {
     MENTAL_STATS.forEach(stat => {
-      child[stat] = Math.max(1, Math.round(child.potentialStats[stat] * getGrowthRatio(spiritAge, stat)));
+      child[stat] = Math.max(1, Math.round(mindPotential[stat] * getGrowthRatio(spiritAge, stat)));
     });
     if (spiritAge >= 16) child.adultMindReached = true;
   }
@@ -245,7 +247,9 @@ function setChildPortrait(child) {
 }
 
 export function updateChildGrowthStage(child, village, { announce = false } = {}) {
-  if (!child.potentialStats) return;
+  const bodyPotential = child.bodyPotentialStats !== undefined ? child.bodyPotentialStats : child.potentialStats;
+  const mindPotential = child.mindPotentialStats !== undefined ? child.mindPotentialStats : child.potentialStats;
+  if (!child.potentialStats && !bodyPotential && !mindPotential) return;
 
   applyGrowthStats(child);
 
@@ -299,6 +303,10 @@ export function updateChildGrowthStage(child, village, { announce = false } = {}
     } else if (child.bodyAge === 16 || child.spiritAge === 16) {
       village.log(`${child.name}は成人しました`);
     }
+    if (child.spiritAge === 16 && !child.adultModalShown) {
+      child.adultModalShown = true;
+      showAdultModal(village, child);
+    }
   }
 }
 
@@ -320,7 +328,8 @@ export function handlePregnancyAndBirth(village) {
     if (!mother.pregnancy) return;
 
     mother.pregnancy.months = (Number(mother.pregnancy.months) || 0) + 1;
-    if (mother.pregnancy.months >= 8 && !hasTrait(mother, "臨月")) {
+    if (mother.pregnancy.months >= 8) {
+      const wasFullTerm = hasTrait(mother, "臨月");
       mother.bodyTraits = mother.bodyTraits.filter(trait => trait !== "妊娠");
       addUnique(mother.bodyTraits, "臨月");
       if (!mother.pregnancy.fullTermApplied) {
@@ -328,7 +337,9 @@ export function handlePregnancyAndBirth(village) {
         mother.vit = round3(mother.vit * 0.5);
         mother.pregnancy.fullTermApplied = true;
       }
-      village.log(`${mother.name}は臨月に入りました`);
+      if (!wasFullTerm) {
+        village.log(`${mother.name}は臨月に入りました`);
+      }
     } else if (mother.pregnancy.months < 8) {
       addUnique(mother.bodyTraits, "妊娠");
     }
@@ -393,6 +404,8 @@ function giveBirth(village, mother) {
   child.spiritAge = 0;
   child.spiritSex = data.childSex;
   child.potentialStats = { ...data.potentialStats };
+  child.bodyPotentialStats = { ...data.potentialStats };
+  child.mindPotentialStats = { ...data.potentialStats };
   Object.assign(child, child.potentialStats);
   child.bodyTraits = ["赤子"];
   child.mindTraits = ["無垢"];
@@ -492,13 +505,53 @@ function showPregnancyModal(village, mother, father) {
   modal.innerHTML = `
     <h2>妊娠</h2>
     <p>${mother.name}が妊娠しました。</p>
-    <p><strong>${mother.name}</strong>: ${getPregnancyNoticeLine(mother, "mother", father)}</p>
-    ${father ? `<p><strong>${father.name}</strong>: ${getPregnancyNoticeLine(father, "father", mother)}</p>` : ""}
+    ${renderPortraitLine(mother, getPregnancyNoticeLine(mother, "mother", father))}
+    ${father ? renderPortraitLine(father, getPregnancyNoticeLine(father, "father", mother)) : ""}
     <button id="closePregnancyModal">閉じる</button>
   `;
   document.body.appendChild(overlay);
   document.body.appendChild(modal);
   document.getElementById("closePregnancyModal").onclick = () => {
+    overlay.remove();
+    modal.remove();
+    import("./ui.js").then(module => module.updateUI(village));
+  };
+}
+
+function getAdultLine(character) {
+  const type = character.speechType || determineSpeechType(character);
+  const lines = {
+    "普通Ｍ": ["今日から大人か。できることを一つずつやっていくよ。", "少し背筋が伸びるな。これからもよろしく。"],
+    "普通Ｆ": ["成人したんですね。これからも頑張ります。", "少し緊張しますけど、しっかりやっていきます。"],
+    "強気Ｍ": ["ようやく一人前だな。任せておけ。", "ここからが本番だ。しっかり働くさ。"],
+    "強気Ｆ": ["成人したからには、遠慮なく頼っていいわ。", "もう子供扱いはなしよ。私が支えるわ。"],
+    "内気": ["お、大人になったんですね……頑張ります。", "まだ不安ですけど、少しずつ慣れていきます。"],
+    "陰気": ["……成人か。逃げ場はないな。", "……まあ、やるべきことはやる。"],
+    "お調子者": ["ついに大人っすね！見ててくださいよ！", "いやー、これで一人前っす！たぶん！"],
+    "快活": ["成人だね！いっぱい頑張るよ！", "今日からもっと村の力になるね！"],
+    "お嬢様": ["成人いたしましたわ。皆様のお力になります。", "一人前として、恥じぬよう努めますわ。"],
+    "クールＭ": ["成人した。役割を果たそう。", "これからは大人として判断する。"],
+    "クールＦ": ["成人ね。落ち着いて役目を果たすわ。", "一人前として扱ってもらって構わないわ。"],
+    "老人": ["成人とはめでたいのう。若い力は村の宝じゃ。", "これからが人生の始まりじゃな。"]
+  };
+  return randChoice(lines[type] || lines[character.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
+}
+
+function showAdultModal(village, character) {
+  if (typeof document === "undefined") return;
+  const overlay = document.createElement("div");
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;";
+  const modal = document.createElement("div");
+  modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;max-width:560px;width:calc(100% - 32px);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
+  modal.innerHTML = `
+    <h2>成人</h2>
+    <p>${character.name}が成人しました。</p>
+    ${renderPortraitLine(character, getAdultLine(character))}
+    <button id="closeAdultModal">閉じる</button>
+  `;
+  document.body.appendChild(overlay);
+  document.body.appendChild(modal);
+  document.getElementById("closeAdultModal").onclick = () => {
     overlay.remove();
     modal.remove();
     import("./ui.js").then(module => module.updateUI(village));
@@ -534,8 +587,9 @@ function showBirthModal(village, mother, father, child) {
   modal.innerHTML = `
     <h2>出産</h2>
     <p>${mother.name}が${child.name}を出産しました。</p>
-    <p><strong>${mother.name}</strong>: ${getBirthLine(mother, "母")}</p>
-    ${father ? `<p><strong>${father.name}</strong>: ${getBirthLine(father, father.bodySex === "女" ? "母" : "父")}</p>` : ""}
+    ${renderPortraitLine(mother, getBirthLine(mother, "母"))}
+    ${father ? renderPortraitLine(father, getBirthLine(father, father.bodySex === "女" ? "母" : "父")) : ""}
+    ${renderPortraitLine(child, "……すやすや眠っている。")}
     <button id="closeBirthModal">閉じる</button>
   `;
   document.body.appendChild(overlay);
@@ -545,4 +599,13 @@ function showBirthModal(village, mother, father, child) {
     modal.remove();
     import("./ui.js").then(module => module.updateUI(village));
   };
+}
+
+function renderPortraitLine(character, line) {
+  return `
+    <div style="display:grid;grid-template-columns:72px 1fr;gap:12px;margin:12px 0;align-items:center;">
+      <img src="${getPortraitPath(character)}" alt="${character.name}" style="width:72px;height:72px;object-fit:cover;border:1px solid #ddd;background:#f6f0e6;">
+      <p><strong>${character.name}</strong>: ${line}</p>
+    </div>
+  `;
 }

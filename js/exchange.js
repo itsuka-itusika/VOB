@@ -20,7 +20,15 @@ export function doExchange(a, b, v, isLightning = false) {
     dex: a.dex,
     mag: a.mag,
     chr: a.chr,
-    bodyTraits: [...a.bodyTraits]
+    bodyTraits: [...a.bodyTraits],
+    pregnancy: a.pregnancy ? JSON.parse(JSON.stringify(a.pregnancy)) : null,
+    postpartumMonths: a.postpartumMonths || 0,
+    bodyPotentialStats: a.bodyPotentialStats
+      ? { ...a.bodyPotentialStats }
+      : (a.potentialStats ? { ...a.potentialStats } : null),
+    adultBodyTraits: Array.isArray(a.adultBodyTraits) ? [...a.adultBodyTraits] : [],
+    adultBodyReached: !!a.adultBodyReached,
+    adultPortraitFile: a.adultPortraitFile || ""
   };
 
   a.bodySex = b.bodySex;
@@ -37,6 +45,14 @@ export function doExchange(a, b, v, isLightning = false) {
   a.mag = b.mag;
   a.chr = b.chr;
   a.bodyTraits = [...b.bodyTraits];
+  a.pregnancy = b.pregnancy ? JSON.parse(JSON.stringify(b.pregnancy)) : null;
+  a.postpartumMonths = b.postpartumMonths || 0;
+  a.bodyPotentialStats = b.bodyPotentialStats
+    ? { ...b.bodyPotentialStats }
+    : (b.potentialStats ? { ...b.potentialStats } : null);
+  a.adultBodyTraits = Array.isArray(b.adultBodyTraits) ? [...b.adultBodyTraits] : [];
+  a.adultBodyReached = !!b.adultBodyReached;
+  a.adultPortraitFile = b.adultPortraitFile || "";
 
   b.bodySex = exchangeParams.bodySex;
   b.bodyAge = exchangeParams.bodyAge;
@@ -52,14 +68,20 @@ export function doExchange(a, b, v, isLightning = false) {
   b.mag = exchangeParams.mag;
   b.chr = exchangeParams.chr;
   b.bodyTraits = [...exchangeParams.bodyTraits];
+  b.pregnancy = exchangeParams.pregnancy ? JSON.parse(JSON.stringify(exchangeParams.pregnancy)) : null;
+  b.postpartumMonths = exchangeParams.postpartumMonths;
+  b.bodyPotentialStats = exchangeParams.bodyPotentialStats ? { ...exchangeParams.bodyPotentialStats } : null;
+  b.adultBodyTraits = [...exchangeParams.adultBodyTraits];
+  b.adultBodyReached = exchangeParams.adultBodyReached;
+  b.adultPortraitFile = exchangeParams.adultPortraitFile;
 
   refreshJobTable(a);
   refreshJobTable(b);
 
-  if (!a.jobTable.includes(a.job)) a.job = "なし";
-  if (!a.actionTable.includes(a.action)) a.action = a.job;
-  if (!b.jobTable.includes(b.job)) b.job = "なし";
-  if (!b.actionTable.includes(b.action)) b.action = b.job;
+  a.job = "なし";
+  a.action = "なし";
+  b.job = "なし";
+  b.action = "なし";
 
   if (!isLightning) {
     v.log(`【交換の奇跡】${a.name}と${b.name}の肉体を交換しました`);

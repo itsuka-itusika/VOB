@@ -529,7 +529,7 @@ const SPEECH_TYPE_MAPPING = {
  */
 export function determineSpeechType(character) {  // export を追加
   // デフォルトの口調
-  const defaultSpeechType = character.bodySex === "男" ? "普通Ｍ" : "普通Ｆ";
+  const defaultSpeechType = (character.spiritSex || character.bodySex) === "男" ? "普通Ｍ" : "普通Ｆ";
   
   // 精神特性がない場合はデフォルトを返す
   if (!character.mindTraits || character.mindTraits.length === 0) {
@@ -544,7 +544,7 @@ export function determineSpeechType(character) {  // export を追加
     return defaultSpeechType;
   }
 
-  return character.bodySex === "男" ? speechTypes.male : speechTypes.female;
+  return (character.spiritSex || character.bodySex) === "男" ? speechTypes.male : speechTypes.female;
 }
 
 /**

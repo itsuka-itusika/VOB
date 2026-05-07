@@ -151,6 +151,8 @@ function convertVillagerToObject(vill) {
     pregnancy: vill.pregnancy ? JSON.parse(JSON.stringify(vill.pregnancy)) : null,
     postpartumMonths: vill.postpartumMonths || 0,
     potentialStats: vill.potentialStats ? { ...vill.potentialStats } : null,
+    bodyPotentialStats: vill.bodyPotentialStats ? { ...vill.bodyPotentialStats } : null,
+    mindPotentialStats: vill.mindPotentialStats ? { ...vill.mindPotentialStats } : null,
     adultBodyTraits: Array.isArray(vill.adultBodyTraits) ? [...vill.adultBodyTraits] : [],
     adultMindTraits: Array.isArray(vill.adultMindTraits) ? [...vill.adultMindTraits] : [],
     adultHobby: vill.adultHobby || "",
@@ -161,7 +163,8 @@ function convertVillagerToObject(vill) {
       : !!(vill.potentialStats && Number(vill.bodyAge) >= 16),
     adultMindReached: vill.adultMindReached !== undefined
       ? !!vill.adultMindReached
-      : !!(vill.potentialStats && Number(vill.spiritAge) >= 16)
+      : !!(vill.potentialStats && Number(vill.spiritAge) >= 16),
+    adultModalShown: !!vill.adultModalShown
   };
 }
 
@@ -282,6 +285,12 @@ function convertObjectToVillager(obj) {
   vill.pregnancy = obj.pregnancy ? JSON.parse(JSON.stringify(obj.pregnancy)) : null;
   vill.postpartumMonths = obj.postpartumMonths || 0;
   vill.potentialStats = obj.potentialStats ? { ...obj.potentialStats } : null;
+  vill.bodyPotentialStats = obj.bodyPotentialStats
+    ? { ...obj.bodyPotentialStats }
+    : (obj.potentialStats ? { ...obj.potentialStats } : null);
+  vill.mindPotentialStats = obj.mindPotentialStats
+    ? { ...obj.mindPotentialStats }
+    : (obj.potentialStats ? { ...obj.potentialStats } : null);
   vill.adultBodyTraits = Array.isArray(obj.adultBodyTraits) ? [...obj.adultBodyTraits] : [];
   vill.adultMindTraits = Array.isArray(obj.adultMindTraits) ? [...obj.adultMindTraits] : [];
   vill.adultHobby = obj.adultHobby || "";
@@ -293,6 +302,7 @@ function convertObjectToVillager(obj) {
   vill.adultMindReached = obj.adultMindReached !== undefined
     ? !!obj.adultMindReached
     : !!(vill.potentialStats && Number(vill.spiritAge) >= 16);
+  vill.adultModalShown = !!obj.adultModalShown;
 
   return vill;
 }

@@ -136,6 +136,8 @@ export class Villager {
     this.pregnancy = null;
     this.postpartumMonths = 0;
     this.potentialStats = null;
+    this.bodyPotentialStats = null;
+    this.mindPotentialStats = null;
     this.adultBodyTraits = [];
     this.adultMindTraits = [];
     this.adultHobby = "";
@@ -143,6 +145,7 @@ export class Villager {
     this.childMindTrait = "";
     this.adultBodyReached = false;
     this.adultMindReached = false;
+    this.adultModalShown = false;
   }
 
   setPortrait(portraitFile) {
