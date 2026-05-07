@@ -389,6 +389,7 @@ function doFarm(p, v) {
   if (p.mindTraits.includes("熟練農夫")) mul*=1.3;
   if (p.mindTraits.includes("達人農夫")) mul*=1.5;
   if (p.bodyTraits.includes("大地の巫女")) mul*=1.5;
+  if (p.bodyTraits.includes("大地の加護")) mul*=1.2;
   if (p.bodyTraits.includes("緑の指")) mul*=1.2;
 
   let amt=Math.round(base*mul*youthWorkMultiplier(p));
@@ -497,6 +498,8 @@ function doHunt(p, v) {
   if (v.villageTraits.includes("豊穣")) mul *= 2;
   if (v.villageTraits.includes("冬")) mul *= 1.2;
   if (p.bodyTraits.includes("月の巫女")) mul *= 1.5;
+  if (p.bodyTraits.includes("月の加護")) mul *= 1.2;
+  if (p.bodyTraits.includes("夜目")) mul *= 1.2;
   if (p.bodyTraits.includes("飛行")) mul *= 1.2;
   if (p.mindTraits.includes("熟練狩人")) mul *= 1.3;
   if (p.mindTraits.includes("達人狩人")) mul *= 1.5;
@@ -752,6 +755,9 @@ function doGuardJob(p, v) {
   p.mp = clampValue(p.mp-mc, 0, 100);
 
   let inc = Math.round(10 * (p.str/20) * (p.eth/20));
+  if (p.bodyTraits.includes("夜目")) {
+    inc = Math.round(inc * 1.2);
+  }
   if(inc<1) inc=1;
 
   v.security = clampValue(v.security+inc, 0, 100);
@@ -819,6 +825,9 @@ function doDancer(p, v) {
   if (p.bodyTraits.includes("澄んだ声") || p.bodyTraits.includes("通る声")) {
     inc = Math.round(inc * 1.2);
   }
+  if (p.bodyTraits.includes("太陽の巫女")) {
+    inc = Math.round(inc * 1.5);
+  }
   
   let affected = 0;
   v.villagers.forEach(target => {
@@ -858,6 +867,12 @@ function doPoet(p, v) {
   
   // 澄んだ声または通る声の特性があれば効果1.2倍
   if (p.bodyTraits.includes("澄んだ声") || p.bodyTraits.includes("通る声")) {
+    inc = Math.round(inc * 1.2);
+  }
+  if (p.bodyTraits.includes("太陽の巫女")) {
+    inc = Math.round(inc * 1.5);
+  }
+  if (p.bodyTraits.includes("太陽の加護")) {
     inc = Math.round(inc * 1.2);
   }
   
@@ -1208,6 +1223,12 @@ function doWeaving(p, v) {
   p.mp = clampValue(p.mp-mc, 0, 100);
 
   let fundsGain = Math.round(30 * p.dex/20 * p.ind/20);
+  if (p.bodyTraits.includes("梟の巫女")) {
+    fundsGain = Math.round(fundsGain * 1.5);
+  }
+  if (p.bodyTraits.includes("梟の加護")) {
+    fundsGain = Math.round(fundsGain * 1.2);
+  }
   v.funds = clampValue(v.funds + fundsGain, 0, 99999);
 
   let logMsg = `${p.name}機織り:資金+${fundsGain},体力-${tc},メンタル-${mc}`;

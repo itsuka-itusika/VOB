@@ -47,12 +47,90 @@ function snapshotParent(person) {
   const snap = {
     name: person.name,
     race: person.race || "人間",
-    bodySex: person.bodySex
+    bodySex: person.bodySex,
+    bodyTraits: Array.isArray(person.bodyTraits) ? [...person.bodyTraits] : []
   };
   [...PHYSICAL_STATS, ...MENTAL_STATS].forEach(stat => {
     snap[stat] = Number(person[stat]) || 1;
   });
   return snap;
+}
+
+function snapshotHasBodyTrait(snapshot, trait) {
+  return Array.isArray(snapshot?.bodyTraits) && snapshot.bodyTraits.includes(trait);
+}
+
+function rollInheritedTraits(data) {
+  const mother = data.motherSnapshot;
+  const father = data.fatherSnapshot;
+  const inherited = [];
+  const addIfRolled = (trait) => {
+    if (Math.random() < 0.3) inherited.push(trait);
+  };
+
+  ["緑の指", "夜目", "澄んだ声", "通る声"].forEach(trait => {
+    if (snapshotHasBodyTrait(mother, trait) || snapshotHasBodyTrait(father, trait)) {
+      addIfRolled(trait);
+    }
+  });
+
+  if (data.childSex === "女") {
+    ["大地の巫女", "月の巫女", "太陽の巫女", "梟の巫女", "聖女の輝き"].forEach(trait => {
+      if (snapshotHasBodyTrait(mother, trait)) {
+        addIfRolled(trait);
+      }
+    });
+  } else {
+    [
+      ["大地の巫女", "大地の加護"],
+      ["月の巫女", "月の加護"],
+      ["太陽の巫女", "太陽の加護"],
+      ["梟の巫女", "梟の加護"]
+    ].forEach(([motherTrait, childTrait]) => {
+      if (snapshotHasBodyTrait(mother, motherTrait)) {
+        addIfRolled(childTrait);
+      }
+    });
+  }
+
+  return inherited;
+}
+
+function addBodyStatBonus(child, stat, amount) {
+  child[stat] = (Number(child[stat]) || 0) + amount;
+  ["potentialStats", "bodyPotentialStats", "mindPotentialStats"].forEach(key => {
+    if (child[key]) {
+      child[key][stat] = (Number(child[key][stat]) || 0) + amount;
+    }
+  });
+}
+
+function applyInheritedBodyTraits(child, traits) {
+  traits.forEach(trait => addUnique(child.bodyTraits, trait));
+  if (traits.includes("大地の巫女")) {
+    addBodyStatBonus(child, "vit", 10);
+    addBodyStatBonus(child, "chr", 10);
+  }
+  if (traits.includes("月の巫女")) {
+    addBodyStatBonus(child, "dex", 10);
+    addBodyStatBonus(child, "chr", 10);
+  }
+  if (traits.includes("太陽の巫女")) {
+    addBodyStatBonus(child, "str", 15);
+    addBodyStatBonus(child, "chr", 5);
+  }
+  if (traits.includes("梟の巫女")) {
+    addBodyStatBonus(child, "mag", 10);
+    addBodyStatBonus(child, "chr", 10);
+  }
+  if (traits.includes("聖女の輝き")) {
+    addBodyStatBonus(child, "mag", 10);
+    addBodyStatBonus(child, "chr", 10);
+  }
+  if (traits.includes("大地の加護")) addBodyStatBonus(child, "vit", 5);
+  if (traits.includes("月の加護")) addBodyStatBonus(child, "dex", 5);
+  if (traits.includes("太陽の加護")) addBodyStatBonus(child, "str", 5);
+  if (traits.includes("梟の加護")) addBodyStatBonus(child, "mag", 5);
 }
 
 function childRelationshipSuffix(child) {
@@ -382,6 +460,7 @@ function startPregnancy(village, mother, father) {
     childRace,
     childSex,
     potentialStats,
+    inheritedBodyTraits: rollInheritedTraits({ motherSnapshot, fatherSnapshot, childSex }),
     fullTermApplied: false
   };
   addUnique(mother.bodyTraits, "妊娠");
@@ -413,6 +492,7 @@ function giveBirth(village, mother) {
     addUnique(child.bodyTraits, "飛行");
     addUnique(child.bodyTraits, "澄んだ声");
   }
+  applyInheritedBodyTraits(child, data.inheritedBodyTraits || []);
   child.hobby = "";
   child.hp = 100;
   child.mp = 100;

@@ -163,6 +163,9 @@ function seasonWorkMultiplier(village, job, person) {
   if (hasTrait(person, "緑の指") && ["農作業", "伐採", "採集"].includes(job)) mul *= 1.2;
   if (hasTrait(person, "飛行") && ["狩猟", "採集"].includes(job)) mul *= 1.2;
   if (hasTrait(person, "月の巫女") && job === "狩猟") mul *= 1.5;
+  if (hasTrait(person, "月の加護") && job === "狩猟") mul *= 1.2;
+  if (hasTrait(person, "夜目") && ["警備", "狩猟"].includes(job)) mul *= 1.2;
+  if (hasTrait(person, "大地の加護") && job === "農作業") mul *= 1.2;
   if (hasTrait(person, "水中呼吸") && job === "漁") mul *= 1.5;
   if (hasTrait(person, "森の知恵") && job === "採集") mul *= 1.5;
   if (hasTrait(person, "海の知恵") && job === "漁") mul *= 1.5;
@@ -284,7 +287,7 @@ function getTaskEstimate(person, task, village) {
       parts = [`技術+${gain}`, `体力-${bodyCost(15, person)}`, `メンタル-${mindCost(30, "int", person)}`];
       break;
     case "警備":
-      parts = [`治安+${Math.max(1, Math.round(10 * (str / 20) * (eth / 20)))}`, `体力-${bodyCost(15, person)}`, `メンタル-${mindCost(30, "cou", person)}`];
+      parts = [`治安+${Math.max(1, Math.round(10 * (str / 20) * (eth / 20) * (hasTrait(person, "夜目") ? 1.2 : 1)))}`, `体力-${bodyCost(15, person)}`, `メンタル-${mindCost(30, "cou", person)}`];
       break;
     case "看護":
       gain = Math.round(20 * mag * eth / 400 * (clinic ? 1.2 : 1));
@@ -300,11 +303,11 @@ function getTaskEstimate(person, task, village) {
       parts = [`全員メンタル+${gain}`, `体力-${bodyCost(10, person)}`, `メンタル-${mindCost(30, "eth", person)}`];
       break;
     case "踊り子":
-      gain = Math.round(5 * chr * sexdr / 400 * (tavern ? 1.2 : 1) * (voice ? 1.2 : 1));
+      gain = Math.round(5 * chr * sexdr / 400 * (tavern ? 1.2 : 1) * (voice ? 1.2 : 1) * (hasTrait(person, "太陽の巫女") ? 1.5 : 1));
       parts = [`男性${affectedMen}人幸福+${gain}`, `体力-${bodyCost(20, person)}`, `メンタル-${mindCost(20, "sexdr", person)}`];
       break;
     case "詩人":
-      gain = Math.round(5 * chr * chr / 400 * (tavern ? 1.2 : 1) * (voice ? 1.2 : 1));
+      gain = Math.round(5 * chr * chr / 400 * (tavern ? 1.2 : 1) * (voice ? 1.2 : 1) * (hasTrait(person, "太陽の巫女") ? 1.5 : 1) * (hasTrait(person, "太陽の加護") ? 1.2 : 1));
       parts = [`女性${affectedWomen}人幸福+${gain}`, `体力-${bodyCost(20, person)}`, `メンタル-${mindCost(20, "ind", person)}`];
       break;
     case "バニー":
@@ -323,7 +326,7 @@ function getTaskEstimate(person, task, village) {
       parts = [`資金/技術+${gain}`, `体力-${bodyCost(20, person)}`, `メンタル-${mindCost(20, "ind", person)}`];
       break;
     case "機織り":
-      parts = [`資金+${Math.round(30 * dex / 20 * ind / 20)}`, `体力-${bodyCost(20, person)}`, `メンタル-${mindCost(20, "ind", person)}`];
+      parts = [`資金+${Math.round(30 * dex / 20 * ind / 20 * (hasTrait(person, "梟の巫女") ? 1.5 : 1) * (hasTrait(person, "梟の加護") ? 1.2 : 1))}`, `体力-${bodyCost(20, person)}`, `メンタル-${mindCost(20, "ind", person)}`];
       break;
     case "醸造":
       parts = [`食料+${Math.round(24 * mag / 20 * ind / 20)}`, `魔素+${Math.round(5 * mag / 20 * ind / 20)}`, `体力-${bodyCost(20, person)}`, `メンタル-${mindCost(20, "ind", person)}`];
