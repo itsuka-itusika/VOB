@@ -3,33 +3,38 @@
 import { randInt, clampValue, round3, getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "./util.js";
 import { doLoverCheck, doMarriageCheck, clearRelationshipsForDepartedVillager } from "./relationships.js";
 import { createRandomVillager, createRandomVisitor } from "./createVillagers.js";
-import { startRaidEvent } from "./raid.js";
-import { theVillage } from "./main.js";
+import { startRaidEvent } from "./raidStart.js";
 import { RandomEvents } from "./RandomEvents.js";
-import { handlePregnancyAndBirth, updateChildGrowthStage } from "./reproduction.js";
+import { handleBirthAndPostpartum, handlePregnancyChecks, updateChildGrowthStage } from "./reproduction.js";
+import { showFestivalModal } from "./festivalModal.js";
+import { applyForcedActionRestriction, refreshJobTable } from "./domain/jobTables.js";
 
 /**
- * 固定イベント(前半) - 新年祭など
+ * 固定イベント(前半) - 新年祭,夏至祭など
  */
 export function doFixedEventPre(village) {
-  if (village.month===1 && !village.hasDonePreEvent) {
-    newYearFestival(village);
-    village.hasDonePreEvent = true;
+  if (!village.hasDonePreEvent) {
+    switch(village.month) {
+      case 1:
+        newYearFestival(village);
+        village.hasDonePreEvent = true;
+        break;
+      case 6:
+        summerSolsticeFestival(village);
+        village.hasDonePreEvent = true;
+        break;
+    }
   }
 }
 
 /**
- * 固定イベント(後半) - 復活祭,夏至祭,収穫祭,星霜祭など
+ * 固定イベント(後半) - 復活祭,収穫祭,星霜祭など
  */
 export function doFixedEventPost(village) {
   if (!village.hasDonePostEvent) {
     switch(village.month) {
       case 3:
         resurrectionFestival(village);
-        village.hasDonePostEvent=true;
-        break;
-      case 6:
-        summerSolsticeFestival(village);
         village.hasDonePostEvent=true;
         break;
       case 10:
@@ -48,6 +53,7 @@ export function doFixedEventPost(village) {
 // 各祭り
 // -------------------------
 function newYearFestival(v) {
+  showFestivalModal("newYear");
   v.log("【新年祭】体力+20,メンタル+20,幸福+20-30 全員");
   v.villagers.forEach(p=>{
     p.hp=clampValue(p.hp+20,0,100);
@@ -58,6 +64,7 @@ function newYearFestival(v) {
 }
 
 function resurrectionFestival(v) {
+  showFestivalModal("resurrection");
   v.log("【復活祭】体力+20,メンタル+20 +追加魔素");
   v.villagers.forEach(p=>{
     p.hp=clampValue(p.hp+20,0,100);
@@ -74,6 +81,7 @@ function resurrectionFestival(v) {
 }
 
 function summerSolsticeFestival(v) {
+  showFestivalModal("summerSolstice");
   v.log("【夏至祭】体力+20,メンタル+20,幸福+20-30 +結婚判定");
   v.villagers.forEach(p=>{
     p.hp=clampValue(p.hp+20,0,100);
@@ -85,6 +93,7 @@ function summerSolsticeFestival(v) {
 }
 
 function harvestFestival(v) {
+  showFestivalModal("harvest");
   v.log("【収穫祭】全員体力+40,メンタル+20");
   v.villagers.forEach(p=>{
     p.hp=clampValue(p.hp+40,0,100);
@@ -93,6 +102,7 @@ function harvestFestival(v) {
 }
 
 function starsFestival(v) {
+  showFestivalModal("stars");
   v.log("【星霜祭】体力+20,メンタル+20 +追加魔素 +恋人判定");
   v.villagers.forEach(p=>{
     p.hp=clampValue(p.hp+20,0,100);
@@ -117,6 +127,34 @@ export function doRandomEventPre(village) {
 }
 export function doRandomEventPost(village) {
   RandomEvents.execute(village, "後");
+}
+
+export function doRaidStartCheck(village) {
+  const raidProb = village.villageTraits.includes("荒廃") ? 0.4 : 0.2;
+  if (Math.random() < raidProb) {
+    startRaidEvent(village);
+  }
+}
+
+function applyMonthStartRestrictions(village) {
+  village.villagers.forEach(person => {
+    const restriction = applyForcedActionRestriction(person);
+    if (restriction.restricted && restriction.changed) {
+      village.log(`${person.name}は${restriction.reason}のため、行動を「${restriction.action}」に設定しました`);
+    }
+  });
+}
+
+export function runMonthStartPhase(village) {
+  doMonthStartProcess(village);
+  if ([3,6,9,12].includes(village.month)) {
+    updateSeason(village);
+  }
+  doFixedEventPre(village);
+  handleBirthAndPostpartum(village);
+  doRandomEventPre(village);
+  applyMonthStartRestrictions(village);
+  doRaidStartCheck(village);
 }
 
 function getVisitorLimit(village) {
@@ -271,7 +309,7 @@ export function endOfMonthProcess(v) {
     }
   });
 
-  handlePregnancyAndBirth(v);
+  handlePregnancyChecks(v);
 
   // ログ出力を元に戻す処理を削除
   // v.log = originalLog;
@@ -285,8 +323,8 @@ export function endOfMonthProcess(v) {
  *  - 魔素増加(幸福度ベース)
  *  - 食料/資材0時のペナルティ
  *  - 幸福度調整
+ *  - 訪問者生成
  *  - jobTable再構築
- *  - 襲撃判定
  */
 export function doMonthStartProcess(v) {
   v.log("【月初処理】");
@@ -306,12 +344,6 @@ export function doMonthStartProcess(v) {
       }
     }
   });
-
-  // 襲撃判定（荒廃時は確率2倍）
-  let raidProb = v.villageTraits.includes("荒廃") ? 0.4 : 0.2;
-  if (Math.random() < raidProb) {
-    startRaidEvent(v);
-  }
 
   // 幸福度由来の魔素増加
   let tot=0;
@@ -447,51 +479,31 @@ export function doMonthStartProcess(v) {
 
   // 全村人の行動テーブルを再構築
   v.villagers.forEach(p=>{
-    let currentJob = p.job;     // 現在のjobを保存
     let currentAction = p.action; // 現在のactionを保存
     
     // 一旦空にする
     p.actionTable = [];
     p.jobTable = [];  // jobTableも初期化
     
-    // ②状態異常特性による行動制限を優先チェック
-    if (p.bodyTraits.includes("危篤")) {
-      p.actionTable = ["臨終"];
-      p.jobTable = ["なし"];
-      p.job = "なし";
-      p.action = "臨終";
-      v.log(`${p.name}は危篤状態のため、行動を「臨終」に設定しました`);
-      return;
-    } else if (
-      p.bodyTraits.includes("病気") || 
-      p.bodyTraits.includes("負傷") || 
-      p.bodyTraits.includes("過労") ||
-      p.bodyTraits.includes("産褥") ||
-      p.mindTraits.includes("抑鬱")
-    ) {
-      p.actionTable = ["療養"];
-      p.jobTable = ["なし"];
-      p.job = "なし";
-      p.action = "療養";
-      let abnormalities = [];
-      if (p.bodyTraits.includes("病気")) abnormalities.push("病気");
-      if (p.bodyTraits.includes("負傷")) abnormalities.push("負傷");
-      if (p.bodyTraits.includes("過労")) abnormalities.push("過労");
-      if (p.bodyTraits.includes("産褥")) abnormalities.push("産褥");
-      if (p.mindTraits.includes("抑鬱")) abnormalities.push("抑鬱");
-      let selected = randChoice(abnormalities);
-      v.log(`${p.name}は${selected}のため、行動を「療養」に設定しました`);
+    const restriction = applyForcedActionRestriction(p);
+    if (restriction.restricted) {
+      v.log(`${p.name}は${restriction.reason}のため、行動を「${restriction.action}」に設定しました`);
       return;
     }
     
-    refreshJobTable(p);
+    refreshJobTable(p, v);
 
-    // 現在の行動と仕事が一致している場合は維持
-    if (currentAction === currentJob && p.actionTable.includes(currentAction)) {
-      p.action = currentAction;
-    } else {
-      // 現在の行動と仕事が一致していない場合は仕事と同じにする
+    // 月ごとの一時的な行動変更は翌月まで持ち越さず、基本は仕事と同じ行動へ戻す。
+    // 仕事が行動として選べない村人は、休養などの有効な行動まで「なし」に戻さない。
+    const refreshedAction = p.action;
+    if (p.actionTable.includes(p.job)) {
       p.action = p.job;
+    } else if (p.actionTable.includes(currentAction)) {
+      p.action = currentAction;
+    } else if (p.actionTable.includes(refreshedAction)) {
+      p.action = refreshedAction;
+    } else {
+      p.action = p.actionTable.includes("休養") ? "休養" : (p.actionTable[0] || "なし");
     }
 
     // 勤勉度および体力・メンタルによる休養判定
@@ -606,101 +618,170 @@ export function updateSeason(v) {
 
 // 季節変更ダイアログを表示する関数
 function showSeasonChangeDialog(season) {
-  let messages = {
-    "春": "暖かな風が吹き、新しい命が芽吹く季節となりました。",
-    "夏": "太陽が高く昇り、生命力溢れる季節となりました。",
-    "秋": "実りの秋を迎え、収穫の季節となりました。",
-    "冬": "寒さが厳しくなり、静かな季節となりました。"
+  const seasonData = {
+    "春": {
+      image: "../images/seasons/spring.png",
+      message: "暖かな風が吹き、新しい命が芽吹く季節となりました。",
+      accent: "#ffd6e7",
+      tips: [
+        "大きな補正は少ない安定した季節です。",
+        "食料や資材を整え、夏以降に備えるのに向いています。"
+      ]
+    },
+    "夏": {
+      image: "../images/seasons/summer.png",
+      message: "太陽が高く昇り、生命力溢れる季節となりました。",
+      accent: "#ffe39a",
+      tips: [
+        "夏至祭では体力・メンタル・幸福が回復し、結婚判定があります。",
+        "ランダムイベントの猛暑や冷夏には注意してください。"
+      ]
+    },
+    "秋": {
+      image: "../images/seasons/autumn.png",
+      message: "実りの秋を迎え、収穫の季節となりました。",
+      accent: "#ffd08a",
+      tips: [
+        "農作業と採集の生産量が1.5倍になります。",
+        "冬に備えて食料と資材を厚めに蓄える好機です。"
+      ]
+    },
+    "冬": {
+      image: "../images/seasons/winter.png",
+      message: "寒さが厳しくなり、静かな季節となりました。",
+      accent: "#d5e8ff",
+      tips: [
+        "農作業の生産量が0.5倍、狩猟の生産量が1.2倍になります。",
+        "月末に村人1人あたり資材10を消費します。資材0だと凍えが発生します。"
+      ]
+    }
   };
-  let tips = {
-    "春": [
-      "大きな補正は少ない安定した季節です。",
-      "食料や資材を整え、夏以降に備えるのに向いています。"
-    ],
-    "夏": [
-      "夏至祭では体力・メンタル・幸福が回復し、結婚判定があります。",
-      "ランダムイベントの猛暑や冷夏には注意してください。"
-    ],
-    "秋": [
-      "農作業と採集の生産量が1.5倍になります。",
-      "冬に備えて食料と資材を厚めに蓄える好機です。"
-    ],
-    "冬": [
-      "農作業の生産量が0.5倍、狩猟の生産量が1.2倍になります。",
-      "月末に村人1人あたり資材10を消費します。資材0だと凍えが発生します。"
-    ]
-  };
+  const data = seasonData[season];
+  if (!data) return;
+  const imageUrl = new URL(data.image, import.meta.url).href;
+
+  let overlay = document.createElement("div");
+  overlay.id = "seasonChangeOverlay";
+  overlay.style.cssText = `
+    position: fixed;
+    inset: 0;
+    background: rgba(9, 8, 7, 0.45);
+    z-index: 1400;
+  `;
 
   let dialog = document.createElement("div");
+  dialog.id = "seasonChangeDialog";
+  dialog.setAttribute("role", "dialog");
+  dialog.setAttribute("aria-modal", "true");
   dialog.style.cssText = `
     position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: rgba(0, 0, 0, 0.9);
-    color: white;
-    padding: 2em;
-    border-radius: 10px;
-    text-align: center;
-    z-index: 1000;
-    min-width: 300px;
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+    box-sizing: border-box;
+    width: min(720px, 92vw);
+    min-height: min(360px, 84vh);
+    max-height: 84vh;
+    overflow-y: auto;
+    color: #fffaf0;
+    border: 1px solid rgba(255, 255, 255, 0.42);
+    border-radius: 8px;
+    text-align: left;
+    z-index: 1401;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.48);
+    background-image:
+      linear-gradient(90deg, rgba(10, 8, 6, 0.88), rgba(10, 8, 6, 0.62) 54%, rgba(10, 8, 6, 0.2)),
+      url("${imageUrl}");
+    background-size: cover;
+    background-position: center;
+  `;
+
+  let content = document.createElement("div");
+  content.style.cssText = `
+    box-sizing: border-box;
+    min-height: min(360px, 84vh);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 14px;
+    padding: clamp(22px, 5vw, 42px);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.75);
   `;
 
   let seasonText = document.createElement("h2");
   seasonText.textContent = `${season}の訪れ`;
   seasonText.style.cssText = `
-    margin: 0 0 1em 0;
-    color: #FFD700;
-    font-size: 1.5em;
+    margin: 0;
+    color: ${data.accent};
+    font-size: clamp(2rem, 7vw, 3.5rem);
+    line-height: 1;
+    letter-spacing: 0;
   `;
 
   let message = document.createElement("p");
-  message.textContent = messages[season];
+  message.textContent = data.message;
   message.style.cssText = `
-    margin: 0 0 1.5em 0;
-    line-height: 1.5;
+    max-width: 34rem;
+    margin: 0;
+    line-height: 1.7;
+    font-size: clamp(1rem, 2.8vw, 1.16rem);
   `;
 
   let tipList = document.createElement("ul");
   tipList.style.cssText = `
-    margin: 0 0 1.5em 0;
-    padding-left: 1.2em;
+    max-width: 36rem;
+    margin: 0;
+    padding: 11px 13px 11px 2rem;
     text-align: left;
-    line-height: 1.5;
-    color: #f0f0f0;
+    line-height: 1.55;
+    color: #fffaf0;
+    background: rgba(255, 248, 225, 0.13);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 6px;
+    backdrop-filter: blur(2px);
   `;
-  (tips[season] || []).forEach(tip => {
+  data.tips.forEach(tip => {
     const item = document.createElement("li");
     item.textContent = tip;
     tipList.appendChild(item);
   });
 
+  const buttons = document.createElement("div");
+  buttons.style.cssText = "display:flex;justify-content:flex-end;margin-top:4px;";
+
   let closeButton = document.createElement("button");
+  closeButton.type = "button";
   closeButton.textContent = "閉じる";
   closeButton.style.cssText = `
-    padding: 0.5em 2em;
-    background: #4a4a4a;
-    border: 1px solid #666;
-    color: white;
+    min-width: 88px;
+    padding: 8px 16px;
+    background: ${data.accent};
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    color: #241d17;
     border-radius: 5px;
+    font-weight: bold;
     cursor: pointer;
-    transition: background 0.3s;
   `;
-  closeButton.onmouseover = () => closeButton.style.background = "#666";
-  closeButton.onmouseout = () => closeButton.style.background = "#4a4a4a";
-  closeButton.onclick = () => dialog.remove();
+  const closeDialog = () => {
+    overlay.remove();
+    dialog.remove();
+  };
+  closeButton.onclick = closeDialog;
+  overlay.onclick = closeDialog;
 
-  dialog.appendChild(seasonText);
-  dialog.appendChild(message);
-  dialog.appendChild(tipList);
-  dialog.appendChild(closeButton);
+  buttons.appendChild(closeButton);
+  content.appendChild(seasonText);
+  content.appendChild(message);
+  content.appendChild(tipList);
+  content.appendChild(buttons);
+  dialog.appendChild(content);
+  document.body.appendChild(overlay);
   document.body.appendChild(dialog);
 
   // 5秒後に自動で閉じる
   setTimeout(() => {
     if (document.body.contains(dialog)) {
-      dialog.remove();
+      closeDialog();
     }
   }, 5000);
 }
@@ -711,8 +792,6 @@ function randChoice(arr) {
   return arr[Math.floor(Math.random()*arr.length)];
 }
 
-// refreshJobTable が events.js 内で必要になったのでimport
-import { refreshJobTable } from "./createVillagers.js";
 
 // randFloat (幸福度自然減衰で使用)
 function randFloat(min,max){ return Math.random()*(max-min)+min; }

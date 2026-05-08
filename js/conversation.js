@@ -1,8 +1,9 @@
 import { theVillage } from "./main.js";
 import { updateUI } from "./ui.js";
 import { randInt, randChoice, getPortraitPath, isForcedHealingAction } from "./util.js";
-import { refreshJobTable } from "./createVillagers.js";  // refreshJobTableをインポート
+import { refreshJobTable } from "./domain/jobTables.js";
 import { getReproductiveStatusLine } from "./reproduction.js";
+import { ACTION_DEFEND, ACTION_TRAP, isRaidActionAssignable } from "./raidRules.js";
 
 // 口調タイプごとのテンプレート
 const SPEECH_PATTERNS = {
@@ -462,6 +463,42 @@ function refreshConversationText(character) {
   text.innerHTML = createConversationStatusHtml(character);
 }
 
+function getChildlikeStatusLine(character, status) {
+  const mindTraits = Array.isArray(character?.mindTraits) ? character.mindTraits : [];
+  const spiritSexKey = character?.spiritSex === "女" ? "female" : "male";
+  const lines = {
+    "無垢": {
+      raid: ["あうー……。", "んま……？", "ふぇ……。"],
+      exhausted: ["すやすや……。", "ふぇ……。", "んま……。"],
+      tired: ["ねむ……。", "あうー。", "すやすや……。"],
+      healthy: ["あうー。", "んま。", "ばぶ。", "きゃっ。"]
+    },
+    "萌芽": {
+      male: {
+        raid: ["こわいよ……。", "ぼく、まもれるかな……？", "だいじょうぶだよね……？"],
+        exhausted: ["もうつかれたよ……。", "ぼく、ねむい……。", "だっこして……。"],
+        tired: ["ちょっとねむいな。", "ぼく、すこし休むね。", "まだがんばれるよ。"],
+        healthy: ["えへへ、きょうもあそぶ？", "ねえねえ、あれなあに？", "ぼく、ちょっとできるよ！", "おそと、いきたいな。"]
+      },
+      female: {
+        raid: ["こわいよ……。", "わたし、だいじょうぶかな……？", "ぎゅってして……。"],
+        exhausted: ["もうつかれちゃった……。", "わたし、ねむい……。", "だっこして……。"],
+        tired: ["ちょっとねむいな。", "おひるねしたいな……。", "まだおてつだいできるよ。"],
+        healthy: ["えへへ、きょうもあそぶ？", "ねえねえ、あれなあに？", "わたしもおてつだいする！", "おそと、いきたいな。"]
+      }
+    }
+  };
+
+  if (mindTraits.includes("無垢")) {
+    return randChoice(lines["無垢"][status] || lines["無垢"].healthy);
+  }
+  if (mindTraits.includes("萌芽")) {
+    const sexLines = lines["萌芽"][spiritSexKey] || lines["萌芽"].male;
+    return randChoice(sexLines[status] || sexLines.healthy);
+  }
+  return null;
+}
+
 function isMerchantVisitor(character) {
   return getVisitorType(character) === "行商人";
 }
@@ -521,6 +558,11 @@ export function openConversationModal(character) {
     `;
   }
   
+  const isVillageMember = theVillage.villagers.includes(character);
+  if (isVillageMember) {
+    refreshJobTable(character, theVillage);
+  }
+
   // キャラクターの状態を判定
   const isExhausted = character.hp <= 33 || character.mp <= 33;
   const isTired = (character.hp > 33 && character.hp <= 59) || (character.mp > 33 && character.mp <= 59);
@@ -571,16 +613,16 @@ export function openConversationModal(character) {
         openMerchantTradeModal(character);
       });
     }
-  } else if (isUnderRaid && theVillage.villagers.includes(character) && !isForcedHealingAction(character)) {
+  } else if (isUnderRaid && isVillageMember && isRaidActionAssignable(character)) {
     const actionTable = Array.isArray(character.actionTable) ? character.actionTable : [];
-    const canDefend = actionTable.includes("迎撃");
-    const canMakeTrap = actionTable.includes("罠作成");
+    const canDefend = actionTable.includes(ACTION_DEFEND);
+    const canMakeTrap = actionTable.includes(ACTION_TRAP);
     const buttons = [];
     if (canDefend) {
-      buttons.push(`<button id="assignDefender" class="${character.action === '迎撃' ? 'active-action' : ''}">迎撃任命</button>`);
+      buttons.push(`<button id="assignDefender" class="${character.action === ACTION_DEFEND ? 'active-action' : ''}">迎撃任命</button>`);
     }
     if (canMakeTrap) {
-      buttons.push(`<button id="assignTrapMaker" class="${character.action === '罠作成' ? 'active-action' : ''}">罠作成任命</button>`);
+      buttons.push(`<button id="assignTrapMaker" class="${character.action === ACTION_TRAP ? 'active-action' : ''}">罠作成任命</button>`);
     }
     actionButtons.innerHTML = buttons.join("");
     actionButtons.style.display = buttons.length > 0 ? "block" : "none";
@@ -588,14 +630,14 @@ export function openConversationModal(character) {
     const defenderButton = document.getElementById("assignDefender");
     if (defenderButton) {
       defenderButton.addEventListener("click", () => {
-        changeCharacterAction(character, "迎撃");
+        changeCharacterAction(character, ACTION_DEFEND);
       });
     }
 
     const trapMakerButton = document.getElementById("assignTrapMaker");
     if (trapMakerButton) {
       trapMakerButton.addEventListener("click", () => {
-        changeCharacterAction(character, "罠作成");
+        changeCharacterAction(character, ACTION_TRAP);
       });
     }
   } else {
@@ -621,6 +663,9 @@ export function closeConversationModal() {
  * 状態に応じたセリフを返す
  */
 function getStatusLine(character, status) {
+  const childLine = getChildlikeStatusLine(character, status);
+  if (childLine) return childLine;
+
   const speechType = character.speechType;
   const pattern = SPEECH_PATTERNS[speechType];
   
@@ -1132,37 +1177,31 @@ function getSeasonalLines(character, season) {
  * キャラクターの行動を変更する
  */
 function changeCharacterAction(character, newAction) {
+  refreshJobTable(character, theVillage);
+
   if (isForcedHealingAction(character) && newAction !== "療養") {
     console.error(`Action ${newAction} is not available for this character`);
     return;
   }
 
-  if ((newAction === "迎撃" || newAction === "罠作成") && isForcedHealingAction(character)) {
+  if ((newAction === ACTION_DEFEND || newAction === ACTION_TRAP) && !isRaidActionAssignable(character)) {
     console.error(`Action ${newAction} is not available for this character`);
     return;
   }
 
-  if (character.actionTable.includes(newAction)) {
+  if (Array.isArray(character.actionTable) && character.actionTable.includes(newAction)) {
     character.action = newAction;
-    
-    // テキスト部分を更新して行動変更を反映
-    const text = document.getElementById("conversationText");
-    if (text) {
-      const currentText = text.innerHTML;
-      const updatedText = currentText.replace(
-        `<strong>現在の行動:</strong> ${character.action !== newAction ? character.action : newAction}`,
-        `<strong>現在の行動:</strong> ${newAction}`
-      );
-      text.innerHTML = updatedText;
-    }
+    refreshConversationText(character);
     
     // ボタンのアクティブ状態を更新
     const defenderButton = document.getElementById("assignDefender");
     const trapMakerButton = document.getElementById("assignTrapMaker");
     
-    if (defenderButton && trapMakerButton) {
-      defenderButton.className = newAction === "迎撃" ? "active-action" : "";
-      trapMakerButton.className = newAction === "罠作成" ? "active-action" : "";
+    if (defenderButton) {
+      defenderButton.className = newAction === ACTION_DEFEND ? "active-action" : "";
+    }
+    if (trapMakerButton) {
+      trapMakerButton.className = newAction === ACTION_TRAP ? "active-action" : "";
     }
     
     // 村のUIを更新
@@ -1559,7 +1598,7 @@ function handleRecruitmentSuccess(visitor, recruiter, successRate = 0) {
   theVillage.villagers.push(visitor);
   
   // 仕事テーブルを更新
-  refreshJobTable(visitor);
+  refreshJobTable(visitor, theVillage);
   
   theVillage.log(`${recruiter.name}の勧誘により、${visitor.name}が村人になりました。(成功率: ${Math.floor(successRate)}%)`);
   alert(`勧誘成功！${visitor.name}が村人になりました。`);

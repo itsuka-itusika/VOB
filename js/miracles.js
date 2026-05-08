@@ -4,7 +4,8 @@ import { clampValue, round3, getPortraitPath } from "./util.js";
 import { addRelationship, removeRelationship, checkHasRelationship, getRelationshipTargetName, clearRelationshipsForDepartedVillager, addSpouseRelationships } from "./relationships.js";
 import { updateUI } from "./ui.js";  // 実行後にUIを更新する
 import { doExchange } from "./exchange.js";
-import { createRandomVisitor, determineSpeechType, refreshJobTable } from "./createVillagers.js";
+import { createRandomVisitor, determineSpeechType } from "./createVillagers.js";
+import { refreshJobTable } from "./domain/jobTables.js";
 /**
  * 奇跡リスト
  */
@@ -484,7 +485,12 @@ function departureMiracle(p,v) {
 function getChildlikeMiracleLine(person) {
   const mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
   if (mindTraits.includes("無垢")) return randFrom(["あうー。", "んま。", "ばぶ。", "すやすや……"]);
-  if (mindTraits.includes("萌芽")) return randFrom(["わあ……きらきらしてる。", "これ、なあに？", "えへへ、ふしぎだね。"]);
+  if (mindTraits.includes("萌芽")) {
+    const lines = person.spiritSex === "女"
+      ? ["わあ……きらきらしてる。", "これ、なあに？", "わたし、ふしぎでどきどきする。"]
+      : ["わあ……きらきらしてる。", "これ、なあに？", "ぼく、ふしぎでどきどきする。"];
+    return randFrom(lines);
+  }
   return null;
 }
 
