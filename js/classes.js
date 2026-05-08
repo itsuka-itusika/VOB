@@ -33,6 +33,7 @@ export class Village {
     // 襲撃イベント用フラグ/データ
     this.raidEnemies = [];
     this.isRaidProcessDone = false;
+    this.isRaidFinalizing = false;
     this.raidTurnCount = 0;
     this.raidActionQueue = [];
     this.currentActionIndex = 0;
@@ -80,6 +81,7 @@ export class Villager {
   constructor(name, bodySex, bodyAge) {
     /** 基本情報 */
     this.name = name;
+    // 肉体側の識別子。精神側の spiritSex/spiritAge とは統合しない。
     this.bodySex = bodySex;
     this.bodyAge = bodyAge;
     this.race = "人間";  // 種族パラメータを追加
@@ -102,7 +104,7 @@ export class Villager {
     this.cou = 10;
     this.sexdr = 10;
 
-    /** 精神情報(魂側) */
+    /** 精神情報(魂側)。bodyAge/bodySex とは別軸のゲーム仕様。 */
     this.spiritAge = bodyAge;
     this.spiritSex = bodySex;
 
@@ -117,6 +119,7 @@ export class Villager {
     /** 仕事関連 */
     this.job = "休養";
     this.jobTable = [];
+    this.assignmentLocked = false;
 
     /** 行動関連 */
     this.action = "休養";
@@ -143,6 +146,8 @@ export class Villager {
     this.adultMindTraits = [];
     this.adultHobby = "";
     this.adultPortraitFile = "";
+    this.toddlerPortraitFile = "";
+    this.toddlerPortraitGroup = "";
     this.childMindTrait = "";
     this.adultBodyReached = false;
     this.adultMindReached = false;

@@ -1,5 +1,12 @@
-import { refreshJobTable } from "./createVillagers.js";
+import { refreshJobTable } from "./domain/jobTables.js";
 import { getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "./util.js";
+import {
+  ACTION_DEFEND,
+  ACTION_TRAP,
+  canPerformRaidAction,
+  isRaidActionAssignable,
+  isRaidActive
+} from "./raidRules.js";
 
 const JOB_NONE = "\u306a\u3057";
 const JOB_REST = "\u4f11\u990a";
@@ -8,9 +15,6 @@ const JOB_HEAL = "\u7642\u990a";
 const JOB_LAST_MOMENTS = "\u81e8\u7d42";
 const TRAIT_CRITICAL = "\u5371\u7be4";
 const TRAIT_PACIFIST = "\u975e\u6226\u4e3b\u7fa9";
-const TRAIT_UNDER_RAID = "\u8972\u6483\u4e2d";
-const ACTION_DEFEND = "\u8fce\u6483";
-const ACTION_TRAP = "\u7f60\u4f5c\u6210";
 const JOB_FOOD_SET = new Set([
   "\u8fb2\u4f5c\u696d",
   "\u72e9\u731f",
@@ -41,13 +45,13 @@ const JOB_RECOVERY_SET = new Set([
   "\u770b\u8b77",
   "\u3042\u3093\u307e"
 ]);
-const ACTION_RECOVERY_SET = [
+const RECOVERY_ASSIGNMENT_SET = new Set([
   "\u7642\u990a",
   "\u4f11\u990a",
   "\u4f59\u6687",
   "\u770b\u8b77",
   "\u3042\u3093\u307e"
-];
+]);
 
 const JOB_WEIGHTS = {
   "\u5b66\u696d": { int: 2, ind: 2, eth: 0.5 },
@@ -226,12 +230,21 @@ function scoreJob(person, job, context) {
   return rawScore * getJobTraitMultiplier(person, job, context?.village);
 }
 
+function hasLowRecoveryNeed(person) {
+  return (Number(person.hp) || 0) <= 33 || (Number(person.mp) || 0) <= 33;
+}
+
 function chooseBestJob(person, context) {
-  let bestJob = firstAvailable([JOB_NONE], person.jobTable) || person.jobTable[0] || JOB_NONE;
+  const jobTable = Array.isArray(person.jobTable) ? person.jobTable : [];
+  const candidateJobs = jobTable.filter(job => job !== JOB_NONE);
+  const workCandidates = hasLowRecoveryNeed(person)
+    ? candidateJobs
+    : candidateJobs.filter(job => !RECOVERY_ASSIGNMENT_SET.has(job));
+  const candidates = workCandidates.length > 0 ? workCandidates : candidateJobs;
+  let bestJob = firstAvailable([JOB_NONE], jobTable) || jobTable[0] || JOB_NONE;
   let bestScore = -Infinity;
 
-  person.jobTable.forEach(job => {
-    if (job === JOB_NONE) return;
+  candidates.forEach(job => {
     const score = scoreJob(person, job, context);
     if (score > bestScore) {
       bestScore = score;
@@ -242,25 +255,11 @@ function chooseBestJob(person, context) {
   return bestJob;
 }
 
-function chooseRecoveryAction(person, actionTable, context) {
-  if (!context || context.recoverySeverity <= 0) return null;
+function chooseWorkAction(person, actionTable, job) {
+  if (actionTable.includes(job)) return job;
 
-  if ((Number(person.hp) || 0) <= 45 || (Number(person.mp) || 0) <= 45) {
-    if ((Number(person.hp) || 0) <= (Number(person.mp) || 0)) {
-      return firstAvailable(["\u7642\u990a", "\u4f11\u990a", "\u4f59\u6687"], actionTable);
-    }
-    return firstAvailable(["\u4f59\u6687", "\u7642\u990a", "\u4f11\u990a"], actionTable);
-  }
-
-  if (context.recoverySeverity >= 0.9 && ((Number(person.hp) || 0) <= 60 || (Number(person.mp) || 0) <= 60)) {
-    return firstAvailable(ACTION_RECOVERY_SET, actionTable);
-  }
-
-  if (context.recoverySeverity >= 1.1 && ((Number(person.eth) || 0) >= 16 || (Number(person.mag) || 0) >= 16)) {
-    return firstAvailable(["\u770b\u8b77", "\u3042\u3093\u307e"], actionTable);
-  }
-
-  return null;
+  const nonRecoveryAction = actionTable.find(action => action !== JOB_NONE && !RECOVERY_ASSIGNMENT_SET.has(action));
+  return nonRecoveryAction || firstAvailable([JOB_NONE], actionTable) || actionTable[0] || job;
 }
 
 function chooseAssignment(person, village, context) {
@@ -279,31 +278,23 @@ function chooseAssignment(person, village, context) {
 
   if (person.hp <= 33) {
     return {
-      job: firstAvailable([JOB_NONE], jobTable) || currentJob,
+      job: currentJob,
       action: firstAvailable([JOB_HEAL, JOB_REST, JOB_LEISURE, JOB_NONE], actionTable) || currentJob
     };
   }
 
   if (person.mp <= 33) {
     return {
-      job: firstAvailable([JOB_NONE], jobTable) || currentJob,
+      job: currentJob,
       action: firstAvailable([JOB_REST, JOB_LEISURE, JOB_HEAL, JOB_NONE], actionTable) || currentJob
     };
   }
 
-  const recoveryAction = chooseRecoveryAction(person, actionTable, context);
   const job = chooseBestJob(person, context);
   return {
     job,
-    action: recoveryAction || (actionTable.includes(job) ? job : firstAvailable([JOB_REST, JOB_LEISURE, JOB_NONE], actionTable) || job)
+    action: chooseWorkAction(person, actionTable, job)
   };
-}
-
-function isRaidActive(village) {
-  return village.villageTraits.includes(TRAIT_UNDER_RAID)
-    && !village.isRaidProcessDone
-    && Array.isArray(village.raidEnemies)
-    && village.raidEnemies.length > 0;
 }
 
 function getHealthFactor(person) {
@@ -316,13 +307,46 @@ function canUseAction(person, action) {
   return Array.isArray(person.actionTable) && person.actionTable.includes(action);
 }
 
-function getDefenderScore(person) {
+function chooseRaidFallbackAction(person, currentJob, currentAction) {
+  const actionTable = Array.isArray(person.actionTable) ? person.actionTable : [];
+  const isRaidAction = currentAction === ACTION_DEFEND || currentAction === ACTION_TRAP;
+
+  if (!isRaidAction && actionTable.includes(currentAction)) {
+    return currentAction;
+  }
+  if (actionTable.includes(currentJob)) {
+    return currentJob;
+  }
+  return firstAvailable([JOB_REST, JOB_LEISURE, JOB_HEAL, JOB_NONE], actionTable) ||
+    actionTable[0] ||
+    JOB_NONE;
+}
+
+function getExpectedDefenderDamage(person) {
   const mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
-  if (mindTraits.includes(TRAIT_PACIFIST)) return -Infinity;
+  if (mindTraits.includes(TRAIT_PACIFIST)) return 0;
 
   const physical = ((Number(person.str) || 0) * (Number(person.cou) || 0) / 400) * 50;
   const magical = ((Number(person.mag) || 0) * (Number(person.cou) || 0) / 400) * 25;
-  const attack = Math.max(physical, magical);
+  const traitMultiplier = mindTraits.includes("歴戦") ? 1.2 : 1;
+  return Math.max(physical, magical) * traitMultiplier;
+}
+
+function getExpectedTrapDamage(person) {
+  return ((Number(person.dex) || 0) * (Number(person.int) || 0) / 400) * 30;
+}
+
+function isSafeDefender(person) {
+  return (Number(person.hp) || 0) >= 55 && (Number(person.mp) || 0) >= 20;
+}
+
+function isSafeTrapMaker(person) {
+  return (Number(person.hp) || 0) >= 35 && (Number(person.mp) || 0) >= 10;
+}
+
+function getDefenderScore(person) {
+  const attack = getExpectedDefenderDamage(person);
+  if (attack <= 0) return -Infinity;
 
   return (
     attack * 2.2
@@ -333,8 +357,10 @@ function getDefenderScore(person) {
 }
 
 function getTrapScore(person) {
+  const damage = getExpectedTrapDamage(person);
   return (
-    (Number(person.dex) || 0) * 2.65
+    damage * 4
+    + (Number(person.dex) || 0) * 2.65
     + (Number(person.int) || 0) * 2.45
     + (Number(person.ind) || 0) * 1.0
     + (Number(person.cou) || 0) * 0.4
@@ -342,23 +368,33 @@ function getTrapScore(person) {
   );
 }
 
-function getRaidAssignmentProfile(person) {
-  refreshJobTable(person);
+function getRaidAssignmentProfile(person, village) {
+  const currentJob = person.job;
+  const currentAction = person.action;
+  refreshJobTable(person, village);
 
-  const normal = chooseAssignment(person, null, null);
+  const keptJob = Array.isArray(person.jobTable) && person.jobTable.includes(currentJob)
+    ? currentJob
+    : person.job;
+  const fallbackAction = chooseRaidFallbackAction(person, keptJob, currentAction);
   const bodyTraits = Array.isArray(person.bodyTraits) ? person.bodyTraits : [];
+  const assignable = isRaidActionAssignable(person);
 
-  const canDefend = canUseAction(person, ACTION_DEFEND);
-  const canTrap = canUseAction(person, ACTION_TRAP);
+  const defenderDamage = getExpectedDefenderDamage(person);
+  const trapDamage = getExpectedTrapDamage(person);
+  const canDefend = assignable && canUseAction(person, ACTION_DEFEND) && isSafeDefender(person) && defenderDamage >= 8;
+  const canTrap = assignable && canUseAction(person, ACTION_TRAP) && isSafeTrapMaker(person) && trapDamage >= 6;
 
   return {
     person,
-    normal,
-    forcedNormal: bodyTraits.includes(TRAIT_CRITICAL),
+    fallback: { job: keptJob, action: fallbackAction },
+    forcedNormal: bodyTraits.includes(TRAIT_CRITICAL) || !assignable,
     canDefend,
     canTrap,
     defenderScore: canDefend ? getDefenderScore(person) : -Infinity,
-    trapScore: canTrap ? getTrapScore(person) : -Infinity
+    trapScore: canTrap ? getTrapScore(person) : -Infinity,
+    defenderDamage: canDefend ? defenderDamage : 0,
+    trapDamage: canTrap ? trapDamage : 0
   };
 }
 
@@ -379,7 +415,7 @@ function getMinimumDefenders(village, profiles) {
 
 function buildRaidAssignments(village, targets) {
   const assignments = new Map();
-  const profiles = targets.map(person => getRaidAssignmentProfile(person));
+  const profiles = targets.map(person => getRaidAssignmentProfile(person, village));
   const minimumDefenders = getMinimumDefenders(village, profiles);
   const defenderSlots = new Set(
     profiles
@@ -391,26 +427,26 @@ function buildRaidAssignments(village, targets) {
 
   profiles.forEach(profile => {
     if (profile.forcedNormal || (!profile.canDefend && !profile.canTrap)) {
-      assignments.set(profile.person, profile.normal);
+      assignments.set(profile.person, profile.fallback);
       return;
     }
 
     if (defenderSlots.has(profile.person)) {
-      assignments.set(profile.person, { job: profile.normal.job, action: ACTION_DEFEND });
+      assignments.set(profile.person, { job: profile.fallback.job, action: ACTION_DEFEND });
       return;
     }
 
-    if (profile.canTrap && profile.trapScore >= 68 && profile.trapScore >= profile.defenderScore * 0.78) {
-      assignments.set(profile.person, { job: profile.normal.job, action: ACTION_TRAP });
+    if (profile.canTrap && (!profile.canDefend || profile.trapDamage >= profile.defenderDamage * 0.82)) {
+      assignments.set(profile.person, { job: profile.fallback.job, action: ACTION_TRAP });
       return;
     }
 
-    if (profile.canDefend && profile.defenderScore >= 82) {
-      assignments.set(profile.person, { job: profile.normal.job, action: ACTION_DEFEND });
+    if (profile.canDefend) {
+      assignments.set(profile.person, { job: profile.fallback.job, action: ACTION_DEFEND });
       return;
     }
 
-    assignments.set(profile.person, profile.normal);
+    assignments.set(profile.person, profile.fallback);
   });
 
   return assignments;
@@ -418,46 +454,52 @@ function buildRaidAssignments(village, targets) {
 
 export function autoAssignJobs(village) {
   let changed = 0;
-  const raidMode = isRaidActive(village);
   const priorityContext = buildVillagePriorityContext(village);
+  const targets = village.villagers.filter(person => !person.assignmentLocked);
+
+  targets.forEach(person => {
+    const next = chooseAssignment(person, village, priorityContext);
+
+    if (person.job !== next.job || person.action !== next.action) {
+      changed++;
+    }
+    person.job = next.job;
+    person.action = next.action;
+  });
+
+  const lockedCount = village.villagers.filter(person => person.assignmentLocked).length;
+  village.log(`自動割り振り: ${changed}人の仕事/行動を更新しました。固定${lockedCount}人は除外 (食料${priorityContext.foodSeverity.toFixed(2)}, 回復${priorityContext.recoverySeverity.toFixed(2)}, 資材${priorityContext.materialSeverity.toFixed(2)}, 資金${priorityContext.fundsSeverity.toFixed(2)})`);
+}
+
+export function autoAssignRaidActions(village) {
+  if (!isRaidActive(village)) {
+    village.log("襲撃は発生していません。");
+    return;
+  }
+
+  let changed = 0;
   let defenders = 0;
   let trapMakers = 0;
   let nonParticipants = 0;
-
-  const targets = raidMode
-    ? village.villagers
-    : village.villagers.filter(person => person.job === JOB_NONE);
-  const raidAssignments = raidMode ? buildRaidAssignments(village, targets) : null;
+  const targets = Array.isArray(village.villagers) ? village.villagers : [];
+  const raidAssignments = buildRaidAssignments(village, targets);
 
   targets.forEach(person => {
     const currentJob = person.job;
     const currentAction = person.action;
-    const next = raidMode ? raidAssignments.get(person) : chooseAssignment(person, village, priorityContext);
+    const next = raidAssignments.get(person);
+    if (!next) return;
 
-    if (raidMode) {
-      person.job = currentJob;
-      if (currentAction !== next.action) {
-        changed++;
-      }
-      person.action = next.action;
-    } else {
-      if (person.job !== next.job || person.action !== next.action) {
-        changed++;
-      }
-      person.job = next.job;
-      person.action = next.action;
+    if (currentAction !== next.action || currentJob !== next.job) {
+      changed++;
     }
+    person.job = next.job;
+    person.action = next.action;
 
-    if (raidMode) {
-      if (person.action === ACTION_DEFEND) defenders++;
-      else if (person.action === ACTION_TRAP) trapMakers++;
-      else nonParticipants++;
-    }
+    if (person.action === ACTION_DEFEND && canPerformRaidAction(person, ACTION_DEFEND)) defenders++;
+    else if (person.action === ACTION_TRAP && canPerformRaidAction(person, ACTION_TRAP)) trapMakers++;
+    else nonParticipants++;
   });
 
-  if (raidMode) {
-    village.log(`\u81ea\u52d5\u5272\u308a\u632f\u308a(\u8fce\u6483): ${changed}\u4eba\u3092\u66f4\u65b0\u3057\u307e\u3057\u305f\u3002\u8fce\u6483${defenders}\u4eba\u3001\u7f60\u4f5c\u6210${trapMakers}\u4eba\u3001\u4e0d\u53c2\u52a0${nonParticipants}\u4eba`);
-  } else {
-    village.log(`\u81ea\u52d5\u5272\u308a\u632f\u308a: ${changed}\u4eba\u306e\u4ed5\u4e8b/\u884c\u52d5\u3092\u66f4\u65b0\u3057\u307e\u3057\u305f (食料${priorityContext.foodSeverity.toFixed(2)}, 回復${priorityContext.recoverySeverity.toFixed(2)}, 資材${priorityContext.materialSeverity.toFixed(2)}, 資金${priorityContext.fundsSeverity.toFixed(2)})`);
-  }
+  village.log(`迎撃割り振り: ${changed}人を更新しました。迎撃${defenders}人、罠作成${trapMakers}人、不参加${nonParticipants}人`);
 }

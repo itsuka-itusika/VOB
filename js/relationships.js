@@ -210,7 +210,12 @@ function getSpeechType(person) {
 function getChildlikeRelationshipLine(person) {
   const mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
   if (mindTraits.includes("無垢")) return randChoice(["あうー。", "んま。", "ばぶ。", "すやすや……"]);
-  if (mindTraits.includes("萌芽")) return randChoice(["わあ……。", "えへへ。", "これ、なあに？"]);
+  if (mindTraits.includes("萌芽")) {
+    const lines = person.spiritSex === "女"
+      ? ["わあ……。", "えへへ、わたしもうれしい。", "これ、なあに？"]
+      : ["わあ……。", "えへへ、ぼくもうれしい。", "これ、なあに？"];
+    return randChoice(lines);
+  }
   return null;
 }
 

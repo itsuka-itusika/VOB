@@ -1,0 +1,952 @@
+/* =====================
+   ▼ CSS全体
+   テーブル列構成:
+   0: 名前
+   1: 肉体
+   2: 種族
+   3: 性別(肉体性別)
+   4: 年齢(肉体年齢)
+   5: 体力
+   6: メンタル
+   7: 幸福
+   8: 仕事
+   9: 筋力
+   10: 耐久
+   11: 器用
+   12:魔力
+   13:魅力
+   14:肉体特性
+   15:知力
+   16:勤勉
+   17:倫理
+   18:勇気
+   19:好色
+   20:精神特性
+   21:趣味
+   22:(詳細: 人間関係+精神年齢+精神性別)
+===================== */
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
+  background: #f5f5f5;
+  color: #333;
+}
+header, footer {
+  background: #333;
+  color: #fff;
+  padding: 3px;
+}
+main {
+  padding: 3px;
+}
+h1, h2, h3 {
+  margin-top: 0.1em;
+  margin-bottom: 0.1em;
+}
+section {
+  margin-bottom: 10px;
+}
+.resource-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  background: #e8e8e8;
+  padding: 5px;
+}
+.resource-box {
+  background: #fff;
+  border: 1px solid #ccc;
+  padding: 5px 8px;
+  min-width: 80px;
+  text-align: center;
+}
+button {
+  margin-top: 0.30em;
+  margin-right: 6px;
+  cursor: pointer;
+}
+.job-cell-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 150px;
+}
+.job-cell-controls select {
+  min-width: 86px;
+  flex: 1 1 auto;
+}
+.assignment-lock-toggle {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 26px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #b8a36d;
+  border-radius: 4px;
+  background: #fffaf0;
+  color: #5c4a19;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.assignment-lock-toggle.is-locked {
+  background: #5b5143;
+  border-color: #5b5143;
+  color: #fff;
+}
+.assignment-lock-icon {
+  position: relative;
+  width: 13px;
+  height: 10px;
+  border: 2px solid currentColor;
+  border-radius: 2px;
+  box-sizing: border-box;
+}
+.assignment-lock-icon::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: -11px;
+  width: 9px;
+  height: 10px;
+  border: 2px solid currentColor;
+  border-bottom: 0;
+  border-radius: 7px 7px 0 0;
+  box-sizing: border-box;
+}
+.assignment-lock-icon::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 3px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.assignment-lock-toggle.is-auto .assignment-lock-icon::before {
+  left: 5px;
+  top: -10px;
+  transform: rotate(28deg);
+  transform-origin: left bottom;
+}
+.assignment-lock-toggle.is-auto:hover {
+  background: #f4ead0;
+}
+.assignment-lock-toggle.is-locked:hover {
+  background: #706454;
+}
+.top-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.action-buttons {
+  flex: 1 1 auto;
+}
+.message-window {
+  flex: 1 1 520px;
+  min-height: 0;
+  max-height: 96px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #b8a36d;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+.message-item {
+  border-top: 1px dotted #d8c7a8;
+  padding: 3px 0;
+}
+.message-item:first-of-type {
+  border-top: 0;
+}
+.message-item.warning {
+  color: #8a4b00;
+}
+.message-item.danger {
+  color: #a40000;
+  font-weight: bold;
+}
+.message-empty {
+  color: #666;
+}
+@media (max-width: 760px) {
+  .top-actions {
+    flex-direction: column;
+  }
+  .message-window {
+    flex-basis: auto;
+    width: calc(100% - 18px);
+  }
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+}
+th, td {
+  border: 1px solid #ccc;
+  padding: 4px;
+  text-align: center;
+}
+.log-and-dictionary {
+  display: flex;
+  gap: 20px;
+  margin: 0 auto;
+}
+.log-area {
+  height: 400px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #ccc;
+  padding: 5px;
+  font-size: 0.85rem;
+  line-height: 1.4em;
+  width: 80%;
+}
+.dictionary-section {
+  width: 20%;
+}
+.dictionary-search {
+  margin-bottom: 10px;
+}
+.dictionary-search input {
+  width: 100%;
+  padding: 5px;
+  font-size: 0.9rem;
+}
+.dictionary-content {
+  height: 360px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #ccc;
+  padding: 10px;
+  font-size: 0.85rem;
+  line-height: 1.4em;
+}
+
+/* モーダル(奇跡) */
+#miracleModal {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  border: 2px solid #aaa;
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+  width: 420px;
+  max-width: 90%;
+  padding: 10px;
+  display: none;
+  z-index: 999;
+}
+#modalOverlay {
+  position: fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  z-index:998;
+}
+.modal-header {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+.modal-content {
+  margin-top: 5px;
+}
+.modal-buttons {
+  margin-top: 10px;
+  text-align: right;
+}
+select {
+  margin: 2px 0;
+}
+
+/* ▼男女色分け (列0~7) */
+.male-basic {
+  background: #d8e9f9; /* 薄青 */
+}
+.female-basic {
+  background: #f9d8e9; /* 薄赤 */
+}
+
+/* ▼筋力～魅力(列8~13) => 薄黄色 */
+.male-basic.happiness-cell {
+  background: #d8e9f9;
+}
+
+.female-basic.happiness-cell {
+  background: #f9d8e9;
+}
+
+tr td:nth-child(11),
+tr td:nth-child(12),
+tr td:nth-child(13),
+tr td:nth-child(14),
+tr td:nth-child(15),
+tr td:nth-child(16) {
+  background: #faf2d3;
+}
+
+/* ▼知力～好色(列14~19) => 薄緑 */
+tr td:nth-child(17),
+tr td:nth-child(18),
+tr td:nth-child(19),
+tr td:nth-child(20),
+tr td:nth-child(21),
+tr td:nth-child(22) {
+  background: #e2f9d8;
+}
+
+/* HP/MP<=33 => 赤文字 */
+.low-hpmp {
+  color: red;
+}
+
+/* ステータス>=20 => 太字 */
+.bold-value {
+  font-weight: bold;
+}
+.status-debuff {
+  color: #1565c0;
+  font-weight: bold;
+}
+
+.dictionary-term {
+  color: inherit;
+  cursor: help;
+  text-decoration: none;
+}
+.dictionary-term:focus {
+  outline: 1px solid #999;
+  outline-offset: 2px;
+}
+
+.spirit-column {
+  display: none;
+}
+table.show-spirit-columns .spirit-column {
+  display: table-cell;
+}
+.table-tools {
+  margin: 2px 0 6px;
+  font-size: 0.85rem;
+}
+.table-tools label {
+  cursor: pointer;
+  user-select: none;
+}
+
+.villager-portrait-cell {
+  width: 42px;
+  min-width: 42px;
+  padding: 2px;
+  background: #fff;
+}
+.villager-portrait-frame {
+  width: 34px;
+  height: 34px;
+  overflow: hidden;
+  border-radius: 4px;
+  border: 1px solid #bbb;
+  background: #fff;
+  margin: 0 auto;
+}
+.villager-portrait {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+  display: block;
+  transform: scale(1.34);
+  transform-origin: center 28%;
+}
+#villagersTable td:nth-child(11) {
+  background: inherit;
+}
+#visitorsTable td:nth-child(11),
+#raidEnemiesTable td:nth-child(11) {
+  background: inherit;
+}
+#villagersTable td:nth-child(12),
+#villagersTable td:nth-child(13),
+#villagersTable td:nth-child(14),
+#villagersTable td:nth-child(15),
+#villagersTable td:nth-child(16),
+#villagersTable td:nth-child(17),
+#visitorsTable td:nth-child(12),
+#visitorsTable td:nth-child(13),
+#visitorsTable td:nth-child(14),
+#visitorsTable td:nth-child(15),
+#visitorsTable td:nth-child(16),
+#visitorsTable td:nth-child(17),
+#raidEnemiesTable td:nth-child(12),
+#raidEnemiesTable td:nth-child(13),
+#raidEnemiesTable td:nth-child(14),
+#raidEnemiesTable td:nth-child(15),
+#raidEnemiesTable td:nth-child(16),
+#raidEnemiesTable td:nth-child(17) {
+  background: #faf2d3;
+}
+#villagersTable td:nth-child(18),
+#villagersTable td:nth-child(19),
+#villagersTable td:nth-child(20),
+#villagersTable td:nth-child(21),
+#villagersTable td:nth-child(22),
+#villagersTable td:nth-child(23),
+#visitorsTable td:nth-child(18),
+#visitorsTable td:nth-child(19),
+#visitorsTable td:nth-child(20),
+#visitorsTable td:nth-child(21),
+#visitorsTable td:nth-child(22),
+#visitorsTable td:nth-child(23),
+#raidEnemiesTable td:nth-child(18),
+#raidEnemiesTable td:nth-child(19),
+#raidEnemiesTable td:nth-child(20),
+#raidEnemiesTable td:nth-child(21),
+#raidEnemiesTable td:nth-child(22),
+#raidEnemiesTable td:nth-child(23) {
+  background: #e2f9d8;
+}
+
+#villagersTable td:nth-child(11),
+#villagersTable td:nth-child(12),
+#villagersTable td:nth-child(13),
+#visitorsTable td:nth-child(11),
+#visitorsTable td:nth-child(12),
+#visitorsTable td:nth-child(13),
+#raidEnemiesTable td:nth-child(11),
+#raidEnemiesTable td:nth-child(12),
+#raidEnemiesTable td:nth-child(13) {
+  background: inherit;
+}
+#villagersTable td:nth-child(14),
+#villagersTable td:nth-child(15),
+#villagersTable td:nth-child(16),
+#villagersTable td:nth-child(17),
+#villagersTable td:nth-child(18),
+#villagersTable td:nth-child(19),
+#visitorsTable td:nth-child(14),
+#visitorsTable td:nth-child(15),
+#visitorsTable td:nth-child(16),
+#visitorsTable td:nth-child(17),
+#visitorsTable td:nth-child(18),
+#visitorsTable td:nth-child(19),
+#raidEnemiesTable td:nth-child(14),
+#raidEnemiesTable td:nth-child(15),
+#raidEnemiesTable td:nth-child(16),
+#raidEnemiesTable td:nth-child(17),
+#raidEnemiesTable td:nth-child(18),
+#raidEnemiesTable td:nth-child(19) {
+  background: #faf2d3;
+}
+#villagersTable td:nth-child(20),
+#villagersTable td:nth-child(21),
+#villagersTable td:nth-child(22),
+#villagersTable td:nth-child(23),
+#villagersTable td:nth-child(24),
+#villagersTable td:nth-child(25),
+#visitorsTable td:nth-child(20),
+#visitorsTable td:nth-child(21),
+#visitorsTable td:nth-child(22),
+#visitorsTable td:nth-child(23),
+#visitorsTable td:nth-child(24),
+#visitorsTable td:nth-child(25),
+#raidEnemiesTable td:nth-child(20),
+#raidEnemiesTable td:nth-child(21),
+#raidEnemiesTable td:nth-child(22),
+#raidEnemiesTable td:nth-child(23),
+#raidEnemiesTable td:nth-child(24),
+#raidEnemiesTable td:nth-child(25) {
+  background: #e2f9d8;
+}
+
+/* 折りたたみ */
+#villagersTable td.happiness-cell.male-basic,
+#visitorsTable td.happiness-cell.male-basic,
+#raidEnemiesTable td.happiness-cell.male-basic {
+  background: #d8e9f9;
+}
+
+#villagersTable td.happiness-cell.female-basic,
+#visitorsTable td.happiness-cell.female-basic,
+#raidEnemiesTable td.happiness-cell.female-basic {
+  background: #f9d8e9;
+}
+
+.foldable-info {
+  text-align: left;
+}
+.foldable-info summary {
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* ---------------------
+   ▼ 迎撃モーダル (襲撃イベント)
+---------------------- */
+#raidModal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  border: 2px solid #aaa;
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+  width: min(1000px, calc(100vw - 32px));
+  max-width: 1000px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 10px;
+  display: none;
+  z-index: 2000;
+}
+#raidOverlay {
+  position: fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  z-index:1999;
+}
+#raidModal .raid-section {
+  margin-bottom: 10px;
+  overflow-x: auto;
+}
+#raidModal h3 {
+  margin: 0.5em 0;
+}
+#raidModal table {
+  margin-bottom: 0;
+}
+#raidModal th,
+#raidModal td {
+  white-space: nowrap;
+}
+#raidLogArea {
+  height: min(250px, 28vh);
+  min-height: 140px;
+  overflow-y: auto;
+  background: #fdfdfd;
+  border: 1px solid #ccc;
+  padding: 5px;
+  font-size: 0.85rem;
+  line-height: 1.4em;
+}
+.raid-buttons {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #fff;
+  text-align: left;
+  margin: 0 -10px 10px -10px;
+  padding: 8px 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+/* 追加: ヘッダー内の h1 のフォントサイズを指定 */
+header h1 {
+  font-size: 1.0rem; /* お好みのサイズに調整してください */
+}
+
+/* 追加: 村情報のセクション内の h2 のフォントサイズを指定 */
+section h2 {
+  font-size: 1.0rem; /* お好みのサイズに調整してください */
+}
+
+/* 保存/ロードボタン群を右寄せする */
+.save-load-buttons {
+  text-align: right;
+  margin-top: 5px; /* ボタン群の上に少し余白を追加 (任意) */
+}
+
+/* モーダル: 建築 */
+#buildingOverlay {
+  position: fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  z-index:998;
+}
+#buildingModal {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  border: 2px solid #aaa;
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+  width: 800px;
+  max-width: 90%;
+  max-height: 90vh;
+  padding: 20px;
+  display: none;
+  z-index: 999;
+  overflow-y: auto;
+}
+#buildingContent {
+  margin-top: 5px;
+}
+.building-item {
+  border: 1px solid #ddd;
+  padding: 15px;
+  background: #f9f9f9;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+.building-item:hover {
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.building-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.building-header h4 {
+  margin: 0;
+  color: #333;
+}
+.built-mark {
+  background: #4CAF50;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 0.8em;
+}
+.building-desc {
+  color: #666;
+  margin-bottom: 10px;
+  min-height: 2.4em;
+}
+.building-cost {
+  display: flex;
+  gap: 10px;
+  font-size: 0.9em;
+  color: #555;
+  margin-bottom: 10px;
+}
+.building-reason {
+  color: #f44336;
+  font-size: 0.9em;
+  margin-bottom: 10px;
+}
+.building-button {
+  width: 100%;
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.building-button:not(:disabled) {
+  background: #2196F3;
+  color: white;
+}
+.building-button:not(:disabled):hover {
+  background: #1976D2;
+}
+.building-button:disabled {
+  background: #ddd;
+  cursor: not-allowed;
+}
+.building-button.built {
+  background: #4CAF50;
+  color: white;
+}
+.built-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+.built-item {
+  background: #4CAF50;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+.building-resources {
+  display: flex;
+  gap: 20px;
+  background: #f5f5f5;
+  padding: 10px;
+  margin-bottom: 15px;
+  border-radius: 4px;
+  font-weight: bold;
+}
+.building-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 15px;
+  margin-top: 10px;
+}
+.built-count {
+  background: #2196F3;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 0.8em;
+  margin-left: 8px;
+}
+
+/* 月末サマリーモーダル用スタイル */
+#monthEndModal {
+  font-size: 0.9rem;
+  width: 600px;
+}
+
+#monthEndModal h3 {
+  color: #333;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 10px;
+}
+
+#monthEndModal button {
+  background: #4CAF50;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#monthEndModal button:hover {
+  background: #45a049;
+}
+
+/* 月末サマリーモーダル用スタイルに追加 */
+.tab-container {
+  margin-top: 15px;
+}
+
+.tab-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.tab-button {
+  padding: 8px 16px;
+  border: none;
+  background: #f0f0f0;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.tab-button.active {
+  background: #4CAF50;
+  color: white;
+}
+
+.tab-content {
+  display: none;
+  max-height: 50vh;
+  overflow-y: auto;
+  padding: 10px;
+  background: #f9f9f9;
+  border-radius: 4px;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+.tab-content h4 {
+  margin-top: 0;
+  color: #333;
+}
+
+/* 会話モーダル用のスタイル */
+#conversationOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  z-index: 2001;
+}
+
+#conversationModal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  border: 2px solid #aaa;
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+  width: 600px;
+  max-width: 90%;
+  padding: 20px;
+  display: none;
+  z-index: 2002;
+}
+
+.conversation-content {
+  display: flex;
+  gap: 20px;
+}
+
+.portrait-area {
+  width: 200px;
+  height: 200px;
+  background: #f0f0f0;
+}
+
+.portrait-area img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dialogue-area {
+  flex: 1;
+  min-height: 200px;
+  padding: 10px;
+  background: #f9f9f9;
+  border-radius: 4px;
+}
+
+/* 行動ボタン用のスタイル */
+#actionButtons {
+  margin-top: 15px;
+  display: flex;
+  gap: 10px;
+}
+
+#actionButtons button {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  background-color: #f0f0f0;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+#actionButtons button:hover {
+  background-color: #e0e0e0;
+}
+
+#actionButtons button.active-action {
+  background-color: #4CAF50;
+  color: white;
+  border-color: #45a049;
+}
+
+#actionButtons button.active-action:hover {
+  background-color: #45a049;
+}
+
+/* 交換モーダル用のスタイル */
+#exchangeOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  z-index: 2001;
+}
+
+#exchangeModal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  border: 2px solid #aaa;
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+  width: 800px;
+  max-width: 90%;
+  padding: 20px;
+  display: none;
+  z-index: 2002;
+}
+
+.exchange-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.exchange-title {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.exchange-title h3 {
+  margin: 0;
+  color: #a83232;
+}
+
+.character-exchange {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.exchange-character {
+  flex: 1;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #f8f8f8;
+  padding: 15px;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.exchange-character .portrait-area {
+  width: 150px;
+  height: 150px;
+  margin: 0 auto;
+  background: #eee;
+}
+
+.exchange-character .portrait-area img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.exchange-character .dialogue-area {
+  padding: 10px;
+  background: #fff;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  min-height: 80px;
+}
+
+/* キャラクター情報のスタイルを調整 */
+.character-info {
+  margin-bottom: 12px;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 8px;
+}
+
+.character-name {
+  font-size: 1em;
+}
+
+.character-details {
+  display: flex;
+  justify-content: flex-start;
+  gap: 12px;
+  font-size: 0.9em;
+  color: #555;
+}
+
+.character-details span {
+  white-space: nowrap;
+}

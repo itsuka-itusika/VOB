@@ -5,15 +5,16 @@ import {
   assignBodyMindTraits,
   assignHobby,
   determineSpeechType,
-  refreshJobTable,
-  selectPortraitByCharacter
+  selectPortraitByCharacter,
+  selectToddlerPortraitByCharacter
 } from "./createVillagers.js";
+import { refreshJobTable } from "./domain/jobTables.js";
 import { addRelationship, checkHasRelationship, getRelationshipTargetName, normalizeRelationship } from "./relationships.js";
 
 const HUMANOID_RACES = new Set(["人間", "ハーピー", "半神", "キュクロプス", "サイクロプス", "巨人"]);
 const PHYSICAL_STATS = ["str", "vit", "dex", "mag", "chr"];
 const MENTAL_STATS = ["int", "ind", "eth", "cou", "sexdr"];
-const CHILD_BODY_TRAITS = ["赤子", "幼児", "少年", "少女"];
+const CHILD_BODY_TRAITS = ["赤子", "子供", "少年", "少女"];
 const CHILD_MIND_TRAITS = ["無垢", "萌芽", "思春期"];
 const PREGNANCY_FULL_TERM_MONTHS = 10;
 const POSTPARTUM_MONTHS = 3;
@@ -164,6 +165,12 @@ function getSpouse(person, village) {
   const spouseName = getRelationshipTargetName(person, "夫") || getRelationshipTargetName(person, "妻");
   if (!spouseName) return null;
   return village.villagers.find(candidate => candidate.name === spouseName) || null;
+}
+
+function getBuddingStatusLine(character) {
+  const maleLines = ["えへへ、きょうもあそぶ？", "ねえねえ、あれなあに？", "ぼく、ちょっとできるよ！", "おそと、いきたいな。"];
+  const femaleLines = ["えへへ、きょうもあそぶ？", "ねえねえ、あれなあに？", "わたしもおてつだいする！", "おそと、いきたいな。"];
+  return randChoice(character?.spiritSex === "女" ? femaleLines : maleLines);
 }
 
 function canBeMother(person, village) {
@@ -373,7 +380,10 @@ function setChildPortrait(child) {
     if (child.bodyAge <= 3) {
       child.portraitFile = child.bodySex === "男" ? "../malebaby.png" : "../femalebaby.png";
     } else {
-      child.portraitFile = "CHILD_SHADOW.svg";
+      if (!child.toddlerPortraitFile) {
+        child.toddlerPortraitFile = selectToddlerPortraitByCharacter(child);
+      }
+      child.portraitFile = child.toddlerPortraitFile;
     }
   } else if (child.adultPortraitFile) {
     child.portraitFile = child.adultPortraitFile;
@@ -392,9 +402,9 @@ export function updateChildGrowthStage(child, village, { announce = false } = {}
     addUnique(child.bodyTraits, "赤子");
   } else if (child.bodyAge <= 9) {
     child.bodyTraits = removeTraits(child.bodyTraits, ["赤子", "少年", "少女"]);
-    addUnique(child.bodyTraits, "幼児");
+    addUnique(child.bodyTraits, "子供");
   } else if (child.bodyAge <= 15) {
-    child.bodyTraits = removeTraits(child.bodyTraits, ["赤子", "幼児"]);
+    child.bodyTraits = removeTraits(child.bodyTraits, ["赤子", "子供"]);
     addUnique(child.bodyTraits, child.bodySex === "男" ? "少年" : "少女");
   } else {
     const currentBodyTraits = removeTraits(child.bodyTraits, CHILD_BODY_TRAITS);
@@ -431,7 +441,7 @@ export function updateChildGrowthStage(child, village, { announce = false } = {}
 
   if (announce) {
     if (child.bodyAge === 4 || child.spiritAge === 4) {
-      village.log(`${child.name}は幼児期に入りました`);
+      village.log(`${child.name}は子供期に入りました`);
     } else if (child.bodyAge === 10 || child.spiritAge === 10) {
       village.log(`${child.name}は少年期に入りました`);
     } else if (child.bodyAge === 16 || child.spiritAge === 16) {
@@ -444,7 +454,7 @@ export function updateChildGrowthStage(child, village, { announce = false } = {}
   }
 }
 
-export function handlePregnancyAndBirth(village) {
+export function handleBirthAndPostpartum(village) {
   village.villagers.forEach(person => {
     if (Number(person.postpartumMonths) > 0) {
       person.postpartumMonths -= 1;
@@ -482,9 +492,16 @@ export function handlePregnancyAndBirth(village) {
       giveBirth(village, mother);
     }
   });
+}
 
+export function handlePregnancyChecks(village) {
   processPendingGoldenRainPregnancies(village);
   processPregnancyChecks(village);
+}
+
+export function handlePregnancyAndBirth(village) {
+  handleBirthAndPostpartum(village);
+  handlePregnancyChecks(village);
 }
 
 function processPregnancyChecks(village) {
@@ -641,7 +658,7 @@ export function getReproductiveStatusLine(character) {
   if (hasTrait(character, "臨月")) return getPregnancyLine(character, true);
   if (hasTrait(character, "妊娠")) return getPregnancyLine(character, false);
   if (hasMindTrait(character, "無垢")) return randChoice(["あうー。", "んま。", "ばぶ。", "きゃっ。", "すやすや……"]);
-  if (hasMindTrait(character, "萌芽")) return randChoice(["えへへ、きょうもあそぶ？", "ねえねえ、あれなあに？", "ぼく、ちょっとできるよ！", "わたしもおてつだいする！", "おそと、いきたいな。"]);
+  if (hasMindTrait(character, "萌芽")) return getBuddingStatusLine(character);
   return null;
 }
 

@@ -1,24 +1,16 @@
 // ui.js
 
-import { theVillage } from "./main.js"; // 注意: これにより循環参照に注意
-// ただし updateUI() の中で theVillage を参照するかどうかによっては構成要再検討
-import { refreshJobTable } from "./createVillagers.js";  // 追加
-import { openConversationModal } from "./conversation.js";
+import { refreshJobTable } from "./domain/jobTables.js";
+import { isRestrictedNoJobVillager } from "./domain/rules.js";
 import { showDictionaryEntry } from "./dictionary.js";
 import { getPortraitPath, getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "./util.js";
 import { formatRelationshipsForDisplay, normalizeRelationship } from "./relationships.js";
 
-function isRestrictedNoJobVillager(person) {
-  const bodyTraits = Array.isArray(person.bodyTraits) ? person.bodyTraits : [];
-  const mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
-  const hasChildLimit = bodyTraits.includes("赤子") ||
-    bodyTraits.includes("幼児") ||
-    mindTraits.includes("無垢") ||
-    mindTraits.includes("萌芽");
-  const onlyNoJob = Array.isArray(person.jobTable) &&
-    person.jobTable.length > 0 &&
-    person.jobTable.every(job => job === "なし");
-  return hasChildLimit || onlyNoJob;
+
+function openConversationFor(person) {
+  import("./conversation.js").then(({ openConversationModal }) => {
+    openConversationModal(person);
+  });
 }
 
 function appendDictionaryTerm(parent, term) {
@@ -82,7 +74,10 @@ function buildWarningMessages(village) {
   const winterNeed = villagers.reduce((sum, person) => sum + getVillagerWinterMaterialConsumption(person), 0) * getWinterMonthsToPrepare(village.month);
   const lowHpCount = villagers.filter(person => Number(person.hp) <= 33).length;
   const lowMpCount = villagers.filter(person => Number(person.mp) <= 33).length;
-  const noJobCount = villagers.filter(person => person.job === "なし" && !isRestrictedNoJobVillager(person)).length;
+  const noActionCount = villagers.filter(person => {
+    const action = String(person.action || "").trim();
+    return (action === "" || action === "なし") && !isRestrictedNoJobVillager(person);
+  }).length;
 
   if (foodCost > 0 && monthsOfFood <= 3) {
     warnings.push({
@@ -124,10 +119,10 @@ function buildWarningMessages(village) {
     });
   }
 
-  if (noJobCount > 0) {
+  if (noActionCount > 0) {
     warnings.push({
       level: "warning",
-      text: `仕事が「なし」の村人が${noJobCount}人います。必要なら自動割り振りを使えます。`
+      text: `行動が未設定の村人が${noActionCount}人います。必要なら自動割り振りを使えます。`
     });
   }
 
@@ -466,6 +461,202 @@ function getJobLabel(job) {
   return JOB_KEY_STATS[job] ? `${job}（${JOB_KEY_STATS[job]}）` : job;
 }
 
+
+function appendTextCell(row, value, className = "") {
+  const cell = document.createElement("td");
+  if (className) cell.classList.add(className);
+  cell.textContent = value ?? "";
+  row.appendChild(cell);
+  return cell;
+}
+
+function appendNumberCell(row, value) {
+  return appendTextCell(row, Math.floor(Number(value) || 0));
+}
+
+function appendPortraitCell(row, person) {
+  const cell = document.createElement("td");
+  cell.classList.add("villager-portrait-cell");
+  cell.style.cursor = "pointer";
+  cell.onclick = () => openConversationFor(person);
+
+  const frame = document.createElement("div");
+  frame.classList.add("villager-portrait-frame");
+
+  const portrait = document.createElement("img");
+  portrait.classList.add("villager-portrait");
+  portrait.src = getPortraitPath(person);
+  portrait.alt = person.name;
+  portrait.loading = "lazy";
+
+  frame.appendChild(portrait);
+  cell.appendChild(frame);
+  row.appendChild(cell);
+}
+
+function appendDictionaryCell(row, terms) {
+  const cell = document.createElement("td");
+  setDictionaryTerms(cell, terms);
+  row.appendChild(cell);
+}
+
+function appendIdentityCells(row, person) {
+  appendPortraitCell(row, person);
+
+  const nameCell = appendTextCell(row, person.name);
+  nameCell.style.cursor = "pointer";
+  nameCell.onclick = () => openConversationFor(person);
+
+  appendTextCell(row, person.bodyOwner);
+  appendTextCell(row, person.race);
+  // bodySex/bodyAge と spiritSex/spiritAge は別仕様。表示時も統合しない。
+  appendTextCell(row, person.bodySex);
+  appendTextCell(row, person.bodyAge);
+  const spiritSexCell = appendTextCell(row, person.spiritSex, "spirit-column");
+  if (person.spiritSex === "男") {
+    spiritSexCell.classList.add("male-basic");
+  } else if (person.spiritSex === "女") {
+    spiritSexCell.classList.add("female-basic");
+  }
+  appendTextCell(row, person.spiritAge, "spirit-column");
+  appendNumberCell(row, person.hp);
+  appendNumberCell(row, person.mp);
+  appendTextCell(row, Math.floor(Number(person.happiness) || 0), "happiness-cell");
+}
+
+function appendActionCell(row, person, village, editable) {
+  const cell = document.createElement("td");
+  if (!editable) {
+    cell.textContent = person.action;
+    row.appendChild(cell);
+    return;
+  }
+
+  const select = document.createElement("select");
+  select.onchange = () => {
+    person.action = select.value;
+    showDictionaryEntry(select.value);
+  };
+  (person.actionTable || []).forEach(action => {
+    const option = document.createElement("option");
+    option.value = action;
+    option.textContent = getTaskEstimate(person, action, village);
+    option.title = option.textContent;
+    if (action === person.action) option.selected = true;
+    select.appendChild(option);
+  });
+  cell.appendChild(select);
+  row.appendChild(cell);
+}
+
+function appendJobCell(row, person, village, editable) {
+  const cell = document.createElement("td");
+  if (!editable) {
+    cell.textContent = person.job;
+    row.appendChild(cell);
+    return;
+  }
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "job-cell-controls";
+
+  const select = document.createElement("select");
+  (person.jobTable || []).forEach(job => {
+    const option = document.createElement("option");
+    option.value = job;
+    option.textContent = getJobLabel(job);
+    option.title = option.textContent;
+    if (job === person.job) option.selected = true;
+    select.appendChild(option);
+  });
+  select.onchange = function() {
+    const newJob = this.value;
+    person.job = newJob;
+    person.action = newJob;
+    showDictionaryEntry(newJob);
+    refreshJobTable(person, village);
+    updateUI(village);
+  };
+
+  const lockButton = document.createElement("button");
+  lockButton.type = "button";
+  lockButton.className = `assignment-lock-toggle ${person.assignmentLocked ? "is-locked" : "is-auto"}`;
+  lockButton.title = person.assignmentLocked
+    ? "自動割り振りから除外中。クリックで自動対象に戻す"
+    : "自動割り振りの対象。クリックで固定する";
+  lockButton.setAttribute("aria-label", person.assignmentLocked ? "固定中" : "自動割り振り対象");
+  lockButton.setAttribute("aria-pressed", person.assignmentLocked ? "true" : "false");
+  const lockIcon = document.createElement("span");
+  lockIcon.className = "assignment-lock-icon";
+  lockIcon.setAttribute("aria-hidden", "true");
+  lockButton.appendChild(lockIcon);
+  lockButton.onclick = () => {
+    person.assignmentLocked = !person.assignmentLocked;
+    updateUI(village);
+  };
+
+  wrapper.appendChild(select);
+  wrapper.appendChild(lockButton);
+  cell.appendChild(wrapper);
+  row.appendChild(cell);
+}
+
+function appendStatCells(row, person) {
+  ["str", "vit", "dex", "mag", "chr"].forEach(stat => appendNumberCell(row, person[stat]));
+  appendDictionaryCell(row, person.bodyTraits);
+  ["int", "ind", "eth", "cou", "sexdr"].forEach(stat => appendNumberCell(row, person[stat]));
+  appendDictionaryCell(row, person.mindTraits);
+  appendDictionaryCell(row, [person.hobby]);
+
+  const detailsCell = document.createElement("td");
+  detailsCell.classList.add("foldable-info");
+  detailsCell.innerHTML = renderFoldableDetails(person);
+  row.appendChild(detailsCell);
+}
+
+function applyPersonRowStyle(row, person) {
+  for (let i = 0; i <= 14; i++) {
+    const cell = row.cells[i];
+    if (!cell) continue;
+    cell.classList.add(person.bodySex === "男" ? "male-basic" : "female-basic");
+  }
+  const spiritSexCell = row.cells[6];
+  if (spiritSexCell) {
+    spiritSexCell.classList.remove("male-basic", "female-basic");
+    if (person.spiritSex === "男") {
+      spiritSexCell.classList.add("male-basic");
+    } else if (person.spiritSex === "女") {
+      spiritSexCell.classList.add("female-basic");
+    }
+  }
+  if (person.hp <= 33 && row.cells[8]) row.cells[8].classList.add("low-hpmp");
+  if (person.mp <= 33 && row.cells[9]) row.cells[9].classList.add("low-hpmp");
+  applyStatusHighlights(row, person);
+}
+
+function createPersonRow(person, village, { editable = false } = {}) {
+  const row = document.createElement("tr");
+  if (editable) {
+    refreshJobTable(person, village);
+  }
+  appendIdentityCells(row, person);
+  appendActionCell(row, person, village, editable);
+  appendJobCell(row, person, village, editable);
+  appendStatCells(row, person);
+  applyPersonRowStyle(row, person);
+  return row;
+}
+
+function renderPeopleTable(tbody, people, village, options = {}) {
+  if (!tbody) return;
+  tbody.innerHTML = "";
+  people.forEach(person => tbody.appendChild(createPersonRow(person, village, options)));
+}
+
+function setSectionVisible(section, visible) {
+  if (section) section.style.display = visible ? "block" : "none";
+}
+
 /**
  * メイン画面(村人一覧,資源パネルなど)を更新
  */
@@ -512,597 +703,24 @@ export function updateUI(v) {
       && !v.isRaidProcessDone
       && Array.isArray(v.raidEnemies)
       && v.raidEnemies.length > 0;
-    autoAssignButton.textContent = raidMode ? "自動割り振り（迎撃）" : "自動割り振り";
+    autoAssignButton.textContent = "自動割り振り";
+    const raidAssignButton = document.getElementById("raidAssignButton");
+    if (raidAssignButton) {
+      raidAssignButton.style.display = raidMode ? "" : "none";
+    }
   }
 
   const tb = document.querySelector("#villagersTable tbody");
-  if (!tb) return;
-  tb.innerHTML="";
-
-  v.villagers.forEach(person=>{
-    let tr=document.createElement("tr");
-
-    let tdPortrait = document.createElement("td");
-    tdPortrait.classList.add("villager-portrait-cell");
-    tdPortrait.style.cursor = "pointer";
-    tdPortrait.onclick = () => openConversationModal(person);
-    let portraitFrame = document.createElement("div");
-    portraitFrame.classList.add("villager-portrait-frame");
-    let portrait = document.createElement("img");
-    portrait.classList.add("villager-portrait");
-    portrait.src = getPortraitPath(person);
-    portrait.alt = person.name;
-    portrait.loading = "lazy";
-    portraitFrame.appendChild(portrait);
-    tdPortrait.appendChild(portraitFrame);
-    tr.appendChild(tdPortrait);
-
-    // 名前
-    let tdName=document.createElement("td");
-    tdName.textContent=person.name;
-    tdName.style.cursor = "pointer";
-    tdName.onclick = () => openConversationModal(person);
-    tr.appendChild(tdName);
-
-    // 体の持ち主
-    let tdOwn=document.createElement("td");
-    tdOwn.textContent=person.bodyOwner;
-    tr.appendChild(tdOwn);
-
-    // 種族を追加
-    let tdRace = document.createElement("td");
-    tdRace.textContent = person.race;
-    tr.appendChild(tdRace);
-
-    // 性別
-    let tdSex=document.createElement("td");
-    tdSex.textContent=person.bodySex;
-    tr.appendChild(tdSex);
-
-    // 年齢
-    let tdAge=document.createElement("td");
-    tdAge.textContent=person.bodyAge;
-    tr.appendChild(tdAge);
-
-    let tdSpiritSex=document.createElement("td");
-    tdSpiritSex.classList.add("spirit-column");
-    tdSpiritSex.textContent=person.spiritSex;
-    tr.appendChild(tdSpiritSex);
-
-    let tdSpiritAge=document.createElement("td");
-    tdSpiritAge.classList.add("spirit-column");
-    tdSpiritAge.textContent=person.spiritAge;
-    tr.appendChild(tdSpiritAge);
-
-    // hp
-    let tdHP=document.createElement("td");
-    tdHP.textContent=Math.floor(person.hp);
-    tr.appendChild(tdHP);
-
-    // mp
-    let tdMP=document.createElement("td");
-    tdMP.textContent=Math.floor(person.mp);
-    tr.appendChild(tdMP);
-
-    // happiness
-    let tdHap=document.createElement("td");
-    tdHap.textContent=Math.floor(person.happiness);
-    tr.appendChild(tdHap);
-
-    // 幸福度の後に行動を追加
-    let tdAction = document.createElement("td");
-    let selAction = document.createElement("select");
-    selAction.onchange = () => {
-      person.action = selAction.value;
-      showDictionaryEntry(selAction.value);
-    };
-    person.actionTable.forEach(act => {
-      let op = document.createElement("option");
-      op.value = act;
-      op.textContent = getTaskEstimate(person, act, v);
-      op.title = op.textContent;
-      if (act === person.action) op.selected = true;
-      selAction.appendChild(op);
-    });
-    tdAction.appendChild(selAction);
-    tr.appendChild(tdAction);
-
-    // 仕事
-    let tdJob=document.createElement("td");
-    let sel=document.createElement("select");
-    person.jobTable.forEach(j=>{
-      let op=document.createElement("option");
-      op.value=j;
-      op.textContent=getJobLabel(j);
-      op.title = op.textContent;
-      if (j===person.job) op.selected=true;
-      sel.appendChild(op);
-    });
-    sel.onchange = function() {
-      const newJob = this.value;
-      person.job = newJob;
-      person.action = newJob;
-      showDictionaryEntry(newJob);
-      refreshJobTable(person);  // 仕事テーブルを更新
-      updateUI(v);  // UI全体を更新
-    };
-    tdJob.appendChild(sel);
-    tr.appendChild(tdJob);
-
-    // 筋力
-    let tdStr=document.createElement("td");
-    tdStr.textContent=Math.floor(person.str);
-    tr.appendChild(tdStr);
-
-    // 耐久
-    let tdVit=document.createElement("td");
-    tdVit.textContent=Math.floor(person.vit);
-    tr.appendChild(tdVit);
-
-    // 器用
-    let tdDex=document.createElement("td");
-    tdDex.textContent=Math.floor(person.dex);
-    tr.appendChild(tdDex);
-
-    // 魔力
-    let tdMag=document.createElement("td");
-    tdMag.textContent=Math.floor(person.mag);
-    tr.appendChild(tdMag);
-
-    // 魅力
-    let tdChr=document.createElement("td");
-    tdChr.textContent=Math.floor(person.chr);
-    tr.appendChild(tdChr);
-
-    // 肉体特性
-    let tdBod=document.createElement("td");
-    setDictionaryTerms(tdBod, person.bodyTraits);
-    tr.appendChild(tdBod);
-
-    // 知力
-    let tdInt=document.createElement("td");
-    tdInt.textContent=Math.floor(person.int);
-    tr.appendChild(tdInt);
-
-    // 勤勉
-    let tdInd=document.createElement("td");
-    tdInd.textContent=Math.floor(person.ind);
-    tr.appendChild(tdInd);
-
-    // 倫理
-    let tdEth=document.createElement("td");
-    tdEth.textContent=Math.floor(person.eth);
-    tr.appendChild(tdEth);
-
-    // 勇気
-    let tdCou=document.createElement("td");
-    tdCou.textContent=Math.floor(person.cou);
-    tr.appendChild(tdCou);
-
-    // 好色
-    let tdSexdr=document.createElement("td");
-    tdSexdr.textContent=Math.floor(person.sexdr);
-    tr.appendChild(tdSexdr);
-
-    // 精神特性
-    let tdMind=document.createElement("td");
-    setDictionaryTerms(tdMind, person.mindTraits);
-    tr.appendChild(tdMind);
-
-    // 趣味
-    let tdHobby=document.createElement("td");
-    setDictionaryTerms(tdHobby, [person.hobby]);
-    tr.appendChild(tdHobby);
-
-    // 詳細(折り畳み)
-    let tdFold=document.createElement("td");
-    tdFold.classList.add("foldable-info");
-    tdFold.innerHTML = renderFoldableDetails(person);
-    tr.appendChild(tdFold);
-
-    // 行スタイル等(例: 性別により色分け)
-    for (let i=0; i<=14; i++) {
-      if (person.bodySex==="男") {
-        tr.cells[i].classList.add("male-basic");
-      } else {
-        tr.cells[i].classList.add("female-basic");
-      }
-    }
-
-    // 体力とメンタルが33以下の時赤字
-    if (person.hp <= 33) {
-      tr.cells[8].classList.add("low-hpmp");
-    }
-    if (person.mp <= 33) {
-      tr.cells[9].classList.add("low-hpmp");
-    }
-
-    applyStatusHighlights(tr, person);
-
-    tb.appendChild(tr);
-  });
-
-  // 訪問者テーブルの更新
-  const visitorSection = document.getElementById("visitorsSection");
-  const visitorTb = document.querySelector("#visitorsTable tbody");
-
-  // 訪問者セクション表示制御
-  if (visitorSection) {
-    if (v.visitors.length > 0) {
-      visitorSection.style.display = "block";
-    } else {
-      visitorSection.style.display = "none";
-    }
-  }
-
-  // 訪問者テーブル更新
-  if (visitorTb && v.visitors.length > 0) {
-    visitorTb.innerHTML = "";
-    v.visitors.forEach(person => {
-      let tr = document.createElement("tr");
-
-      let tdPortrait = document.createElement("td");
-      tdPortrait.classList.add("villager-portrait-cell");
-      tdPortrait.style.cursor = "pointer";
-      tdPortrait.onclick = () => openConversationModal(person);
-      let portraitFrame = document.createElement("div");
-      portraitFrame.classList.add("villager-portrait-frame");
-      let portrait = document.createElement("img");
-      portrait.classList.add("villager-portrait");
-      portrait.src = getPortraitPath(person);
-      portrait.alt = person.name;
-      portrait.loading = "lazy";
-      portraitFrame.appendChild(portrait);
-      tdPortrait.appendChild(portraitFrame);
-      tr.appendChild(tdPortrait);
-
-      // 名前
-      let tdName = document.createElement("td");
-      tdName.textContent = person.name;
-      tdName.style.cursor = "pointer";
-      tdName.onclick = () => openConversationModal(person);
-      tr.appendChild(tdName);
-
-      // 体の持ち主
-      let tdOwn = document.createElement("td");
-      tdOwn.textContent = person.bodyOwner;
-      tr.appendChild(tdOwn);
-
-      // 種族を追加
-      let tdRace = document.createElement("td");
-      tdRace.textContent = person.race;
-      tr.appendChild(tdRace);
-
-      // 性別
-      let tdSex = document.createElement("td");
-      tdSex.textContent = person.bodySex;
-      tr.appendChild(tdSex);
-
-      // 年齢
-      let tdAge = document.createElement("td");
-      tdAge.textContent = person.bodyAge;
-      tr.appendChild(tdAge);
-
-      let tdSpiritSex = document.createElement("td");
-      tdSpiritSex.classList.add("spirit-column");
-      tdSpiritSex.textContent = person.spiritSex;
-      tr.appendChild(tdSpiritSex);
-
-      let tdSpiritAge = document.createElement("td");
-      tdSpiritAge.classList.add("spirit-column");
-      tdSpiritAge.textContent = person.spiritAge;
-      tr.appendChild(tdSpiritAge);
-
-      // hp
-      let tdHP = document.createElement("td");
-      tdHP.textContent = Math.floor(person.hp);
-      tr.appendChild(tdHP);
-
-      // mp
-      let tdMP = document.createElement("td");
-      tdMP.textContent = Math.floor(person.mp);
-      tr.appendChild(tdMP);
-
-      // happiness
-      let tdHap = document.createElement("td");
-      tdHap.textContent = Math.floor(person.happiness);
-      tr.appendChild(tdHap);
-
-      // 行動
-      let tdAction = document.createElement("td");
-      tdAction.textContent = person.action;
-      tr.appendChild(tdAction);
-
-      // 仕事
-      let tdJob = document.createElement("td");
-      tdJob.textContent = person.job;
-      tr.appendChild(tdJob);
-
-      // 筋力
-      let tdStr = document.createElement("td");
-      tdStr.textContent = Math.floor(person.str);
-      tr.appendChild(tdStr);
-
-      // 耐久
-      let tdVit = document.createElement("td");
-      tdVit.textContent = Math.floor(person.vit);
-      tr.appendChild(tdVit);
-
-      // 器用
-      let tdDex = document.createElement("td");
-      tdDex.textContent = Math.floor(person.dex);
-      tr.appendChild(tdDex);
-
-      // 魔力
-      let tdMag = document.createElement("td");
-      tdMag.textContent = Math.floor(person.mag);
-      tr.appendChild(tdMag);
-
-      // 魅力
-      let tdChr = document.createElement("td");
-      tdChr.textContent = Math.floor(person.chr);
-      tr.appendChild(tdChr);
-
-      // 肉体特性
-      let tdBod = document.createElement("td");
-      setDictionaryTerms(tdBod, person.bodyTraits);
-      tr.appendChild(tdBod);
-
-      // 知力
-      let tdInt = document.createElement("td");
-      tdInt.textContent = Math.floor(person.int);
-      tr.appendChild(tdInt);
-
-      // 勤勉
-      let tdInd = document.createElement("td");
-      tdInd.textContent = Math.floor(person.ind);
-      tr.appendChild(tdInd);
-
-      // 倫理
-      let tdEth = document.createElement("td");
-      tdEth.textContent = Math.floor(person.eth);
-      tr.appendChild(tdEth);
-
-      // 勇気
-      let tdCou = document.createElement("td");
-      tdCou.textContent = Math.floor(person.cou);
-      tr.appendChild(tdCou);
-
-      // 好色
-      let tdSexdr = document.createElement("td");
-      tdSexdr.textContent = Math.floor(person.sexdr);
-      tr.appendChild(tdSexdr);
-
-      // 精神特性
-      let tdMind = document.createElement("td");
-      setDictionaryTerms(tdMind, person.mindTraits);
-      tr.appendChild(tdMind);
-
-      // 趣味
-      let tdHobby = document.createElement("td");
-      setDictionaryTerms(tdHobby, [person.hobby]);
-      tr.appendChild(tdHobby);
-
-      // 詳細(折り畳み)
-      let tdFold = document.createElement("td");
-      tdFold.classList.add("foldable-info");
-      tdFold.innerHTML = renderFoldableDetails(person);
-      tr.appendChild(tdFold);
-
-      // スタイル適用
-      for (let i = 0; i <= 14; i++) {
-        if (person.bodySex === "男") {
-          tr.cells[i].classList.add("male-basic");
-        } else {
-          tr.cells[i].classList.add("female-basic");
-        }
-      }
-      if (person.hp <= 33) {
-        tr.cells[8].classList.add("low-hpmp");
-      }
-      if (person.mp <= 33) {
-        tr.cells[9].classList.add("low-hpmp");
-      }
-
-      applyStatusHighlights(tr, person);
-
-      visitorTb.appendChild(tr);
-    });
-  }
-
-  // 襲撃者一覧テーブル更新
-  const raidTb = document.querySelector("#raidEnemiesTable tbody");
-
-  // 襲撃者セクション表示制御
-  const raidSection = document.getElementById("raidEnemiesSection");
-  if (raidSection) {
-    if (v.villageTraits.includes("襲撃中") && v.raidEnemies.length > 0) {
-      raidSection.style.display = "block";
-    } else {
-      raidSection.style.display = "none";
-    }
-  }
-
-  // 襲撃者テーブル更新
-  if (raidTb) {
-    raidTb.innerHTML="";
-
-    // 襲撃中の場合のみ表示
-    if (v.villageTraits.includes("襲撃中") && v.raidEnemies.length > 0) {
-      v.raidEnemies.forEach(person=>{
-        let tr=document.createElement("tr");
-
-        let tdPortrait = document.createElement("td");
-        tdPortrait.classList.add("villager-portrait-cell");
-        tdPortrait.style.cursor = "pointer";
-        tdPortrait.onclick = () => openConversationModal(person);
-        let portraitFrame = document.createElement("div");
-        portraitFrame.classList.add("villager-portrait-frame");
-        let portrait = document.createElement("img");
-        portrait.classList.add("villager-portrait");
-        portrait.src = getPortraitPath(person);
-        portrait.alt = person.name;
-        portrait.loading = "lazy";
-        portraitFrame.appendChild(portrait);
-        tdPortrait.appendChild(portraitFrame);
-        tr.appendChild(tdPortrait);
-
-        // 名前
-        let tdName=document.createElement("td");
-        tdName.textContent=person.name;
-        tdName.style.cursor = "pointer";
-        tdName.onclick = () => {
-          openConversationModal(person);
-        };
-        tr.appendChild(tdName);
-
-        // 体の持ち主
-        let tdOwn=document.createElement("td");
-        tdOwn.textContent=person.bodyOwner;
-        tr.appendChild(tdOwn);
-
-        // 種族を追加
-        let tdRace = document.createElement("td");
-        tdRace.textContent = person.race;
-        tr.appendChild(tdRace);
-
-        // 性別
-        let tdSex=document.createElement("td");
-        tdSex.textContent=person.bodySex;
-        tr.appendChild(tdSex);
-
-        // 年齢
-        let tdAge=document.createElement("td");
-        tdAge.textContent=person.bodyAge;
-        tr.appendChild(tdAge);
-
-        let tdSpiritSex=document.createElement("td");
-        tdSpiritSex.classList.add("spirit-column");
-        tdSpiritSex.textContent=person.spiritSex;
-        tr.appendChild(tdSpiritSex);
-
-        let tdSpiritAge=document.createElement("td");
-        tdSpiritAge.classList.add("spirit-column");
-        tdSpiritAge.textContent=person.spiritAge;
-        tr.appendChild(tdSpiritAge);
-
-        // hp
-        let tdHP=document.createElement("td");
-        tdHP.textContent=Math.floor(person.hp);
-        tr.appendChild(tdHP);
-
-        // mp
-        let tdMP=document.createElement("td");
-        tdMP.textContent=Math.floor(person.mp);
-        tr.appendChild(tdMP);
-
-        // happiness
-        let tdHap=document.createElement("td");
-        tdHap.textContent=Math.floor(person.happiness);
-        tr.appendChild(tdHap);
-
-        // 行動
-        let tdAction = document.createElement("td");
-        tdAction.textContent=person.action;
-        tr.appendChild(tdAction);
-
-        // 仕事
-        let tdJob=document.createElement("td");
-        tdJob.textContent=person.job;
-        tr.appendChild(tdJob);
-
-        // 筋力
-        let tdStr=document.createElement("td");
-        tdStr.textContent=Math.floor(person.str);
-        tr.appendChild(tdStr);
-
-        // 耐久
-        let tdVit=document.createElement("td");
-        tdVit.textContent=Math.floor(person.vit);
-        tr.appendChild(tdVit);
-
-        // 器用
-        let tdDex=document.createElement("td");
-        tdDex.textContent=Math.floor(person.dex);
-        tr.appendChild(tdDex);
-
-        // 魔力
-        let tdMag=document.createElement("td");
-        tdMag.textContent=Math.floor(person.mag);
-        tr.appendChild(tdMag);
-
-        // 魅力
-        let tdChr=document.createElement("td");
-        tdChr.textContent=Math.floor(person.chr);
-        tr.appendChild(tdChr);
-
-        // 肉体特性
-        let tdBod=document.createElement("td");
-        setDictionaryTerms(tdBod, person.bodyTraits);
-        tr.appendChild(tdBod);
-
-        // 知力
-        let tdInt=document.createElement("td");
-        tdInt.textContent=Math.floor(person.int);
-        tr.appendChild(tdInt);
-
-        // 勤勉
-        let tdInd=document.createElement("td");
-        tdInd.textContent=Math.floor(person.ind);
-        tr.appendChild(tdInd);
-
-        // 倫理
-        let tdEth=document.createElement("td");
-        tdEth.textContent=Math.floor(person.eth);
-        tr.appendChild(tdEth);
-
-        // 勇気
-        let tdCou=document.createElement("td");
-        tdCou.textContent=Math.floor(person.cou);
-        tr.appendChild(tdCou);
-
-        // 好色
-        let tdSexdr=document.createElement("td");
-        tdSexdr.textContent=Math.floor(person.sexdr);
-        tr.appendChild(tdSexdr);
-
-        // 精神特性
-        let tdMind=document.createElement("td");
-        setDictionaryTerms(tdMind, person.mindTraits);
-        tr.appendChild(tdMind);
-
-        // 趣味
-        let tdHobby=document.createElement("td");
-        setDictionaryTerms(tdHobby, [person.hobby]);
-        tr.appendChild(tdHobby);
-
-        // 詳細(折り畳み)
-        let tdFold=document.createElement("td");
-        tdFold.classList.add("foldable-info");
-        tdFold.innerHTML = renderFoldableDetails(person);
-        tr.appendChild(tdFold);
-
-        // 行スタイル等(例: 性別により色分け)
-        for (let i=0; i<=14; i++) {
-          if (person.bodySex==="男") {
-            tr.cells[i].classList.add("male-basic");
-          } else {
-            tr.cells[i].classList.add("female-basic");
-          }
-        }
-        if (person.hp<=33) {
-          tr.cells[8].classList.add("low-hpmp");
-        }
-        if (person.mp<=33) {
-          tr.cells[9].classList.add("low-hpmp");
-        }
-
-        applyStatusHighlights(tr, person);
-
-        raidTb.appendChild(tr);
-      });
-    }
-  }
+  renderPeopleTable(tb, v.villagers || [], v, { editable: true });
+
+  const visitors = Array.isArray(v.visitors) ? v.visitors : [];
+  setSectionVisible(document.getElementById("visitorsSection"), visitors.length > 0);
+  renderPeopleTable(document.querySelector("#visitorsTable tbody"), visitors, v);
+
+  const raidEnemies = Array.isArray(v.raidEnemies) ? v.raidEnemies : [];
+  const showRaidEnemies = v.villageTraits.includes("襲撃中") && raidEnemies.length > 0;
+  setSectionVisible(document.getElementById("raidEnemiesSection"), showRaidEnemies);
+  renderPeopleTable(document.querySelector("#raidEnemiesTable tbody"), showRaidEnemies ? raidEnemies : [], v);
 
   // テーブル更新後にソート機能をセットアップ
   setupTableSort();
@@ -1126,45 +744,25 @@ let sortState = {
  */
 function setupTableSort() {
   const table = document.getElementById("villagersTable");
+  if (!table) return;
   const headers = table.querySelectorAll("thead th");
-  
-  // ソート可能な列のインデックス
-  const sortableColumns = [
-    4,  // 性別
-    5,  // 年齢
-    6,  // 精神性別
-    7,  // 精神年齢
-    8,  // 体力
-    9,  // メンタル
-    10, // 幸福
-    12, // 仕事
-    13, // 筋力
-    14, // 耐久
-    15, // 器用
-    16, // 魔力
-    17, // 魅力
-    19, // 知力
-    20, // 勤勉
-    21, // 倫理
-    22, // 勇気
-    23  // 好色
-  ];
+
+  const sortableColumns = [4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23];
 
   sortableColumns.forEach(colIndex => {
     const header = headers[colIndex];
+    if (!header || header.dataset.sortBound === "true") return;
+    header.dataset.sortBound = "true";
     header.style.cursor = "pointer";
     header.addEventListener("click", () => {
-      // 同じ列をクリックした場合は昇順/降順を切り替え
       if (sortState.column === colIndex) {
         sortState.isAsc = !sortState.isAsc;
       } else {
         sortState.column = colIndex;
         sortState.isAsc = true;
       }
-      
+
       sortVillagerTable(colIndex, sortState.isAsc);
-      
-      // ソート方向を表示
       headers.forEach(h => h.textContent = h.textContent.replace(" ▲", "").replace(" ▼", ""));
       header.textContent += sortState.isAsc ? " ▲" : " ▼";
     });
@@ -1176,12 +774,14 @@ function setupTableSort() {
  */
 function sortVillagerTable(colIndex, isAsc) {
   const table = document.getElementById("villagersTable");
+  if (!table) return;
   const tbody = table.querySelector("tbody");
+  if (!tbody) return;
   const rows = Array.from(tbody.querySelectorAll("tr"));
 
   rows.sort((a, b) => {
-    let aVal = a.cells[colIndex].textContent;
-    let bVal = b.cells[colIndex].textContent;
+    let aVal = a.cells[colIndex]?.textContent ?? "";
+    let bVal = b.cells[colIndex]?.textContent ?? "";
 
     // 数値の場合は数値としてソート
     if ([5,7,8,9,10,13,14,15,16,17,19,20,21,22,23].includes(colIndex)) {

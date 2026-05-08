@@ -1,7 +1,17 @@
 // saveLoad.js
 import { Village, Villager } from "./classes.js";
-import { determineSpeechType, refreshJobTable, registerUsedName } from "./createVillagers.js";
+import { determineSpeechType, registerUsedName } from "./createVillagers.js";
+import { refreshJobTable } from "./domain/jobTables.js";
 import { normalizeRelationships } from "./relationships.js";
+
+function normalizeBodyTraitName(trait) {
+  return trait === "幼児" || trait === "児童" ? "子供" : trait;
+}
+
+function normalizeBodyTraitList(traits) {
+  if (!Array.isArray(traits)) return [];
+  return traits.map(normalizeBodyTraitName);
+}
 
 /**
  * 村データをJSONファイルとしてダウンロードさせる
@@ -137,13 +147,14 @@ function convertVillagerToObject(vill) {
     spiritAge: vill.spiritAge,
     spiritSex: vill.spiritSex,
 
-    bodyTraits: [...vill.bodyTraits],
+    bodyTraits: normalizeBodyTraitList(vill.bodyTraits),
     mindTraits: [...vill.mindTraits],
     hobby: vill.hobby,
     relationships: [...normalizeRelationships(vill)],
 
     job: vill.job,
     jobTable: [...vill.jobTable],
+    assignmentLocked: !!vill.assignmentLocked,
     action: vill.action,
     actionTable: [...vill.actionTable],
     bodyOwner: vill.bodyOwner,
@@ -157,10 +168,12 @@ function convertVillagerToObject(vill) {
     potentialStats: vill.potentialStats ? { ...vill.potentialStats } : null,
     bodyPotentialStats: vill.bodyPotentialStats ? { ...vill.bodyPotentialStats } : null,
     mindPotentialStats: vill.mindPotentialStats ? { ...vill.mindPotentialStats } : null,
-    adultBodyTraits: Array.isArray(vill.adultBodyTraits) ? [...vill.adultBodyTraits] : [],
+    adultBodyTraits: normalizeBodyTraitList(vill.adultBodyTraits),
     adultMindTraits: Array.isArray(vill.adultMindTraits) ? [...vill.adultMindTraits] : [],
     adultHobby: vill.adultHobby || "",
     adultPortraitFile: vill.adultPortraitFile || "",
+    toddlerPortraitFile: vill.toddlerPortraitFile || "",
+    toddlerPortraitGroup: vill.toddlerPortraitGroup || "",
     childMindTrait: vill.childMindTrait || "",
     adultBodyReached: vill.adultBodyReached !== undefined
       ? !!vill.adultBodyReached
@@ -258,10 +271,11 @@ function convertObjectToVillager(obj) {
   vill.cou = obj.cou;
   vill.sexdr = obj.sexdr;
 
-  vill.spiritAge = obj.spiritAge;
-  vill.spiritSex = obj.spiritSex;
+  // 精神側の識別子は肉体側とは別に復元する。旧セーブで欠けている場合だけ初期値として肉体側を使う。
+  vill.spiritAge = obj.spiritAge ?? obj.bodyAge;
+  vill.spiritSex = obj.spiritSex ?? obj.bodySex;
 
-  vill.bodyTraits = Array.isArray(obj.bodyTraits) ? [...obj.bodyTraits] : [];
+  vill.bodyTraits = normalizeBodyTraitList(obj.bodyTraits);
   vill.mindTraits = Array.isArray(obj.mindTraits) ? [...obj.mindTraits] : [];
   if (obj.hobby === "大食い") {
     vill.hobby = "ドカ食い";
@@ -276,9 +290,10 @@ function convertObjectToVillager(obj) {
 
   vill.job = obj.job;
   vill.jobTable = Array.isArray(obj.jobTable) ? [...obj.jobTable] : [];
+  vill.assignmentLocked = !!obj.assignmentLocked;
   vill.action = obj.action;
   vill.actionTable = Array.isArray(obj.actionTable) ? [...obj.actionTable] : [];
-  vill.bodyOwner = obj.bodyOwner;
+  vill.bodyOwner = obj.bodyOwner || obj.name;
   
   // 口調タイプを保存・復元するように追加
   vill.speechType = obj.speechType || determineSpeechType(vill);
@@ -300,10 +315,12 @@ function convertObjectToVillager(obj) {
   vill.mindPotentialStats = obj.mindPotentialStats
     ? { ...obj.mindPotentialStats }
     : (obj.potentialStats ? { ...obj.potentialStats } : null);
-  vill.adultBodyTraits = Array.isArray(obj.adultBodyTraits) ? [...obj.adultBodyTraits] : [];
+  vill.adultBodyTraits = normalizeBodyTraitList(obj.adultBodyTraits);
   vill.adultMindTraits = Array.isArray(obj.adultMindTraits) ? [...obj.adultMindTraits] : [];
   vill.adultHobby = obj.adultHobby || "";
   vill.adultPortraitFile = obj.adultPortraitFile || "";
+  vill.toddlerPortraitFile = obj.toddlerPortraitFile || "";
+  vill.toddlerPortraitGroup = obj.toddlerPortraitGroup || "";
   vill.childMindTrait = obj.childMindTrait || "";
   vill.adultBodyReached = obj.adultBodyReached !== undefined
     ? !!obj.adultBodyReached

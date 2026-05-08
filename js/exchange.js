@@ -1,6 +1,6 @@
 // exchange.js
 
-import { refreshJobTable } from "./createVillagers.js";
+import { refreshJobTable } from "./domain/jobTables.js";
 
 /**
  * Swap body-related parameters between two characters.
@@ -28,7 +28,9 @@ export function doExchange(a, b, v, isLightning = false) {
       : (a.potentialStats ? { ...a.potentialStats } : null),
     adultBodyTraits: Array.isArray(a.adultBodyTraits) ? [...a.adultBodyTraits] : [],
     adultBodyReached: !!a.adultBodyReached,
-    adultPortraitFile: a.adultPortraitFile || ""
+    adultPortraitFile: a.adultPortraitFile || "",
+    toddlerPortraitFile: a.toddlerPortraitFile || "",
+    toddlerPortraitGroup: a.toddlerPortraitGroup || ""
   };
 
   a.bodySex = b.bodySex;
@@ -53,6 +55,8 @@ export function doExchange(a, b, v, isLightning = false) {
   a.adultBodyTraits = Array.isArray(b.adultBodyTraits) ? [...b.adultBodyTraits] : [];
   a.adultBodyReached = !!b.adultBodyReached;
   a.adultPortraitFile = b.adultPortraitFile || "";
+  a.toddlerPortraitFile = b.toddlerPortraitFile || "";
+  a.toddlerPortraitGroup = b.toddlerPortraitGroup || "";
 
   b.bodySex = exchangeParams.bodySex;
   b.bodyAge = exchangeParams.bodyAge;
@@ -74,9 +78,11 @@ export function doExchange(a, b, v, isLightning = false) {
   b.adultBodyTraits = [...exchangeParams.adultBodyTraits];
   b.adultBodyReached = exchangeParams.adultBodyReached;
   b.adultPortraitFile = exchangeParams.adultPortraitFile;
+  b.toddlerPortraitFile = exchangeParams.toddlerPortraitFile;
+  b.toddlerPortraitGroup = exchangeParams.toddlerPortraitGroup;
 
-  refreshJobTable(a);
-  refreshJobTable(b);
+  refreshJobTable(a, v);
+  refreshJobTable(b, v);
 
   a.job = "なし";
   a.action = "なし";
