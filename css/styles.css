@@ -67,6 +67,32 @@ button {
   margin-right: 6px;
   cursor: pointer;
 }
+.view-mode-toggle {
+  display: inline-flex;
+  vertical-align: middle;
+  margin: 0 8px 4px 0;
+  border: 1px solid #888;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fff;
+}
+.view-mode-button {
+  min-width: 62px;
+  margin: 0;
+  padding: 5px 10px;
+  border: 0;
+  border-right: 1px solid #bbb;
+  border-radius: 0;
+  background: #f7f7f7;
+}
+.view-mode-button:last-child {
+  border-right: 0;
+}
+.view-mode-button.is-active {
+  background: #333;
+  color: #fff;
+  font-weight: bold;
+}
 .job-cell-controls {
   display: flex;
   align-items: center;
@@ -949,4 +975,185 @@ section h2 {
 
 .character-details span {
   white-space: nowrap;
+}
+
+/* ---------------------
+   雑スマホモード
+---------------------- */
+body.mobile-mode {
+  font-size: 17px;
+  line-height: 1.5;
+  background: #f2f4f1;
+}
+body.mobile-mode header,
+body.mobile-mode footer {
+  padding: 8px;
+}
+body.mobile-mode h1 {
+  font-size: 1.15rem;
+  line-height: 1.25;
+}
+body.mobile-mode h2 {
+  font-size: 1.1rem;
+}
+body.mobile-mode main {
+  padding: 8px;
+}
+body.mobile-mode section {
+  overflow-x: auto;
+  margin-bottom: 14px;
+}
+body.mobile-mode .resource-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 8px;
+}
+body.mobile-mode .resource-box {
+  min-width: 0;
+  padding: 8px 6px;
+  font-size: 0.98rem;
+}
+body.mobile-mode .top-actions {
+  flex-direction: column;
+  gap: 10px;
+}
+body.mobile-mode .action-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+body.mobile-mode .view-mode-toggle {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+body.mobile-mode .view-mode-button,
+body.mobile-mode .action-buttons > button {
+  width: 100%;
+  min-height: 46px;
+  margin: 0;
+  padding: 10px 8px;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+body.mobile-mode .action-buttons > button[data-mobile-label] {
+  font-size: 0;
+}
+body.mobile-mode .action-buttons > button[data-mobile-label]::after {
+  content: attr(data-mobile-label);
+  font-size: 1rem;
+}
+body.mobile-mode #nextTurnButton {
+  grid-column: 1 / -1;
+  min-height: 54px;
+  font-size: 1.08rem;
+  font-weight: bold;
+}
+body.mobile-mode .message-window {
+  width: calc(100% - 18px);
+  max-height: 150px;
+  font-size: 0.95rem;
+}
+body.mobile-mode table {
+  min-width: 980px;
+  font-size: 1rem;
+}
+body.mobile-mode th,
+body.mobile-mode td {
+  padding: 7px 6px;
+}
+body.mobile-mode select,
+body.mobile-mode input,
+body.mobile-mode textarea {
+  min-height: 42px;
+  font-size: 1rem;
+}
+body.mobile-mode .job-cell-controls {
+  min-width: 190px;
+}
+body.mobile-mode .assignment-lock-toggle {
+  width: 42px;
+  height: 40px;
+}
+body.mobile-mode .villager-portrait-cell {
+  width: 56px;
+  min-width: 56px;
+}
+body.mobile-mode .villager-portrait-frame {
+  width: 46px;
+  height: 46px;
+}
+body.mobile-mode .log-and-dictionary {
+  flex-direction: column;
+  gap: 10px;
+}
+body.mobile-mode .log-area,
+body.mobile-mode .dictionary-section {
+  width: auto;
+}
+body.mobile-mode .log-area {
+  height: 260px;
+  font-size: 0.95rem;
+}
+body.mobile-mode .dictionary-content {
+  height: 260px;
+  font-size: 0.95rem;
+}
+body.mobile-mode #miracleModal,
+body.mobile-mode #buildingModal,
+body.mobile-mode #conversationModal,
+body.mobile-mode #exchangeModal,
+body.mobile-mode #raidModal,
+body.mobile-mode #monthEndModal {
+  width: calc(100vw - 20px);
+  max-width: calc(100vw - 20px);
+  max-height: calc(100vh - 20px);
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+body.mobile-mode .modal-buttons button,
+body.mobile-mode #actionButtons button,
+body.mobile-mode .building-button,
+body.mobile-mode .tab-button {
+  min-height: 44px;
+  font-size: 1rem;
+}
+body.mobile-mode .conversation-content,
+body.mobile-mode .exchange-content,
+body.mobile-mode .character-exchange,
+body.mobile-mode .exchange-character {
+  flex-direction: column;
+}
+body.mobile-mode .conversation-content {
+  gap: 12px;
+}
+body.mobile-mode .portrait-area {
+  width: 160px;
+  height: 160px;
+  margin: 0 auto;
+}
+body.mobile-mode .exchange-character .portrait-area {
+  width: 140px;
+  height: 140px;
+}
+body.mobile-mode #actionButtons {
+  gap: 8px;
+}
+body.mobile-mode #raidModal {
+  padding: 8px;
+}
+body.mobile-mode #raidModal table {
+  min-width: 620px;
+}
+body.mobile-mode .raid-buttons button {
+  width: 100%;
+  min-height: 50px;
+  font-size: 1.05rem;
+}
+body.mobile-mode #raidLogArea {
+  height: 220px;
+  font-size: 0.95rem;
 }
