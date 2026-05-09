@@ -62,6 +62,14 @@ section {
   min-width: 80px;
   text-align: center;
 }
+.resource-label,
+.resource-value {
+  display: block;
+}
+.resource-value {
+  margin-top: 2px;
+  font-weight: bold;
+}
 button {
   margin-top: 0.30em;
   margin-right: 6px;
@@ -215,6 +223,20 @@ table {
   border-collapse: collapse;
   margin-bottom: 10px;
   font-size: 0.9rem;
+}
+#villagersTable,
+#visitorsTable,
+#raidEnemiesTable {
+  width: max-content;
+  min-width: 100%;
+}
+#villagersTable th,
+#villagersTable td,
+#visitorsTable th,
+#visitorsTable td,
+#raidEnemiesTable th,
+#raidEnemiesTable td {
+  white-space: nowrap;
 }
 th, td {
   border: 1px solid #ccc;
@@ -978,54 +1000,105 @@ section h2 {
 }
 
 /* ---------------------
-   雑スマホモード
+   スマホ横向きモード
 ---------------------- */
 body.mobile-mode {
-  font-size: 17px;
-  line-height: 1.5;
+  font-size: 14px;
+  line-height: 1.25;
   background: #f2f4f1;
+}
+body.mobile-mode header {
+  display: none;
 }
 body.mobile-mode header,
 body.mobile-mode footer {
-  padding: 8px;
+  padding: 4px 6px;
 }
 body.mobile-mode h1 {
-  font-size: 1.15rem;
-  line-height: 1.25;
+  font-size: 0.92rem;
+  line-height: 1.15;
 }
 body.mobile-mode h2 {
-  font-size: 1.1rem;
+  font-size: 0.82rem;
+  line-height: 1.1;
+  margin-bottom: 3px;
 }
 body.mobile-mode main {
-  padding: 8px;
+  padding: 3px 5px;
 }
 body.mobile-mode section {
+  margin-bottom: 5px;
   overflow-x: auto;
-  margin-bottom: 14px;
+}
+body.mobile-mode main > section:first-child {
+  display: block;
+  overflow-x: visible;
+}
+body.mobile-mode main > section:first-child > h2 {
+  display: none;
+}
+body.mobile-mode main > section:nth-of-type(2) > h2 {
+  display: none;
 }
 body.mobile-mode .resource-panel {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  padding: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 18px;
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid #c9d3c8;
+  background: #fff;
+  box-sizing: border-box;
 }
 body.mobile-mode .resource-box {
-  min-width: 0;
-  padding: 8px 6px;
-  font-size: 0.98rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.38em;
+  flex: 0 0 auto;
+  min-width: auto;
+  min-height: 0;
+  padding: 1px 0;
+  border: 0;
+  background: transparent;
+  font-size: 0.69rem;
+  line-height: 1.05;
+  text-align: left;
+}
+body.mobile-mode .resource-label {
+  flex: 0 0 auto;
+  color: #555;
+  font-size: 0.74rem;
+  white-space: nowrap;
+}
+body.mobile-mode .resource-value {
+  min-width: auto;
+  margin-top: 0;
+  overflow: visible;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-align: left;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+body.mobile-mode .resource-traits {
+  min-width: auto;
 }
 body.mobile-mode .top-actions {
   flex-direction: column;
-  gap: 10px;
+  gap: 3px;
+  min-width: 0;
+  margin-top: 4px;
 }
 body.mobile-mode .action-buttons {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
   width: 100%;
 }
 body.mobile-mode .view-mode-toggle {
-  grid-column: 1 / -1;
+  grid-column: span 1;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin: 0;
@@ -1033,74 +1106,152 @@ body.mobile-mode .view-mode-toggle {
 body.mobile-mode .view-mode-button,
 body.mobile-mode .action-buttons > button {
   width: 100%;
-  min-height: 46px;
+  min-height: 36px;
   margin: 0;
-  padding: 10px 8px;
-  font-size: 1rem;
-  line-height: 1.2;
-}
-body.mobile-mode .action-buttons > button[data-mobile-label] {
-  font-size: 0;
-}
-body.mobile-mode .action-buttons > button[data-mobile-label]::after {
-  content: attr(data-mobile-label);
-  font-size: 1rem;
+  padding: 6px 4px;
+  font-size: 0.75rem;
+  line-height: 1.15;
 }
 body.mobile-mode #nextTurnButton {
-  grid-column: 1 / -1;
-  min-height: 54px;
-  font-size: 1.08rem;
+  grid-column: span 2;
+  min-height: 42px;
+  font-size: 0.96rem;
   font-weight: bold;
 }
+body.mobile-mode #autoAssignButton {
+  grid-column: span 2;
+}
+body.mobile-mode .action-buttons.is-raid-mode #autoAssignButton,
+body.mobile-mode .action-buttons.is-raid-mode #raidAssignButton {
+  grid-column: span 1;
+}
 body.mobile-mode .message-window {
-  width: calc(100% - 18px);
-  max-height: 150px;
-  font-size: 0.95rem;
+  flex: 0 0 auto;
+  width: auto;
+  max-height: 40px;
+  padding: 3px 6px;
+  font-size: 0.72rem;
+  line-height: 1.2;
 }
-body.mobile-mode table {
-  min-width: 980px;
-  font-size: 1rem;
+body.mobile-mode .message-item {
+  padding: 2px 0;
 }
-body.mobile-mode th,
-body.mobile-mode td {
-  padding: 7px 6px;
+body.mobile-mode #villagersTable,
+body.mobile-mode #visitorsTable,
+body.mobile-mode #raidEnemiesTable {
+  width: max-content;
+  min-width: 1280px;
+  table-layout: auto;
+  font-size: 0.68rem;
+}
+body.mobile-mode #villagersTable th,
+body.mobile-mode #villagersTable td,
+body.mobile-mode #visitorsTable th,
+body.mobile-mode #visitorsTable td,
+body.mobile-mode #raidEnemiesTable th,
+body.mobile-mode #raidEnemiesTable td {
+  padding: 2px 3px;
+  line-height: 1.05;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+body.mobile-mode #villagersTable th,
+body.mobile-mode #visitorsTable th,
+body.mobile-mode #raidEnemiesTable th {
+  font-size: 0.62rem;
+  font-weight: bold;
+}
+body.mobile-mode #villagersTable th:nth-child(1),
+body.mobile-mode #villagersTable td:nth-child(1),
+body.mobile-mode #visitorsTable th:nth-child(1),
+body.mobile-mode #visitorsTable td:nth-child(1),
+body.mobile-mode #raidEnemiesTable th:nth-child(1),
+body.mobile-mode #raidEnemiesTable td:nth-child(1) {
+  width: 30px;
+}
+body.mobile-mode #villagersTable th:nth-child(2),
+body.mobile-mode #villagersTable td:nth-child(2),
+body.mobile-mode #visitorsTable th:nth-child(2),
+body.mobile-mode #visitorsTable td:nth-child(2),
+body.mobile-mode #raidEnemiesTable th:nth-child(2),
+body.mobile-mode #raidEnemiesTable td:nth-child(2) {
+  width: 76px;
+}
+body.mobile-mode #villagersTable th:nth-child(12),
+body.mobile-mode #villagersTable td:nth-child(12),
+body.mobile-mode #villagersTable th:nth-child(13),
+body.mobile-mode #villagersTable td:nth-child(13),
+body.mobile-mode #visitorsTable th:nth-child(12),
+body.mobile-mode #visitorsTable td:nth-child(12),
+body.mobile-mode #visitorsTable th:nth-child(13),
+body.mobile-mode #visitorsTable td:nth-child(13),
+body.mobile-mode #raidEnemiesTable th:nth-child(12),
+body.mobile-mode #raidEnemiesTable td:nth-child(12),
+body.mobile-mode #raidEnemiesTable th:nth-child(13),
+body.mobile-mode #raidEnemiesTable td:nth-child(13) {
+  width: 128px;
 }
 body.mobile-mode select,
 body.mobile-mode input,
 body.mobile-mode textarea {
-  min-height: 42px;
-  font-size: 1rem;
+  min-height: 30px;
+  font-size: 0.72rem;
+}
+body.mobile-mode #villagersTable select,
+body.mobile-mode #visitorsTable select,
+body.mobile-mode #raidEnemiesTable select {
+  width: 100%;
+  min-height: 28px;
+  font-size: 0.68rem;
 }
 body.mobile-mode .job-cell-controls {
-  min-width: 190px;
+  gap: 2px;
+  min-width: 0;
+}
+body.mobile-mode .job-cell-controls select {
+  min-width: 0;
 }
 body.mobile-mode .assignment-lock-toggle {
-  width: 42px;
-  height: 40px;
+  width: 27px;
+  height: 28px;
 }
 body.mobile-mode .villager-portrait-cell {
-  width: 56px;
-  min-width: 56px;
+  width: 30px;
+  min-width: 30px;
 }
 body.mobile-mode .villager-portrait-frame {
-  width: 46px;
-  height: 46px;
+  width: 26px;
+  height: 26px;
+}
+body.mobile-mode .table-tools {
+  margin: 1px 0 4px;
+  font-size: 0.72rem;
+}
+body.mobile-mode .log-dictionary-section > h2 {
+  display: none;
 }
 body.mobile-mode .log-and-dictionary {
   flex-direction: column;
-  gap: 10px;
-}
-body.mobile-mode .log-area,
-body.mobile-mode .dictionary-section {
-  width: auto;
+  gap: 8px;
 }
 body.mobile-mode .log-area {
-  height: 260px;
-  font-size: 0.95rem;
+  order: 2;
+  width: auto;
+  height: 190px;
+  font-size: 0.72rem;
+}
+body.mobile-mode .dictionary-section {
+  order: 1;
+  width: auto;
+}
+body.mobile-mode .dictionary-search {
+  margin-bottom: 3px;
 }
 body.mobile-mode .dictionary-content {
-  height: 260px;
-  font-size: 0.95rem;
+  height: 82px;
+  padding: 5px 6px;
+  font-size: 0.72rem;
 }
 body.mobile-mode #miracleModal,
 body.mobile-mode #buildingModal,
@@ -1108,52 +1259,115 @@ body.mobile-mode #conversationModal,
 body.mobile-mode #exchangeModal,
 body.mobile-mode #raidModal,
 body.mobile-mode #monthEndModal {
-  width: calc(100vw - 20px);
-  max-width: calc(100vw - 20px);
-  max-height: calc(100vh - 20px);
+  top: 8px;
+  left: 50%;
+  width: min(880px, calc(100vw - 16px));
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  padding: 8px;
   overflow-y: auto;
   box-sizing: border-box;
+  transform: translateX(-50%);
+}
+body.mobile-mode .modal-header {
+  margin-bottom: 4px;
+  font-size: 0.9rem;
+}
+body.mobile-mode .modal-content {
+  margin-top: 3px;
+}
+body.mobile-mode .modal-buttons {
+  position: sticky;
+  bottom: 0;
+  margin: 8px -8px -8px;
+  padding: 6px 8px;
+  background: #fff;
+  border-top: 1px solid #ddd;
 }
 body.mobile-mode .modal-buttons button,
 body.mobile-mode #actionButtons button,
 body.mobile-mode .building-button,
 body.mobile-mode .tab-button {
-  min-height: 44px;
-  font-size: 1rem;
-}
-body.mobile-mode .conversation-content,
-body.mobile-mode .exchange-content,
-body.mobile-mode .character-exchange,
-body.mobile-mode .exchange-character {
-  flex-direction: column;
+  min-height: 38px;
+  font-size: 0.82rem;
 }
 body.mobile-mode .conversation-content {
-  gap: 12px;
+  gap: 10px;
 }
 body.mobile-mode .portrait-area {
-  width: 160px;
-  height: 160px;
-  margin: 0 auto;
+  flex: 0 0 128px;
+  width: 128px;
+  height: 128px;
 }
-body.mobile-mode .exchange-character .portrait-area {
-  width: 140px;
-  height: 140px;
+body.mobile-mode .dialogue-area {
+  min-height: 128px;
+  max-height: calc(100vh - 92px);
+  overflow-y: auto;
 }
 body.mobile-mode #actionButtons {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+body.mobile-mode .exchange-title {
+  margin-bottom: 8px;
+}
+body.mobile-mode .character-exchange {
   gap: 8px;
+  width: 100%;
+}
+body.mobile-mode .exchange-character {
+  min-width: 0;
+  padding: 8px;
+}
+body.mobile-mode .exchange-character .portrait-area {
+  width: 96px;
+  height: 96px;
+}
+body.mobile-mode .building-resources {
+  gap: 8px;
+  padding: 6px;
+  margin-bottom: 8px;
+  font-size: 0.78rem;
+}
+body.mobile-mode .building-grid {
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 8px;
+}
+body.mobile-mode .building-item {
+  padding: 9px;
 }
 body.mobile-mode #raidModal {
   padding: 8px;
 }
+body.mobile-mode #raidModal .raid-section {
+  margin-bottom: 7px;
+}
 body.mobile-mode #raidModal table {
-  min-width: 620px;
+  min-width: 0;
+  font-size: 0.76rem;
+}
+body.mobile-mode .raid-buttons {
+  margin: 0 -8px 8px;
+  padding: 6px 8px;
 }
 body.mobile-mode .raid-buttons button {
   width: 100%;
-  min-height: 50px;
-  font-size: 1.05rem;
+  min-height: 44px;
+  font-size: 0.95rem;
 }
 body.mobile-mode #raidLogArea {
-  height: 220px;
-  font-size: 0.95rem;
+  height: 118px;
+  font-size: 0.72rem;
+}
+
+@media (max-width: 720px) {
+  body.mobile-mode main > section:first-child {
+    grid-template-columns: 1fr;
+  }
+  body.mobile-mode .action-buttons {
+    grid-template-columns: repeat(4, minmax(58px, 1fr));
+  }
+  body.mobile-mode .resource-panel {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }

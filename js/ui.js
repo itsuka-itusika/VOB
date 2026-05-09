@@ -461,7 +461,6 @@ function getJobLabel(job) {
   return JOB_KEY_STATS[job] ? `${job}（${JOB_KEY_STATS[job]}）` : job;
 }
 
-
 function appendTextCell(row, value, className = "") {
   const cell = document.createElement("td");
   if (className) cell.classList.add(className);
@@ -539,9 +538,10 @@ function appendActionCell(row, person, village, editable) {
   };
   (person.actionTable || []).forEach(action => {
     const option = document.createElement("option");
+    const label = getTaskEstimate(person, action, village);
     option.value = action;
-    option.textContent = getTaskEstimate(person, action, village);
-    option.title = option.textContent;
+    option.textContent = label;
+    option.title = label;
     if (action === person.action) option.selected = true;
     select.appendChild(option);
   });
@@ -563,9 +563,10 @@ function appendJobCell(row, person, village, editable) {
   const select = document.createElement("select");
   (person.jobTable || []).forEach(job => {
     const option = document.createElement("option");
+    const label = getJobLabel(job);
     option.value = job;
-    option.textContent = getJobLabel(job);
-    option.title = option.textContent;
+    option.textContent = label;
+    option.title = label;
     if (job === person.job) option.selected = true;
     select.appendChild(option);
   });
@@ -678,17 +679,17 @@ export function updateUI(v) {
   rp.style.backgroundColor = seasonColor;
 
   rp.innerHTML = `
-    <div class="resource-box">年/月<br>${v.year}年${v.month}月</div>
-    <div class="resource-box">食料<br>${v.food}</div>
-    <div class="resource-box">資材<br>${v.materials}</div>
-    <div class="resource-box">資金<br>${v.funds}</div>
-    <div class="resource-box">魔素<br>${v.mana}</div>
-    <div class="resource-box">名声<br>${v.fame}</div>
-    <div class="resource-box">技術<br>${v.tech}</div>
-    <div class="resource-box">治安<br>${v.security}</div>
-    <div class="resource-box">規模<br>${v.building}</div>
-    <div class="resource-box">人口/上限<br>${v.villagers.length}/${v.popLimit}</div>
-    <div class="resource-box">村特性<br><span id="villageTraitsTerms"></span></div>
+    <div class="resource-box"><span class="resource-label">年/月</span><span class="resource-value">${v.year}年${v.month}月</span></div>
+    <div class="resource-box"><span class="resource-label">食料</span><span class="resource-value">${v.food}</span></div>
+    <div class="resource-box"><span class="resource-label">資材</span><span class="resource-value">${v.materials}</span></div>
+    <div class="resource-box"><span class="resource-label">資金</span><span class="resource-value">${v.funds}</span></div>
+    <div class="resource-box"><span class="resource-label">魔素</span><span class="resource-value">${v.mana}</span></div>
+    <div class="resource-box"><span class="resource-label">名声</span><span class="resource-value">${v.fame}</span></div>
+    <div class="resource-box"><span class="resource-label">技術</span><span class="resource-value">${v.tech}</span></div>
+    <div class="resource-box"><span class="resource-label">治安</span><span class="resource-value">${v.security}</span></div>
+    <div class="resource-box"><span class="resource-label">規模</span><span class="resource-value">${v.building}</span></div>
+    <div class="resource-box"><span class="resource-label">人口/上限</span><span class="resource-value">${v.villagers.length}/${v.popLimit}</span></div>
+    <div class="resource-box resource-traits"><span class="resource-label">村特性</span><span class="resource-value" id="villageTraitsTerms"></span></div>
   `;
   const villageTraitsTerms = document.getElementById("villageTraitsTerms");
   if (villageTraitsTerms) {
@@ -703,6 +704,10 @@ export function updateUI(v) {
       && !v.isRaidProcessDone
       && Array.isArray(v.raidEnemies)
       && v.raidEnemies.length > 0;
+    const actionButtons = autoAssignButton.closest(".action-buttons");
+    if (actionButtons) {
+      actionButtons.classList.toggle("is-raid-mode", raidMode);
+    }
     autoAssignButton.textContent = "自動割り振り";
     const raidAssignButton = document.getElementById("raidAssignButton");
     if (raidAssignButton) {

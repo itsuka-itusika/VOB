@@ -94,6 +94,7 @@ function setViewMode(mode) {
   }
 
   saveViewMode(normalizedMode);
+  updateUI(theVillage);
 }
 
 function initViewMode() {
