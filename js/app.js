@@ -18,6 +18,8 @@ import {
 } from "./saveLoad.js";
 import { updateUI } from "./ui.js";
 
+const VIEW_MODE_STORAGE_KEY = "vob.viewMode";
+
 function replaceVillageState(nextVillage, loadedMessage) {
   Object.assign(theVillage, nextVillage);
   theVillage.log(loadedMessage);
@@ -57,6 +59,47 @@ function setSpiritColumnsVisibility(visible) {
   });
 }
 
+function readSavedViewMode() {
+  try {
+    return localStorage.getItem(VIEW_MODE_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function saveViewMode(mode) {
+  try {
+    localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode);
+  } catch {
+    // 保存できない環境でも表示切替自体は動かす。
+  }
+}
+
+function setViewMode(mode) {
+  const normalizedMode = mode === "mobile" ? "mobile" : "pc";
+  const isMobileMode = normalizedMode === "mobile";
+
+  document.body.classList.toggle("mobile-mode", isMobileMode);
+  document.body.dataset.viewMode = normalizedMode;
+
+  const pcButton = document.getElementById("pcModeButton");
+  const mobileButton = document.getElementById("mobileModeButton");
+  if (pcButton) {
+    pcButton.classList.toggle("is-active", !isMobileMode);
+    pcButton.setAttribute("aria-pressed", String(!isMobileMode));
+  }
+  if (mobileButton) {
+    mobileButton.classList.toggle("is-active", isMobileMode);
+    mobileButton.setAttribute("aria-pressed", String(isMobileMode));
+  }
+
+  saveViewMode(normalizedMode);
+}
+
+function initViewMode() {
+  setViewMode(readSavedViewMode() === "mobile" ? "mobile" : "pc");
+}
+
 function bindGlobalHandlers() {
   Object.assign(window, {
     onNextTurn,
@@ -80,6 +123,7 @@ function bindGlobalHandlers() {
       updateUI(theVillage);
     },
     toggleSpiritColumns: setSpiritColumnsVisibility,
+    setViewMode,
     closeConversationModal: async () => {
       const { closeConversationModal } = await import("./conversation.js");
       closeConversationModal();
@@ -89,3 +133,4 @@ function bindGlobalHandlers() {
 }
 
 bindGlobalHandlers();
+initViewMode();
