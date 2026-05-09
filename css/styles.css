@@ -1031,7 +1031,8 @@ body.mobile-mode section {
   overflow-x: auto;
 }
 body.mobile-mode main > section:first-child {
-  display: block;
+  display: flex;
+  flex-direction: column;
   overflow-x: visible;
 }
 body.mobile-mode main > section:first-child > h2 {
@@ -1086,16 +1087,18 @@ body.mobile-mode .resource-traits {
   min-width: auto;
 }
 body.mobile-mode .top-actions {
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-  margin-top: 4px;
+  display: contents;
 }
 body.mobile-mode .action-buttons {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 4px;
+  order: 1;
   width: 100%;
+}
+body.mobile-mode .resource-panel {
+  order: 2;
+  margin-top: 4px;
 }
 body.mobile-mode .view-mode-toggle {
   grid-column: span 1;
@@ -1127,7 +1130,9 @@ body.mobile-mode .action-buttons.is-raid-mode #raidAssignButton {
 }
 body.mobile-mode .message-window {
   flex: 0 0 auto;
+  order: 3;
   width: auto;
+  margin-top: 4px;
   max-height: 40px;
   padding: 3px 6px;
   font-size: 0.72rem;
@@ -1139,10 +1144,10 @@ body.mobile-mode .message-item {
 body.mobile-mode #villagersTable,
 body.mobile-mode #visitorsTable,
 body.mobile-mode #raidEnemiesTable {
-  width: max-content;
-  min-width: 1280px;
-  table-layout: auto;
-  font-size: 0.68rem;
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+  font-size: 0.48rem;
 }
 body.mobile-mode #villagersTable th,
 body.mobile-mode #villagersTable td,
@@ -1150,7 +1155,7 @@ body.mobile-mode #visitorsTable th,
 body.mobile-mode #visitorsTable td,
 body.mobile-mode #raidEnemiesTable th,
 body.mobile-mode #raidEnemiesTable td {
-  padding: 2px 3px;
+  padding: 1px 1px;
   line-height: 1.05;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1159,7 +1164,7 @@ body.mobile-mode #raidEnemiesTable td {
 body.mobile-mode #villagersTable th,
 body.mobile-mode #visitorsTable th,
 body.mobile-mode #raidEnemiesTable th {
-  font-size: 0.62rem;
+  font-size: 0.48rem;
   font-weight: bold;
 }
 body.mobile-mode #villagersTable th:nth-child(1),
@@ -1168,7 +1173,7 @@ body.mobile-mode #visitorsTable th:nth-child(1),
 body.mobile-mode #visitorsTable td:nth-child(1),
 body.mobile-mode #raidEnemiesTable th:nth-child(1),
 body.mobile-mode #raidEnemiesTable td:nth-child(1) {
-  width: 30px;
+  width: 2.2%;
 }
 body.mobile-mode #villagersTable th:nth-child(2),
 body.mobile-mode #villagersTable td:nth-child(2),
@@ -1176,7 +1181,69 @@ body.mobile-mode #visitorsTable th:nth-child(2),
 body.mobile-mode #visitorsTable td:nth-child(2),
 body.mobile-mode #raidEnemiesTable th:nth-child(2),
 body.mobile-mode #raidEnemiesTable td:nth-child(2) {
-  width: 76px;
+  width: 4.7%;
+}
+body.mobile-mode #villagersTable th:nth-child(3),
+body.mobile-mode #villagersTable td:nth-child(3),
+body.mobile-mode #visitorsTable th:nth-child(3),
+body.mobile-mode #visitorsTable td:nth-child(3),
+body.mobile-mode #raidEnemiesTable th:nth-child(3),
+body.mobile-mode #raidEnemiesTable td:nth-child(3) {
+  width: 4.7%;
+}
+body.mobile-mode #villagersTable th:nth-child(4),
+body.mobile-mode #villagersTable td:nth-child(4),
+body.mobile-mode #villagersTable th:nth-child(5),
+body.mobile-mode #villagersTable td:nth-child(5),
+body.mobile-mode #villagersTable th:nth-child(6),
+body.mobile-mode #villagersTable td:nth-child(6),
+body.mobile-mode #visitorsTable th:nth-child(4),
+body.mobile-mode #visitorsTable td:nth-child(4),
+body.mobile-mode #visitorsTable th:nth-child(5),
+body.mobile-mode #visitorsTable td:nth-child(5),
+body.mobile-mode #visitorsTable th:nth-child(6),
+body.mobile-mode #visitorsTable td:nth-child(6),
+body.mobile-mode #raidEnemiesTable th:nth-child(4),
+body.mobile-mode #raidEnemiesTable td:nth-child(4),
+body.mobile-mode #raidEnemiesTable th:nth-child(5),
+body.mobile-mode #raidEnemiesTable td:nth-child(5),
+body.mobile-mode #raidEnemiesTable th:nth-child(6),
+body.mobile-mode #raidEnemiesTable td:nth-child(6) {
+  width: 2.4%;
+}
+body.mobile-mode #villagersTable th:nth-child(7),
+body.mobile-mode #villagersTable td:nth-child(7),
+body.mobile-mode #villagersTable th:nth-child(8),
+body.mobile-mode #villagersTable td:nth-child(8),
+body.mobile-mode #visitorsTable th:nth-child(7),
+body.mobile-mode #visitorsTable td:nth-child(7),
+body.mobile-mode #visitorsTable th:nth-child(8),
+body.mobile-mode #visitorsTable td:nth-child(8),
+body.mobile-mode #raidEnemiesTable th:nth-child(7),
+body.mobile-mode #raidEnemiesTable td:nth-child(7),
+body.mobile-mode #raidEnemiesTable th:nth-child(8),
+body.mobile-mode #raidEnemiesTable td:nth-child(8) {
+  width: 3%;
+}
+body.mobile-mode #villagersTable th:nth-child(9),
+body.mobile-mode #villagersTable td:nth-child(9),
+body.mobile-mode #villagersTable th:nth-child(10),
+body.mobile-mode #villagersTable td:nth-child(10),
+body.mobile-mode #villagersTable th:nth-child(11),
+body.mobile-mode #villagersTable td:nth-child(11),
+body.mobile-mode #visitorsTable th:nth-child(9),
+body.mobile-mode #visitorsTable td:nth-child(9),
+body.mobile-mode #visitorsTable th:nth-child(10),
+body.mobile-mode #visitorsTable td:nth-child(10),
+body.mobile-mode #visitorsTable th:nth-child(11),
+body.mobile-mode #visitorsTable td:nth-child(11),
+body.mobile-mode #raidEnemiesTable th:nth-child(9),
+body.mobile-mode #raidEnemiesTable td:nth-child(9),
+body.mobile-mode #raidEnemiesTable th:nth-child(10),
+body.mobile-mode #raidEnemiesTable td:nth-child(10),
+body.mobile-mode #raidEnemiesTable th:nth-child(11),
+body.mobile-mode #raidEnemiesTable td:nth-child(11) {
+  width: 2.7%;
 }
 body.mobile-mode #villagersTable th:nth-child(12),
 body.mobile-mode #villagersTable td:nth-child(12),
@@ -1190,7 +1257,51 @@ body.mobile-mode #raidEnemiesTable th:nth-child(12),
 body.mobile-mode #raidEnemiesTable td:nth-child(12),
 body.mobile-mode #raidEnemiesTable th:nth-child(13),
 body.mobile-mode #raidEnemiesTable td:nth-child(13) {
-  width: 128px;
+  width: 9.7%;
+}
+body.mobile-mode #villagersTable th:nth-child(n+14):nth-child(-n+18),
+body.mobile-mode #villagersTable td:nth-child(n+14):nth-child(-n+18),
+body.mobile-mode #villagersTable th:nth-child(n+20):nth-child(-n+24),
+body.mobile-mode #villagersTable td:nth-child(n+20):nth-child(-n+24),
+body.mobile-mode #visitorsTable th:nth-child(n+14):nth-child(-n+18),
+body.mobile-mode #visitorsTable td:nth-child(n+14):nth-child(-n+18),
+body.mobile-mode #visitorsTable th:nth-child(n+20):nth-child(-n+24),
+body.mobile-mode #visitorsTable td:nth-child(n+20):nth-child(-n+24),
+body.mobile-mode #raidEnemiesTable th:nth-child(n+14):nth-child(-n+18),
+body.mobile-mode #raidEnemiesTable td:nth-child(n+14):nth-child(-n+18),
+body.mobile-mode #raidEnemiesTable th:nth-child(n+20):nth-child(-n+24),
+body.mobile-mode #raidEnemiesTable td:nth-child(n+20):nth-child(-n+24) {
+  width: 2.2%;
+}
+body.mobile-mode #villagersTable th:nth-child(19),
+body.mobile-mode #villagersTable td:nth-child(19),
+body.mobile-mode #villagersTable th:nth-child(25),
+body.mobile-mode #villagersTable td:nth-child(25),
+body.mobile-mode #visitorsTable th:nth-child(19),
+body.mobile-mode #visitorsTable td:nth-child(19),
+body.mobile-mode #visitorsTable th:nth-child(25),
+body.mobile-mode #visitorsTable td:nth-child(25),
+body.mobile-mode #raidEnemiesTable th:nth-child(19),
+body.mobile-mode #raidEnemiesTable td:nth-child(19),
+body.mobile-mode #raidEnemiesTable th:nth-child(25),
+body.mobile-mode #raidEnemiesTable td:nth-child(25) {
+  width: 4.5%;
+}
+body.mobile-mode #villagersTable th:nth-child(26),
+body.mobile-mode #villagersTable td:nth-child(26),
+body.mobile-mode #visitorsTable th:nth-child(26),
+body.mobile-mode #visitorsTable td:nth-child(26),
+body.mobile-mode #raidEnemiesTable th:nth-child(26),
+body.mobile-mode #raidEnemiesTable td:nth-child(26) {
+  width: 3.6%;
+}
+body.mobile-mode #villagersTable th:nth-child(27),
+body.mobile-mode #villagersTable td:nth-child(27),
+body.mobile-mode #visitorsTable th:nth-child(27),
+body.mobile-mode #visitorsTable td:nth-child(27),
+body.mobile-mode #raidEnemiesTable th:nth-child(27),
+body.mobile-mode #raidEnemiesTable td:nth-child(27) {
+  width: 2.5%;
 }
 body.mobile-mode select,
 body.mobile-mode input,
@@ -1202,8 +1313,8 @@ body.mobile-mode #villagersTable select,
 body.mobile-mode #visitorsTable select,
 body.mobile-mode #raidEnemiesTable select {
   width: 100%;
-  min-height: 28px;
-  font-size: 0.68rem;
+  min-height: 20px;
+  font-size: 0.5rem;
 }
 body.mobile-mode .job-cell-controls {
   gap: 2px;
@@ -1213,16 +1324,16 @@ body.mobile-mode .job-cell-controls select {
   min-width: 0;
 }
 body.mobile-mode .assignment-lock-toggle {
-  width: 27px;
-  height: 28px;
+  width: 18px;
+  height: 20px;
 }
 body.mobile-mode .villager-portrait-cell {
-  width: 30px;
-  min-width: 30px;
+  width: 2.2%;
+  min-width: 0;
 }
 body.mobile-mode .villager-portrait-frame {
-  width: 26px;
-  height: 26px;
+  width: 18px;
+  height: 18px;
 }
 body.mobile-mode .table-tools {
   margin: 1px 0 4px;

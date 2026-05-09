@@ -265,6 +265,37 @@ function formatEstimate(parts) {
     .join(", ");
 }
 
+function isMobileViewMode() {
+  return document.body && document.body.classList.contains("mobile-mode");
+}
+
+function compactEstimateText(text) {
+  return text
+    .replaceAll("体力回復", "HP回復")
+    .replaceAll("体力", "HP")
+    .replaceAll("メンタル", "MP")
+    .replaceAll("幸福", "幸")
+    .replaceAll("想定ダメージ", "想定")
+    .replaceAll("男性", "男")
+    .replaceAll("女性", "女")
+    .replaceAll("全員", "全")
+    .replaceAll(", ", ",");
+}
+
+function compactStatText(text) {
+  return text
+    .replaceAll("筋力", "筋")
+    .replaceAll("耐久", "耐")
+    .replaceAll("器用", "器")
+    .replaceAll("魔力", "魔")
+    .replaceAll("魅力", "魅")
+    .replaceAll("知力", "知")
+    .replaceAll("勤勉", "勤")
+    .replaceAll("倫理", "倫")
+    .replaceAll("勇気", "勇")
+    .replaceAll("好色", "色");
+}
+
 function resourceName(village, normalName) {
   return village.villageTraits.includes("ミダス") && normalName === "食料" ? "資金" : normalName;
 }
@@ -426,7 +457,10 @@ function getTaskEstimate(person, task, village) {
   }
 
   const estimate = formatEstimate(parts);
-  return estimate ? `${task} (${estimate})` : task;
+  if (!estimate) return task;
+  return isMobileViewMode()
+    ? `${task}(${compactEstimateText(estimate)})`
+    : `${task} (${estimate})`;
 }
 
 const JOB_KEY_STATS = {
@@ -457,8 +491,10 @@ const JOB_KEY_STATS = {
   "醸造": "魔力×勤勉"
 };
 
-function getJobLabel(job) {
-  return JOB_KEY_STATS[job] ? `${job}（${JOB_KEY_STATS[job]}）` : job;
+function getJobLabel(job, compact = false) {
+  if (!JOB_KEY_STATS[job]) return job;
+  const stats = compact ? compactStatText(JOB_KEY_STATS[job]) : JOB_KEY_STATS[job];
+  return compact ? `${job}(${stats})` : `${job}（${stats}）`;
 }
 
 function appendTextCell(row, value, className = "") {
@@ -563,10 +599,10 @@ function appendJobCell(row, person, village, editable) {
   const select = document.createElement("select");
   (person.jobTable || []).forEach(job => {
     const option = document.createElement("option");
-    const label = getJobLabel(job);
+    const fullLabel = getJobLabel(job);
     option.value = job;
-    option.textContent = label;
-    option.title = label;
+    option.textContent = getJobLabel(job, isMobileViewMode());
+    option.title = fullLabel;
     if (job === person.job) option.selected = true;
     select.appendChild(option);
   });
