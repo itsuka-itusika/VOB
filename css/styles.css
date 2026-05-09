@@ -101,6 +101,9 @@ button {
   color: #fff;
   font-weight: bold;
 }
+.mobile-utility-actions {
+  display: none;
+}
 .job-cell-controls {
   display: flex;
   align-items: center;
@@ -1101,7 +1104,8 @@ body.mobile-mode .resource-panel {
   margin-top: 4px;
 }
 body.mobile-mode .view-mode-toggle {
-  grid-column: span 1;
+  order: 1;
+  grid-column: span 2;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin: 0;
@@ -1116,17 +1120,44 @@ body.mobile-mode .action-buttons > button {
   line-height: 1.15;
 }
 body.mobile-mode #nextTurnButton {
+  order: 2;
   grid-column: span 2;
   min-height: 42px;
   font-size: 0.96rem;
   font-weight: bold;
 }
 body.mobile-mode #autoAssignButton {
+  order: 2;
   grid-column: span 2;
 }
 body.mobile-mode .action-buttons.is-raid-mode #autoAssignButton,
 body.mobile-mode .action-buttons.is-raid-mode #raidAssignButton {
   grid-column: span 1;
+}
+body.mobile-mode .utility-direct-button {
+  display: none;
+}
+body.mobile-mode .mobile-utility-actions {
+  display: grid;
+  order: 1;
+  grid-column: span 4;
+  grid-template-columns: minmax(0, 1fr) 48px;
+  gap: 4px;
+}
+body.mobile-mode .action-buttons > button:not(.utility-direct-button):not(#autoAssignButton):not(#raidAssignButton):not(#nextTurnButton) {
+  order: 2;
+}
+body.mobile-mode #raidAssignButton {
+  order: 2;
+}
+body.mobile-mode .mobile-utility-actions select,
+body.mobile-mode .mobile-utility-actions button {
+  width: 100%;
+  min-height: 36px;
+  margin: 0;
+  padding: 6px 4px;
+  font-size: 0.75rem;
+  line-height: 1.15;
 }
 body.mobile-mode .message-window {
   flex: 0 0 auto;
@@ -1160,6 +1191,19 @@ body.mobile-mode #raidEnemiesTable td {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+body.mobile-mode #villagersTable td:nth-child(19),
+body.mobile-mode #villagersTable td:nth-child(25),
+body.mobile-mode #visitorsTable td:nth-child(19),
+body.mobile-mode #visitorsTable td:nth-child(25),
+body.mobile-mode #raidEnemiesTable td:nth-child(19),
+body.mobile-mode #raidEnemiesTable td:nth-child(25) {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.15;
 }
 body.mobile-mode #villagersTable th,
 body.mobile-mode #visitorsTable th,

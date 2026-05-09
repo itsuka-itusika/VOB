@@ -38,11 +38,22 @@
         <button id="nextTurnButton" onclick="onNextTurn()">次の月へ</button>
         <button onclick="openMiracleModal()" data-mobile-label="奇跡">奇跡の行使</button>
         <button onclick="openBuildingModal()" data-mobile-label="建築">建築</button>
-        <button onclick="onSaveAsJsonFile()" data-mobile-label="JSON保存">JSON保存</button>
-        <button onclick="onLoadFromJsonFile()" data-mobile-label="JSON読込">JSON読込</button>
-        <button onclick="onSaveToLocalStorage()" data-mobile-label="端末保存">ローカル保存</button>
-        <button onclick="onLoadFromLocalStorage()" data-mobile-label="端末読込">ローカル読込</button>
-        <button onclick="window.open('Readme.txt', '_blank')" style="margin-left: 0px;" data-mobile-label="説明">更新履歴・説明</button>
+        <button class="utility-direct-button" onclick="onSaveAsJsonFile()" data-mobile-label="JSON保存">JSON保存</button>
+        <button class="utility-direct-button" onclick="onLoadFromJsonFile()" data-mobile-label="JSON読込">JSON読込</button>
+        <button class="utility-direct-button" onclick="onSaveToLocalStorage()" data-mobile-label="端末保存">ローカル保存</button>
+        <button class="utility-direct-button" onclick="onLoadFromLocalStorage()" data-mobile-label="端末読込">ローカル読込</button>
+        <button class="utility-direct-button" onclick="window.open('Readme.txt', '_blank')" style="margin-left: 0px;" data-mobile-label="説明">更新履歴・説明</button>
+        <div class="mobile-utility-actions">
+          <select id="mobileUtilityActionSelect" aria-label="保存・読込操作">
+            <option value="">保存/読込/説明</option>
+            <option value="save-json">JSON保存</option>
+            <option value="load-json">JSON読込</option>
+            <option value="save-local">ローカル保存</option>
+            <option value="load-local">ローカル読込</option>
+            <option value="readme">更新履歴・説明</option>
+          </select>
+          <button type="button" onclick="runMobileUtilityAction()">実行</button>
+        </div>
         <div class="view-mode-toggle" role="group" aria-label="表示モード">
           <button type="button" id="pcModeButton" class="view-mode-button is-active" onclick="setViewMode('pc')" aria-pressed="true">PC</button>
           <button type="button" id="mobileModeButton" class="view-mode-button" onclick="setViewMode('mobile')" aria-pressed="false">スマホ仮</button>

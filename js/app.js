@@ -52,6 +52,30 @@ function loadFromLocalStorage() {
   replaceVillageState(loadedVillage, "ローカルストレージからロードしました");
 }
 
+function runMobileUtilityAction() {
+  const select = document.getElementById("mobileUtilityActionSelect");
+  const action = select ? select.value : "";
+  if (!action) return;
+
+  if (action === "save-json") {
+    saveVillageToJsonFile(theVillage);
+  } else if (action === "load-json") {
+    openJsonLoadDialog();
+  } else if (action === "save-local") {
+    if (window.confirm("現在の状態をローカル保存に上書きしますか？")) {
+      saveVillageToLocalStorage(theVillage);
+    }
+  } else if (action === "load-local") {
+    if (window.confirm("ローカル保存を読み込み、現在の状態を置き換えますか？")) {
+      loadFromLocalStorage();
+    }
+  } else if (action === "readme") {
+    window.open("Readme.txt", "_blank");
+  }
+
+  if (select) select.value = "";
+}
+
 function setSpiritColumnsVisibility(visible) {
   ["villagersTable", "visitorsTable", "raidEnemiesTable"].forEach(id => {
     const table = document.getElementById(id);
@@ -113,6 +137,7 @@ function bindGlobalHandlers() {
     onSaveToLocalStorage: () => saveVillageToLocalStorage(theVillage),
     onLoadFromJsonFile: openJsonLoadDialog,
     onLoadFromLocalStorage: loadFromLocalStorage,
+    runMobileUtilityAction,
     openBuildingModal: () => openBuildingModal(theVillage),
     closeBuildingModal,
     onAutoAssignJobs: () => {
