@@ -84,9 +84,7 @@ export function doExchange(a, b, v, isLightning = false) {
   refreshJobTable(a, v);
   refreshJobTable(b, v);
 
-  a.job = "なし";
   a.action = "なし";
-  b.job = "なし";
   b.action = "なし";
 
   if (!isLightning) {

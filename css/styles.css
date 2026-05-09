@@ -1050,6 +1050,7 @@ body.mobile-mode main > section:nth-of-type(2) > h2 {
 body.mobile-mode main > section:nth-of-type(2) {
   display: flex;
   flex-direction: column;
+  margin-bottom: 1px;
 }
 body.mobile-mode .resource-panel {
   display: flex;
@@ -1216,6 +1217,7 @@ body.mobile-mode #visitorsTable,
 body.mobile-mode #raidEnemiesTable {
   width: 100%;
   min-width: 0;
+  margin-bottom: 1px;
   table-layout: fixed;
   font-size: 0.48rem;
 }
@@ -1427,7 +1429,7 @@ body.mobile-mode .log-dictionary-section > h2 {
 }
 body.mobile-mode .log-and-dictionary {
   flex-direction: column;
-  gap: 8px;
+  gap: 5px;
 }
 body.mobile-mode .log-area {
   order: 2;
@@ -1440,7 +1442,15 @@ body.mobile-mode .dictionary-section {
   width: auto;
 }
 body.mobile-mode .dictionary-search {
-  margin-bottom: 3px;
+  margin-bottom: 1px;
+}
+body.mobile-mode .dictionary-search input {
+  min-height: 0;
+  height: 24px;
+  padding: 3px 6px;
+  box-sizing: border-box;
+  font-size: 0.72rem;
+  line-height: 1.2;
 }
 body.mobile-mode .dictionary-content {
   height: 82px;

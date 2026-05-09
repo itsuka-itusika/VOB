@@ -1,7 +1,7 @@
 // raid.js
 
 import { randInt, randChoice, clampValue, shuffleArray } from "./util.js";
-import { endOfMonthProcess, doFixedEventPost, doRandomEventPost, doAgingProcess, runMonthStartPhase } from "./events.js";
+import { endOfMonthProcess, doFixedEventPost, doAgingProcess, runMonthStartPhase } from "./events.js";
 import { handleAllVillagerJobs } from "./jobs.js";
 import { canPerformRaidAction } from "./raidRules.js";
 import { updateUI } from "./ui.js";
@@ -414,8 +414,6 @@ function endRaidProcess(isSuccess, isPartSuccess, village) {
     // 襲撃終了後、その月の残り処理を実行→次月へ
     // 村人仕事
     handleAllVillagerJobs(village);
-    // 月後半
-    doRandomEventPost(village);
     doFixedEventPost(village);
     // 月末
     endOfMonthProcess(village);

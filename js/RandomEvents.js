@@ -1,10 +1,11 @@
 // RandomEvents.js
 
-import { randInt, clampValue } from "./util.js";
+import { randInt, clampValue, round3 } from "./util.js";
 import { doLoverCheck, addRelationship as addCategorizedRelationship } from "./relationships.js";
 import { doExchange } from "./exchange.js";
 import { showRandomEventModal } from "./randomEventModal.js";
 import { scheduleGoldenRainPregnancy } from "./reproduction.js";
+import { refreshJobTable } from "./domain/jobTables.js";
 
 import {
   EVENT_KIND_TABLE,
@@ -354,9 +355,10 @@ export class RandomEvents {
     return eventKey === "lover";
   }
 
-  static chooseEventKind() {
-    const roll = randInt(1, 100);
-    const match = EVENT_KIND_TABLE.find(item => roll <= item.maxRoll);
+  static chooseEventKind({ chanceMultiplier = 1 } = {}) {
+    const multiplier = Number.isFinite(chanceMultiplier) ? Math.max(0, chanceMultiplier) : 1;
+    const roll = Math.random() * 100;
+    const match = EVENT_KIND_TABLE.find(item => roll < Math.min(100, item.maxRoll * multiplier));
     return match ? match.kind : null;
   }
 
@@ -371,9 +373,10 @@ export class RandomEvents {
    * ランダムイベントを実行
    * @param {Village} v - 村オブジェクト
    * @param {string} phase - イベントフェーズ("前"/"後")
+   * @param {{ chanceMultiplier?: number }} options - 発生率倍率
    */
-  static execute(v, phase) {
-    const kind = this.chooseEventKind();
+  static execute(v, phase, options = {}) {
+    const kind = this.chooseEventKind(options);
     if (kind) {
       this.runWithAnnouncement(v, phase, kind, () => this.runEventByKind(v, kind));
     } else {
@@ -488,7 +491,7 @@ export class RandomEvents {
         break;
       }
       case "hotSpring": {
-        const hpGain = 15;
+        const hpGain = 10;
         v.villagers.forEach(p => {
           p.hp = clampValue(p.hp + hpGain, 0, 100);
         });
@@ -597,7 +600,8 @@ export class RandomEvents {
           x.bodySex === "女" &&
           x.bodyAge >= 12 && x.bodyAge <= 30 &&
           x.spiritAge >= 16 &&
-          x.sexdr >= 20
+          x.sexdr >= 20 &&
+          x.hobby !== "オシャレ"
         );
 
         if (candidates.length > 0) {
@@ -605,7 +609,7 @@ export class RandomEvents {
           
           a.chr += 3;
           a.happiness = clampValue(a.happiness + 20, 0, 100);
-          a.hobby = Math.random() < 0.5 ? "オシャレ" : "自家発電";
+          a.hobby = "オシャレ";
 
           v.log(`ファッションイベント:${a.name}は鏡の前で衣装を試し、気分が上がった。魅力+3,幸福+20,趣味:${a.hobby}`);
         } else {
@@ -618,7 +622,8 @@ export class RandomEvents {
           x.spiritSex === "女" &&
           x.bodySex === "男" &&
           x.spiritAge >= 16 &&
-          x.str >= 20
+          x.str >= 20 &&
+          x.hobby !== "筋トレ"
         );
 
         if (candidates.length > 0) {
@@ -639,8 +644,10 @@ export class RandomEvents {
           x.bodySex === "女" &&
           x.spiritAge >= 16 &&
           x.bodyAge >= 12 &&
+          x.bodyAge <= 30 &&
           x.chr >= 16 &&
-          x.sexdr >= 20
+          x.sexdr >= 20 &&
+          x.hobby !== "自家発電"
         );
 
         if (candidates.length > 0) {
@@ -662,11 +669,68 @@ export class RandomEvents {
     return ev;
   }
 
+  static getCurrentSeason(village) {
+    const traits = Array.isArray(village?.villageTraits) ? village.villageTraits : [];
+    const season = ["春", "夏", "秋", "冬"].find(value => traits.includes(value));
+    if (season) return season;
+
+    const month = Number(village?.month) || 0;
+    if ([3, 4, 5].includes(month)) return "春";
+    if ([6, 7, 8].includes(month)) return "夏";
+    if ([9, 10, 11].includes(month)) return "秋";
+    if ([12, 1, 2].includes(month)) return "冬";
+    return "";
+  }
+
+  static getBadEventWeight(eventKey, season) {
+    switch (eventKey) {
+      case "storm":
+        return season === "春" ? 1 : 0;
+      case "downpour":
+        return season === "夏" || season === "秋" ? 1 : 0;
+      case "heat":
+        return season === "夏" ? 1 : 0;
+      case "fire":
+        return season === "冬" ? 2.5 : 1;
+      case "lightning1":
+      case "lightning2":
+        return season === "夏" ? 2.5 : 1;
+      case "snow":
+        return season === "冬" || season === "春" ? 1 : 0;
+      case "epidemic":
+        return season === "冬" ? 0.35 : 0;
+      default:
+        return 1;
+    }
+  }
+
+  static chooseWeightedEvent(entries) {
+    const weighted = entries.filter(entry => entry.weight > 0);
+    const total = weighted.reduce((sum, entry) => sum + entry.weight, 0);
+    if (total <= 0) return null;
+
+    let roll = Math.random() * total;
+    for (const entry of weighted) {
+      roll -= entry.weight;
+      if (roll <= 0) return entry.key;
+    }
+    return weighted[weighted.length - 1].key;
+  }
+
+  static chooseBadEvent(village) {
+    const season = this.getCurrentSeason(village);
+    return this.chooseWeightedEvent(EVENT_POOLS.bad.map(key => ({
+      key,
+      weight: this.getBadEventWeight(key, season)
+    })));
+  }
+
   /**
    * バッドイベント(15%)
    */
   static doBadEvent(v) {
-    let ev = this.randChoice(EVENT_POOLS.bad);
+    let ev = this.chooseBadEvent(v);
+    if (!ev) return null;
 
     switch (ev) {
       case "storm": {
@@ -736,6 +800,7 @@ export class RandomEvents {
       case "fight": {
         let candidates = v.villagers.filter(x => 
           x.spiritSex === "男" &&
+          x.spiritAge >= 12 &&
           x.eth <= 12
         );
 
@@ -772,6 +837,42 @@ export class RandomEvents {
           v.security = clampValue(v.security - 12, 0, 100);
 
           v.log(`飲酒イベント:${a.name}は飲んだくれて騒ぎを起こした！ 治安-12`);
+        } else {
+          return null;
+        }
+        break;
+      }
+      case "epidemic": {
+        const candidates = v.villagers.filter(x =>
+          Array.isArray(x.bodyTraits) && !x.bodyTraits.includes("疫病")
+        );
+
+        if (candidates.length >= 2) {
+          const pool = [...candidates];
+          const count = Math.min(randInt(2, 3), pool.length);
+          const infected = [];
+
+          for (let i = 0; i < count; i++) {
+            const index = randInt(0, pool.length - 1);
+            const person = pool.splice(index, 1)[0];
+            infected.push(person);
+
+            person.bodyTraits.push("疫病");
+            person.hp = clampValue(round3((Number(person.hp) || 0) * 0.5), 0, 100);
+            person.str = round3((Number(person.str) || 0) * 0.5);
+            person.vit = round3((Number(person.vit) || 0) * 0.5);
+            person.dex = round3((Number(person.dex) || 0) * 0.5);
+            refreshJobTable(person, v);
+            this.addForcedSpeaker(person);
+          }
+
+          const villageTraits = Array.isArray(v.villageTraits) ? v.villageTraits : (v.villageTraits = []);
+          if (!villageTraits.includes("疫病流行")) {
+            villageTraits.push("疫病流行");
+          }
+
+          const names = infected.map(person => person.name).join("、");
+          v.log(`疫病の流行:${names}が疫病に倒れた。体力・筋力・耐久・器用0.5倍`);
         } else {
           return null;
         }

@@ -4,7 +4,15 @@ import { randInt, randFloat, clampValue, round3 } from "./util.js";
 import { HobbyEffects } from "./HobbyEffects.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 
-const HEALING_RECOVERABLE_BODY_TRAITS = ["負傷"];
+const HEALING_RECOVERABLE_BODY_TRAITS = ["負傷", "疫病"];
+
+function restoreRecoveredBodyTraitStats(person, trait) {
+  if (trait !== "疫病") return;
+  person.hp = clampValue(round3((Number(person.hp) || 0) / 0.5), 0, 100);
+  person.str = round3((Number(person.str) || 0) / 0.5);
+  person.vit = round3((Number(person.vit) || 0) / 0.5);
+  person.dex = round3((Number(person.dex) || 0) / 0.5);
+}
 
 /**
  * 全村人の「行動」を実行する
@@ -792,17 +800,20 @@ function doHealingJob(p, v) {
     mpG = Math.floor(mpG * 0.6);
   }
   
+  const recoveredTraits = HEALING_RECOVERABLE_BODY_TRAITS.filter(trait => p.bodyTraits.includes(trait));
+  if (recoveredTraits.length > 0) {
+    recoveredTraits.forEach(trait => restoreRecoveredBodyTraitStats(p, trait));
+    p.bodyTraits = p.bodyTraits.filter(trait => !HEALING_RECOVERABLE_BODY_TRAITS.includes(trait));
+    refreshJobTable(p, v);
+  }
+
   const currentHp = Math.max(0, Number(p.hp) || 0);
   const currentMp = Math.max(0, Number(p.mp) || 0);
   p.hp = clampValue(currentHp + hpG, 0, 100);
   p.mp = clampValue(currentMp + mpG, 0, 100);
-  
+
   let logMsg = `${p.name}療養:体力+${hpG},メンタル+${mpG}`;
-  
-  const recoveredTraits = HEALING_RECOVERABLE_BODY_TRAITS.filter(trait => p.bodyTraits.includes(trait));
   if (recoveredTraits.length > 0) {
-    p.bodyTraits = p.bodyTraits.filter(trait => !HEALING_RECOVERABLE_BODY_TRAITS.includes(trait));
-    refreshJobTable(p, v);
     logMsg += `,${recoveredTraits.join(",")}が回復`;
   }
   

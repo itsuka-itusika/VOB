@@ -12,7 +12,7 @@ export const EVENT_KIND_TITLES = {
 
 export const EVENT_POOLS = {
   good: ["cat", "gold", "strangeRain", "fireworks", "hotSpring", "hobbyFriends", "menFriendship", "lover", "yuri", "tattoo", "fashion", "muscle", "selfPleasure"],
-  bad: ["storm", "downpour", "heat", "fire", "thief", "rats", "lightning1", "lightning2", "snow", "fight", "drunk"]
+  bad: ["storm", "downpour", "heat", "fire", "thief", "rats", "lightning1", "lightning2", "snow", "fight", "drunk", "epidemic"]
 };
 export const GOLDEN_RAIN_RACES = new Set(["人間", "ハーピー", "半神", "キュクロプス", "サイクロプス"]);
 
@@ -45,7 +45,8 @@ export const EVENT_SUBJECTS = {
   lightning2: "落雷による肉体交換",
   snow: "大雪",
   fight: "喧嘩",
-  drunk: "飲酒騒ぎ"
+  drunk: "飲酒騒ぎ",
+  epidemic: "疫病の流行"
 };
 
 export const EVENT_MOODS = {
@@ -77,7 +78,8 @@ export const EVENT_MOODS = {
   lightning2: "shock",
   snow: "hardship",
   fight: "conflict",
-  drunk: "conflict"
+  drunk: "conflict",
+  epidemic: "hardship"
 };
 
 export const EVENT_VILLAGER_LINES = {
@@ -1088,6 +1090,28 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     neutral: "酒が回っている。気分が大きくなるな。",
     gal: "楽しくなってきた！ まだまだ飲めるっしょ！",
     elder: "酒はほどほどがよいが、今日は少し賑やかじゃのう。"
+  }),
+  epidemic: speechTypeLines({
+    normalM: "体が重い……今日は無理せず療養した方がよさそうだ。",
+    politeM: "発熱がひどいですね。皆に広げぬよう、静かに休みます。",
+    strongM: "くそ、体が言うことを聞かねえ……今は寝て治すしかないな。",
+    roughM: "だるい……こんな時に強がっても仕方ねえ。休ませろ。",
+    playfulM: "これはまずいっすね……今日は大人しく寝てるっす。",
+    darkM: "熱が引かない。考えるのも億劫だ……。",
+    coolM: "症状は明確だ。隔離と療養を優先する。",
+    normalF: "体が熱いです……今日は療養させてください。",
+    politeF: "無理をすれば皆様に迷惑をかけます。今は休みますね。",
+    lady: "不覚ですわ……けれど、ここで無理をするわけにはまいりません。",
+    livelyF: "うう、元気が出ない……ちゃんと休んで治すね。",
+    shyF: "すみません……少し、息が苦しくて……休ませてください。",
+    strongF: "悔しいけど、今は無理をしない。治してから動くわ。",
+    roughF: "最悪……でも倒れる前に寝る。文句は治ってから言うわ。",
+    softF: "体がつらいですね……皆さんも気をつけてください。",
+    cuteF: "熱っぽいよ……今日はお布団から出たくないな。",
+    coolF: "感染を広げないことが先ね。療養に入るわ。",
+    neutral: "体が重い。今は動くより休むべきだな。",
+    gal: "マジでしんどい……今日は無理、ちゃんと休む。",
+    elder: "疫病は侮れん。若い者も無理をするでないぞ。"
   })
 });
 
@@ -1143,5 +1167,6 @@ export const EVENT_SECOND_LINE_BASES = {
   lightning2: "手足の感覚が自分のものではない",
   snow: "雪が深くて一歩進むだけでも骨が折れる",
   fight: "これ以上言われっぱなしではいられない",
-  drunk: "酒が回って、声も気分も大きくなっている"
+  drunk: "酒が回って、声も気分も大きくなっている",
+  epidemic: "熱とだるさが体の奥まで染みている"
 };

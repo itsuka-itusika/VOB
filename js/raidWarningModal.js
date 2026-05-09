@@ -1,10 +1,54 @@
 const MODAL_OVERLAY_ID = "raidWarningOverlay";
 const MODAL_ID = "raidWarningModal";
+const PRIORITY_MODAL_SELECTORS = [
+  "#seasonChangeDialog",
+  "#festivalModal"
+];
+
+let pendingRaidWarning = null;
+let priorityModalObserver = null;
 
 export function showRaidWarningModal({ raiderType, enemyCount }) {
   if (typeof document === "undefined") return;
 
+  pendingRaidWarning = { raiderType, enemyCount };
   closeRaidWarningModal();
+  showRaidWarningWhenReady();
+}
+
+function isPriorityModalOpen() {
+  return PRIORITY_MODAL_SELECTORS.some(selector => document.querySelector(selector));
+}
+
+function waitForPriorityModalsToClose() {
+  if (priorityModalObserver) return;
+  priorityModalObserver = new MutationObserver(showRaidWarningWhenReady);
+  priorityModalObserver.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+}
+
+function stopWaitingForPriorityModals() {
+  if (!priorityModalObserver) return;
+  priorityModalObserver.disconnect();
+  priorityModalObserver = null;
+}
+
+function showRaidWarningWhenReady() {
+  if (!pendingRaidWarning) {
+    stopWaitingForPriorityModals();
+    return;
+  }
+
+  if (isPriorityModalOpen()) {
+    waitForPriorityModalsToClose();
+    return;
+  }
+
+  stopWaitingForPriorityModals();
+  const { raiderType, enemyCount } = pendingRaidWarning;
+  pendingRaidWarning = null;
 
   const isSingleEnemy = enemyCount === 1;
   const message = isSingleEnemy

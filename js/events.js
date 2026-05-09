@@ -123,10 +123,10 @@ function starsFestival(v) {
 // ランダムイベント
 // -------------------------
 export function doRandomEventPre(village) {
-  RandomEvents.execute(village, "前");
+  RandomEvents.execute(village, "前", { chanceMultiplier: 1.6 });
 }
 export function doRandomEventPost(village) {
-  RandomEvents.execute(village, "後");
+  // 後ランダムイベントは廃止。ランダムイベントは行動前のみ発生する。
 }
 
 export function doRaidStartCheck(village) {
@@ -236,7 +236,7 @@ export function endOfMonthProcess(v) {
   // 状態異常の解除処理
   v.villagers.forEach(p => {
     // 身体特性からの状態異常解除
-    let bodyTraitsToRemove = ["飢餓", "凍え", "疲労", "過労", "病気"];
+    let bodyTraitsToRemove = ["飢餓", "凍え", "疲労", "過労", "病気", "疫病"];
     bodyTraitsToRemove.forEach(trait => {
       if (p.bodyTraits.includes(trait)) {
         // 特性を解除
@@ -263,6 +263,12 @@ export function endOfMonthProcess(v) {
             p.str = round3(p.str / 0.25);  // 25%から回復
             p.vit = round3(p.vit / 0.25);
             p.dex = round3(p.dex / 0.25);
+                        break;
+          case "疫病":
+            p.hp = clampValue(round3(p.hp / 0.5), 0, 100);
+            p.str = round3(p.str / 0.5);
+            p.vit = round3(p.vit / 0.5);
+            p.dex = round3(p.dex / 0.5);
                         break;
           default:
             

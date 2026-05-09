@@ -4,7 +4,7 @@
 import { Village } from "./classes.js";
 import { createInitialVillagers } from "./createVillagers.js";
 import { updateUI } from "./ui.js";
-import { doFixedEventPost, doRandomEventPost, endOfMonthProcess, doAgingProcess, runMonthStartPhase } from "./events.js";
+import { doFixedEventPost, endOfMonthProcess, doAgingProcess, runMonthStartPhase } from "./events.js";
 import { applyForcedActionRestriction, refreshJobTable } from "./domain/jobTables.js";
 import { handleAllVillagerJobs } from "./jobs.js";
 import { isRestrictedNoJobVillager } from "./domain/rules.js";
@@ -76,7 +76,6 @@ export function onNextTurn() {
 
   // 通常ターン進行
   handleAllVillagerJobs(theVillage);
-  doRandomEventPost(theVillage);
   doFixedEventPost(theVillage);
   endOfMonthProcess(theVillage);
 

@@ -17,7 +17,7 @@ export const MIRACLES = [
   {id:"3",  name:"クピドの奇跡(80)", cost:80, desc:"2人を強制結婚(条件無視)"},
   {id:"4",  name:"宴会の奇跡(人数×15)", cost:-1, desc:"全員体力/メンタル+30,幸福+20 (資金×人数分も要)"},
   {id:"5",  name:"狂宴の奇跡(人数×30)", cost:-2, desc:"全員体力/メンタル+100,幸福+50,倫理↓,好色+15"},
-  {id:"6",  name:"癒しの奇跡(80)", cost:80, desc:"1人の負傷/疲労等回復,体力/メンタル+50"},
+  {id:"6",  name:"癒しの奇跡(80)", cost:80, desc:"1人の負傷/疫病/疲労等回復,体力/メンタル+50"},
   {id:"7",  name:"戦神の奇跡(80)", cost:80, desc:"1人に火星の加護(3ヶ月)"},
   {id:"8",  name:"竈女神の奇跡(60)", cost:60, desc:"恋人を結婚100%(いなければ30返還)"},
   {id:"9",  name:"常春の奇跡(300)", cost:300,desc:"村特性→春に固定。次の季節まで継続"},
@@ -335,10 +335,7 @@ function forceMarriage(a,b,v) {
 
 /** 癒し: 負傷など回復 */
 function healMiracle(p,v) {
-  p.hp=clampValue(p.hp+50,0,100);
-  p.mp=clampValue(p.mp+50,0,100);
-
-  let arr=["負傷","疲労","過労","飢餓","産褥","心労","抑鬱"];
+  let arr=["負傷","疲労","過労","飢餓","疫病","産褥","心労","抑鬱"];
   let recoveredTraits = [];
 
   // 身体特性からの状態異常回復
@@ -351,6 +348,12 @@ function healMiracle(p,v) {
       switch(trait) {
         case "飢餓":
           p.str = round3(p.str / 0.5);  // 50%から回復
+          p.vit = round3(p.vit / 0.5);
+          p.dex = round3(p.dex / 0.5);
+          break;
+        case "疫病":
+          p.hp = clampValue(round3(p.hp / 0.5), 0, 100);
+          p.str = round3(p.str / 0.5);
           p.vit = round3(p.vit / 0.5);
           p.dex = round3(p.dex / 0.5);
           break;
@@ -399,6 +402,9 @@ function healMiracle(p,v) {
       }
     }
   });
+
+  p.hp=clampValue(p.hp+50,0,100);
+  p.mp=clampValue(p.mp+50,0,100);
 
   let recoveryMsg = recoveredTraits.length > 0 ? 
     `${recoveredTraits.join(",")}を回復,` : "";
