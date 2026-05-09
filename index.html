@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ヴィレッジオブバッカス</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260509-view-mode-2">
+  <link rel="stylesheet" href="css/styles.css?v=20260509-mobile-ui-3">
   <style>
     .action-buttons {
       display: flex;
@@ -58,6 +58,9 @@
           <button type="button" id="pcModeButton" class="view-mode-button is-active" onclick="setViewMode('pc')" aria-pressed="true">PC</button>
           <button type="button" id="mobileModeButton" class="view-mode-button" onclick="setViewMode('mobile')" aria-pressed="false">スマホ仮</button>
         </div>
+        <label class="mobile-spirit-toggle">
+          <input type="checkbox" id="mobileSpiritColumnsToggle" onchange="toggleSpiritColumns(this.checked)">精神情報表示
+        </label>
       </div>
       <div class="message-window" id="messageWindow">
         <div class="message-empty">警告はありません</div>
@@ -344,7 +347,7 @@
      保存/ロード機能を含む全ファイルを読み込む
      (他のjs: util.js, classes.js, createVillagers.js などは先の回答と同様に配置)
 -->
-<script type="module" src="./js/app.js?v=20260509-view-mode-2"></script>
+<script type="module" src="./js/app.js?v=20260509-mobile-ui-3"></script>
 
 </body>
 </html>

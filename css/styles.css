@@ -104,6 +104,9 @@ button {
 .mobile-utility-actions {
   display: none;
 }
+.mobile-spirit-toggle {
+  display: none;
+}
 .job-cell-controls {
   display: flex;
   align-items: center;
@@ -1044,6 +1047,10 @@ body.mobile-mode main > section:first-child > h2 {
 body.mobile-mode main > section:nth-of-type(2) > h2 {
   display: none;
 }
+body.mobile-mode main > section:nth-of-type(2) {
+  display: flex;
+  flex-direction: column;
+}
 body.mobile-mode .resource-panel {
   display: flex;
   flex-wrap: wrap;
@@ -1105,7 +1112,8 @@ body.mobile-mode .resource-panel {
 }
 body.mobile-mode .view-mode-toggle {
   order: 1;
-  grid-column: span 2;
+  grid-row: 1;
+  grid-column: 5 / span 2;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin: 0;
@@ -1121,14 +1129,16 @@ body.mobile-mode .action-buttons > button {
 }
 body.mobile-mode #nextTurnButton {
   order: 2;
-  grid-column: span 2;
+  grid-row: 2;
+  grid-column: 3 / span 2;
   min-height: 42px;
   font-size: 0.96rem;
   font-weight: bold;
 }
 body.mobile-mode #autoAssignButton {
   order: 2;
-  grid-column: span 2;
+  grid-row: 2;
+  grid-column: 1 / span 2;
 }
 body.mobile-mode .action-buttons.is-raid-mode #autoAssignButton,
 body.mobile-mode .action-buttons.is-raid-mode #raidAssignButton {
@@ -1140,15 +1150,18 @@ body.mobile-mode .utility-direct-button {
 body.mobile-mode .mobile-utility-actions {
   display: grid;
   order: 1;
-  grid-column: span 4;
-  grid-template-columns: minmax(0, 1fr) 48px;
+  grid-row: 1;
+  grid-column: 1 / span 3;
+  grid-template-columns: minmax(0, 1fr) 44px;
   gap: 4px;
 }
 body.mobile-mode .action-buttons > button:not(.utility-direct-button):not(#autoAssignButton):not(#raidAssignButton):not(#nextTurnButton) {
   order: 2;
+  grid-row: 2;
 }
 body.mobile-mode #raidAssignButton {
   order: 2;
+  grid-row: 2;
 }
 body.mobile-mode .mobile-utility-actions select,
 body.mobile-mode .mobile-utility-actions button {
@@ -1158,6 +1171,29 @@ body.mobile-mode .mobile-utility-actions button {
   padding: 6px 4px;
   font-size: 0.75rem;
   line-height: 1.15;
+}
+body.mobile-mode .mobile-spirit-toggle {
+  order: 1;
+  grid-row: 1;
+  grid-column: 4 / span 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 2px;
+  border: 1px solid #777;
+  border-radius: 4px;
+  background: #eee;
+  box-sizing: border-box;
+  font-size: 0.72rem;
+  cursor: pointer;
+  user-select: none;
+}
+body.mobile-mode .mobile-spirit-toggle input {
+  width: 14px;
+  height: 14px;
+  min-height: 0;
+  margin: 0 3px 0 0;
 }
 body.mobile-mode .message-window {
   flex: 0 0 auto;
@@ -1171,6 +1207,9 @@ body.mobile-mode .message-window {
 }
 body.mobile-mode .message-item {
   padding: 2px 0;
+}
+body.mobile-mode main > section:nth-of-type(2) > .table-tools {
+  display: none;
 }
 body.mobile-mode #villagersTable,
 body.mobile-mode #visitorsTable,
@@ -1520,7 +1559,7 @@ body.mobile-mode #raidLogArea {
     grid-template-columns: 1fr;
   }
   body.mobile-mode .action-buttons {
-    grid-template-columns: repeat(4, minmax(58px, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
   body.mobile-mode .resource-panel {
     grid-template-columns: repeat(3, minmax(0, 1fr));

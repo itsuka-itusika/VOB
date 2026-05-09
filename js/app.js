@@ -81,6 +81,10 @@ function setSpiritColumnsVisibility(visible) {
     const table = document.getElementById(id);
     if (table) table.classList.toggle("show-spirit-columns", Boolean(visible));
   });
+  ["spiritColumnsToggle", "mobileSpiritColumnsToggle"].forEach(id => {
+    const checkbox = document.getElementById(id);
+    if (checkbox) checkbox.checked = Boolean(visible);
+  });
 }
 
 function readSavedViewMode() {
