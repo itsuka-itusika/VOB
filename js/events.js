@@ -10,7 +10,7 @@ import { showFestivalModal } from "./festivalModal.js";
 import { applyForcedActionRestriction, refreshJobTable } from "./domain/jobTables.js";
 
 /**
- * 固定イベント(前半) - 新年祭,夏至祭など
+ * 固定イベント(前半) - 新年祭,夏至祭,星霜祭など
  */
 export function doFixedEventPre(village) {
   if (!village.hasDonePreEvent) {
@@ -23,12 +23,16 @@ export function doFixedEventPre(village) {
         summerSolsticeFestival(village);
         village.hasDonePreEvent = true;
         break;
+      case 12:
+        starsFestival(village);
+        village.hasDonePreEvent = true;
+        break;
     }
   }
 }
 
 /**
- * 固定イベント(後半) - 復活祭,収穫祭,星霜祭など
+ * 固定イベント(後半) - 復活祭,収穫祭など
  */
 export function doFixedEventPost(village) {
   if (!village.hasDonePostEvent) {
@@ -39,10 +43,6 @@ export function doFixedEventPost(village) {
         break;
       case 10:
         harvestFestival(village);
-        village.hasDonePostEvent=true;
-        break;
-      case 12:
-        starsFestival(village);
         village.hasDonePostEvent=true;
         break;
     }
