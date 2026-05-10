@@ -2,7 +2,8 @@ const MODAL_OVERLAY_ID = "raidWarningOverlay";
 const MODAL_ID = "raidWarningModal";
 const PRIORITY_MODAL_SELECTORS = [
   "#seasonChangeDialog",
-  "#festivalModal"
+  "#festivalModal",
+  "#randomEventModal"
 ];
 
 let pendingRaidWarning = null;
