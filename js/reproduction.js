@@ -10,6 +10,7 @@ import {
 } from "./createVillagers.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { addRelationship, checkHasRelationship, getRelationshipTargetName, normalizeRelationship } from "./relationships.js";
+import { getDialogueLine } from "./dialogue/dialogueEngine.js";
 
 const HUMANOID_RACES = new Set(["人間", "ハーピー", "半神", "キュクロプス", "サイクロプス", "巨人"]);
 const PHYSICAL_STATS = ["str", "vit", "dex", "mag", "chr"];
@@ -655,49 +656,29 @@ function giveBirth(village, mother) {
 }
 
 export function getReproductiveStatusLine(character) {
-  if (hasTrait(character, "臨月")) return getPregnancyLine(character, true);
-  if (hasTrait(character, "妊娠")) return getPregnancyLine(character, false);
-  if (hasMindTrait(character, "無垢")) return randChoice(["あうー。", "んま。", "ばぶ。", "きゃっ。", "すやすや……"]);
-  if (hasMindTrait(character, "萌芽")) return getBuddingStatusLine(character);
+  if (hasTrait(character, "臨月")) {
+    return getDialogueLine({ character, scene: "reproduction", key: "fullTermConversation" });
+  }
+  if (hasTrait(character, "妊娠")) {
+    return getDialogueLine({ character, scene: "reproduction", key: "pregnantConversation" });
+  }
+  if (hasTrait(character, "産褥")) {
+    return getDialogueLine({ character, scene: "reproduction", key: "postpartumConversation" });
+  }
+  if (hasMindTrait(character, "無垢") || hasMindTrait(character, "萌芽")) {
+    return getDialogueLine({ character, scene: "status", key: "healthy" });
+  }
   return null;
 }
 
-function getPregnancyLine(character, fullTerm) {
-  const type = character.speechType || determineSpeechType(character);
-  const lines = {
-    "普通Ｍ": fullTerm ? ["腹が重い……本当に、もうすぐなんだな。まだ頭が追いつかない。", "怖くないと言えば嘘になるけど、ここまで来たなら迎えるしかない。"] : ["まさか俺が妊娠するなんてな……まだ実感が追いつかない。", "体の中に命があるって、こんなに落ち着かないものなんだな。"],
-    "普通Ｆ": fullTerm ? ["もうすぐ会えるんですね。少し緊張します。", "体は重いですが、楽しみです。"] : ["新しい命がいるんですね。大切にします。", "無理はしないようにします。"],
-    "強気Ｍ": fullTerm ? ["くそ、体が思うように動かねぇ……だが音は上げない。", "もうすぐだな。怖くないわけじゃないが、腹はくくった。"] : ["は？ 俺が妊娠？ ……冗談じゃないが、逃げる気もない。", "戸惑いはある。苛立ちもある。だが守るものができたなら守る。"],
-    "強気Ｆ": fullTerm ? ["もうすぐね。弱音なんて吐かないわ。", "大丈夫、ちゃんと産んでみせる。"] : ["驚いたけど、覚悟はできてるわ。", "私がしっかりしないとね。"],
-    "内気": fullTerm ? ["こ、怖いです……でも、会いたいです。", "もうすぐなんですね……どきどきします。"] : ["まだ少し、信じられません……。", "ちゃんとできるか、不安です……。"],
-    "陰気": fullTerm ? ["……重い。怖い。けど、ここまで来てしまった。", "……終わりじゃなくて、始まりか。正直、まだ受け止めきれていない。"] : ["……妙な気分だ。自分の体じゃないみたいで落ち着かない。", "……自分に務まるのか。考えるほど胃が沈む。"],
-    "お調子者": fullTerm ? ["いよいよっすね、さすがに笑ってごまかせないっす！", "もうすぐ会えるとか、すごいっすね……いや、めちゃくちゃ緊張するっす。"] : ["いやー、びっくりっすね！ っていうか本当に自分がっすか！？", "これは頑張らないとっすね。まだ全然落ち着かないっすけど！"],
-    "快活": fullTerm ? ["もうすぐだね！ちょっと怖いけど楽しみ！", "元気な子だといいな！"] : ["びっくりしたけど、なんだか嬉しい！", "無理せず元気にいこう！"],
-    "お嬢様": fullTerm ? ["いよいよですわね……心を整えますわ。", "少し怖いですけれど、楽しみですわ。"] : ["まあ……不思議な気持ちですわ。", "大切に過ごしますわ。"],
-    "クールＭ": fullTerm ? ["出産が近い。体の違和感は強いが、手順を確認しておこう。", "動揺は残っている。だからこそ体調管理を最優先にする。"] : ["状況は理解した。俺の体で妊娠が進行している、という事実にな。", "想定外だ。感情は後で処理する。今は無理を避ける。"],
-    "クールＦ": fullTerm ? ["もうすぐね。落ち着いて臨むわ。", "体は重いけれど、問題ないわ。"] : ["理解したわ。慎重に過ごす。", "少し不思議な感覚ね。"],
-    "老人": fullTerm ? ["この年で命を迎えるとは、不思議なものじゃ。", "もうすぐじゃな……静かに待とう。"] : ["命とは巡るものじゃのう。", "大事にせねばならんのう。"]
-  };
-  return randChoice(lines[type] || lines[character.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
-}
-
 function getPregnancyNoticeLine(character, role, partner) {
-  const type = character.speechType || determineSpeechType(character);
-  const lines = {
-    "普通Ｍ": role === "mother" ? ["まさか俺が妊娠するなんてな……驚きすぎて、まだ言葉が出ない。", "戸惑ってる。でも、体の中にいるなら大事にしないとな。"] : [`${partner.name}を支えないとな。`, "無事に育ってほしい。できることをするよ。"],
-    "普通Ｆ": role === "mother" ? ["新しい命がいるんですね。大切にします。", "少し不思議ですけど、嬉しいです。"] : [`${partner.name}さんを支えます。`, "無事に産まれてきてほしいですね。"],
-    "強気Ｍ": role === "mother" ? ["冗談みたいな話だな……腹は立つが、投げ出す気はない。", "戸惑いも苛立ちもある。だが、宿ったなら守り抜く。"] : [`${partner.name}は俺が支える。`, "子も親も守ってみせる。"],
-    "強気Ｆ": role === "mother" ? ["驚いたけど、覚悟はできてるわ。", "大丈夫、私がしっかりする。"] : [`${partner.name}を支えるわ。任せて。`, "無事に迎える準備をするわよ。"],
-    "内気": role === "mother" ? ["まだ少し、信じられません……。", "ちゃんとできるか、不安です……でも嬉しいです。"] : [`${partner.name}さんの力に、なりたいです……。`, "こ、これから大切にしないと……。"],
-    "陰気": role === "mother" ? ["……妙な気分だ。驚くより先に、怖さが来る。", "……自分に務まるのか。正直、わからない。"] : [`……${partner.name}を放ってはおけないな。`, "……無事なら、それでいい。"],
-    "お調子者": role === "mother" ? ["いやー、びっくりっすね！ 自分のことなのに現実味がないっす！", "これは頑張らないとっすね！ まず落ち着くところからっすけど！"] : [`${partner.name}を全力で支えるっす！`, "いやー、急に責任重大っすね！"],
-    "快活": role === "mother" ? ["びっくりしたけど、なんだか嬉しい！", "無理せず元気にいこう！"] : [`${partner.name}、一緒に頑張ろう！`, "元気な子だといいね！"],
-    "お嬢様": role === "mother" ? ["まあ……不思議な気持ちですわ。", "大切に過ごしますわ。"] : [`${partner.name}様を丁寧に支えますわ。`, "新たな命に祝福がありますように。"],
-    "クールＭ": role === "mother" ? ["状況は理解した。理解したが、動揺していないわけではない。", "想定外の妊娠だ。感情より先に、必要な備えを始める。"] : [`${partner.name}の体調管理を優先する。`, "必要な準備を始めよう。"],
-    "クールＦ": role === "mother" ? ["理解したわ。慎重に過ごす。", "少し不思議な感覚ね。"] : [`${partner.name}を支える。今はそれが最優先ね。`, "落ち着いて準備しましょう。"],
-    "老人": role === "mother" ? ["命とは巡るものじゃのう。", "大事にせねばならんのう。"] : [`${partner.name}を労わらねばのう。`, "新しい命とは、めでたいものじゃ。"]
-  };
-  return randChoice(lines[type] || lines[character.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
+  const key = role === "mother" ? "pregnancyNoticeParent" : "pregnancyNoticePartner";
+  return getDialogueLine({
+    character,
+    scene: "reproduction",
+    key,
+    context: { partner }
+  }) || "";
 }
 
 function showPregnancyModal(village, mother, father) {
@@ -723,22 +704,7 @@ function showPregnancyModal(village, mother, father) {
 }
 
 function getAdultLine(character) {
-  const type = character.speechType || determineSpeechType(character);
-  const lines = {
-    "普通Ｍ": ["今日から大人か。できることを一つずつやっていくよ。", "少し背筋が伸びるな。これからもよろしく。"],
-    "普通Ｆ": ["成人したんですね。これからも頑張ります。", "少し緊張しますけど、しっかりやっていきます。"],
-    "強気Ｍ": ["ようやく一人前だな。任せておけ。", "ここからが本番だ。しっかり働くさ。"],
-    "強気Ｆ": ["成人したからには、遠慮なく頼っていいわ。", "もう子供扱いはなしよ。私が支えるわ。"],
-    "内気": ["お、大人になったんですね……頑張ります。", "まだ不安ですけど、少しずつ慣れていきます。"],
-    "陰気": ["……成人か。逃げ場はないな。", "……まあ、やるべきことはやる。"],
-    "お調子者": ["ついに大人っすね！見ててくださいよ！", "いやー、これで一人前っす！たぶん！"],
-    "快活": ["成人だね！いっぱい頑張るよ！", "今日からもっと村の力になるね！"],
-    "お嬢様": ["成人いたしましたわ。皆様のお力になります。", "一人前として、恥じぬよう努めますわ。"],
-    "クールＭ": ["成人した。役割を果たそう。", "これからは大人として判断する。"],
-    "クールＦ": ["成人ね。落ち着いて役目を果たすわ。", "一人前として扱ってもらって構わないわ。"],
-    "老人": ["成人とはめでたいのう。若い力は村の宝じゃ。", "これからが人生の始まりじゃな。"]
-  };
-  return randChoice(lines[type] || lines[character.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
+  return getDialogueLine({ character, scene: "reproduction", key: "adult" }) || "";
 }
 
 function showAdultModal(village, character) {
@@ -764,22 +730,13 @@ function showAdultModal(village, character) {
 
 function getBirthLine(character, role) {
   if (!character) return "";
-  const type = character.speechType || determineSpeechType(character);
-  const lines = {
-    "普通Ｍ": [`${role}になったんだな……大切にしよう。`, "無事でよかった。本当に。"],
-    "普通Ｆ": [`${role}になったんですね……嬉しいです。`, "小さくて、あたたかいですね。"],
-    "強気Ｍ": ["よく来たな。俺が守ってやる。", "無事に産まれてくれて何よりだ。"],
-    "強気Ｆ": ["よく来たわね。絶対守るから。", "大丈夫、ここから一緒に生きていくのよ。"],
-    "内気": ["ち、小さい……かわいいです……。", "無事で……よかった……。"],
-    "陰気": ["……産まれたのか。", "……守る理由ができたな。"],
-    "お調子者": ["うわ、ちっちゃいっすね！かわいいっす！", "これはもう、頑張るしかないっすね！"],
-    "快活": ["やった！元気に産まれたね！", "かわいい！これからよろしくね！"],
-    "お嬢様": ["まあ……なんて愛らしいのでしょう。", "この子の未来が明るいものでありますように。"],
-    "クールＭ": ["無事に出生した。まずは安心だ。", "この子を守る責任がある。"],
-    "クールＦ": ["無事ね。よかった。", "小さいけれど、確かな命ね。"],
-    "老人": ["新しい命じゃ……めでたいのう。", "この村にも未来が生まれたのじゃな。"]
-  };
-  return randChoice(lines[type] || lines[character.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
+  const key = role === "母" ? "birthParent" : "birthPartner";
+  return getDialogueLine({
+    character,
+    scene: "reproduction",
+    key,
+    context: { roleLabel: role }
+  }) || "";
 }
 
 function showBirthModal(village, mother, father, child) {

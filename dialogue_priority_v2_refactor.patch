@@ -1,0 +1,1149 @@
+diff --git a/js/conversation.js b/js/conversation.js
+index 2ddd44d..4cd43d2 100644
+--- a/js/conversation.js
++++ b/js/conversation.js
+@@ -2,9 +2,8 @@ import { theVillage } from "./main.js";
+ import { updateUI } from "./ui.js";
+ import { getPortraitPath, isForcedHealingAction } from "./util.js";
+ import { refreshJobTable } from "./domain/jobTables.js";
+-import { getReproductiveStatusLine } from "./reproduction.js";
+ import { ACTION_DEFEND, ACTION_TRAP, isRaidActionAssignable } from "./raidRules.js";
+-import { getDialogueLine, getDialogueLines, pickDialogueLine } from "./dialogue/dialogueEngine.js";
++import { getConversationLine } from "./dialogue/dialogueEngine.js";
+ 
+ // 訪問者タイプごとの勧誘成功率係数
+ const RECRUITMENT_COEFFICIENTS = {
+@@ -24,40 +23,8 @@ const MERCHANT_TRADE = {
+ };
+ 
+ function createConversationStatusHtml(character) {
+-  const isExhausted = character.hp <= 33 || character.mp <= 33;
+-  const isTired = (character.hp > 33 && character.hp <= 59) || (character.mp > 33 && character.mp <= 59);
+-  const isHealthy = character.hp > 59 && character.mp > 59;
+-  const isUnderRaid = theVillage.villageTraits.includes("襲撃中");
+-
+-  if (character.mindTraits && character.mindTraits.includes("襲撃者") && character.raiderDialogues) {
+-    const raiderLine = character.raiderDialogues[Math.floor(Math.random() * character.raiderDialogues.length)];
+-    return `<p><strong></strong> ${raiderLine}</p>`;
+-  }
+-  const reproductiveLine = getReproductiveStatusLine(character);
+-  const isPregnancyLine = reproductiveLine &&
+-    character.bodyTraits &&
+-    (character.bodyTraits.includes("妊娠") || character.bodyTraits.includes("臨月"));
+-  if (reproductiveLine && !isPregnancyLine) {
+-    return `<p><strong></strong> ${reproductiveLine}</p>`;
+-  }
+-  const pickLine = (status) => {
+-    const statusLine = getStatusLine(character, status);
+-    if (isPregnancyLine && Math.random() < 0.5) return reproductiveLine;
+-    return statusLine;
+-  };
+-  if (isUnderRaid) {
+-    return `<p><strong></strong> ${pickLine("raid")}</p>`;
+-  }
+-  if (isExhausted) {
+-    return `<p><strong></strong> ${pickLine("exhausted")}</p>`;
+-  }
+-  if (isTired) {
+-    return `<p><strong></strong> ${pickLine("tired")}</p>`;
+-  }
+-  if (isHealthy) {
+-    return `<p><strong></strong> ${pickLine("healthy")}</p>`;
+-  }
+-  return "";
++  const line = getConversationLine({ character, village: theVillage });
++  return `<p><strong></strong> ${line || "..."}</p>`;
+ }
+ 
+ function refreshConversationText(character) {
+@@ -226,79 +193,6 @@ export function closeConversationModal() {
+   if (modal) modal.style.display = "none";
+ }
+ 
+-/**
+- * 状態に応じたセリフを返す
+- */
+-function getStatusLine(character, status) {
+-  if (character.mindTraits && character.mindTraits.includes("訪問者")) {
+-    return getVisitorLine(character);
+-  }
+-
+-  const statusLines = getDialogueLines({ character, scene: "status", key: status });
+-
+-  // 健康状態で勤勉度が低い場合の特別な会話
+-  if (status === "healthy" && character.ind <= 10) {
+-    const lazyLines = getLazyLines(character);
+-    if (lazyLines.length > 0) {
+-      const allLines = [...statusLines, ...lazyLines];
+-      const currentSeason = getCurrentSeason();
+-      if (currentSeason) {
+-        allLines.push(...getSeasonalLines(character, currentSeason));
+-      }
+-      return pickDialogueLine(allLines) || "...";
+-    }
+-  }
+-
+-  // 季節に応じた会話を取得
+-  if (status === "healthy") {
+-    const currentSeason = getCurrentSeason();
+-    if (currentSeason) {
+-      const seasonLines = getSeasonalLines(character, currentSeason);
+-      if (seasonLines.length > 0) {
+-        return pickDialogueLine([...statusLines, ...seasonLines]) || "...";
+-      }
+-    }
+-  }
+-
+-  const statusLine = pickDialogueLine(statusLines);
+-  if (!statusLine) {
+-    console.warn(`Status "${status}" line not found for character ${character.name}`);
+-    return "...";
+-  }
+-  return statusLine;
+-}
+-
+-function getCurrentSeason() {
+-  const traits = Array.isArray(theVillage.villageTraits) ? theVillage.villageTraits : [];
+-  const seasonTraits = ["春", "夏", "秋", "冬"];
+-  return seasonTraits.find(trait => traits.includes(trait)) || "";
+-}
+-
+-/**
+- * 訪問者タイプごとの専用セリフを返す
+- */
+-function getVisitorLine(character) {
+-  return getDialogueLine({
+-    character,
+-    scene: "visitor",
+-    key: getVisitorType(character)
+-  });
+-}
+-
+-/**
+- * 勤勉度が低い場合の会話を返す
+- */
+-function getLazyLines(character) {
+-  return getDialogueLines({ character, scene: "lazy" });
+-}
+-
+-/**
+- * 季節に応じた会話を返す
+- */
+-function getSeasonalLines(character, season) {
+-  return getDialogueLines({ character, scene: "season", key: season });
+-}
+-
+ /**
+  * キャラクターの行動を変更する
+  */
+diff --git a/js/data/dialogue/conditionLines.js b/js/data/dialogue/conditionLines.js
+new file mode 100644
+index 0000000..a195dfc
+--- /dev/null
++++ b/js/data/dialogue/conditionLines.js
+@@ -0,0 +1,184 @@
++// 通常会話で使う状態異常・生活状態セリフデータ。
++// ここでは状態を口調にせず、口調別の文面だけを保持する。
++
++export const CONDITION_LINES = {
++  overwork: {
++    default: ["体が限界を訴えている。今は休んだ方がよさそうだ。"],
++    male: ["無理をしすぎたな……少し休まないとまずい。", "体が重い。これ以上は倒れかねないな。"],
++    female: ["無理をしすぎましたね……少し休まないと危ないです。", "体が重いです。これ以上は倒れてしまいそうです。"],
++    bold: ["まだ動ける……と言いたいところだが、さすがに限界だ。"],
++    polite: ["申し訳ありません。今は休養を優先させていただきます。"],
++    rough: ["くそっ、体が鉛みてぇだ……休ませろ。"],
++    shy: ["すみません……もう、体がついてきません……。"],
++    cool: ["過労状態だ。これ以上の稼働は非効率だな。"],
++    bright: ["ちょっと頑張りすぎたかも……今日は休みたいな。"],
++    elder: ["無理をしすぎたのう……この老体には堪えるわい。"],
++    child: ["もうくたくただよ……おやすみしたい……。"],
++    childMale: ["ぼく、もう動けないよ……休みたい……。"],
++    childFemale: ["わたし、もう動けないよ……おやすみしたい……。"],
++    infant: ["ふぇ……。", "すやすや……。"],
++    baby: ["ふぇ……。", "すやすや……。"]
++  },
++
++  depression: {
++    default: ["心が沈んでいる。今は静かにしていたい。"],
++    male: ["気分が沈んでいる……何をするにも力が入らない。"],
++    female: ["気持ちが沈んでいます……少し静かにしていたいです。"],
++    bold: ["情けないが、今は気力が出ない。無理に動いても仕方ない。"],
++    polite: ["申し訳ありません。今は心を整える時間が必要です。"],
++    rough: ["気分が最悪だ……今日は何も言いたくねぇ。"],
++    shy: ["ごめんなさい……今は、誰とも話すのがつらいです……。"],
++    cool: ["精神状態が悪い。判断を急ぐべきではないな。"],
++    bright: ["元気にしてたいけど……今日はちょっと難しいかも。"],
++    elder: ["心が重い日もあるものじゃ……静かに休ませてくれ。"],
++    child: ["なんだかかなしい……ひとりにしないで……。"],
++    childMale: ["ぼく、なんだかかなしい……。"],
++    childFemale: ["わたし、なんだかかなしい……。"],
++    infant: ["ふぇ……ふぇぇ……。"],
++    baby: ["ふぇ……ふぇぇ……。"]
++  },
++
++  injured: {
++    default: ["傷が痛む。今は無理をしない方がいい。"],
++    male: ["傷が痛むな……無理はできない。"],
++    female: ["傷が痛みます……無理はできません。"],
++    bold: ["この傷くらい……と言いたいが、今は動きが鈍るな。"],
++    polite: ["負傷しております。しばらく療養させてください。"],
++    rough: ["ちっ、傷がうずきやがる……。"],
++    shy: ["いたた……すみません、少し休みたいです……。"],
++    cool: ["負傷している。回復を優先すべきだ。"],
++    bright: ["痛いけど……ちゃんと治せば大丈夫だよね。"],
++    elder: ["傷が痛むのう……若い頃のようにはいかんわい。"],
++    child: ["いたいよ……けが、なおるかな……。"],
++    childMale: ["いたいよ……ぼく、けがしちゃった……。"],
++    childFemale: ["いたいよ……わたし、けがしちゃった……。"],
++    infant: ["ぎゃあ……ふぇぇ……。"],
++    baby: ["ぎゃあ……ふぇぇ……。"]
++  },
++
++  epidemic: {
++    default: ["熱がある。疫病を広げないよう、静かに休むべきだ。"],
++    male: ["熱がひどい……人にうつさないよう休んでおく。"],
++    female: ["熱がひどいです……皆にうつさないよう休みます。"],
++    bold: ["疫病ごときに負けたくはないが、今は休むしかないな。"],
++    polite: ["発熱がひどいですね。皆に広げぬよう、静かに休みます。"],
++    rough: ["だるい……強がっても仕方ねえ。休ませろ。"],
++    shy: ["ねつが……すみません、近づかない方がいいかも……。"],
++    cool: ["感染を広げるべきではない。隔離と休養が妥当だ。"],
++    bright: ["今日はちょっと元気が出ないや……早く治さないとね。"],
++    elder: ["疫病は侮れん。若い者も無理をするでないぞ。"],
++    child: ["うう……からだがあついよ……。"],
++    childMale: ["うう……からだがあついよ。"],
++    childFemale: ["ねつっぽい……おやすみしたい。"],
++    infant: ["ふぇ……あう……。"],
++    baby: ["ふぇ……あう……。"]
++  },
++
++  sickness: {
++    default: ["体調が悪い。今日は療養した方がよさそうだ。"],
++    male: ["体調が悪いな……今日は休んでおく。"],
++    female: ["体調が悪いです……今日は休ませてください。"],
++    bold: ["体調不良か……無理に動いても足手まといになるな。"],
++    polite: ["体調が優れません。休養を取らせていただきます。"],
++    rough: ["ちっ、だるくて仕方ねぇ……。"],
++    shy: ["すみません……今日は体調が悪くて……。"],
++    cool: ["体調不良だ。回復を優先する。"],
++    bright: ["今日は元気が出ないな……早く治したいよ。"],
++    elder: ["体調がすぐれんのう……無理はせん方がよい。"],
++    child: ["からだがだるいよ……おやすみしたい……。"],
++    childMale: ["ぼく、からだがだるいよ……。"],
++    childFemale: ["わたし、からだがだるいよ……。"],
++    infant: ["ふぇ……んぅ……。"],
++    baby: ["ふぇ……んぅ……。"]
++  },
++
++  hunger: {
++    default: ["空腹で力が出ない。食べ物が必要だ。"],
++    male: ["腹が減って力が出ない……食べ物が欲しい。"],
++    female: ["お腹が空いて力が出ません……何か食べたいです。"],
++    bold: ["腹が減って力が出ないな……食料が要る。"],
++    polite: ["空腹で力が入りません。食料の確保が必要ですね。"],
++    rough: ["腹が減って動けねぇ……飯をくれ。"],
++    shy: ["お腹が空いて……少し、つらいです……。"],
++    cool: ["空腹で能力が落ちている。食料補給が必要だ。"],
++    bright: ["お腹すいたなぁ……何か食べたいよ。"],
++    elder: ["腹が減っては何もできんのう……。"],
++    child: ["おなかすいたよ……ごはん、ないの……？"],
++    childMale: ["ぼく、おなかすいたよ……。"],
++    childFemale: ["わたし、おなかすいたよ……。"],
++    infant: ["んま……んま……。"],
++    baby: ["んま……んま……。"]
++  },
++
++  cold: {
++    default: ["寒さで体が震える。暖を取る必要がある。"],
++    male: ["寒いな……このままだと体がもたない。"],
++    female: ["寒いです……暖かい場所に行きたいですね。"],
++    bold: ["寒さくらいで弱音は吐きたくないが……これは厳しいな。"],
++    polite: ["寒さが厳しいですね。暖を取らせていただきます。"],
++    rough: ["くそ寒い……体が震えやがる。"],
++    shy: ["さ、寒いです……手が震えて……。"],
++    cool: ["体温が下がっている。暖を取るべきだ。"],
++    bright: ["寒いね……早くあったまりたいな。"],
++    elder: ["寒さが骨身にしみるのう……。"],
++    child: ["さむいよ……あったかいところ、いきたい……。"],
++    childMale: ["ぼく、さむいよ……。"],
++    childFemale: ["わたし、さむいよ……。"],
++    infant: ["ふぇ……ぶるぶる……。"],
++    baby: ["ふぇ……ぶるぶる……。"]
++  },
++
++  critical: {
++    default: ["意識が遠い。今はただ、命をつなぎとめている。"],
++    male: ["意識が遠い……まだ、終わるわけにはいかない。"],
++    female: ["意識が遠いです……まだ、終わりたくありません。"],
++    bold: ["ここで倒れるわけには……まだ、終われない。"],
++    polite: ["申し訳ありません……少し、意識が遠のいております……。"],
++    rough: ["くそ……まだ、くたばってたまるか……。"],
++    shy: ["こわい……まだ、ここにいたいです……。"],
++    cool: ["危険な状態だ。だが、まだ意識は残っている。"],
++    bright: ["まだ……みんなと一緒にいたいよ……。"],
++    elder: ["まだ逝くには早いのう……もう少しだけ、踏ん張るか……。"],
++    child: ["こわいよ……ねむっちゃだめなの……？"],
++    childMale: ["ぼく、こわいよ……まだ、ねむりたくない……。"],
++    childFemale: ["わたし、こわいよ……まだ、ねむりたくない……。"],
++    infant: ["ふぇ……ふぇ……。"],
++    baby: ["ふぇ……ふぇ……。"]
++  },
++
++  madness: {
++    default: ["心が乱れている。まともに考えがまとまらない。"],
++    male: ["頭の中がぐちゃぐちゃだ……何が正しいのかわからない。"],
++    female: ["頭の中が乱れています……何が正しいのかわかりません。"],
++    bold: ["気分が荒れている……今は近づかない方がいい。"],
++    polite: ["申し訳ありません。少々、心が乱れております。"],
++    rough: ["ああ、うるせぇ……頭が割れそうだ。"],
++    shy: ["こわい……自分でも、何を考えているのか……。"],
++    cool: ["精神が不安定だ。判断を保留すべきだな。"],
++    bright: ["なんだか変な気分……笑っていいのか泣いていいのかわかんない。"],
++    elder: ["心が乱れておる……昔の記憶まで騒ぎよるわい。"],
++    child: ["やだ……あたま、ぐるぐるする……。"],
++    childMale: ["ぼく、あたまがぐるぐるする……。"],
++    childFemale: ["わたし、あたまがぐるぐるする……。"],
++    infant: ["あう……ふぇ……。"],
++    baby: ["あう……ふぇ……。"]
++  },
++
++  mentalStress: {
++    default: ["少し心が疲れている。静かな時間が欲しい。"],
++    male: ["少し気疲れしているな……静かに過ごしたい。"],
++    female: ["少し心が疲れています……静かに過ごしたいです。"],
++    bold: ["気疲れしているが、まだ折れるほどじゃない。"],
++    polite: ["少々心労が溜まっております。落ち着く時間が必要ですね。"],
++    rough: ["面倒が多すぎる……少し黙ってたい気分だ。"],
++    shy: ["少し、気持ちが疲れています……。"],
++    cool: ["精神的な疲労がある。休息で調整しよう。"],
++    bright: ["ちょっと気疲れしちゃった。少し休めば大丈夫だよ。"],
++    elder: ["心労が溜まるのう……静かな茶でも欲しいわい。"],
++    child: ["なんだかつかれちゃった……しずかにしてたい……。"],
++    childMale: ["ぼく、ちょっとつかれちゃった……。"],
++    childFemale: ["わたし、ちょっとつかれちゃった……。"],
++    infant: ["あう……。"],
++    baby: ["あう……。"]
++  }
++};
+diff --git a/js/data/dialogue/reproductionLines.js b/js/data/dialogue/reproductionLines.js
+new file mode 100644
+index 0000000..bb872ed
+--- /dev/null
++++ b/js/data/dialogue/reproductionLines.js
+@@ -0,0 +1,212 @@
++// 妊娠・出産・成人まわりのセリフデータ。
++// 妊娠/臨月/産褥/出産は肉体状態として扱い、文体は会話エンジンの実効口調で解決する。
++
++export const REPRODUCTION_LINES = {
++  pregnantConversation: {
++    "普通Ｍ": ["まさか俺が妊娠するなんてな……まだ実感が追いつかない。", "体の中に命があるって、こんなに落ち着かないものなんだな。"],
++    "普通Ｆ": ["新しい命がいるんですね。大切にします。", "無理はしないようにします。"],
++    "強気Ｍ": ["は？ 俺が妊娠？ ……冗談じゃないが、逃げる気もない。", "戸惑いはある。苛立ちもある。だが守るものができたなら守る。"],
++    "強気Ｆ": ["驚いたけど、覚悟はできてるわ。", "私がしっかりしないとね。"],
++    "内気": ["まだ少し、信じられません……。", "ちゃんとできるか、不安です……。"],
++    "陰気": ["……妙な気分だ。自分の体じゃないみたいで落ち着かない。", "……自分に務まるのか。考えるほど胃が沈む。"],
++    "お調子者": ["いやー、びっくりっすね！ っていうか本当に自分がっすか！？", "これは頑張らないとっすね。まだ全然落ち着かないっすけど！"],
++    "快活": ["びっくりしたけど、なんだか嬉しい！", "無理せず元気にいこう！"],
++    "お嬢様": ["まあ……不思議な気持ちですわ。", "大切に過ごしますわ。"],
++    "クールＭ": ["状況は理解した。俺の体で妊娠が進行している、という事実にな。", "想定外だ。感情は後で処理する。今は無理を避ける。"],
++    "クールＦ": ["理解したわ。慎重に過ごす。", "少し不思議な感覚ね。"],
++    "老人": ["命とは巡るものじゃのう。", "大事にせねばならんのう。"],
++
++    polite: ["体の内で命が育っております。無理をせず、大切に過ごします。"],
++    rough: ["まさかこの体で妊娠するとはな……落ち着かねぇ。"],
++    shy: ["まだ少し、信じられません……。"],
++    cool: ["状況は理解した。今は体調管理を優先する。"],
++    bright: ["びっくりしたけど、ちゃんと元気に過ごしたいな！"],
++    cute: ["びっくりしたけど、だいじに過ごすね～。"],
++    neutralFemale: ["体の中に命があるって、不思議な感じだね。"],
++    child: ["おなかの中、ふしぎな感じがする……。"],
++    childMale: ["おなかが変な感じ……ぼく、大丈夫かな。"],
++    childFemale: ["おなかがふしぎ……赤ちゃん、いるのかな。"],
++    infant: ["あう……んぅ……。"],
++    baby: ["あう……んぅ……。"],
++    default: ["体の内側で、新しい命が育っている。"]
++  },
++
++  fullTermConversation: {
++    "普通Ｍ": ["腹が重い……本当に、もうすぐなんだな。まだ頭が追いつかない。", "怖くないと言えば嘘になるけど、ここまで来たなら迎えるしかない。"],
++    "普通Ｆ": ["もうすぐ会えるんですね。少し緊張します。", "体は重いですが、楽しみです。"],
++    "強気Ｍ": ["くそ、体が思うように動かねぇ……だが音は上げない。", "もうすぐだな。怖くないわけじゃないが、腹はくくった。"],
++    "強気Ｆ": ["もうすぐね。弱音なんて吐かないわ。", "大丈夫、ちゃんと産んでみせる。"],
++    "内気": ["こ、怖いです……でも、会いたいです。", "もうすぐなんですね……どきどきします。"],
++    "陰気": ["……重い。怖い。けど、ここまで来てしまった。", "……終わりじゃなくて、始まりか。正直、まだ受け止めきれていない。"],
++    "お調子者": ["いよいよっすね、さすがに笑ってごまかせないっす！", "もうすぐ会えるとか、すごいっすね……いや、めちゃくちゃ緊張するっす。"],
++    "快活": ["もうすぐだね！ちょっと怖いけど楽しみ！", "元気な子だといいな！"],
++    "お嬢様": ["いよいよですわね……心を整えますわ。", "少し怖いですけれど、楽しみですわ。"],
++    "クールＭ": ["出産が近い。体の違和感は強いが、手順を確認しておこう。", "動揺は残っている。だからこそ体調管理を最優先にする。"],
++    "クールＦ": ["もうすぐね。落ち着いて臨むわ。", "体は重いけれど、問題ないわ。"],
++    "老人": ["この年で命を迎えるとは、不思議なものじゃ。", "もうすぐじゃな……静かに待とう。"],
++
++    polite: ["出産が近づいております。静かに備えたいですね。"],
++    rough: ["腹が重くて仕方ねぇ……もうすぐってことか。"],
++    shy: ["もうすぐなんですね……どきどきします。"],
++    cool: ["出産が近い。落ち着いて準備を進める。"],
++    bright: ["もうすぐだね！ ちょっと怖いけど、会えるのが楽しみ！"],
++    cute: ["もうすぐ会えるんだね～。どきどきするよ～。"],
++    neutralFemale: ["もうすぐなんだね。体は重いけど、落ち着いていたい。"],
++    child: ["おなか、すごく重い……もうすぐなの？"],
++    childMale: ["おなか、すごく重い……ぼく、がんばれるかな。"],
++    childFemale: ["おなか、すごく重い……赤ちゃん、もう出てくるのかな。"],
++    infant: ["あうう……。"],
++    baby: ["あうう……。"],
++    default: ["出産の時が近づいている。"]
++  },
++
++  postpartumConversation: {
++    default: ["出産後の体はまだ回復しきっていない。今は療養が必要だ。"],
++    male: ["体がまだ戻らないな……今は休むしかない。"],
++    female: ["体がまだ戻りません……今は休ませてください。"],
++    bold: ["動きたいところだが、今は回復を優先するしかないな。"],
++    polite: ["出産後の体調がまだ整っておりません。しばらく休養します。"],
++    rough: ["くそ、体が重い……今は休むしかねぇ。"],
++    shy: ["すみません……まだ体がつらくて……。"],
++    cool: ["産褥期だ。回復を優先する。"],
++    bright: ["まだ体はつらいけど、少しずつ元気になるよ。"],
++    elder: ["産後は無理をしてはならん。静かに休むのじゃ。"],
++    child: ["からだがつらい……おやすみしていい……？"],
++    childMale: ["ぼく、からだがつらい……休みたい……。"],
++    childFemale: ["わたし、からだがつらい……休みたい……。"],
++    infant: ["ふぇ……すやすや……。"],
++    baby: ["ふぇ……すやすや……。"]
++  },
++
++  pregnancyNoticeParent: {
++    "普通Ｍ": ["まさか俺が妊娠するなんてな……驚きすぎて、まだ言葉が出ない。", "戸惑ってる。でも、体の中にいるなら大事にしないとな。"],
++    "普通Ｆ": ["新しい命がいるんですね。大切にします。", "少し不思議ですけど、嬉しいです。"],
++    "強気Ｍ": ["冗談みたいな話だな……腹は立つが、投げ出す気はない。", "戸惑いも苛立ちもある。だが、宿ったなら守り抜く。"],
++    "強気Ｆ": ["驚いたけど、覚悟はできてるわ。", "大丈夫、私がしっかりする。"],
++    "内気": ["まだ少し、信じられません……。", "ちゃんとできるか、不安です……でも嬉しいです。"],
++    "陰気": ["……妙な気分だ。驚くより先に、怖さが来る。", "……自分に務まるのか。正直、わからない。"],
++    "お調子者": ["いやー、びっくりっすね！ 自分のことなのに現実味がないっす！", "これは頑張らないとっすね！ まず落ち着くところからっすけど！"],
++    "快活": ["びっくりしたけど、なんだか嬉しい！", "無理せず元気にいこう！"],
++    "お嬢様": ["まあ……不思議な気持ちですわ。", "大切に過ごしますわ。"],
++    "クールＭ": ["状況は理解した。理解したが、動揺していないわけではない。", "想定外の妊娠だ。感情より先に、必要な備えを始める。"],
++    "クールＦ": ["理解したわ。慎重に過ごす。", "少し不思議な感覚ね。"],
++    "老人": ["命とは巡るものじゃのう。", "大事にせねばならんのう。"],
++
++    polite: ["新しい命が宿りました。大切に過ごします。"],
++    rough: ["まさかこの体で妊娠するとはな……投げ出す気はねぇ。"],
++    shy: ["まだ少し、信じられません……でも、大切にしたいです。"],
++    cool: ["状況は理解した。必要な備えを始める。"],
++    bright: ["びっくりしたけど、ちゃんと元気に過ごしたい！"],
++    cute: ["びっくりしたけど、大事にするね～。"],
++    neutralFemale: ["不思議な感じだね。まずは大事に過ごそう。"],
++    child: ["おなかに赤ちゃん……？ ふしぎ……。"],
++    childMale: ["ぼくのおなかに赤ちゃん……？ どうしたらいいの……？"],
++    childFemale: ["わたしのおなかに赤ちゃん……？ だいじにするね。"],
++    infant: ["あう……？"],
++    baby: ["あう……？"],
++    default: ["新しい命が宿った。"]
++  },
++
++  pregnancyNoticePartner: {
++    "普通Ｍ": [({ partner }) => `${partner.name}を支えないとな。`, "無事に育ってほしい。できることをするよ。"],
++    "普通Ｆ": [({ partner }) => `${partner.name}さんを支えます。`, "無事に産まれてきてほしいですね。"],
++    "強気Ｍ": [({ partner }) => `${partner.name}は俺が支える。`, "子も親も守ってみせる。"],
++    "強気Ｆ": [({ partner }) => `${partner.name}を支えるわ。任せて。`, "無事に迎える準備をするわよ。"],
++    "内気": [({ partner }) => `${partner.name}さんの力に、なりたいです……。`, "こ、これから大切にしないと……。"],
++    "陰気": [({ partner }) => `……${partner.name}を放ってはおけないな。`, "……無事なら、それでいい。"],
++    "お調子者": [({ partner }) => `${partner.name}を全力で支えるっす！`, "いやー、急に責任重大っすね！"],
++    "快活": [({ partner }) => `${partner.name}、一緒に頑張ろう！`, "元気な子だといいね！"],
++    "お嬢様": [({ partner }) => `${partner.name}様を丁寧に支えますわ。`, "新たな命に祝福がありますように。"],
++    "クールＭ": [({ partner }) => `${partner.name}の体調管理を優先する。`, "必要な準備を始めよう。"],
++    "クールＦ": [({ partner }) => `${partner.name}を支える。今はそれが最優先ね。`, "落ち着いて準備しましょう。"],
++    "老人": [({ partner }) => `${partner.name}を労わらねばのう。`, "新しい命とは、めでたいものじゃ。"],
++
++    polite: [({ partner }) => `${partner.name}を支えます。無事に育つよう備えましょう。`],
++    rough: [({ partner }) => `${partner.name}を放ってはおけねぇな。`],
++    shy: [({ partner }) => `${partner.name}さんの力に、なりたいです……。`],
++    cool: [({ partner }) => `${partner.name}の体調を優先する。`],
++    bright: [({ partner }) => `${partner.name}、一緒に頑張ろう！`],
++    cute: [({ partner }) => `${partner.name}を支えるね～。`],
++    neutralFemale: [({ partner }) => `${partner.name}を支えよう。`],
++    child: [({ partner }) => `${partner.name}、だいじょうぶかな……。`],
++    childMale: [({ partner }) => `${partner.name}、ぼくも手伝うよ。`],
++    childFemale: [({ partner }) => `${partner.name}、わたしも手伝うね。`],
++    infant: ["あう……？"],
++    baby: ["あう……？"],
++    default: [({ partner }) => `${partner.name}を支える。`]
++  },
++
++  adult: {
++    "普通Ｍ": ["今日から大人か。できることを一つずつやっていくよ。", "少し背筋が伸びるな。これからもよろしく。"],
++    "普通Ｆ": ["成人したんですね。これからも頑張ります。", "少し緊張しますけど、しっかりやっていきます。"],
++    "強気Ｍ": ["ようやく一人前だな。任せておけ。", "ここからが本番だ。しっかり働くさ。"],
++    "強気Ｆ": ["成人したからには、遠慮なく頼っていいわ。", "もう子供扱いはなしよ。私が支えるわ。"],
++    "内気": ["お、大人になったんですね……頑張ります。", "まだ不安ですけど、少しずつ慣れていきます。"],
++    "陰気": ["……成人か。逃げ場はないな。", "……まあ、やるべきことはやる。"],
++    "お調子者": ["ついに大人っすね！見ててくださいよ！", "いやー、これで一人前っす！たぶん！"],
++    "快活": ["成人だね！いっぱい頑張るよ！", "今日からもっと村の力になるね！"],
++    "お嬢様": ["成人いたしましたわ。皆様のお力になります。", "一人前として、恥じぬよう努めますわ。"],
++    "クールＭ": ["成人した。役割を果たそう。", "これからは大人として判断する。"],
++    "クールＦ": ["成人ね。落ち着いて役目を果たすわ。", "一人前として扱ってもらって構わないわ。"],
++    "老人": ["成人とはめでたいのう。若い力は村の宝じゃ。", "これからが人生の始まりじゃな。"],
++    default: ["成人した。これからは一人前として歩んでいく。"]
++  },
++
++  birthParent: {
++    "普通Ｍ": [({ roleLabel }) => `${roleLabel}になったんだな……大切にしよう。`, "無事でよかった。本当に。"],
++    "普通Ｆ": [({ roleLabel }) => `${roleLabel}になったんですね……嬉しいです。`, "小さくて、あたたかいですね。"],
++    "強気Ｍ": ["よく来たな。俺が守ってやる。", "無事に産まれてくれて何よりだ。"],
++    "強気Ｆ": ["よく来たわね。絶対守るから。", "大丈夫、ここから一緒に生きていくのよ。"],
++    "内気": ["ち、小さい……かわいいです……。", "無事で……よかった……。"],
++    "陰気": ["……産まれたのか。", "……守る理由ができたな。"],
++    "お調子者": ["うわ、ちっちゃいっすね！かわいいっす！", "これはもう、頑張るしかないっすね！"],
++    "快活": ["やった！元気に産まれたね！", "かわいい！これからよろしくね！"],
++    "お嬢様": ["まあ……なんて愛らしいのでしょう。", "この子の未来が明るいものでありますように。"],
++    "クールＭ": ["無事に出生した。まずは安心だ。", "この子を守る責任がある。"],
++    "クールＦ": ["無事ね。よかった。", "小さいけれど、確かな命ね。"],
++    "老人": ["新しい命じゃ……めでたいのう。", "この村にも未来が生まれたのじゃな。"],
++
++    polite: ["無事に生まれてくれて、本当に何よりです。"],
++    rough: ["よく産まれてきたな……守ってやる。"],
++    shy: ["ち、小さい……無事で、よかった……。"],
++    cool: ["無事に出生した。まずは安心だ。"],
++    bright: ["やった！元気に産まれたね！"],
++    cute: ["小さくてかわいいね～。無事でよかったぁ。"],
++    neutralFemale: ["小さいけれど、ちゃんと命があるんだね。"],
++    child: ["う、うまれた……？ ちいさいね……。"],
++    childMale: ["う、うまれた……？ ぼく、がんばったの……？"],
++    childFemale: ["あかちゃん……うまれたの？ ちゃんと、だいじょうぶ？"],
++    infant: ["あう……あー……。"],
++    baby: ["あう……あー……。"],
++    default: ["新しい命が生まれた。"]
++  },
++
++  birthPartner: {
++    "普通Ｍ": [({ roleLabel }) => `${roleLabel}になったんだな……大切にしよう。`, "無事でよかった。本当に。"],
++    "普通Ｆ": [({ roleLabel }) => `${roleLabel}になったんですね……嬉しいです。`, "小さくて、あたたかいですね。"],
++    "強気Ｍ": ["よく来たな。俺が守ってやる。", "無事に産まれてくれて何よりだ。"],
++    "強気Ｆ": ["よく来たわね。絶対守るから。", "大丈夫、ここから一緒に生きていくのよ。"],
++    "内気": ["ち、小さい……かわいいです……。", "無事で……よかった……。"],
++    "陰気": ["……産まれたのか。", "……守る理由ができたな。"],
++    "お調子者": ["うわ、ちっちゃいっすね！かわいいっす！", "これはもう、頑張るしかないっすね！"],
++    "快活": ["やった！元気に産まれたね！", "かわいい！これからよろしくね！"],
++    "お嬢様": ["まあ……なんて愛らしいのでしょう。", "この子の未来が明るいものでありますように。"],
++    "クールＭ": ["無事に出生した。まずは安心だ。", "この子を守る責任がある。"],
++    "クールＦ": ["無事ね。よかった。", "小さいけれど、確かな命ね。"],
++    "老人": ["新しい命じゃ……めでたいのう。", "この村にも未来が生まれたのじゃな。"],
++
++    polite: ["無事に生まれてくれて、本当に何よりです。"],
++    rough: ["よく産まれてきたな……守ってやる。"],
++    shy: ["ち、小さい……無事で、よかった……。"],
++    cool: ["無事に出生した。まずは安心だ。"],
++    bright: ["やった！元気に産まれたね！"],
++    cute: ["小さくてかわいいね～。無事でよかったぁ。"],
++    neutralFemale: ["小さいけれど、ちゃんと命があるんだね。"],
++    child: ["あかちゃん、ちいさい……。"],
++    childMale: ["あかちゃん、ちいさいね……ぼくも守る。"],
++    childFemale: ["あかちゃん、ちいさいね……わたしも守る。"],
++    infant: ["あう……？"],
++    baby: ["あう……？"],
++    default: ["新しい命が生まれた。"]
++  }
++};
+diff --git a/js/data/dialogue/seasonLines.js b/js/data/dialogue/seasonLines.js
+index 6b56a6b..4a72a1a 100644
+--- a/js/data/dialogue/seasonLines.js
++++ b/js/data/dialogue/seasonLines.js
+@@ -2,6 +2,9 @@
+ 
+ export const SEASONAL_LINES = {
+     "春": {
++      "赤子": ["あうー。", "きゃっ。", "んま……。"],
++      "男児": ["あったかいね！ おそとであそびたい！", "お花、いっぱいさいてる！", "春ってなんだかわくわくするね！"],
++      "女児": ["あったかくて気持ちいいね。", "お花がいっぱいでかわいいね。", "春って、なんだかわくわくするね。"],
+       "普通Ｍ": ["春の陽気は心地いいね。", "花が咲き始めて綺麗だ。", "春の訪れを感じるね。"],
+       "丁寧Ｍ": ["春の息吹を感じますね。", "花々が美しく咲き誇る季節ですね。", "春の陽気に心が和みます。"],
+       "強気Ｍ": ["春だ！活動するにはピッタリの季節だぜ！", "花見でもするか？いい酒が飲めそうだ！", "春の陽気で体が騒ぐぜ！"],
+@@ -29,6 +32,9 @@ export const SEASONAL_LINES = {
+       ]
+     },
+     "夏": {
++      "赤子": ["あう……。", "んま……。", "ふぇ……あつい……。"],
++      "男児": ["あついね！ 水あそびしたい！", "夏って元気いっぱいな感じがする！", "つめたいもの、ほしいな！"],
++      "女児": ["あついね……水あそびしたいな。", "夏のおまつり、たのしみだね。", "つめたいもの、ほしいな。"],
+       "普通Ｍ": ["夏は暑いけど活気があるね。", "川で泳ぎたくなる季節だ。", "夏祭りが楽しみだな。"],
+       "丁寧Ｍ": ["夏の暑さも悪くないものですね。", "涼しい場所で過ごしたいものです。", "夏祭りが待ち遠しいですね。"],
+       "強気Ｍ": ["夏だぜ！熱い季節だ！", "川で泳ぐか？いい気分だぜ！", "夏祭りで盛り上がろうぜ！"],
+@@ -56,6 +62,9 @@ export const SEASONAL_LINES = {
+       ]
+     },
+     "秋": {
++      "赤子": ["あうー。", "んま。", "すやすや……。"],
++      "男児": ["木の実、ひろいにいきたい！", "葉っぱが赤くなってる！", "秋っておなかがすくね！"],
++      "女児": ["木の実、ひろいにいきたいな。", "葉っぱがきれいな色だね。", "秋っておなかがすくね。"],
+       "普通Ｍ": ["秋の実りは豊かだね。", "紅葉が綺麗な季節だ。", "秋の夜長は読書に最適だ。"],
+       "丁寧Ｍ": ["秋の実りに感謝ですね。", "紅葉の美しさに心奪われます。", "秋の夜長は読書に最適ですね。"],
+       "強気Ｍ": ["秋だ！収穫の季節だぜ！", "紅葉狩りでもするか？", "秋の夜長は酒が進むぜ！"],
+@@ -83,6 +92,9 @@ export const SEASONAL_LINES = {
+       ]
+     },
+     "冬": {
++      "赤子": ["ふぇ……。", "あう……さむい……。", "すやすや……。"],
++      "男児": ["さむいけど、雪であそびたい！", "手がつめたいよ……。", "あったかいところにいきたいな。"],
++      "女児": ["さむいけど、雪がきれいだね。", "手がつめたいよ……。", "あったかいところにいきたいな。"],
+       "普通Ｍ": ["冬は寒いけど静かで良いね。", "雪景色は美しいものだ。", "暖かい部屋で過ごしたいな。"],
+       "丁寧Ｍ": ["冬の厳しさも風情がありますね。", "雪景色は心が洗われる思いです。", "暖かい場所で過ごしたいものです。"],
+       "強気Ｍ": ["冬だぜ！寒さに負けるなよ！", "雪合戦でもするか？", "暖炉の前で酒が進むぜ！"],
+diff --git a/js/data/dialogue/statusLines.js b/js/data/dialogue/statusLines.js
+index 9262627..54b964a 100644
+--- a/js/data/dialogue/statusLines.js
++++ b/js/data/dialogue/statusLines.js
+@@ -1,27 +1,30 @@
+ // 通常会話の状態別・低勤勉セリフデータ。
+ 
++const INFANT_STATUS_LINES = {
++  raid: ["あうー……。", "んま……？", "ふぇ……。"],
++  exhausted: ["すやすや……。", "ふぇ……。", "んま……。"],
++  tired: ["ねむ……。", "あうー。", "すやすや……。"],
++  healthy: ["あうー。", "んま。", "ばぶ。", "きゃっ。"]
++};
++
+ export const CHILDLIKE_STATUS_LINES = {
+-    "無垢": {
+-      raid: ["あうー……。", "んま……？", "ふぇ……。"],
+-      exhausted: ["すやすや……。", "ふぇ……。", "んま……。"],
+-      tired: ["ねむ……。", "あうー。", "すやすや……。"],
+-      healthy: ["あうー。", "んま。", "ばぶ。", "きゃっ。"]
++  "赤子": INFANT_STATUS_LINES,
++  "無垢": INFANT_STATUS_LINES,
++  "萌芽": {
++    male: {
++      raid: ["こわいよ……。", "ぼく、まもれるかな……？", "だいじょうぶだよね……？"],
++      exhausted: ["もうつかれたよ……。", "ぼく、ねむい……。", "だっこして……。"],
++      tired: ["ちょっとねむいな。", "ぼく、すこし休むね。", "まだがんばれるよ。"],
++      healthy: ["えへへ、きょうもあそぶ？", "ねえねえ、あれなあに？", "ぼく、ちょっとできるよ！", "おそと、いきたいな。"]
+     },
+-    "萌芽": {
+-      male: {
+-        raid: ["こわいよ……。", "ぼく、まもれるかな……？", "だいじょうぶだよね……？"],
+-        exhausted: ["もうつかれたよ……。", "ぼく、ねむい……。", "だっこして……。"],
+-        tired: ["ちょっとねむいな。", "ぼく、すこし休むね。", "まだがんばれるよ。"],
+-        healthy: ["えへへ、きょうもあそぶ？", "ねえねえ、あれなあに？", "ぼく、ちょっとできるよ！", "おそと、いきたいな。"]
+-      },
+-      female: {
+-        raid: ["こわいよ……。", "わたし、だいじょうぶかな……？", "ぎゅってして……。"],
+-        exhausted: ["もうつかれちゃった……。", "わたし、ねむい……。", "だっこして……。"],
+-        tired: ["ちょっとねむいな。", "おひるねしたいな……。", "まだおてつだいできるよ。"],
+-        healthy: ["えへへ、きょうもあそぶ？", "ねえねえ、あれなあに？", "わたしもおてつだいする！", "おそと、いきたいな。"]
+-      }
++    female: {
++      raid: ["こわいよ……。", "わたし、だいじょうぶかな……？", "ぎゅってして……。"],
++      exhausted: ["もうつかれちゃった……。", "わたし、ねむい……。", "だっこして……。"],
++      tired: ["ちょっとねむいな。", "おひるねしたいな……。", "まだおてつだいできるよ。"],
++      healthy: ["えへへ、きょうもあそぶ？", "ねえねえ、あれなあに？", "わたしもおてつだいする！", "おそと、いきたいな。"]
+     }
+-  };
++  }
++};
+ 
+ export const STATUS_LINES = {
+       raid: {
+@@ -185,6 +188,9 @@ export const STATUS_LINES = {
+     };
+ 
+ export const LAZY_LINES = {
++    "赤子": ["あう……。", "んま……。", "すやすや……。"],
++    "男児": ["おしごと、ちょっとやだ……。", "ぼく、今日はあそびたいな。", "おやすみしてもいい？"],
++    "女児": ["おしごと、ちょっとやだな……。", "わたし、今日はあそびたいな。", "おやすみしてもいい？"],
+     "普通Ｍ": ["仕事なんてしたくないなぁ…", "今日はのんびりしたいな。", "休みたい気分だ。"],
+     "丁寧Ｍ": ["今日は少し休息を取りたい気分です。", "仕事は…少し後回しにしたいですね。", "休息も大切かと思います。"],
+     "強気Ｍ": ["仕事？今日はパスだ！", "働くより遊びたい気分だぜ！", "休みてぇなぁ！"],
+diff --git a/js/data/dialogue/toneProfiles.js b/js/data/dialogue/toneProfiles.js
+index 627a6b3..4846129 100644
+--- a/js/data/dialogue/toneProfiles.js
++++ b/js/data/dialogue/toneProfiles.js
+@@ -1,18 +1,23 @@
+ // 会話エンジンが使う実効口調定義。
+-// 保存データの speechType は変更せず、無垢/男児/女児はここで仮想口調として解決する。
++// 保存データの speechType は変更せず、無垢/萌芽はここで仮想口調として解決する。
+ 
+ export const DEFAULT_MALE_TONE = "普通Ｍ";
+ export const DEFAULT_FEMALE_TONE = "普通Ｆ";
+ 
++export const TONE_ALIASES = {
++  "無垢": "赤子"
++};
++
+ export const TONE_PROFILES = {
+-  "無垢": { family: "infant", gender: "child", fallback: ["child", "default"] },
++  "赤子": { family: "infant", gender: "child", fallback: ["baby", "infant", "child", "default"] },
++  "無垢": { aliasOf: "赤子", family: "infant", gender: "child", fallback: ["baby", "infant", "child", "default"] },
+   "男児": { family: "childMale", gender: "male", fallback: ["childMale", "child", "male", "default"] },
+   "女児": { family: "childFemale", gender: "female", fallback: ["childFemale", "child", "female", "default"] },
+ 
+   "普通Ｍ": { family: "normalMale", gender: "male", fallback: ["male", "default"] },
+   "丁寧Ｍ": { family: "polite", gender: "male", fallback: ["polite", "male", "default"] },
+   "強気Ｍ": { family: "bold", gender: "male", fallback: ["bold", "male", "default"] },
+-  "乱暴": { family: "rough", gender: "male", fallback: ["bold", "male", "default"] },
++  "乱暴": { family: "rough", gender: "male", fallback: ["rough", "bold", "male", "default"] },
+   "お調子者": { family: "bright", gender: "male", fallback: ["bright", "male", "default"] },
+   "陰気": { family: "shy", gender: "male", fallback: ["shy", "male", "default"] },
+   "クールＭ": { family: "cool", gender: "male", fallback: ["cool", "male", "default"] },
+@@ -23,16 +28,20 @@ export const TONE_PROFILES = {
+   "快活": { family: "bright", gender: "female", fallback: ["bright", "female", "default"] },
+   "内気": { family: "shy", gender: "female", fallback: ["shy", "female", "default"] },
+   "強気Ｆ": { family: "bold", gender: "female", fallback: ["bold", "female", "default"] },
+-  "蓮っ葉": { family: "rough", gender: "female", fallback: ["bold", "female", "default"] },
++  "蓮っ葉": { family: "rough", gender: "female", fallback: ["rough", "bold", "female", "default"] },
+   "おっとり": { family: "polite", gender: "female", fallback: ["polite", "female", "default"] },
+-  "ぶりっこ": { family: "cute", gender: "female", fallback: ["bright", "female", "default"] },
++  "ぶりっこ": { family: "cute", gender: "female", fallback: ["cute", "bright", "female", "default"] },
+   "クールＦ": { family: "cool", gender: "female", fallback: ["cool", "female", "default"] },
+   "ギャル風": { family: "bright", gender: "female", fallback: ["bright", "female", "default"] },
+-  "中性的": { family: "neutralFemale", gender: "female", fallback: ["female", "default"] },
++  "中性的": { family: "neutralFemale", gender: "female", fallback: ["neutralFemale", "female", "default"] },
+ 
+   "老人": { family: "elder", gender: "neutral", fallback: ["elder", "polite", "default"] }
+ };
+ 
++export function normalizeDialogueTone(tone) {
++  return TONE_ALIASES[tone] || tone;
++}
++
+ export function getDefaultToneForCharacter(character) {
+   return character?.spiritSex === "女" ? DEFAULT_FEMALE_TONE : DEFAULT_MALE_TONE;
+ }
+@@ -45,14 +54,33 @@ export function resolveDialogueTone(character) {
+   const mindTraits = Array.isArray(character?.mindTraits) ? character.mindTraits : [];
+   const spiritSex = character?.spiritSex || character?.bodySex || "男";
+ 
+-  if (mindTraits.includes("無垢")) return "無垢";
++  if (mindTraits.includes("無垢")) return "赤子";
+   if (mindTraits.includes("萌芽")) return spiritSex === "女" ? "女児" : "男児";
+ 
+-  return character?.speechType || (spiritSex === "女" ? DEFAULT_FEMALE_TONE : DEFAULT_MALE_TONE);
++  return normalizeDialogueTone(character?.speechType) || (spiritSex === "女" ? DEFAULT_FEMALE_TONE : DEFAULT_MALE_TONE);
++}
++
++export function getToneLookupKeys(tone, character = null) {
++  const normalizedTone = normalizeDialogueTone(tone);
++  const profile = TONE_PROFILES[normalizedTone] || TONE_PROFILES[tone];
++  const defaultTone = getDefaultToneForCharacter(character);
++  const defaultProfile = TONE_PROFILES[defaultTone];
++  const fallbackWithoutDefault = (keys = []) => keys.filter(key => key !== "default");
++  return uniqueKeys([
++    normalizedTone,
++    tone,
++    profile?.family,
++    ...fallbackWithoutDefault(profile?.fallback),
++    defaultTone,
++    defaultProfile?.family,
++    ...fallbackWithoutDefault(defaultProfile?.fallback),
++    "default"
++  ]);
+ }
+ 
+ export function isChildlikeDialogueTone(tone) {
+-  return tone === "無垢" || tone === "男児" || tone === "女児";
++  const normalizedTone = normalizeDialogueTone(tone);
++  return normalizedTone === "赤子" || normalizedTone === "男児" || normalizedTone === "女児";
+ }
+ 
+ export function uniqueKeys(keys) {
+diff --git a/js/dialogue/dialogueEngine.js b/js/dialogue/dialogueEngine.js
+index 9f946cc..b8b8dc1 100644
+--- a/js/dialogue/dialogueEngine.js
++++ b/js/dialogue/dialogueEngine.js
+@@ -1,12 +1,15 @@
+ import {
+-  getDefaultToneForCharacter,
++  getToneLookupKeys,
+   isChildlikeDialogueTone,
++  normalizeDialogueTone,
+   resolveDialogueTone,
+   resolveStoredSpeechType,
+   uniqueKeys
+ } from "../data/dialogue/toneProfiles.js";
+ import { CHILDLIKE_STATUS_LINES, LAZY_LINES, STATUS_LINES } from "../data/dialogue/statusLines.js";
+ import { SEASONAL_LINES } from "../data/dialogue/seasonLines.js";
++import { CONDITION_LINES } from "../data/dialogue/conditionLines.js";
++import { REPRODUCTION_LINES } from "../data/dialogue/reproductionLines.js";
+ import { VISITOR_GENERIC_LINES, VISITOR_LINES } from "../data/dialogue/visitorLines.js";
+ import {
+   BUDDING_EVENT_LINES,
+@@ -21,6 +24,32 @@ import {
+ 
+ export { resolveDialogueTone, resolveStoredSpeechType } from "../data/dialogue/toneProfiles.js";
+ 
++export const CONVERSATION_PRIORITY = {
++  NORMAL: 1,
++  SEVERE: 2,
++  EMERGENCY: 3
++};
++
++const SEASON_TRAITS = ["春", "夏", "秋", "冬"];
++
++const BODY_CONDITION_CANDIDATES = [
++  { trait: "危篤", scene: "condition", key: "critical", priority: CONVERSATION_PRIORITY.EMERGENCY },
++  { trait: "負傷", scene: "condition", key: "injured", priority: CONVERSATION_PRIORITY.SEVERE },
++  { trait: "疫病", scene: "condition", key: "epidemic", priority: CONVERSATION_PRIORITY.SEVERE },
++  { trait: "病気", scene: "condition", key: "sickness", priority: CONVERSATION_PRIORITY.SEVERE },
++  { trait: "過労", scene: "condition", key: "overwork", priority: CONVERSATION_PRIORITY.SEVERE },
++  { trait: "産褥", scene: "reproduction", key: "postpartumConversation", priority: CONVERSATION_PRIORITY.SEVERE },
++  { trait: "飢餓", scene: "condition", key: "hunger", priority: CONVERSATION_PRIORITY.SEVERE },
++  { trait: "凍え", scene: "condition", key: "cold", priority: CONVERSATION_PRIORITY.SEVERE },
++  { trait: "疲労", scene: "status", key: "tired", priority: CONVERSATION_PRIORITY.NORMAL }
++];
++
++const MIND_CONDITION_CANDIDATES = [
++  { trait: "抑鬱", scene: "condition", key: "depression", priority: CONVERSATION_PRIORITY.SEVERE },
++  { trait: "狂乱", scene: "condition", key: "madness", priority: CONVERSATION_PRIORITY.SEVERE },
++  { trait: "心労", scene: "condition", key: "mentalStress", priority: CONVERSATION_PRIORITY.NORMAL }
++];
++
+ export function pickDialogueLine(value, context = {}) {
+   if (Array.isArray(value)) {
+     if (value.length === 0) return null;
+@@ -37,33 +66,32 @@ function asLineArray(value, context = {}) {
+   return line ? [line] : [];
+ }
+ 
+-function selectToneLines(group, character) {
++function selectToneLines(group, character, context = {}) {
+   if (!group) return [];
+   const tone = resolveDialogueTone(character);
+-  const defaultTone = getDefaultToneForCharacter(character);
+-  const keys = uniqueKeys([tone, defaultTone]);
++  const keys = getToneLookupKeys(tone, character);
+   const key = keys.find(candidate => group[candidate]);
+-  return key ? asLineArray(group[key]) : [];
++  return key ? asLineArray(group[key], context) : [];
+ }
+ 
+-function getChildlikeStatusLines(character, status) {
+-  const tone = resolveDialogueTone(character);
++function getChildlikeStatusLines(character, status, context = {}) {
++  const tone = normalizeDialogueTone(resolveDialogueTone(character));
+   if (!isChildlikeDialogueTone(tone)) return [];
+ 
+-  if (tone === "無垢") {
+-    const lines = CHILDLIKE_STATUS_LINES["無垢"];
+-    return asLineArray(lines?.[status] || lines?.healthy);
++  if (tone === "赤子") {
++    const lines = CHILDLIKE_STATUS_LINES["赤子"] || CHILDLIKE_STATUS_LINES["無垢"];
++    return asLineArray(lines?.[status] || lines?.healthy, context);
+   }
+ 
+   const sexKey = tone === "女児" ? "female" : "male";
+   const lines = CHILDLIKE_STATUS_LINES["萌芽"]?.[sexKey] || CHILDLIKE_STATUS_LINES["萌芽"]?.male;
+-  return asLineArray(lines?.[status] || lines?.healthy);
++  return asLineArray(lines?.[status] || lines?.healthy, context);
+ }
+ 
+-function getStatusLines(character, status) {
+-  const childLines = getChildlikeStatusLines(character, status);
++function getStatusLines(character, status, context = {}) {
++  const childLines = getChildlikeStatusLines(character, status, context);
+   if (childLines.length > 0) return childLines;
+-  return selectToneLines(STATUS_LINES[status], character);
++  return selectToneLines(STATUS_LINES[status], character, context);
+ }
+ 
+ function getVisitorLines(visitorType) {
+@@ -76,8 +104,8 @@ function getRandomEventMood(eventKey, kind) {
+ }
+ 
+ export function getChildlikeRandomEventLine(character, { eventKey = null, kind = null, mood = null } = {}) {
+-  const tone = resolveDialogueTone(character);
+-  if (tone === "無垢") return pickDialogueLine(INFANT_EVENT_LINES);
++  const tone = normalizeDialogueTone(resolveDialogueTone(character));
++  if (tone === "赤子") return pickDialogueLine(INFANT_EVENT_LINES);
+ 
+   if (tone === "男児" || tone === "女児") {
+     const sexKey = tone === "女児" ? "female" : "male";
+@@ -155,14 +183,18 @@ function getRandomEventSecondLine(character, eventKey, { base = null, speechType
+   return isMale ? `${base}な。少し様子を見よう。` : `${base}ようです。少し様子を見ましょう。`;
+ }
+ 
+-export function getDialogueLines({ character, scene, key }) {
++export function getDialogueLines({ character, scene, key, context = {} }) {
+   switch (scene) {
+     case "status":
+-      return getStatusLines(character, key);
++      return getStatusLines(character, key, context);
+     case "lazy":
+-      return selectToneLines(LAZY_LINES, character);
++      return selectToneLines(LAZY_LINES, character, context);
+     case "season":
+-      return selectToneLines(SEASONAL_LINES[key], character);
++      return selectToneLines(SEASONAL_LINES[key], character, context);
++    case "condition":
++      return selectToneLines(CONDITION_LINES[key], character, context);
++    case "reproduction":
++      return selectToneLines(REPRODUCTION_LINES[key], character, context);
+     case "visitor":
+       return getVisitorLines(key);
+     default:
+@@ -177,5 +209,132 @@ export function getDialogueLine({ character, scene, key, context = {} }) {
+   if (scene === "randomEventSecond") {
+     return getRandomEventSecondLine(character, key, context);
+   }
+-  return pickDialogueLine(getDialogueLines({ character, scene, key }), context);
++  return pickDialogueLine(getDialogueLines({ character, scene, key, context }), context);
++}
++
++function hasTrait(character, trait, property) {
++  return Array.isArray(character?.[property]) && character[property].includes(trait);
++}
++
++function addCandidate(candidates, character, candidate, context) {
++  const id = `${candidate.scene}:${candidate.key}`;
++  if (candidates.some(existing => `${existing.scene}:${existing.key}` === id)) return;
++  if (getDialogueLines({ character, scene: candidate.scene, key: candidate.key, context }).length === 0) return;
++  candidates.push(candidate);
++}
++
++function getStatOrDefault(value, defaultValue) {
++  const number = Number(value);
++  return Number.isFinite(number) ? number : defaultValue;
++}
++
++function getHealthStatus(character) {
++  const hp = getStatOrDefault(character?.hp, 100);
++  const mp = getStatOrDefault(character?.mp, 100);
++  if (hp <= 33 || mp <= 33) return { key: "exhausted", priority: CONVERSATION_PRIORITY.SEVERE };
++  if ((hp > 33 && hp <= 59) || (mp > 33 && mp <= 59)) return { key: "tired", priority: CONVERSATION_PRIORITY.NORMAL };
++  return { key: "healthy", priority: CONVERSATION_PRIORITY.NORMAL };
++}
++
++function getCurrentSeason(village) {
++  const traits = Array.isArray(village?.villageTraits) ? village.villageTraits : [];
++  return SEASON_TRAITS.find(trait => traits.includes(trait)) || "";
++}
++
++function getVisitorType(visitor) {
++  const match = visitor?.name?.match(/^(.+)の/);
++  return match ? match[1] : null;
++}
++
++export function collectConversationCandidates({ character, village, context = {} }) {
++  const candidates = [];
++  const villageTraits = Array.isArray(village?.villageTraits) ? village.villageTraits : [];
++  const sharedContext = {
++    ...context,
++    bodyTraits: Array.isArray(character?.bodyTraits) ? [...character.bodyTraits] : [],
++    mindTraits: Array.isArray(character?.mindTraits) ? [...character.mindTraits] : [],
++    villageTraits: [...villageTraits]
++  };
++
++  if (villageTraits.includes("襲撃中")) {
++    addCandidate(candidates, character, {
++      scene: "status",
++      key: "raid",
++      priority: CONVERSATION_PRIORITY.EMERGENCY
++    }, sharedContext);
++  }
++
++  BODY_CONDITION_CANDIDATES.forEach(candidate => {
++    if (hasTrait(character, candidate.trait, "bodyTraits")) {
++      addCandidate(candidates, character, candidate, sharedContext);
++    }
++  });
++
++  MIND_CONDITION_CANDIDATES.forEach(candidate => {
++    if (hasTrait(character, candidate.trait, "mindTraits")) {
++      addCandidate(candidates, character, candidate, sharedContext);
++    }
++  });
++
++  const healthStatus = getHealthStatus(character);
++  addCandidate(candidates, character, {
++    scene: "status",
++    key: healthStatus.key,
++    priority: healthStatus.priority
++  }, sharedContext);
++
++  if (hasTrait(character, "臨月", "bodyTraits")) {
++    addCandidate(candidates, character, {
++      scene: "reproduction",
++      key: "fullTermConversation",
++      priority: CONVERSATION_PRIORITY.NORMAL
++    }, sharedContext);
++  } else if (hasTrait(character, "妊娠", "bodyTraits")) {
++    addCandidate(candidates, character, {
++      scene: "reproduction",
++      key: "pregnantConversation",
++      priority: CONVERSATION_PRIORITY.NORMAL
++    }, sharedContext);
++  }
++
++  if (Number(character?.ind) <= 10) {
++    addCandidate(candidates, character, {
++      scene: "lazy",
++      key: "lowDiligence",
++      priority: CONVERSATION_PRIORITY.NORMAL
++    }, sharedContext);
++  }
++
++  const season = getCurrentSeason(village);
++  if (season) {
++    addCandidate(candidates, character, {
++      scene: "season",
++      key: season,
++      priority: CONVERSATION_PRIORITY.NORMAL
++    }, sharedContext);
++  }
++
++  return candidates;
++}
++
++export function selectConversationCandidate(candidates) {
++  if (!Array.isArray(candidates) || candidates.length === 0) return null;
++  const maxPriority = Math.max(...candidates.map(candidate => candidate.priority));
++  const topCandidates = candidates.filter(candidate => candidate.priority === maxPriority);
++  return topCandidates[Math.floor(Math.random() * topCandidates.length)] || null;
++}
++
++export function getConversationLine({ character, village, context = {} }) {
++  if (hasTrait(character, "訪問者", "mindTraits")) {
++    return getDialogueLine({ character, scene: "visitor", key: getVisitorType(character), context }) || "...";
++  }
++
++  if (hasTrait(character, "襲撃者", "mindTraits") && Array.isArray(character?.raiderDialogues) && character.raiderDialogues.length > 0) {
++    return pickDialogueLine(character.raiderDialogues, context) || "...";
++  }
++
++  const candidates = collectConversationCandidates({ character, village, context });
++  const selected = selectConversationCandidate(candidates);
++  if (!selected) return "...";
++  return getDialogueLine({ character, scene: selected.scene, key: selected.key, context }) || "...";
+ }
+diff --git a/js/reproduction.js b/js/reproduction.js
+index b93564a..8e612ff 100644
+--- a/js/reproduction.js
++++ b/js/reproduction.js
+@@ -10,6 +10,7 @@ import {
+ } from "./createVillagers.js";
+ import { refreshJobTable } from "./domain/jobTables.js";
+ import { addRelationship, checkHasRelationship, getRelationshipTargetName, normalizeRelationship } from "./relationships.js";
++import { getDialogueLine } from "./dialogue/dialogueEngine.js";
+ 
+ const HUMANOID_RACES = new Set(["人間", "ハーピー", "半神", "キュクロプス", "サイクロプス", "巨人"]);
+ const PHYSICAL_STATS = ["str", "vit", "dex", "mag", "chr"];
+@@ -655,49 +656,29 @@ function giveBirth(village, mother) {
+ }
+ 
+ export function getReproductiveStatusLine(character) {
+-  if (hasTrait(character, "臨月")) return getPregnancyLine(character, true);
+-  if (hasTrait(character, "妊娠")) return getPregnancyLine(character, false);
+-  if (hasMindTrait(character, "無垢")) return randChoice(["あうー。", "んま。", "ばぶ。", "きゃっ。", "すやすや……"]);
+-  if (hasMindTrait(character, "萌芽")) return getBuddingStatusLine(character);
++  if (hasTrait(character, "臨月")) {
++    return getDialogueLine({ character, scene: "reproduction", key: "fullTermConversation" });
++  }
++  if (hasTrait(character, "妊娠")) {
++    return getDialogueLine({ character, scene: "reproduction", key: "pregnantConversation" });
++  }
++  if (hasTrait(character, "産褥")) {
++    return getDialogueLine({ character, scene: "reproduction", key: "postpartumConversation" });
++  }
++  if (hasMindTrait(character, "無垢") || hasMindTrait(character, "萌芽")) {
++    return getDialogueLine({ character, scene: "status", key: "healthy" });
++  }
+   return null;
+ }
+ 
+-function getPregnancyLine(character, fullTerm) {
+-  const type = character.speechType || determineSpeechType(character);
+-  const lines = {
+-    "普通Ｍ": fullTerm ? ["腹が重い……本当に、もうすぐなんだな。まだ頭が追いつかない。", "怖くないと言えば嘘になるけど、ここまで来たなら迎えるしかない。"] : ["まさか俺が妊娠するなんてな……まだ実感が追いつかない。", "体の中に命があるって、こんなに落ち着かないものなんだな。"],
+-    "普通Ｆ": fullTerm ? ["もうすぐ会えるんですね。少し緊張します。", "体は重いですが、楽しみです。"] : ["新しい命がいるんですね。大切にします。", "無理はしないようにします。"],
+-    "強気Ｍ": fullTerm ? ["くそ、体が思うように動かねぇ……だが音は上げない。", "もうすぐだな。怖くないわけじゃないが、腹はくくった。"] : ["は？ 俺が妊娠？ ……冗談じゃないが、逃げる気もない。", "戸惑いはある。苛立ちもある。だが守るものができたなら守る。"],
+-    "強気Ｆ": fullTerm ? ["もうすぐね。弱音なんて吐かないわ。", "大丈夫、ちゃんと産んでみせる。"] : ["驚いたけど、覚悟はできてるわ。", "私がしっかりしないとね。"],
+-    "内気": fullTerm ? ["こ、怖いです……でも、会いたいです。", "もうすぐなんですね……どきどきします。"] : ["まだ少し、信じられません……。", "ちゃんとできるか、不安です……。"],
+-    "陰気": fullTerm ? ["……重い。怖い。けど、ここまで来てしまった。", "……終わりじゃなくて、始まりか。正直、まだ受け止めきれていない。"] : ["……妙な気分だ。自分の体じゃないみたいで落ち着かない。", "……自分に務まるのか。考えるほど胃が沈む。"],
+-    "お調子者": fullTerm ? ["いよいよっすね、さすがに笑ってごまかせないっす！", "もうすぐ会えるとか、すごいっすね……いや、めちゃくちゃ緊張するっす。"] : ["いやー、びっくりっすね！ っていうか本当に自分がっすか！？", "これは頑張らないとっすね。まだ全然落ち着かないっすけど！"],
+-    "快活": fullTerm ? ["もうすぐだね！ちょっと怖いけど楽しみ！", "元気な子だといいな！"] : ["びっくりしたけど、なんだか嬉しい！", "無理せず元気にいこう！"],
+-    "お嬢様": fullTerm ? ["いよいよですわね……心を整えますわ。", "少し怖いですけれど、楽しみですわ。"] : ["まあ……不思議な気持ちですわ。", "大切に過ごしますわ。"],
+-    "クールＭ": fullTerm ? ["出産が近い。体の違和感は強いが、手順を確認しておこう。", "動揺は残っている。だからこそ体調管理を最優先にする。"] : ["状況は理解した。俺の体で妊娠が進行している、という事実にな。", "想定外だ。感情は後で処理する。今は無理を避ける。"],
+-    "クールＦ": fullTerm ? ["もうすぐね。落ち着いて臨むわ。", "体は重いけれど、問題ないわ。"] : ["理解したわ。慎重に過ごす。", "少し不思議な感覚ね。"],
+-    "老人": fullTerm ? ["この年で命を迎えるとは、不思議なものじゃ。", "もうすぐじゃな……静かに待とう。"] : ["命とは巡るものじゃのう。", "大事にせねばならんのう。"]
+-  };
+-  return randChoice(lines[type] || lines[character.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
+-}
+-
+ function getPregnancyNoticeLine(character, role, partner) {
+-  const type = character.speechType || determineSpeechType(character);
+-  const lines = {
+-    "普通Ｍ": role === "mother" ? ["まさか俺が妊娠するなんてな……驚きすぎて、まだ言葉が出ない。", "戸惑ってる。でも、体の中にいるなら大事にしないとな。"] : [`${partner.name}を支えないとな。`, "無事に育ってほしい。できることをするよ。"],
+-    "普通Ｆ": role === "mother" ? ["新しい命がいるんですね。大切にします。", "少し不思議ですけど、嬉しいです。"] : [`${partner.name}さんを支えます。`, "無事に産まれてきてほしいですね。"],
+-    "強気Ｍ": role === "mother" ? ["冗談みたいな話だな……腹は立つが、投げ出す気はない。", "戸惑いも苛立ちもある。だが、宿ったなら守り抜く。"] : [`${partner.name}は俺が支える。`, "子も親も守ってみせる。"],
+-    "強気Ｆ": role === "mother" ? ["驚いたけど、覚悟はできてるわ。", "大丈夫、私がしっかりする。"] : [`${partner.name}を支えるわ。任せて。`, "無事に迎える準備をするわよ。"],
+-    "内気": role === "mother" ? ["まだ少し、信じられません……。", "ちゃんとできるか、不安です……でも嬉しいです。"] : [`${partner.name}さんの力に、なりたいです……。`, "こ、これから大切にしないと……。"],
+-    "陰気": role === "mother" ? ["……妙な気分だ。驚くより先に、怖さが来る。", "……自分に務まるのか。正直、わからない。"] : [`……${partner.name}を放ってはおけないな。`, "……無事なら、それでいい。"],
+-    "お調子者": role === "mother" ? ["いやー、びっくりっすね！ 自分のことなのに現実味がないっす！", "これは頑張らないとっすね！ まず落ち着くところからっすけど！"] : [`${partner.name}を全力で支えるっす！`, "いやー、急に責任重大っすね！"],
+-    "快活": role === "mother" ? ["びっくりしたけど、なんだか嬉しい！", "無理せず元気にいこう！"] : [`${partner.name}、一緒に頑張ろう！`, "元気な子だといいね！"],
+-    "お嬢様": role === "mother" ? ["まあ……不思議な気持ちですわ。", "大切に過ごしますわ。"] : [`${partner.name}様を丁寧に支えますわ。`, "新たな命に祝福がありますように。"],
+-    "クールＭ": role === "mother" ? ["状況は理解した。理解したが、動揺していないわけではない。", "想定外の妊娠だ。感情より先に、必要な備えを始める。"] : [`${partner.name}の体調管理を優先する。`, "必要な準備を始めよう。"],
+-    "クールＦ": role === "mother" ? ["理解したわ。慎重に過ごす。", "少し不思議な感覚ね。"] : [`${partner.name}を支える。今はそれが最優先ね。`, "落ち着いて準備しましょう。"],
+-    "老人": role === "mother" ? ["命とは巡るものじゃのう。", "大事にせねばならんのう。"] : [`${partner.name}を労わらねばのう。`, "新しい命とは、めでたいものじゃ。"]
+-  };
+-  return randChoice(lines[type] || lines[character.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
++  const key = role === "mother" ? "pregnancyNoticeParent" : "pregnancyNoticePartner";
++  return getDialogueLine({
++    character,
++    scene: "reproduction",
++    key,
++    context: { partner }
++  }) || "";
+ }
+ 
+ function showPregnancyModal(village, mother, father) {
+@@ -723,22 +704,7 @@ function showPregnancyModal(village, mother, father) {
+ }
+ 
+ function getAdultLine(character) {
+-  const type = character.speechType || determineSpeechType(character);
+-  const lines = {
+-    "普通Ｍ": ["今日から大人か。できることを一つずつやっていくよ。", "少し背筋が伸びるな。これからもよろしく。"],
+-    "普通Ｆ": ["成人したんですね。これからも頑張ります。", "少し緊張しますけど、しっかりやっていきます。"],
+-    "強気Ｍ": ["ようやく一人前だな。任せておけ。", "ここからが本番だ。しっかり働くさ。"],
+-    "強気Ｆ": ["成人したからには、遠慮なく頼っていいわ。", "もう子供扱いはなしよ。私が支えるわ。"],
+-    "内気": ["お、大人になったんですね……頑張ります。", "まだ不安ですけど、少しずつ慣れていきます。"],
+-    "陰気": ["……成人か。逃げ場はないな。", "……まあ、やるべきことはやる。"],
+-    "お調子者": ["ついに大人っすね！見ててくださいよ！", "いやー、これで一人前っす！たぶん！"],
+-    "快活": ["成人だね！いっぱい頑張るよ！", "今日からもっと村の力になるね！"],
+-    "お嬢様": ["成人いたしましたわ。皆様のお力になります。", "一人前として、恥じぬよう努めますわ。"],
+-    "クールＭ": ["成人した。役割を果たそう。", "これからは大人として判断する。"],
+-    "クールＦ": ["成人ね。落ち着いて役目を果たすわ。", "一人前として扱ってもらって構わないわ。"],
+-    "老人": ["成人とはめでたいのう。若い力は村の宝じゃ。", "これからが人生の始まりじゃな。"]
+-  };
+-  return randChoice(lines[type] || lines[character.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
++  return getDialogueLine({ character, scene: "reproduction", key: "adult" }) || "";
+ }
+ 
+ function showAdultModal(village, character) {
+@@ -764,22 +730,13 @@ function showAdultModal(village, character) {
+ 
+ function getBirthLine(character, role) {
+   if (!character) return "";
+-  const type = character.speechType || determineSpeechType(character);
+-  const lines = {
+-    "普通Ｍ": [`${role}になったんだな……大切にしよう。`, "無事でよかった。本当に。"],
+-    "普通Ｆ": [`${role}になったんですね……嬉しいです。`, "小さくて、あたたかいですね。"],
+-    "強気Ｍ": ["よく来たな。俺が守ってやる。", "無事に産まれてくれて何よりだ。"],
+-    "強気Ｆ": ["よく来たわね。絶対守るから。", "大丈夫、ここから一緒に生きていくのよ。"],
+-    "内気": ["ち、小さい……かわいいです……。", "無事で……よかった……。"],
+-    "陰気": ["……産まれたのか。", "……守る理由ができたな。"],
+-    "お調子者": ["うわ、ちっちゃいっすね！かわいいっす！", "これはもう、頑張るしかないっすね！"],
+-    "快活": ["やった！元気に産まれたね！", "かわいい！これからよろしくね！"],
+-    "お嬢様": ["まあ……なんて愛らしいのでしょう。", "この子の未来が明るいものでありますように。"],
+-    "クールＭ": ["無事に出生した。まずは安心だ。", "この子を守る責任がある。"],
+-    "クールＦ": ["無事ね。よかった。", "小さいけれど、確かな命ね。"],
+-    "老人": ["新しい命じゃ……めでたいのう。", "この村にも未来が生まれたのじゃな。"]
+-  };
+-  return randChoice(lines[type] || lines[character.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
++  const key = role === "母" ? "birthParent" : "birthPartner";
++  return getDialogueLine({
++    character,
++    scene: "reproduction",
++    key,
++    context: { roleLabel: role }
++  }) || "";
+ }
+ 
+ function showBirthModal(village, mother, father, child) {

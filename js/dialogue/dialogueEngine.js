@@ -1,12 +1,15 @@
 import {
-  getDefaultToneForCharacter,
+  getToneLookupKeys,
   isChildlikeDialogueTone,
+  normalizeDialogueTone,
   resolveDialogueTone,
   resolveStoredSpeechType,
   uniqueKeys
 } from "../data/dialogue/toneProfiles.js";
 import { CHILDLIKE_STATUS_LINES, LAZY_LINES, STATUS_LINES } from "../data/dialogue/statusLines.js";
 import { SEASONAL_LINES } from "../data/dialogue/seasonLines.js";
+import { CONDITION_LINES } from "../data/dialogue/conditionLines.js";
+import { REPRODUCTION_LINES } from "../data/dialogue/reproductionLines.js";
 import { VISITOR_GENERIC_LINES, VISITOR_LINES } from "../data/dialogue/visitorLines.js";
 import {
   BUDDING_EVENT_LINES,
@@ -20,6 +23,32 @@ import {
 } from "../data/dialogue/randomEventLines.js";
 
 export { resolveDialogueTone, resolveStoredSpeechType } from "../data/dialogue/toneProfiles.js";
+
+export const CONVERSATION_PRIORITY = {
+  NORMAL: 1,
+  SEVERE: 2,
+  EMERGENCY: 3
+};
+
+const SEASON_TRAITS = ["春", "夏", "秋", "冬"];
+
+const BODY_CONDITION_CANDIDATES = [
+  { trait: "危篤", scene: "condition", key: "critical", priority: CONVERSATION_PRIORITY.EMERGENCY },
+  { trait: "負傷", scene: "condition", key: "injured", priority: CONVERSATION_PRIORITY.SEVERE },
+  { trait: "疫病", scene: "condition", key: "epidemic", priority: CONVERSATION_PRIORITY.SEVERE },
+  { trait: "病気", scene: "condition", key: "sickness", priority: CONVERSATION_PRIORITY.SEVERE },
+  { trait: "過労", scene: "condition", key: "overwork", priority: CONVERSATION_PRIORITY.SEVERE },
+  { trait: "産褥", scene: "reproduction", key: "postpartumConversation", priority: CONVERSATION_PRIORITY.SEVERE },
+  { trait: "飢餓", scene: "condition", key: "hunger", priority: CONVERSATION_PRIORITY.SEVERE },
+  { trait: "凍え", scene: "condition", key: "cold", priority: CONVERSATION_PRIORITY.SEVERE },
+  { trait: "疲労", scene: "status", key: "tired", priority: CONVERSATION_PRIORITY.NORMAL }
+];
+
+const MIND_CONDITION_CANDIDATES = [
+  { trait: "抑鬱", scene: "condition", key: "depression", priority: CONVERSATION_PRIORITY.SEVERE },
+  { trait: "狂乱", scene: "condition", key: "madness", priority: CONVERSATION_PRIORITY.SEVERE },
+  { trait: "心労", scene: "condition", key: "mentalStress", priority: CONVERSATION_PRIORITY.NORMAL }
+];
 
 export function pickDialogueLine(value, context = {}) {
   if (Array.isArray(value)) {
@@ -37,33 +66,32 @@ function asLineArray(value, context = {}) {
   return line ? [line] : [];
 }
 
-function selectToneLines(group, character) {
+function selectToneLines(group, character, context = {}) {
   if (!group) return [];
   const tone = resolveDialogueTone(character);
-  const defaultTone = getDefaultToneForCharacter(character);
-  const keys = uniqueKeys([tone, defaultTone]);
+  const keys = getToneLookupKeys(tone, character);
   const key = keys.find(candidate => group[candidate]);
-  return key ? asLineArray(group[key]) : [];
+  return key ? asLineArray(group[key], context) : [];
 }
 
-function getChildlikeStatusLines(character, status) {
-  const tone = resolveDialogueTone(character);
+function getChildlikeStatusLines(character, status, context = {}) {
+  const tone = normalizeDialogueTone(resolveDialogueTone(character));
   if (!isChildlikeDialogueTone(tone)) return [];
 
-  if (tone === "無垢") {
-    const lines = CHILDLIKE_STATUS_LINES["無垢"];
-    return asLineArray(lines?.[status] || lines?.healthy);
+  if (tone === "赤子") {
+    const lines = CHILDLIKE_STATUS_LINES["赤子"] || CHILDLIKE_STATUS_LINES["無垢"];
+    return asLineArray(lines?.[status] || lines?.healthy, context);
   }
 
   const sexKey = tone === "女児" ? "female" : "male";
   const lines = CHILDLIKE_STATUS_LINES["萌芽"]?.[sexKey] || CHILDLIKE_STATUS_LINES["萌芽"]?.male;
-  return asLineArray(lines?.[status] || lines?.healthy);
+  return asLineArray(lines?.[status] || lines?.healthy, context);
 }
 
-function getStatusLines(character, status) {
-  const childLines = getChildlikeStatusLines(character, status);
+function getStatusLines(character, status, context = {}) {
+  const childLines = getChildlikeStatusLines(character, status, context);
   if (childLines.length > 0) return childLines;
-  return selectToneLines(STATUS_LINES[status], character);
+  return selectToneLines(STATUS_LINES[status], character, context);
 }
 
 function getVisitorLines(visitorType) {
@@ -76,8 +104,8 @@ function getRandomEventMood(eventKey, kind) {
 }
 
 export function getChildlikeRandomEventLine(character, { eventKey = null, kind = null, mood = null } = {}) {
-  const tone = resolveDialogueTone(character);
-  if (tone === "無垢") return pickDialogueLine(INFANT_EVENT_LINES);
+  const tone = normalizeDialogueTone(resolveDialogueTone(character));
+  if (tone === "赤子") return pickDialogueLine(INFANT_EVENT_LINES);
 
   if (tone === "男児" || tone === "女児") {
     const sexKey = tone === "女児" ? "female" : "male";
@@ -155,14 +183,18 @@ function getRandomEventSecondLine(character, eventKey, { base = null, speechType
   return isMale ? `${base}な。少し様子を見よう。` : `${base}ようです。少し様子を見ましょう。`;
 }
 
-export function getDialogueLines({ character, scene, key }) {
+export function getDialogueLines({ character, scene, key, context = {} }) {
   switch (scene) {
     case "status":
-      return getStatusLines(character, key);
+      return getStatusLines(character, key, context);
     case "lazy":
-      return selectToneLines(LAZY_LINES, character);
+      return selectToneLines(LAZY_LINES, character, context);
     case "season":
-      return selectToneLines(SEASONAL_LINES[key], character);
+      return selectToneLines(SEASONAL_LINES[key], character, context);
+    case "condition":
+      return selectToneLines(CONDITION_LINES[key], character, context);
+    case "reproduction":
+      return selectToneLines(REPRODUCTION_LINES[key], character, context);
     case "visitor":
       return getVisitorLines(key);
     default:
@@ -177,5 +209,132 @@ export function getDialogueLine({ character, scene, key, context = {} }) {
   if (scene === "randomEventSecond") {
     return getRandomEventSecondLine(character, key, context);
   }
-  return pickDialogueLine(getDialogueLines({ character, scene, key }), context);
+  return pickDialogueLine(getDialogueLines({ character, scene, key, context }), context);
+}
+
+function hasTrait(character, trait, property) {
+  return Array.isArray(character?.[property]) && character[property].includes(trait);
+}
+
+function addCandidate(candidates, character, candidate, context) {
+  const id = `${candidate.scene}:${candidate.key}`;
+  if (candidates.some(existing => `${existing.scene}:${existing.key}` === id)) return;
+  if (getDialogueLines({ character, scene: candidate.scene, key: candidate.key, context }).length === 0) return;
+  candidates.push(candidate);
+}
+
+function getStatOrDefault(value, defaultValue) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : defaultValue;
+}
+
+function getHealthStatus(character) {
+  const hp = getStatOrDefault(character?.hp, 100);
+  const mp = getStatOrDefault(character?.mp, 100);
+  if (hp <= 33 || mp <= 33) return { key: "exhausted", priority: CONVERSATION_PRIORITY.SEVERE };
+  if ((hp > 33 && hp <= 59) || (mp > 33 && mp <= 59)) return { key: "tired", priority: CONVERSATION_PRIORITY.NORMAL };
+  return { key: "healthy", priority: CONVERSATION_PRIORITY.NORMAL };
+}
+
+function getCurrentSeason(village) {
+  const traits = Array.isArray(village?.villageTraits) ? village.villageTraits : [];
+  return SEASON_TRAITS.find(trait => traits.includes(trait)) || "";
+}
+
+function getVisitorType(visitor) {
+  const match = visitor?.name?.match(/^(.+)の/);
+  return match ? match[1] : null;
+}
+
+export function collectConversationCandidates({ character, village, context = {} }) {
+  const candidates = [];
+  const villageTraits = Array.isArray(village?.villageTraits) ? village.villageTraits : [];
+  const sharedContext = {
+    ...context,
+    bodyTraits: Array.isArray(character?.bodyTraits) ? [...character.bodyTraits] : [],
+    mindTraits: Array.isArray(character?.mindTraits) ? [...character.mindTraits] : [],
+    villageTraits: [...villageTraits]
+  };
+
+  if (villageTraits.includes("襲撃中")) {
+    addCandidate(candidates, character, {
+      scene: "status",
+      key: "raid",
+      priority: CONVERSATION_PRIORITY.EMERGENCY
+    }, sharedContext);
+  }
+
+  BODY_CONDITION_CANDIDATES.forEach(candidate => {
+    if (hasTrait(character, candidate.trait, "bodyTraits")) {
+      addCandidate(candidates, character, candidate, sharedContext);
+    }
+  });
+
+  MIND_CONDITION_CANDIDATES.forEach(candidate => {
+    if (hasTrait(character, candidate.trait, "mindTraits")) {
+      addCandidate(candidates, character, candidate, sharedContext);
+    }
+  });
+
+  const healthStatus = getHealthStatus(character);
+  addCandidate(candidates, character, {
+    scene: "status",
+    key: healthStatus.key,
+    priority: healthStatus.priority
+  }, sharedContext);
+
+  if (hasTrait(character, "臨月", "bodyTraits")) {
+    addCandidate(candidates, character, {
+      scene: "reproduction",
+      key: "fullTermConversation",
+      priority: CONVERSATION_PRIORITY.NORMAL
+    }, sharedContext);
+  } else if (hasTrait(character, "妊娠", "bodyTraits")) {
+    addCandidate(candidates, character, {
+      scene: "reproduction",
+      key: "pregnantConversation",
+      priority: CONVERSATION_PRIORITY.NORMAL
+    }, sharedContext);
+  }
+
+  if (Number(character?.ind) <= 10) {
+    addCandidate(candidates, character, {
+      scene: "lazy",
+      key: "lowDiligence",
+      priority: CONVERSATION_PRIORITY.NORMAL
+    }, sharedContext);
+  }
+
+  const season = getCurrentSeason(village);
+  if (season) {
+    addCandidate(candidates, character, {
+      scene: "season",
+      key: season,
+      priority: CONVERSATION_PRIORITY.NORMAL
+    }, sharedContext);
+  }
+
+  return candidates;
+}
+
+export function selectConversationCandidate(candidates) {
+  if (!Array.isArray(candidates) || candidates.length === 0) return null;
+  const maxPriority = Math.max(...candidates.map(candidate => candidate.priority));
+  const topCandidates = candidates.filter(candidate => candidate.priority === maxPriority);
+  return topCandidates[Math.floor(Math.random() * topCandidates.length)] || null;
+}
+
+export function getConversationLine({ character, village, context = {} }) {
+  if (hasTrait(character, "訪問者", "mindTraits")) {
+    return getDialogueLine({ character, scene: "visitor", key: getVisitorType(character), context }) || "...";
+  }
+
+  if (hasTrait(character, "襲撃者", "mindTraits") && Array.isArray(character?.raiderDialogues) && character.raiderDialogues.length > 0) {
+    return pickDialogueLine(character.raiderDialogues, context) || "...";
+  }
+
+  const candidates = collectConversationCandidates({ character, village, context });
+  const selected = selectConversationCandidate(candidates);
+  if (!selected) return "...";
+  return getDialogueLine({ character, scene: selected.scene, key: selected.key, context }) || "...";
 }

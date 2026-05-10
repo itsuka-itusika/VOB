@@ -2,9 +2,8 @@ import { theVillage } from "./main.js";
 import { updateUI } from "./ui.js";
 import { getPortraitPath, isForcedHealingAction } from "./util.js";
 import { refreshJobTable } from "./domain/jobTables.js";
-import { getReproductiveStatusLine } from "./reproduction.js";
 import { ACTION_DEFEND, ACTION_TRAP, isRaidActionAssignable } from "./raidRules.js";
-import { getDialogueLine, getDialogueLines, pickDialogueLine } from "./dialogue/dialogueEngine.js";
+import { getConversationLine } from "./dialogue/dialogueEngine.js";
 
 // 訪問者タイプごとの勧誘成功率係数
 const RECRUITMENT_COEFFICIENTS = {
@@ -24,40 +23,8 @@ const MERCHANT_TRADE = {
 };
 
 function createConversationStatusHtml(character) {
-  const isExhausted = character.hp <= 33 || character.mp <= 33;
-  const isTired = (character.hp > 33 && character.hp <= 59) || (character.mp > 33 && character.mp <= 59);
-  const isHealthy = character.hp > 59 && character.mp > 59;
-  const isUnderRaid = theVillage.villageTraits.includes("襲撃中");
-
-  if (character.mindTraits && character.mindTraits.includes("襲撃者") && character.raiderDialogues) {
-    const raiderLine = character.raiderDialogues[Math.floor(Math.random() * character.raiderDialogues.length)];
-    return `<p><strong></strong> ${raiderLine}</p>`;
-  }
-  const reproductiveLine = getReproductiveStatusLine(character);
-  const isPregnancyLine = reproductiveLine &&
-    character.bodyTraits &&
-    (character.bodyTraits.includes("妊娠") || character.bodyTraits.includes("臨月"));
-  if (reproductiveLine && !isPregnancyLine) {
-    return `<p><strong></strong> ${reproductiveLine}</p>`;
-  }
-  const pickLine = (status) => {
-    const statusLine = getStatusLine(character, status);
-    if (isPregnancyLine && Math.random() < 0.5) return reproductiveLine;
-    return statusLine;
-  };
-  if (isUnderRaid) {
-    return `<p><strong></strong> ${pickLine("raid")}</p>`;
-  }
-  if (isExhausted) {
-    return `<p><strong></strong> ${pickLine("exhausted")}</p>`;
-  }
-  if (isTired) {
-    return `<p><strong></strong> ${pickLine("tired")}</p>`;
-  }
-  if (isHealthy) {
-    return `<p><strong></strong> ${pickLine("healthy")}</p>`;
-  }
-  return "";
+  const line = getConversationLine({ character, village: theVillage });
+  return `<p><strong></strong> ${line || "..."}</p>`;
 }
 
 function refreshConversationText(character) {
@@ -224,79 +191,6 @@ export function closeConversationModal() {
   
   if (overlay) overlay.style.display = "none";
   if (modal) modal.style.display = "none";
-}
-
-/**
- * 状態に応じたセリフを返す
- */
-function getStatusLine(character, status) {
-  if (character.mindTraits && character.mindTraits.includes("訪問者")) {
-    return getVisitorLine(character);
-  }
-
-  const statusLines = getDialogueLines({ character, scene: "status", key: status });
-
-  // 健康状態で勤勉度が低い場合の特別な会話
-  if (status === "healthy" && character.ind <= 10) {
-    const lazyLines = getLazyLines(character);
-    if (lazyLines.length > 0) {
-      const allLines = [...statusLines, ...lazyLines];
-      const currentSeason = getCurrentSeason();
-      if (currentSeason) {
-        allLines.push(...getSeasonalLines(character, currentSeason));
-      }
-      return pickDialogueLine(allLines) || "...";
-    }
-  }
-
-  // 季節に応じた会話を取得
-  if (status === "healthy") {
-    const currentSeason = getCurrentSeason();
-    if (currentSeason) {
-      const seasonLines = getSeasonalLines(character, currentSeason);
-      if (seasonLines.length > 0) {
-        return pickDialogueLine([...statusLines, ...seasonLines]) || "...";
-      }
-    }
-  }
-
-  const statusLine = pickDialogueLine(statusLines);
-  if (!statusLine) {
-    console.warn(`Status "${status}" line not found for character ${character.name}`);
-    return "...";
-  }
-  return statusLine;
-}
-
-function getCurrentSeason() {
-  const traits = Array.isArray(theVillage.villageTraits) ? theVillage.villageTraits : [];
-  const seasonTraits = ["春", "夏", "秋", "冬"];
-  return seasonTraits.find(trait => traits.includes(trait)) || "";
-}
-
-/**
- * 訪問者タイプごとの専用セリフを返す
- */
-function getVisitorLine(character) {
-  return getDialogueLine({
-    character,
-    scene: "visitor",
-    key: getVisitorType(character)
-  });
-}
-
-/**
- * 勤勉度が低い場合の会話を返す
- */
-function getLazyLines(character) {
-  return getDialogueLines({ character, scene: "lazy" });
-}
-
-/**
- * 季節に応じた会話を返す
- */
-function getSeasonalLines(character, season) {
-  return getDialogueLines({ character, scene: "season", key: season });
 }
 
 /**
