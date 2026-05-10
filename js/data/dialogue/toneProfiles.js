@@ -35,7 +35,7 @@ export const TONE_PROFILES = {
   "ギャル風": { family: "bright", gender: "female", fallback: ["bright", "female", "default"] },
   "中性的": { family: "neutralFemale", gender: "female", fallback: ["neutralFemale", "female", "default"] },
 
-  "老人": { family: "elder", gender: "neutral", fallback: ["elder", "polite", "default"] }
+  "老人": { family: "elder", gender: "male", fallback: ["elder", "male", "default"] }
 };
 
 export function normalizeDialogueTone(tone) {

@@ -9,6 +9,7 @@ import {
 import { LAZY_LINES, STATUS_LINES } from "../data/dialogue/statusLines.js";
 import { SEASONAL_LINES } from "../data/dialogue/seasonLines.js";
 import { CONDITION_LINES } from "../data/dialogue/conditionLines.js";
+import { JOB_LINES } from "../data/dialogue/jobLines.js";
 import { REPRODUCTION_LINES } from "../data/dialogue/reproductionLines.js";
 import { VISITOR_GENERIC_LINES, VISITOR_LINES } from "../data/dialogue/visitorLines.js";
 import {
@@ -183,6 +184,8 @@ export function getDialogueLines({ character, scene, key, context = {} }) {
       return selectToneLines(SEASONAL_LINES[key], character, context);
     case "condition":
       return selectToneLines(CONDITION_LINES[key], character, context);
+    case "job":
+      return selectToneLines(JOB_LINES[key], character, context);
     case "reproduction":
       return selectToneLines(REPRODUCTION_LINES[key], character, context);
     case "visitor":
@@ -291,6 +294,15 @@ export function collectConversationCandidates({ character, village, context = {}
     addCandidate(candidates, character, {
       scene: "lazy",
       key: "lowDiligence",
+      priority: CONVERSATION_PRIORITY.NORMAL
+    }, sharedContext);
+  }
+
+  const jobKey = String(character?.job || "").trim();
+  if (JOB_LINES[jobKey]) {
+    addCandidate(candidates, character, {
+      scene: "job",
+      key: jobKey,
       priority: CONVERSATION_PRIORITY.NORMAL
     }, sharedContext);
   }

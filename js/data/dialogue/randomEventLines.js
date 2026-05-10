@@ -55,7 +55,7 @@ export const SPEECH_TYPE_LINE_FALLBACKS = {
   "クールＦ": ["クールＦ", "cool", "female"],
   "中性的": ["中性的", "cool", "female", "male"],
   "ギャル風": ["ギャル風", "bright", "female"],
-  "老人": ["老人", "polite", "male", "female"]
+  "老人": ["老人", "male"]
 };
 
 export const SPEECH_TYPE_TONES = {
@@ -78,7 +78,7 @@ export const SPEECH_TYPE_TONES = {
   "クールＦ": "cool",
   "中性的": "cool",
   "ギャル風": "bright",
-  "老人": "polite"
+  "老人": "male"
 };
 
 function speechTypeLines(lines) {
