@@ -265,7 +265,7 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     cuteF: "猫ちゃん、こっち見てる。かわいすぎるよ。",
     coolF: "人慣れしている猫ね。しばらく様子を見ましょう。",
     neutral: "猫の気配は不思議と場を和ませるな。",
-    gal: "この猫かわいすぎ。写真残したいくらい！",
+    gal: "この猫かわいすぎ。絵に残したいくらい！",
     elder: "猫はええのう。そばにおるだけで心が丸くなるわい。"
   }),
   gold: makeEventSpecificLines({
