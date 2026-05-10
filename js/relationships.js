@@ -277,11 +277,11 @@ function showRelationshipModal(title, message, entries) {
     <h2>${title}</h2>
     <p>${message}</p>
     ${rows}
-    <button id="closeRelationshipModal">閉じる</button>
+    <button type="button" data-close-relationship-modal>閉じる</button>
   `;
   document.body.appendChild(overlay);
   document.body.appendChild(modal);
-  document.getElementById("closeRelationshipModal").onclick = () => {
+  modal.querySelector("[data-close-relationship-modal]").onclick = () => {
     overlay.remove();
     modal.remove();
   };

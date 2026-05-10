@@ -681,72 +681,79 @@ function getPregnancyNoticeLine(character, role, partner) {
   }) || "";
 }
 
-function showPregnancyModal(village, mother, father) {
+const reproductionModalQueue = [];
+let isShowingReproductionModal = false;
+
+function enqueueReproductionModal(renderModal) {
   if (typeof document === "undefined") return;
-  const overlay = document.createElement("div");
-  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;";
-  const modal = document.createElement("div");
-  modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;max-width:560px;width:calc(100% - 32px);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
-  modal.innerHTML = `
-    <h2>妊娠</h2>
-    <p>${mother.name}が妊娠しました。</p>
-    ${renderPortraitLine(mother, getPregnancyNoticeLine(mother, "mother", father))}
-    ${father ? renderPortraitLine(father, getPregnancyNoticeLine(father, "father", mother)) : ""}
-    <button id="closePregnancyModal">閉じる</button>
-  `;
-  document.body.appendChild(overlay);
-  document.body.appendChild(modal);
-  document.getElementById("closePregnancyModal").onclick = () => {
-    overlay.remove();
-    modal.remove();
-    import("./ui.js").then(module => module.updateUI(village));
-  };
+  reproductionModalQueue.push(renderModal);
+  if (isShowingReproductionModal) return;
+  showNextReproductionModal();
+}
+
+function showNextReproductionModal() {
+  const renderModal = reproductionModalQueue.shift();
+  if (!renderModal) {
+    isShowingReproductionModal = false;
+    return;
+  }
+  isShowingReproductionModal = true;
+  renderModal(() => {
+    isShowingReproductionModal = false;
+    showNextReproductionModal();
+  });
+}
+
+function closeQueuedReproductionModal(village, overlay, modal, onClosed) {
+  overlay.remove();
+  modal.remove();
+  import("./ui.js").then(module => module.updateUI(village));
+  onClosed();
+}
+
+function showPregnancyModal(village, mother, father) {
+  enqueueReproductionModal(onClosed => {
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;";
+    const modal = document.createElement("div");
+    modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;max-width:560px;width:calc(100% - 32px);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
+    modal.innerHTML = `
+      <h2>妊娠</h2>
+      <p>${mother.name}が妊娠しました。</p>
+      ${renderPortraitLine(mother, getPregnancyNoticeLine(mother, "mother", father))}
+      ${father ? renderPortraitLine(father, getPregnancyNoticeLine(father, "father", mother)) : ""}
+      <button type="button" data-close-reproduction-modal>閉じる</button>
+    `;
+    document.body.appendChild(overlay);
+    document.body.appendChild(modal);
+    modal.querySelector("[data-close-reproduction-modal]").onclick = () => {
+      closeQueuedReproductionModal(village, overlay, modal, onClosed);
+    };
+  });
 }
 
 function getAdultLine(character) {
   return getDialogueLine({ character, scene: "reproduction", key: "adult" }) || "";
 }
 
-const adultModalQueue = [];
-let isShowingAdultModal = false;
-
 function showAdultModal(village, character) {
-  if (typeof document === "undefined") return;
-  adultModalQueue.push({ village, character });
-  if (isShowingAdultModal) return;
-  showNextAdultModal();
-}
-
-function showNextAdultModal() {
-  const event = adultModalQueue.shift();
-  if (!event) {
-    isShowingAdultModal = false;
-    return;
-  }
-  isShowingAdultModal = true;
-
-  const { village, character } = event;
-  const overlay = document.createElement("div");
-  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;";
-  const modal = document.createElement("div");
-  modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;max-width:560px;width:calc(100% - 32px);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
-  modal.innerHTML = `
-    <h2>成人</h2>
-    <p>${character.name}が成人しました。</p>
-    ${renderPortraitLine(character, getAdultLine(character))}
-    <button type="button" data-close-adult-modal>閉じる</button>
-  `;
-  document.body.appendChild(overlay);
-  document.body.appendChild(modal);
-
-  const close = () => {
-    overlay.remove();
-    modal.remove();
-    isShowingAdultModal = false;
-    import("./ui.js").then(module => module.updateUI(village));
-    showNextAdultModal();
-  };
-  modal.querySelector("[data-close-adult-modal]").onclick = close;
+  enqueueReproductionModal(onClosed => {
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;";
+    const modal = document.createElement("div");
+    modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;max-width:560px;width:calc(100% - 32px);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
+    modal.innerHTML = `
+      <h2>成人</h2>
+      <p>${character.name}が成人しました。</p>
+      ${renderPortraitLine(character, getAdultLine(character))}
+      <button type="button" data-close-reproduction-modal>閉じる</button>
+    `;
+    document.body.appendChild(overlay);
+    document.body.appendChild(modal);
+    modal.querySelector("[data-close-reproduction-modal]").onclick = () => {
+      closeQueuedReproductionModal(village, overlay, modal, onClosed);
+    };
+  });
 }
 
 function getBirthLine(character, role) {
@@ -761,26 +768,25 @@ function getBirthLine(character, role) {
 }
 
 function showBirthModal(village, mother, father, child) {
-  if (typeof document === "undefined") return;
-  const overlay = document.createElement("div");
-  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;";
-  const modal = document.createElement("div");
-  modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;max-width:520px;width:calc(100% - 32px);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
-  modal.innerHTML = `
-    <h2>出産</h2>
-    <p>${mother.name}が${child.name}を出産しました。</p>
-    ${renderPortraitLine(mother, getBirthLine(mother, "母"))}
-    ${father ? renderPortraitLine(father, getBirthLine(father, "父")) : ""}
-    ${renderPortraitLine(child, "……すやすや眠っている。")}
-    <button id="closeBirthModal">閉じる</button>
-  `;
-  document.body.appendChild(overlay);
-  document.body.appendChild(modal);
-  document.getElementById("closeBirthModal").onclick = () => {
-    overlay.remove();
-    modal.remove();
-    import("./ui.js").then(module => module.updateUI(village));
-  };
+  enqueueReproductionModal(onClosed => {
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;";
+    const modal = document.createElement("div");
+    modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;max-width:520px;width:calc(100% - 32px);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
+    modal.innerHTML = `
+      <h2>出産</h2>
+      <p>${mother.name}が${child.name}を出産しました。</p>
+      ${renderPortraitLine(mother, getBirthLine(mother, "母"))}
+      ${father ? renderPortraitLine(father, getBirthLine(father, "父")) : ""}
+      ${renderPortraitLine(child, "……すやすや眠っている。")}
+      <button type="button" data-close-reproduction-modal>閉じる</button>
+    `;
+    document.body.appendChild(overlay);
+    document.body.appendChild(modal);
+    modal.querySelector("[data-close-reproduction-modal]").onclick = () => {
+      closeQueuedReproductionModal(village, overlay, modal, onClosed);
+    };
+  });
 }
 
 function renderPortraitLine(character, line) {

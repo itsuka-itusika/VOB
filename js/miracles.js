@@ -772,11 +772,11 @@ function showMiracleResultModal(village, miracleName, message, people) {
     <h2>${miracleName}</h2>
     <p>${message}</p>
     ${rows}
-    <button id="closeMiracleResultModal">閉じる</button>
+    <button type="button" data-close-miracle-result-modal>閉じる</button>
   `;
   document.body.appendChild(overlay);
   document.body.appendChild(modal);
-  document.getElementById("closeMiracleResultModal").onclick = () => {
+  modal.querySelector("[data-close-miracle-result-modal]").onclick = () => {
     overlay.remove();
     modal.remove();
     updateUI(village);
@@ -827,11 +827,11 @@ function showMarriageMiracleModal(village, miracleName, pairs) {
     <h2>${miracleName}</h2>
     <p>奇跡により新たな夫婦が結ばれました。</p>
     ${rows}
-    <button id="closeMarriageMiracleModal">閉じる</button>
+    <button type="button" data-close-marriage-miracle-modal>閉じる</button>
   `;
   document.body.appendChild(overlay);
   document.body.appendChild(modal);
-  document.getElementById("closeMarriageMiracleModal").onclick = () => {
+  modal.querySelector("[data-close-marriage-miracle-modal]").onclick = () => {
     overlay.remove();
     modal.remove();
     updateUI(village);
