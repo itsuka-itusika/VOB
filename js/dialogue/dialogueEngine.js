@@ -6,7 +6,7 @@ import {
   resolveStoredSpeechType,
   uniqueKeys
 } from "../data/dialogue/toneProfiles.js";
-import { CHILDLIKE_STATUS_LINES, LAZY_LINES, STATUS_LINES } from "../data/dialogue/statusLines.js";
+import { LAZY_LINES, STATUS_LINES } from "../data/dialogue/statusLines.js";
 import { SEASONAL_LINES } from "../data/dialogue/seasonLines.js";
 import { CONDITION_LINES } from "../data/dialogue/conditionLines.js";
 import { REPRODUCTION_LINES } from "../data/dialogue/reproductionLines.js";
@@ -75,23 +75,7 @@ function selectToneLines(group, character, context = {}) {
   return key ? asLineArray(group[key], context) : [];
 }
 
-function getChildlikeStatusLines(character, status, context = {}) {
-  const tone = normalizeDialogueTone(resolveDialogueTone(character));
-  if (!isChildlikeDialogueTone(tone)) return [];
-
-  if (tone === "赤子") {
-    const lines = CHILDLIKE_STATUS_LINES["赤子"] || CHILDLIKE_STATUS_LINES["無垢"];
-    return asLineArray(lines?.[status] || lines?.healthy, context);
-  }
-
-  const sexKey = tone === "女児" ? "female" : "male";
-  const lines = CHILDLIKE_STATUS_LINES["萌芽"]?.[sexKey] || CHILDLIKE_STATUS_LINES["萌芽"]?.male;
-  return asLineArray(lines?.[status] || lines?.healthy, context);
-}
-
 function getStatusLines(character, status, context = {}) {
-  const childLines = getChildlikeStatusLines(character, status, context);
-  if (childLines.length > 0) return childLines;
   return selectToneLines(STATUS_LINES[status], character, context);
 }
 

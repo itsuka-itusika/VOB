@@ -7,27 +7,26 @@ const INFANT_STATUS_LINES = {
   healthy: ["あうー。", "んま。", "ばぶ。", "きゃっ。"]
 };
 
-export const CHILDLIKE_STATUS_LINES = {
-  "赤子": INFANT_STATUS_LINES,
-  "無垢": INFANT_STATUS_LINES,
-  "萌芽": {
-    male: {
-      raid: ["こわいよ……。", "ぼく、まもれるかな……？", "だいじょうぶだよね……？"],
-      exhausted: ["もうつかれたよ……。", "ぼく、ねむい……。", "だっこして……。"],
-      tired: ["ちょっとねむいな。", "ぼく、すこし休むね。", "まだがんばれるよ。"],
-      healthy: ["えへへ、きょうもあそぶ？", "ねえねえ、あれなあに？", "ぼく、ちょっとできるよ！", "おそと、いきたいな。"]
-    },
-    female: {
-      raid: ["こわいよ……。", "わたし、だいじょうぶかな……？", "ぎゅってして……。"],
-      exhausted: ["もうつかれちゃった……。", "わたし、ねむい……。", "だっこして……。"],
-      tired: ["ちょっとねむいな。", "おひるねしたいな……。", "まだおてつだいできるよ。"],
-      healthy: ["えへへ、きょうもあそぶ？", "ねえねえ、あれなあに？", "わたしもおてつだいする！", "おそと、いきたいな。"]
-    }
+const CHILD_STATUS_LINES = {
+  male: {
+    raid: ["こわいよ……。", "ぼく、まもれるかな……？", "だいじょうぶだよね……？"],
+    exhausted: ["もうつかれたよ……。", "ぼく、ねむい……。", "だっこして……。"],
+    tired: ["ちょっとねむいな。", "ぼく、すこし休むね。", "まだがんばれるよ。"],
+    healthy: ["えへへ、きょうもあそぶ？", "ねえねえ、あれなあに？", "ぼく、ちょっとできるよ！", "おそと、いきたいな。"]
+  },
+  female: {
+    raid: ["こわいよ……。", "わたし、だいじょうぶかな……？", "ぎゅってして……。"],
+    exhausted: ["もうつかれちゃった……。", "わたし、ねむい……。", "だっこして……。"],
+    tired: ["ちょっとねむいな。", "おひるねしたいな……。", "まだおてつだいできるよ。"],
+    healthy: ["えへへ、きょうもあそぶ？", "ねえねえ、あれなあに？", "わたしもおてつだいする！", "おそと、いきたいな。"]
   }
 };
 
 export const STATUS_LINES = {
       raid: {
+        "赤子": INFANT_STATUS_LINES.raid,
+        "男児": CHILD_STATUS_LINES.male.raid,
+        "女児": CHILD_STATUS_LINES.female.raid,
         "普通Ｍ": ["危険な状況だね...気を付けないと。", "みんなで村を守らないと。"],
         "丁寧Ｍ": ["非常事態ですね。万全の備えを。", "村の安全が第一です。"],
         "強気Ｍ": ["来るなら来い！やってやる！", "襲撃者なんか怖くないぜ！"],
@@ -57,6 +56,9 @@ export const STATUS_LINES = {
         ]
       },
       exhausted: {
+        "赤子": INFANT_STATUS_LINES.exhausted,
+        "男児": CHILD_STATUS_LINES.male.exhausted,
+        "女児": CHILD_STATUS_LINES.female.exhausted,
         "普通Ｍ": ["もう限界かも...", "休みたいな..."],
         "丁寧Ｍ": ["申し訳ありません...少し休ませていただけますか...", "体調が優れません..."],
         "強気Ｍ": ["くっ...まだやれる...", "これしきの疲れ...何でもない..."],
@@ -87,6 +89,9 @@ export const STATUS_LINES = {
         ]
       },
       tired: {
+        "赤子": INFANT_STATUS_LINES.tired,
+        "男児": CHILD_STATUS_LINES.male.tired,
+        "女児": CHILD_STATUS_LINES.female.tired,
         "普通Ｍ": ["ちょっと疲れてるかな。", "少し休憩したいな。"],
         "丁寧Ｍ": ["少々疲れが出ております。", "休息を取らせていただけますでしょうか。"],
         "強気Ｍ": ["まだまだいける！", "この程度の疲れ、何でもないぜ！"],
@@ -116,6 +121,9 @@ export const STATUS_LINES = {
         ]
       },
       healthy: {
+        "赤子": INFANT_STATUS_LINES.healthy,
+        "男児": CHILD_STATUS_LINES.male.healthy,
+        "女児": CHILD_STATUS_LINES.female.healthy,
         "普通Ｍ": ["調子はバッチリだよ！", "元気いっぱいだ！", 
                  "今日は良い天気だね。", "村の様子はどうかな？", 
                  "最近の収穫は順調だよ。"],
