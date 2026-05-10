@@ -4,7 +4,7 @@ import { randInt, clampValue, round3 } from "./util.js";
 import { doLoverCheck, addRelationship as addCategorizedRelationship } from "./relationships.js";
 import { doExchange } from "./exchange.js";
 import { showRandomEventModal } from "./randomEventModal.js";
-import { scheduleGoldenRainPregnancy } from "./reproduction.js";
+import { matureBodyToAdultOnly, scheduleGoldenRainPregnancy } from "./reproduction.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import {
   getChildlikeRandomEventLine,
@@ -230,6 +230,11 @@ export class RandomEvents {
       }
     });
 
+    const growthPotionCandidates = v.villagers.filter(person => Number(person.bodyAge) <= 9);
+    if (growthPotionCandidates.length > 0 && Math.random() < 0.2) {
+      cands.push({ type: "strangeGrowthPotion", vill: this.randChoice(growthPotionCandidates) });
+    }
+
     if (cands.length === 0) {
       return null;
     }
@@ -261,6 +266,13 @@ export class RandomEvents {
         if (!scheduleGoldenRainPregnancy(v, p)) return null;
         this.addForcedSpeaker(p);
         break;
+      case "strangeGrowthPotion": {
+        const beforeAge = Number(p.bodyAge) || 0;
+        if (!matureBodyToAdultOnly(p, v)) return null;
+        this.addForcedSpeaker(p);
+        v.log(`怪しい薬:${p.name}は怪しい薬を頭からかぶり、肉体だけが急成長した。肉体年齢${beforeAge}歳→16歳、肉体能力が潜在値まで成長`);
+        break;
+      }
     }
     return c.type;
   }

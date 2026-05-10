@@ -106,6 +106,11 @@ function getRandomEventMood(eventKey, kind) {
 
 export function getChildlikeRandomEventLine(character, { eventKey = null, kind = null, mood = null } = {}) {
   const tone = normalizeDialogueTone(resolveDialogueTone(character));
+  if (eventKey && isChildlikeDialogueTone(tone)) {
+    const eventLine = findLineByKeys(EVENT_LINES_BY_SPEECH_TYPE[eventKey], getToneLookupKeys(tone, character));
+    if (eventLine) return pickDialogueLine(eventLine);
+  }
+
   if (tone === "赤子") return pickDialogueLine(INFANT_EVENT_LINES);
 
   if (tone === "男児" || tone === "女児") {

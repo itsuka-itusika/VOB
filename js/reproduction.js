@@ -455,6 +455,32 @@ export function updateChildGrowthStage(child, village, { announce = false } = {}
   }
 }
 
+export function matureBodyToAdultOnly(character, village) {
+  if (!character || Number(character.bodyAge) >= 16) return false;
+
+  character.bodyAge = 16;
+
+  const bodyPotential = character.bodyPotentialStats !== undefined
+    ? character.bodyPotentialStats
+    : character.potentialStats;
+  if (bodyPotential) {
+    PHYSICAL_STATS.forEach(stat => {
+      character[stat] = Math.max(1, Math.round(bodyPotential[stat] * getGrowthRatio(16, stat)));
+    });
+  }
+  character.adultBodyReached = true;
+
+  const currentBodyTraits = removeTraits(character.bodyTraits, CHILD_BODY_TRAITS);
+  character.bodyTraits = [...new Set([...(character.adultBodyTraits || []), ...currentBodyTraits])];
+
+  if (!character.adultPortraitFile) {
+    character.adultPortraitFile = selectPortraitByCharacter(character);
+  }
+  setChildPortrait(character);
+  refreshJobTable(character, village);
+  return true;
+}
+
 export function handleBirthAndPostpartum(village) {
   village.villagers.forEach(person => {
     if (Number(person.postpartumMonths) > 0) {
