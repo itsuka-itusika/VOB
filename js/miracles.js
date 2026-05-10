@@ -38,6 +38,7 @@ export function openMiracleModal(village) {
   document.getElementById("miracleModal").style.display = "block";
 
   let sel = document.getElementById("miracleSelect");
+  if (sel.parentElement) sel.parentElement.style.display = "none";
   sel.innerHTML="";
   MIRACLES.forEach(m=>{
     let op=document.createElement("option");
@@ -61,6 +62,10 @@ export function closeMiracleModal() {
  * 選択した奇跡に応じて詳細UIを変える
  */
 export function onSelectMiracleChange(village) {
+  let selected = document.getElementById("miracleSelect");
+  renderMiracleCards(village, selected ? selected.value : "12");
+  return;
+
   let sel = document.getElementById("miracleSelect");
   let mid = sel.value;
   let info = MIRACLES.find(x=> x.id===mid);
@@ -78,6 +83,214 @@ export function onSelectMiracleChange(village) {
       div.appendChild(createVillagerSelect("targetA", village, { villagersOnly: true }));
     }
   }
+}
+
+function getMiracleCostInfo(miracle, village) {
+  const peopleCount = village.villagers.length;
+  if (miracle.cost === -1) {
+    const amount = peopleCount * 15;
+    return { mana: amount, funds: amount, label: `魔素: ${amount} / 資金: ${amount}` };
+  }
+  if (miracle.cost === -2) {
+    const amount = peopleCount * 30;
+    return { mana: amount, funds: amount, label: `魔素: ${amount} / 資金: ${amount}` };
+  }
+  return { mana: miracle.cost, funds: 0, label: `魔素: ${miracle.cost}` };
+}
+
+function getMiracleBlockReason(costInfo, village) {
+  const reasons = [];
+  if (village.mana < costInfo.mana) reasons.push("魔素不足");
+  if (village.funds < costInfo.funds) reasons.push("資金不足");
+  return reasons.join(", ");
+}
+
+function getMiracleTargetCount(mid) {
+  if (["3", "12", "13"].includes(mid)) return 2;
+  if (["6", "7", "11"].includes(mid)) return 1;
+  return 0;
+}
+
+function getMiracleTargetOptions(mid) {
+  if (mid === "12") return { normalExchangeOnly: true };
+  if (mid === "3" || mid === "6" || mid === "7" || mid === "11") return { villagersOnly: true };
+  return {};
+}
+
+function findMiracleTargetByName(name, village) {
+  if (!name) return null;
+  return village.villagers.find(x => x.name === name) ||
+    village.visitors.find(x => x.name === name) ||
+    village.raidEnemies.find(x => x.name === name) ||
+    null;
+}
+
+function areMiracleTargetsReady(mid) {
+  const count = getMiracleTargetCount(mid);
+  if (count === 0) return true;
+  const targetA = document.getElementById("targetA");
+  const targetB = document.getElementById("targetB");
+  if (count === 1) return Boolean(targetA && targetA.value);
+  return Boolean(targetA && targetB && targetA.value && targetB.value && targetA.value !== targetB.value);
+}
+
+function describeMiracleTarget(person) {
+  if (!person) return "";
+  const sex = person.bodySex || person.sex || "-";
+  const age = person.bodyAge ?? person.age ?? "-";
+  return `${person.name}: ${person.race || "-"} / ${sex} / ${age}歳 / 筋${person.str} 耐${person.vit} 器${person.dex} 魔${person.mag} 魅${person.chr}`;
+}
+
+function updateMiraclePreview(mid, village, preview) {
+  if (!preview) return;
+  const targetA = document.getElementById("targetA");
+  const targetB = document.getElementById("targetB");
+  const personA = findMiracleTargetByName(targetA?.value, village);
+  const personB = findMiracleTargetByName(targetB?.value, village);
+
+  if (["12", "13"].includes(mid)) {
+    if (personA && personB && personA !== personB) {
+      preview.innerHTML = `
+        <div>名前と精神は残り、肉体名・種族・年齢・身体能力が入れ替わります。</div>
+        <div>${personA.name} ← ${describeMiracleTarget(personB)}</div>
+        <div>${personB.name} ← ${describeMiracleTarget(personA)}</div>
+      `;
+    } else {
+      preview.textContent = "2人を選ぶと、交換後の肉体プレビューを表示します。";
+    }
+    return;
+  }
+
+  if (personA) {
+    preview.textContent = describeMiracleTarget(personA);
+  } else if (getMiracleTargetCount(mid) > 0) {
+    preview.textContent = "対象を選択してください。";
+  } else {
+    preview.textContent = "";
+  }
+}
+
+function updateMiracleActionButton(mid, button, village, costInfo, preview) {
+  const reason = getMiracleBlockReason(costInfo, village);
+  const targetsReady = areMiracleTargetsReady(mid);
+  button.disabled = Boolean(reason) || !targetsReady;
+  button.textContent = targetsReady ? "行使" : "対象を選んでください";
+  updateMiraclePreview(mid, village, preview);
+}
+
+function createMiracleTargetControls(miracle, village, button, costInfo) {
+  const targetCount = getMiracleTargetCount(miracle.id);
+  if (targetCount === 0) return null;
+
+  const controls = document.createElement("div");
+  controls.className = "miracle-targets";
+
+  const options = getMiracleTargetOptions(miracle.id);
+  const targetA = createVillagerSelect("targetA", village, options);
+  const targetB = targetCount === 2 ? createVillagerSelect("targetB", village, options) : null;
+
+  const preview = document.createElement("div");
+  preview.className = "miracle-preview";
+
+  const addControl = (labelText, select) => {
+    const label = document.createElement("label");
+    label.className = "miracle-target";
+    const span = document.createElement("span");
+    span.textContent = labelText;
+    label.appendChild(span);
+    label.appendChild(select);
+    controls.appendChild(label);
+  };
+
+  addControl(targetCount === 2 ? "対象A" : "対象", targetA);
+  if (targetB) addControl("対象B", targetB);
+  controls.appendChild(preview);
+
+  [targetA, targetB].filter(Boolean).forEach(select => {
+    select.addEventListener("change", () => updateMiracleActionButton(miracle.id, button, village, costInfo, preview));
+  });
+
+  updateMiracleActionButton(miracle.id, button, village, costInfo, preview);
+  return controls;
+}
+
+function setSelectedMiracle(id, village) {
+  const select = document.getElementById("miracleSelect");
+  if (select) select.value = id;
+  renderMiracleCards(village, id);
+}
+
+function createMiracleItem(miracle, village, selectedId) {
+  const div = document.createElement("div");
+  const isActive = miracle.id === selectedId;
+  const costInfo = getMiracleCostInfo(miracle, village);
+  const reasonText = getMiracleBlockReason(costInfo, village);
+  const targetCount = getMiracleTargetCount(miracle.id);
+  const needsTarget = targetCount > 0;
+
+  div.className = `miracle-item${isActive ? " active" : ""}`;
+  div.innerHTML = `
+    <div class="miracle-header">
+      <h4>${miracle.name}</h4>
+      ${isActive ? '<span class="miracle-mark">選択中</span>' : ""}
+    </div>
+    <div class="miracle-desc">${miracle.desc}</div>
+    <div class="miracle-cost"><div>${costInfo.label}</div></div>
+    ${reasonText ? `<div class="miracle-reason">${reasonText}</div>` : ""}
+  `;
+
+  const button = document.createElement("button");
+  button.className = "miracle-button";
+
+  if (reasonText) {
+    button.disabled = true;
+    button.textContent = "行使不可";
+  } else if (!isActive && needsTarget) {
+    button.textContent = "対象選択";
+    button.onclick = () => setSelectedMiracle(miracle.id, village);
+  } else {
+    button.textContent = "行使";
+    button.onclick = () => {
+      const select = document.getElementById("miracleSelect");
+      if (select) select.value = miracle.id;
+      performMiracle(village);
+    };
+  }
+
+  if (isActive) {
+    const controls = createMiracleTargetControls(miracle, village, button, costInfo);
+    if (controls) div.appendChild(controls);
+  }
+
+  div.appendChild(button);
+  div.onclick = (event) => {
+    if (event.target.closest("button") || event.target.closest("select")) return;
+    if (!isActive) setSelectedMiracle(miracle.id, village);
+  };
+  return div;
+}
+
+function renderMiracleCards(village, selectedId = "12") {
+  const content = document.getElementById("miracleOptions");
+  if (!content) return;
+  const currentId = MIRACLES.some(m => m.id === selectedId) ? selectedId : "12";
+  const select = document.getElementById("miracleSelect");
+  if (select) select.value = currentId;
+
+  content.innerHTML = `
+    <div class="miracle-resources">
+      <div>魔素: ${village.mana}</div>
+      <div>資金: ${village.funds}</div>
+      <div>村人: ${village.villagers.length}</div>
+    </div>
+    <div class="miracle-list">
+      <h3>行使できる奇跡</h3>
+      <div class="miracle-grid"></div>
+    </div>
+  `;
+
+  const grid = content.querySelector(".miracle-grid");
+  MIRACLES.forEach(miracle => grid.appendChild(createMiracleItem(miracle, village, currentId)));
 }
 
 function createVillagerSelect(id, village, options = {}) {

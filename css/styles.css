@@ -293,11 +293,13 @@ th, td {
   background: #fff;
   border: 2px solid #aaa;
   box-shadow: 2px 2px 8px rgba(0,0,0,0.3);
-  width: 420px;
+  width: 800px;
   max-width: 90%;
-  padding: 10px;
+  max-height: 90vh;
+  padding: 20px;
   display: none;
   z-index: 999;
+  overflow-y: auto;
 }
 #modalOverlay {
   position: fixed;
@@ -317,6 +319,9 @@ th, td {
 .modal-buttons {
   margin-top: 10px;
   text-align: right;
+}
+#miracleModal .modal-buttons button:first-child {
+  display: none;
 }
 select {
   margin: 2px 0;
@@ -750,6 +755,138 @@ section h2 {
   border-radius: 3px;
   font-size: 0.8em;
   margin-left: 8px;
+}
+
+.miracle-resources {
+  display: flex;
+  gap: 20px;
+  background: #f5f5f5;
+  padding: 10px;
+  margin-bottom: 15px;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+.miracle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.miracle-item {
+  border: 1px solid #ddd;
+  padding: 15px;
+  background: #f9f9f9;
+  border-radius: 4px;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.miracle-item:hover,
+.miracle-item.active {
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.miracle-item.active {
+  border-color: #2196F3;
+  background: #f7fbff;
+}
+
+.miracle-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.miracle-header h4 {
+  margin: 0;
+  color: #333;
+}
+
+.miracle-mark {
+  background: #2196F3;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 0.8em;
+  white-space: nowrap;
+}
+
+.miracle-desc {
+  color: #666;
+  margin-bottom: 10px;
+  min-height: 2.4em;
+}
+
+.miracle-cost {
+  display: flex;
+  gap: 10px;
+  font-size: 0.9em;
+  color: #555;
+  margin-bottom: 10px;
+}
+
+.miracle-reason {
+  color: #f44336;
+  font-size: 0.9em;
+  margin-bottom: 10px;
+}
+
+.miracle-targets {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0;
+  padding: 10px;
+  background: #fff;
+  border: 1px solid #e4e4e4;
+  border-radius: 4px;
+}
+
+.miracle-target {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.9em;
+}
+
+.miracle-target select {
+  width: 100%;
+  min-width: 0;
+}
+
+.miracle-preview {
+  color: #444;
+  font-size: 0.86em;
+  line-height: 1.45;
+  padding-top: 4px;
+  border-top: 1px solid #eee;
+}
+
+.miracle-button {
+  width: 100%;
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.miracle-button:not(:disabled) {
+  background: #673AB7;
+  color: white;
+}
+
+.miracle-button:not(:disabled):hover {
+  background: #512DA8;
+}
+
+.miracle-button:disabled {
+  background: #ddd;
+  cursor: not-allowed;
 }
 
 /* 月末サマリーモーダル用スタイル */
@@ -1491,6 +1628,7 @@ body.mobile-mode .modal-buttons {
 body.mobile-mode .modal-buttons button,
 body.mobile-mode #actionButtons button,
 body.mobile-mode .building-button,
+body.mobile-mode .miracle-button,
 body.mobile-mode .tab-button {
   min-height: 38px;
   font-size: 0.82rem;
@@ -1533,11 +1671,24 @@ body.mobile-mode .building-resources {
   margin-bottom: 8px;
   font-size: 0.78rem;
 }
+body.mobile-mode .miracle-resources {
+  gap: 8px;
+  padding: 6px;
+  margin-bottom: 8px;
+  font-size: 0.78rem;
+}
 body.mobile-mode .building-grid {
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
   gap: 8px;
 }
+body.mobile-mode .miracle-grid {
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 8px;
+}
 body.mobile-mode .building-item {
+  padding: 9px;
+}
+body.mobile-mode .miracle-item {
   padding: 9px;
 }
 body.mobile-mode #raidModal {

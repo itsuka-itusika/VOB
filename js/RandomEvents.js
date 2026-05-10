@@ -6,21 +6,22 @@ import { doExchange } from "./exchange.js";
 import { showRandomEventModal } from "./randomEventModal.js";
 import { scheduleGoldenRainPregnancy } from "./reproduction.js";
 import { refreshJobTable } from "./domain/jobTables.js";
+import {
+  getChildlikeRandomEventLine,
+  getDialogueLine,
+  pickDialogueLine,
+  resolveStoredSpeechType,
+  selectRandomEventLineBySpeechType
+} from "./dialogue/dialogueEngine.js";
 
 import {
   EVENT_KIND_TABLE,
   EVENT_KIND_TITLES,
-  EVENT_LINES_BY_SPEECH_TYPE,
   EVENT_MOODS,
   EVENT_POOLS,
   EVENT_SECOND_LINE_BASES,
   EVENT_SUBJECTS,
-  EVENT_VILLAGER_LINES,
-  GOLDEN_RAIN_RACES,
-  SPEECH_TYPE_LINE_FALLBACKS,
-  SPEECH_TYPE_TONES,
-  expandEventVillagerLines,
-  findLineByKeys
+  GOLDEN_RAIN_RACES
 } from "./data/randomEventData.js";
 
 const VILLAGER_STATE_KEYS = [
@@ -29,39 +30,6 @@ const VILLAGER_STATE_KEYS = [
   "bodyTraits", "mindTraits", "relationships", "hobby",
   "bodySex", "bodyAge", "bodyOwner", "race", "portraitFile"
 ];
-
-const BUDDING_EVENT_LINES = {
-  male: {
-    mythic: ["わあ……ひかってる。ぼく、ちゃんと見てたよ！", "すごいね……ぼく、ちょっとどきどきする。"],
-    happy: ["やった、いいことだね！", "えへへ、ぼくもうれしい！"],
-    gain: ["これ、村の役に立つ？ ぼくも運ぶよ！", "たくさんあるね。ぼく、なくさないようにする。"],
-    friendship: ["ともだちができるの、うれしいね！", "ぼくも仲よくしたいな。"],
-    romance: ["なんだか、むねがぽかぽかするね。", "すきって、こういうことなのかな。"],
-    selfChange: ["ぼく、ちょっと変わったかも！", "見て見て、ぼく新しくなった？"],
-    loss: ["なくなっちゃったの？ ぼくも探すよ。", "たいへんだ……ぼく、手伝うね。"],
-    hardship: ["たいへんだけど、ぼくもがんばる。", "ちょっとつらいけど、だいじょうぶ。"],
-    threat: ["こわいけど、ちゃんと隠れるよ。", "ぼく、みんなのそばにいるね。"],
-    injury: ["いたいの？ はやくなおしてあげよう。", "けが、こわいね……手当てしよう。"],
-    shock: ["びっくりした……いまの、なに？", "ぼく、目がまんまるになっちゃった。"],
-    conflict: ["けんかはいやだよ。なかなおりしよう。", "ぼく、怒った声はこわいな……。"],
-    default: ["わあ……。", "えへへ。", "これ、なあに？"]
-  },
-  female: {
-    mythic: ["わあ……きれい。わたし、ちゃんと見てたよ！", "すごいね……わたし、胸がどきどきする。"],
-    happy: ["やった、いいことだね！", "えへへ、わたしもうれしい！"],
-    gain: ["これ、村の役に立つ？ わたしも運ぶね！", "たくさんあるね。わたし、大事にする。"],
-    friendship: ["ともだちができるの、うれしいね！", "わたしも仲よくしたいな。"],
-    romance: ["なんだか、胸がふわふわするね。", "すきって、こういう気持ちなのかな。"],
-    selfChange: ["わたし、ちょっと変わったかも！", "見て見て、わたし新しくなった？"],
-    loss: ["なくなっちゃったの？ わたしも探すね。", "たいへんだ……わたし、手伝うね。"],
-    hardship: ["たいへんだけど、わたしもがんばる。", "ちょっとつらいけど、だいじょうぶ。"],
-    threat: ["こわいけど、ちゃんと隠れるね。", "わたし、みんなのそばにいるね。"],
-    injury: ["いたいの？ はやくなおしてあげよう。", "けが、こわいね……手当てしよう。"],
-    shock: ["びっくりした……いまの、なに？", "わたし、目がまんまるになっちゃった。"],
-    conflict: ["けんかはいやだよ。なかなおりしよう。", "わたし、怒った声はこわいな……。"],
-    default: ["わあ……。", "えへへ。", "これ、なあに？"]
-  }
-};
 
 function snapshotVillager(person) {
   return JSON.stringify(Object.fromEntries(VILLAGER_STATE_KEYS.map(key => [key, person[key]])));
@@ -103,203 +71,46 @@ export class RandomEvents {
   }
 
   static getSpeechType(character) {
-    return character.speechType || (character.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ");
+    return resolveStoredSpeechType(character);
   }
 
   static getChildlikeEventLine(character, eventKey = null, kind = null) {
-    const mindTraits = Array.isArray(character?.mindTraits) ? character.mindTraits : [];
-    if (mindTraits.includes("無垢")) return this.randChoice(["あうー。", "んま。", "ばぶ。", "すやすや……"]);
-    if (mindTraits.includes("萌芽")) {
-      const sexKey = character?.spiritSex === "女" ? "female" : "male";
-      const mood = eventKey ? this.getEventMood(eventKey, kind) : "default";
-      const lines = BUDDING_EVENT_LINES[sexKey] || BUDDING_EVENT_LINES.male;
-      return this.randChoice(lines[mood] || lines.default);
-    }
-    return null;
+    const mood = eventKey ? this.getEventMood(eventKey, kind) : "default";
+    return getChildlikeRandomEventLine(character, { eventKey, kind, mood });
   }
 
   static createEventLine(kind, character, eventKey) {
-    const childLine = this.getChildlikeEventLine(character, eventKey, kind);
-    if (childLine) return childLine;
-
-    const subject = this.getEventSubject(eventKey, kind);
-    const mood = this.getEventMood(eventKey, kind);
-    const speechType = this.getSpeechType(character);
-    const eventLine = this.getLineBySpeechType(EVENT_LINES_BY_SPEECH_TYPE[eventKey], speechType, character);
-    if (eventLine) {
-      return this.resolveLineValue(eventLine);
-    }
-
-    const lines = {
-      mythic: {
-        polite: `${subject}……これは、軽々しく語ってよい出来事ではありませんね。`,
-        cool: `${subject}か。記録しておく価値はありそうだ。`,
-        bold: `${subject}だと？ すげえな、体が熱くなるぜ！`,
-        shy: `${subject}……こ、怖いけど、少しだけ綺麗でした……`,
-        bright: `${subject}ってすごいね！ なんだか特別な日になったよ！`,
-        male: `${subject}か……ただごとじゃなかったな。`,
-        female: `${subject}……不思議なこともあるものですね。`
-      },
-      happy: {
-        polite: `これは朗報ですね。村の空気が少し和らぎました。`,
-        cool: `悪くない流れだ。今日は少し期待できそうだな。`,
-        bold: `いい話だ！ こういう展開は大歓迎だな！`,
-        shy: `……なんだか、少しうれしいです。`,
-        bright: `わあ、いい感じ！ 今日はいい日になりそう！`,
-        male: `いい知らせだな。少し気分が明るくなる。`,
-        female: `うれしい出来事ですね。村が明るくなった気がします。`
-      },
-      gain: {
-        polite: `助かりますね。大切に使っていきましょう。`,
-        cool: `余裕ができたな。使い道は慎重に決めよう。`,
-        bold: `こいつは助かる！ これで一息つけるな！`,
-        shy: `……よかった。む、無駄にしないようにします。`,
-        bright: `やった！ ちょっと得した気分だね！`,
-        male: `これは助かるな。`,
-        female: `ありがたいですね。助かります。`
-      },
-      friendship: {
-        polite: `よい縁に恵まれました。これからも大切にしたいですね。`,
-        cool: `信頼できる相手がいるのは助かる。悪くない。`,
-        bold: `気の合う仲間ってのは最高だな！`,
-        shy: `……うまく仲良くできて、ほっとしました。`,
-        bright: `気が合う人ができると、やっぱりうれしいね！`,
-        male: `いい仲間ができた。頼もしいな。`,
-        female: `いいご縁でした。これからが楽しみですね。`
-      },
-      romance: {
-        polite: `胸が高鳴りますね……丁寧に向き合っていきたいです。`,
-        cool: `この感情は軽く扱えないな。慎重にいこう。`,
-        bold: `よし、こうなったら正面からぶつかるしかないな！`,
-        shy: `……は、恥ずかしいけど……うれしいです。`,
-        bright: `わあ……これ、すごくドキドキするね！`,
-        male: `不思議な気分だな……でも悪くない。`,
-        female: `心がふわっとします……大事にしたいですね。`
-      },
-      selfChange: {
-        polite: `新しい自分を試してみます。きっと糧になります。`,
-        cool: `変われるなら変わる。それが今は最適だ。`,
-        bold: `変わるなら徹底的にだ！ もっといくぞ！`,
-        shy: `……ちょっと怖いけど、変わってみたいです。`,
-        bright: `変わるのって楽しいね！ もっとやってみたい！`,
-        male: `少し変わってみるのも悪くないな。`,
-        female: `新しい私になれる気がします。`
-      },
-      loss: {
-        polite: `${subject}の被害は痛いですね。早めに立て直しましょう。`,
-        cool: `${subject}か。損失を計算して次に備えるべきだ。`,
-        bold: `${subject}だと？ くそ、すぐ取り返すぞ！`,
-        shy: `${subject}……こ、困りましたね……`,
-        bright: `${subject}は大変だけど、まだなんとかなるよ！`,
-        male: `${subject}は痛いな。対策しないと。`,
-        female: `${subject}は困りますね。備えが必要です。`
-      },
-      hardship: {
-        polite: `${subject}は体に堪えますね。無理は禁物です。`,
-        cool: `${subject}か。消耗を抑えて動こう。`,
-        bold: `${subject}くらいでへばってられないな！`,
-        shy: `${subject}……今日は休んだ方がいいかも……`,
-        bright: `${subject}はきついけど、がんばって乗り切ろう！`,
-        male: `${subject}はこたえるな。`,
-        female: `${subject}はつらいですね。`
-      },
-      threat: {
-        polite: `${subject}とは物騒ですね。警戒を強めましょう。`,
-        cool: `${subject}か。治安の低下は見過ごせない。`,
-        bold: `${subject}だと？ 見つけたらただじゃおかない！`,
-        shy: `${subject}……こ、怖いです……戸締まりします。`,
-        bright: `${subject}！？ みんな、気をつけようね！`,
-        male: `${subject}か。警戒が必要だな。`,
-        female: `${subject}なんて、物騒ですね。`
-      },
-      injury: {
-        polite: `手当てを急ぎましょう。被害を広げないことが先決です。`,
-        cool: `痛むが、まずは治療だ。優先順位を間違えるな。`,
-        bold: `くっ……この程度で止まってられねえ。手当てだ！`,
-        shy: `……いたっ……で、でも、先に手当てします……`,
-        bright: `いたた……！ でも大丈夫、すぐ手当てするよ！`,
-        male: `痛っ……まずは手当てしないとな。`,
-        female: `痛みますね……落ち着いて手当てしましょう。`
-      },
-      shock: {
-        polite: `常識では測れない出来事ですね……状況確認を急ぎましょう。`,
-        cool: `想定外だな。まずは状況確認を急ぐべきだ。`,
-        bold: `なんだ今のは！？ すぐに状況を確かめるぞ！`,
-        shy: `……え、えっと……私たち、大丈夫でしょうか……？`,
-        bright: `びっくりした……！ 何が起きたか確認しよう！`,
-        male: `今のは予想外だな……状況を確認しよう。`,
-        female: `驚きました……まずは落ち着いて確認しましょう。`
-      },
-      conflict: {
-        polite: `感情的になってしまいました……まずは落ち着いて話します。`,
-        cool: `熱くなりすぎたな。ここは一度引くべきだ。`,
-        bold: `ちっ、頭に血がのぼった。落ち着いて話し直すか。`,
-        shy: `……こ、怖かったです……ちゃんと話し合いたいです。`,
-        bright: `言いすぎちゃったかも……ちゃんと仲直りしたいな。`,
-        male: `まずかったな……冷静になって話し合おう。`,
-        female: `少し感情的でした……きちんと話し直します。`
+    return getDialogueLine({
+      character,
+      scene: "randomEvent",
+      key: eventKey,
+      context: {
+        kind,
+        subject: this.getEventSubject(eventKey, kind),
+        mood: this.getEventMood(eventKey, kind)
       }
-    };
-
-    const group = lines[mood] || lines[kind] || lines.happy;
-    return this.resolveLineValue(this.getLineBySpeechType(expandEventVillagerLines(group), speechType, character));
+    }) || "...";
   }
 
   static getLineBySpeechType(group, speechType, character) {
-    if (!group) return null;
-    const genderFallback = character.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ";
-    const keys = [
-      speechType,
-      ...(SPEECH_TYPE_LINE_FALLBACKS[speechType] || []),
-      genderFallback,
-      ...(SPEECH_TYPE_LINE_FALLBACKS[genderFallback] || []),
-      "普通Ｆ",
-      "普通Ｍ",
-      "female",
-      "male"
-    ];
-    return findLineByKeys(group, [...new Set(keys)]);
+    return selectRandomEventLineBySpeechType(group, speechType, character);
   }
 
   static resolveLineValue(value) {
-    if (Array.isArray(value)) return this.randChoice(value);
-    return value || null;
+    return pickDialogueLine(value);
   }
 
   static createSecondEventLine(eventKey, speechType, character) {
-    const childLine = this.getChildlikeEventLine(character, eventKey);
-    if (childLine) return childLine;
-
-    const base = EVENT_SECOND_LINE_BASES[eventKey];
-    if (!base) return null;
-
-    const style = SPEECH_TYPE_TONES[speechType] || (character.spiritSex === "女" ? "female" : "male");
-    const isMale = character.spiritSex !== "女";
-
-    if (eventKey === "fight") {
-      if (style === "polite") return `${base}のです。そこをどいてください。`;
-      if (style === "cool") return `${base}。ここで引く気はない。`;
-      if (style === "bold") return isMale ? `${base}んだよ。やるなら来い！` : `${base}わ。やるなら来なさい！`;
-      if (style === "shy") return `${base}です……もう黙っていられません……`;
-      if (style === "bright") return `${base}よ！ さすがに怒るからね！`;
-      return isMale ? `${base}。もう黙っていられない。` : `${base}わ。もう黙っていられません。`;
-    }
-
-    if (eventKey === "drunk") {
-      if (style === "polite") return `${base}ようですが、まだ席は立ちませんよ。`;
-      if (style === "cool") return `${base}。だが問題はない、たぶん。`;
-      if (style === "bold") return isMale ? `${base}んだよ！ もっと酒を持ってこい！` : `${base}のよ！ もっと飲ませなさい！`;
-      if (style === "shy") return `${base}みたいです……えへへ、変ですね……`;
-      if (style === "bright") return `${base}よ！ 今日はもっと楽しくしよう！`;
-      return isMale ? `${base}。まだ飲める。` : `${base}みたいです。まだ平気です。`;
-    }
-
-    if (style === "polite") return `${base}ようです。丁寧に受け止めたいですね。`;
-    if (style === "cool") return `${base}。状況を見極めよう。`;
-    if (style === "bold") return isMale ? `${base}！ この勢い、無駄にしねえ！` : `${base}！ この勢い、無駄にしないわ！`;
-    if (style === "shy") return `${base}みたいです……まだ少し落ち着きません……`;
-    if (style === "bright") return `${base}！ なんだか胸が騒ぐね！`;
-    return isMale ? `${base}な。少し様子を見よう。` : `${base}ようです。少し様子を見ましょう。`;
+    return getDialogueLine({
+      character,
+      scene: "randomEventSecond",
+      key: eventKey,
+      context: {
+        base: EVENT_SECOND_LINE_BASES[eventKey],
+        speechType,
+        mood: this.getEventMood(eventKey, null)
+      }
+    });
   }
 
   static addForcedSpeaker(character) {
