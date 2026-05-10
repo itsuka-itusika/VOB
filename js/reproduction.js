@@ -707,8 +707,25 @@ function getAdultLine(character) {
   return getDialogueLine({ character, scene: "reproduction", key: "adult" }) || "";
 }
 
+const adultModalQueue = [];
+let isShowingAdultModal = false;
+
 function showAdultModal(village, character) {
   if (typeof document === "undefined") return;
+  adultModalQueue.push({ village, character });
+  if (isShowingAdultModal) return;
+  showNextAdultModal();
+}
+
+function showNextAdultModal() {
+  const event = adultModalQueue.shift();
+  if (!event) {
+    isShowingAdultModal = false;
+    return;
+  }
+  isShowingAdultModal = true;
+
+  const { village, character } = event;
   const overlay = document.createElement("div");
   overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;";
   const modal = document.createElement("div");
@@ -717,15 +734,19 @@ function showAdultModal(village, character) {
     <h2>成人</h2>
     <p>${character.name}が成人しました。</p>
     ${renderPortraitLine(character, getAdultLine(character))}
-    <button id="closeAdultModal">閉じる</button>
+    <button type="button" data-close-adult-modal>閉じる</button>
   `;
   document.body.appendChild(overlay);
   document.body.appendChild(modal);
-  document.getElementById("closeAdultModal").onclick = () => {
+
+  const close = () => {
     overlay.remove();
     modal.remove();
+    isShowingAdultModal = false;
     import("./ui.js").then(module => module.updateUI(village));
+    showNextAdultModal();
   };
+  modal.querySelector("[data-close-adult-modal]").onclick = close;
 }
 
 function getBirthLine(character, role) {
