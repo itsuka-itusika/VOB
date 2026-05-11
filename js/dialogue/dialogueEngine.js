@@ -290,7 +290,9 @@ export function collectConversationCandidates({ character, village, context = {}
     }, sharedContext);
   }
 
-  if (Number(character?.ind) <= 10) {
+  // 低勤勉の会話は、仕事への抵抗感として成立する精神年齢からだけ候補にする。
+  // 子供系口調が混入した場合は LAZY_LINES 側の通常fallbackで受ける。
+  if (Number(character?.ind) <= 10 && Number(character?.spiritAge) >= 10) {
     addCandidate(candidates, character, {
       scene: "lazy",
       key: "lowDiligence",
