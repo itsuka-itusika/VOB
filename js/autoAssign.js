@@ -54,49 +54,53 @@ const RECOVERY_ASSIGNMENT_SET = new Set([
 ]);
 
 const JOB_WEIGHTS = {
-  "\u5b66\u696d": { int: 2, ind: 2, eth: 0.5 },
-  "\u935b\u932c": { str: 2, vit: 1.5, cou: 1.5 },
-  "\u8fb2\u4f5c\u696d": { vit: 2.1, str: 1.1, ind: 1.1 },
-  "\u4f10\u63a1": { str: 2.05, ind: 1.55, cou: 0.5 },
-  "\u72e9\u731f": { str: 2.1, cou: 2.1, vit: 0.35 },
-  "\u6f01": { vit: 2.15, cou: 1.85, int: 0.35 },
-  "\u63a1\u96c6": { dex: 1.7, int: 1.7, ind: 1.1 },
-  "\u5185\u8077": { dex: 2, ind: 1.5, int: 0.5 },
-  "\u9b54\u6cd5\u7d30\u5de5": { mag: 2, dex: 1.5, int: 1 },
-  "\u7814\u7a76": { int: 2, mag: 1.5, ind: 1 },
-  "\u6559\u80b2": { int: 1.5, chr: 1.5, eth: 1.5 },
-  "\u8b66\u5099": { str: 1.5, vit: 1.5, cou: 2 },
-  "\u770b\u8b77": { eth: 2, mag: 1.5, int: 1 },
-  "\u8e0a\u308a\u5b50": { chr: 2, dex: 1.5, sexdr: 1 },
-  "\u8a69\u4eba": { chr: 2, mag: 1, int: 1 },
-  "\u30b7\u30b9\u30bf\u30fc": { eth: 2, mag: 1.5, chr: 1 },
-  "\u795e\u5b98": { mag: 2, eth: 1.5, chr: 1 },
-  "\u884c\u5546": { chr: 2, ind: 1.5, int: 1 },
-  "\u3042\u3093\u307e": { dex: 2, eth: 1.5, chr: 1 },
-  "\u5deb\u5973": { mag: 2, eth: 1.5, chr: 1.5 },
-  "\u30d0\u30cb\u30fc": { chr: 2, sexdr: 1.5, dex: 1 },
-  "\u932c\u91d1\u8853": { int: 2, mag: 1.5, dex: 1 },
-  "\u5199\u672c": { int: 2, ind: 1.5, dex: 1 },
-  "\u6a5f\u7e54\u308a": { dex: 2, ind: 1.5, chr: 0.5 },
-  "\u91b8\u9020": { dex: 1.5, int: 1.5, ind: 1 }
+  "\u5b66\u696d": { int: 2, ind: 2 },
+  "\u935b\u932c": { str: 2, vit: 1.5, cou: 1 },
+  "\u8fb2\u4f5c\u696d": { vit: 2, ind: 2 },
+  "\u4f10\u63a1": { str: 2, ind: 2 },
+  "\u72e9\u731f": { str: 2, cou: 2 },
+  "\u6f01": { vit: 2, cou: 2 },
+  "\u63a1\u96c6": { dex: 2, int: 2 },
+  "\u5185\u8077": { dex: 2, ind: 2 },
+  "\u9b54\u6cd5\u7d30\u5de5": { dex: 2, mag: 2 },
+  "\u7814\u7a76": { int: 2, mag: 2 },
+  "\u6559\u80b2": { int: 1.5, ind: 1.5, eth: 1.5, cou: 1.5 },
+  "\u8b66\u5099": { str: 2, eth: 2 },
+  "\u770b\u8b77": { mag: 2, eth: 2 },
+  "\u8e0a\u308a\u5b50": { chr: 2, sexdr: 2 },
+  "\u8a69\u4eba": { chr: 4 },
+  "\u30b7\u30b9\u30bf\u30fc": { chr: 2, eth: 2 },
+  "\u795e\u5b98": { chr: 2, eth: 2 },
+  "\u884c\u5546": { chr: 2, int: 2 },
+  "\u3042\u3093\u307e": { str: 1, dex: 1, chr: 1, sexdr: 1 },
+  "\u5deb\u5973": { chr: 1.5, mag: 1.5, sexdr: 1.5 },
+  "\u30d0\u30cb\u30fc": { chr: 2, sexdr: 2 },
+  "\u932c\u91d1\u8853": { int: 2, mag: 2 },
+  "\u5199\u672c": { dex: 2, int: 2 },
+  "\u6a5f\u7e54\u308a": { dex: 2, ind: 2 },
+  "\u91b8\u9020": { mag: 2, ind: 2 }
 };
 
 const JOB_BASE_SCORES = {
   "\u8fb2\u4f5c\u696d": 20,
-  "\u4f10\u63a1": 18,
+  "\u4f10\u63a1": 20,
   "\u72e9\u731f": 14,
   "\u6f01": 14,
-  "\u63a1\u96c6": 18,
-  "\u5185\u8077": 2,
+  "\u63a1\u96c6": 14,
+  "\u5185\u8077": 8,
   "\u9b54\u6cd5\u7d30\u5de5": 0,
-  "\u884c\u5546": 0,
+  "\u7814\u7a76": -8,
+  "\u884c\u5546": 8,
   "\u932c\u91d1\u8853": 0,
-  "\u5199\u672c": 0,
-  "\u6a5f\u7e54\u308a": 2,
+  "\u5199\u672c": 8,
+  "\u6a5f\u7e54\u308a": 8,
   "\u91b8\u9020": 14,
   "\u8b66\u5099": -8,
+  "\u770b\u8b77": 8,
   "\u8e0a\u308a\u5b50": -8,
-  "\u30b7\u30b9\u30bf\u30fc": -8
+  "\u30b7\u30b9\u30bf\u30fc": -8,
+  "\u3042\u3093\u307e": 8,
+  "\u30d0\u30cb\u30fc": 8
 };
 
 function firstAvailable(candidates, table) {
@@ -217,8 +221,16 @@ function getJobTraitMultiplier(person, job, village) {
   return mul;
 }
 
+function getJobWeights(person, job) {
+  if (job === "\u3042\u3093\u307e") {
+    if (person.bodySex === "\u7537") return { str: 2, dex: 2 };
+    if (person.bodySex === "\u5973") return { chr: 2, sexdr: 2 };
+  }
+  return JOB_WEIGHTS[job];
+}
+
 function scoreJob(person, job, context) {
-  const weights = JOB_WEIGHTS[job];
+  const weights = getJobWeights(person, job);
   if (!weights) return -Infinity;
 
   const baseScore = JOB_BASE_SCORES[job] || 0;

@@ -1,5 +1,18 @@
 // ui.js
 
+import {
+  calculateFarmYield,
+  calculateFishYield,
+  calculateGatherYield,
+  calculateGuardYield,
+  calculateHandiworkYield,
+  calculateHuntYield,
+  calculateLumberYield,
+  calculateResearchYield,
+  calculateTradingYield,
+  estimateBodyCost,
+  estimateMindCost,
+} from "./domain/jobMath.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { isRestrictedNoJobVillager } from "./domain/rules.js";
 import { showDictionaryEntry } from "./dictionary.js";
@@ -201,13 +214,12 @@ function applyStatusHighlights(row, person) {
   if (happinessCell) happinessCell.style.color = "#000";
 }
 
-function bodyCost(base, person) {
-  return Math.round(base * (1 - ((Number(person.vit) || 0) / 100)));
+function bodyCost(base, person, village) {
+  return estimateBodyCost(base, person?.vit, person, village);
 }
 
-function mindCost(base, stat, person) {
-  if (Array.isArray(person.mindTraits) && person.mindTraits.includes("ワーカホリック")) return 0;
-  return Math.round(base * (1 - ((Number(person[stat]) || 0) / 100)));
+function mindCost(base, stat, person, village) {
+  return estimateMindCost(base, person?.[stat], person, village);
 }
 
 function ageRestMultiplier(person) {
@@ -222,40 +234,6 @@ function hasCurrentHobbyMate(person) {
     const normalized = normalizeRelationship(rel);
     return normalized.includes(`${person.hobby}仲間：`);
   });
-}
-
-function seasonWorkMultiplier(village, job, person) {
-  let mul = 1;
-  if (village.villageTraits.includes("豊穣") && ["農作業", "伐採", "狩猟", "漁", "採集"].includes(job)) mul *= 2;
-  if (village.villageTraits.includes("秋") && ["農作業", "採集"].includes(job)) mul *= 1.5;
-  if (village.villageTraits.includes("冬") && job === "農作業") mul *= 0.5;
-  if (village.villageTraits.includes("冬") && job === "狩猟") mul *= 1.2;
-  if (village.villageTraits.includes("冷夏") && ["農作業", "伐採"].includes(job)) mul *= 0.5;
-  if (hasTrait(person, "緑の指") && ["農作業", "伐採", "採集"].includes(job)) mul *= 1.2;
-  if (hasTrait(person, "熟練農夫") && job === "農作業") mul *= 1.3;
-  if (hasTrait(person, "達人農夫") && job === "農作業") mul *= 1.5;
-  if (hasTrait(person, "熟練木樵") && job === "伐採") mul *= 1.3;
-  if (hasTrait(person, "達人木樵") && job === "伐採") mul *= 1.5;
-  if (hasTrait(person, "熟練狩人") && job === "狩猟") mul *= 1.3;
-  if (hasTrait(person, "達人狩人") && job === "狩猟") mul *= 1.5;
-  if (hasTrait(person, "熟練漁師") && job === "漁") mul *= 1.3;
-  if (hasTrait(person, "達人漁師") && job === "漁") mul *= 1.5;
-  if (hasTrait(person, "飛行") && ["狩猟", "採集"].includes(job)) mul *= 1.2;
-  if (hasTrait(person, "大地の巫女") && job === "農作業") mul *= 1.5;
-  if (hasTrait(person, "月の巫女") && job === "狩猟") mul *= 1.5;
-  if (hasTrait(person, "月の加護") && job === "狩猟") mul *= 1.2;
-  if (hasTrait(person, "夜目") && ["警備", "狩猟"].includes(job)) mul *= 1.2;
-  if (hasTrait(person, "大地の加護") && job === "農作業") mul *= 1.2;
-  if (hasTrait(person, "水中呼吸") && job === "漁") mul *= 1.5;
-  if (hasTrait(person, "森の知恵") && job === "採集") mul *= 1.5;
-  if (hasTrait(person, "海の知恵") && job === "漁") mul *= 1.5;
-  if (person.hobby === "ハンティング" && job === "狩猟") mul *= 1.2;
-  if (person.hobby === "狩猟" && job === "狩猟") mul *= 1.2;
-  if ((Array.isArray(person.mindTraits) && person.mindTraits.includes("思春期")) &&
-    ["農作業", "伐採", "狩猟", "漁", "採集", "内職"].includes(job)) {
-    mul *= 0.8;
-  }
-  return mul;
 }
 
 function formatEstimate(parts) {
@@ -345,6 +323,8 @@ function getTaskEstimate(person, task, village) {
   let gain = 0;
   let parts = [];
 
+  // jobMath.js と共有していない表示計算は、対象選択やランダム分岐を単純化した目安用です。
+  // 実処理の成果量まで安全に共有できる仕事は、下の各 case から jobMath.js を参照します。
   switch (task) {
     case "休養": {
       let hp = person.mindTraits.includes("ワーカホリック") ? 30 : 54;
@@ -362,91 +342,92 @@ function getTaskEstimate(person, task, village) {
       break;
     }
     case "遊び":
-      parts = [`体力-${bodyCost(5, person)}`, "メンタル+20", "幸福+15"];
+      parts = [`体力-${bodyCost(5, person, village)}`, "メンタル+20", "幸福+15"];
       break;
     case "療養":
       parts = [`体力+${Math.floor(20 * (hasTrait(person, "老人") ? 0.6 : hasTrait(person, "中年") ? 0.8 : 1))}`, `メンタル+${Math.floor(20 * (hasTrait(person, "老人") ? 0.6 : hasTrait(person, "中年") ? 0.8 : 1))}`];
       break;
     case "農作業":
-      gain = Math.round((10 + 20 * ((vit / 20) * (ind / 20))) * seasonWorkMultiplier(village, task, person));
-      parts = [`${resourceName(village, "食料")}+${gain}`, `体力-${bodyCost(30, person)}`, `メンタル-${mindCost(15, "ind", person)}`];
+      gain = calculateFarmYield(person, village);
+      parts = [`${resourceName(village, "食料")}+${gain}`, `体力-${bodyCost(30, person, village)}`, `メンタル-${mindCost(15, "ind", person, village)}`];
       break;
     case "伐採":
-      gain = Math.round((10 + 20 * ((str / 20) * (ind / 20))) * seasonWorkMultiplier(village, task, person));
-      parts = [`資材+${gain}`, `体力-${bodyCost(30, person)}`, `メンタル-${mindCost(15, "ind", person)}`];
+      gain = calculateLumberYield(person, village);
+      parts = [`資材+${gain}`, `体力-${bodyCost(30, person, village)}`, `メンタル-${mindCost(15, "ind", person, village)}`];
       break;
     case "狩猟":
-      gain = Math.round((22 * ((str / 20) * (cou / 20))) * seasonWorkMultiplier(village, task, person));
-      parts = [`${resourceName(village, "食料")}+${gain}`, `体力-${bodyCost(30, person)}`, `メンタル-${mindCost(15, "ind", person)}`];
+      gain = calculateHuntYield(person, village);
+      parts = [`${resourceName(village, "食料")}+${gain}`, `体力-${bodyCost(30, person, village)}`, `メンタル-${mindCost(15, "ind", person, village)}`];
       break;
     case "漁":
-      gain = Math.round((22 * ((vit / 20) * (cou / 20))) * seasonWorkMultiplier(village, task, person));
-      parts = [`${resourceName(village, "食料")}+${gain}`, `体力-${bodyCost(30, person)}`, `メンタル-${mindCost(15, "ind", person)}`];
+      gain = calculateFishYield(person, village);
+      parts = [`${resourceName(village, "食料")}+${gain}`, `体力-${bodyCost(30, person, village)}`, `メンタル-${mindCost(15, "ind", person, village)}`];
       break;
-    case "採集":
-      gain = Math.round((5 + 10 * ((dex / 20) * (intv / 20))) * seasonWorkMultiplier(village, task, person));
-      parts = [`${resourceName(village, "食料")}+${gain}`, `資材+${Math.round(2 * seasonWorkMultiplier(village, task, person))}`, `体力-${bodyCost(15, person)}`, `メンタル-${mindCost(15, "ind", person)}`];
+    case "採集": {
+      const gatherYield = calculateGatherYield(person, village);
+      parts = [`${resourceName(village, "食料")}+${gatherYield.food}`, `資材+${gatherYield.materials}`, `体力-${bodyCost(15, person, village)}`, `メンタル-${mindCost(15, "ind", person, village)}`];
       break;
+    }
     case "内職":
-      parts = [`資金+${Math.round((5 + 10 * ((dex / 20) * (ind / 20))) * seasonWorkMultiplier(village, task, person))}`, `体力-${bodyCost(15, person)}`, `メンタル-${mindCost(15, "ind", person)}`];
+      parts = [`資金+${calculateHandiworkYield(person, village)}`, `体力-${bodyCost(15, person, village)}`, `メンタル-${mindCost(15, "ind", person, village)}`];
       break;
     case "行商":
-      parts = [`資金+${Math.round(20 * ((chr / 20) * (intv / 20)))}`, `体力-${bodyCost(20, person)}`, `メンタル-${mindCost(20, "ind", person)}`];
+      parts = [`資金+${calculateTradingYield(person)}`, `体力-${bodyCost(20, person, village)}`, `メンタル-${mindCost(20, "ind", person, village)}`];
       break;
     case "研究":
-      gain = Math.round((15 + 30 * ((intv / 20) * (mag / 20))) * (library ? 1.2 : 1));
-      parts = [`技術+${gain}`, `体力-${bodyCost(15, person)}`, `メンタル-${mindCost(30, "int", person)}`];
+      gain = calculateResearchYield(person, village);
+      parts = [`技術+${gain}`, `体力-${bodyCost(15, person, village)}`, `メンタル-${mindCost(30, "int", person, village)}`];
       break;
     case "警備":
-      parts = [`治安+${Math.max(1, Math.round(10 * (str / 20) * (eth / 20) * (hasTrait(person, "夜目") ? 1.2 : 1)))}`, `体力-${bodyCost(15, person)}`, `メンタル-${mindCost(30, "cou", person)}`];
+      parts = [`治安+${calculateGuardYield(person)}`, `体力-${bodyCost(15, person, village)}`, `メンタル-${mindCost(30, "cou", person, village)}`];
       break;
     case "看護":
       gain = Math.round(20 * mag * eth / 400 * (clinic ? 1.2 : 1));
-      parts = [`体力回復+${gain}`, `体力-${bodyCost(20, person)}`, `メンタル-${mindCost(20, "eth", person)}`];
+      parts = [`体力回復+${gain}`, `体力-${bodyCost(20, person, village)}`, `メンタル-${mindCost(20, "eth", person, village)}`];
       break;
     case "あんま":
       gain = person.bodySex === "男" ? Math.round(20 * str / 20 * dex / 20) : Math.round(20 * chr / 20 * sexdr / 20);
-      parts = [`体力回復+${gain}`, `体力-${bodyCost(20, person)}`, `メンタル-${mindCost(20, person.bodySex === "男" ? "ind" : "sexdr", person)}`];
+      parts = [`体力回復+${gain}`, `体力-${bodyCost(20, person, village)}`, `メンタル-${mindCost(20, person.bodySex === "男" ? "ind" : "sexdr", person, village)}`];
       break;
     case "シスター":
     case "神官":
       gain = Math.round(5 * chr * eth / 400 * (church ? 1.2 : 1) * (voice ? 1.2 : 1));
-      parts = [`全員メンタル+${gain}`, `体力-${bodyCost(10, person)}`, `メンタル-${mindCost(30, "eth", person)}`];
+      parts = [`全員メンタル+${gain}`, `体力-${bodyCost(10, person, village)}`, `メンタル-${mindCost(30, "eth", person, village)}`];
       break;
     case "踊り子":
       gain = Math.round(5 * chr * sexdr / 400 * (tavern ? 1.2 : 1) * (voice ? 1.2 : 1) * (hasTrait(person, "太陽の巫女") ? 1.5 : 1));
-      parts = [`男性${affectedMen}人幸福+${gain}`, `体力-${bodyCost(20, person)}`, `メンタル-${mindCost(20, "sexdr", person)}`];
+      parts = [`男性${affectedMen}人幸福+${gain}`, `体力-${bodyCost(20, person, village)}`, `メンタル-${mindCost(20, "sexdr", person, village)}`];
       break;
     case "詩人":
       gain = Math.round(5 * chr * chr / 400 * (tavern ? 1.2 : 1) * (voice ? 1.2 : 1) * (hasTrait(person, "太陽の巫女") ? 1.5 : 1) * (hasTrait(person, "太陽の加護") ? 1.2 : 1));
-      parts = [`女性${affectedWomen}人幸福+${gain}`, `体力-${bodyCost(20, person)}`, `メンタル-${mindCost(20, "ind", person)}`];
+      parts = [`女性${affectedWomen}人幸福+${gain}`, `体力-${bodyCost(20, person, village)}`, `メンタル-${mindCost(20, "ind", person, village)}`];
       break;
     case "バニー":
       gain = Math.round(6 * chr / 20 * sexdr / 20);
-      parts = [`男性${affectedMen}人幸福/メンタル+${gain}`, `体力-${bodyCost(20, person)}`, `メンタル-${mindCost(20, "sexdr", person)}`];
+      parts = [`男性${affectedMen}人幸福/メンタル+${gain}`, `体力-${bodyCost(20, person, village)}`, `メンタル-${mindCost(20, "sexdr", person, village)}`];
       break;
     case "巫女":
-      parts = [`魔素+${Math.round(10 * chr / 20 * mag / 20 * sexdr / 20)}`, `体力-${bodyCost(20, person)}`, `メンタル-${mindCost(20, "sexdr", person)}`];
+      parts = [`魔素+${Math.round(10 * chr / 20 * mag / 20 * sexdr / 20)}`, `体力-${bodyCost(20, person, village)}`, `メンタル-${mindCost(20, "sexdr", person, village)}`];
       break;
     case "錬金術":
       gain = Math.round(24 * mag / 20 * intv / 20);
-      parts = [`資金/技術+${gain}`, `体力-${bodyCost(20, person)}`, `メンタル-${mindCost(20, "int", person)}`];
+      parts = [`資金/技術+${gain}`, `体力-${bodyCost(20, person, village)}`, `メンタル-${mindCost(20, "int", person, village)}`];
       break;
     case "写本":
       gain = Math.round(24 * dex / 20 * intv / 20);
-      parts = [`資金/技術+${gain}`, `体力-${bodyCost(20, person)}`, `メンタル-${mindCost(20, "ind", person)}`];
+      parts = [`資金/技術+${gain}`, `体力-${bodyCost(20, person, village)}`, `メンタル-${mindCost(20, "ind", person, village)}`];
       break;
     case "機織り":
-      parts = [`資金+${Math.round(30 * dex / 20 * ind / 20 * (hasTrait(person, "梟の巫女") ? 1.5 : 1) * (hasTrait(person, "梟の加護") ? 1.2 : 1))}`, `体力-${bodyCost(20, person)}`, `メンタル-${mindCost(20, "ind", person)}`];
+      parts = [`資金+${Math.round(30 * dex / 20 * ind / 20 * (hasTrait(person, "梟の巫女") ? 1.5 : 1) * (hasTrait(person, "梟の加護") ? 1.2 : 1))}`, `体力-${bodyCost(20, person, village)}`, `メンタル-${mindCost(20, "ind", person, village)}`];
       break;
     case "醸造":
-      parts = [`食料+${Math.round(24 * mag / 20 * ind / 20)}`, `魔素+${Math.round(5 * mag / 20 * ind / 20)}`, `体力-${bodyCost(20, person)}`, `メンタル-${mindCost(20, "ind", person)}`];
+      parts = [`食料+${Math.round(24 * mag / 20 * ind / 20)}`, `魔素+${Math.round(5 * mag / 20 * ind / 20)}`, `体力-${bodyCost(20, person, village)}`, `メンタル-${mindCost(20, "ind", person, village)}`];
       break;
     case "学業":
-      parts = [`体力-${bodyCost(10, person)}`, `メンタル-${mindCost(10, "ind", person)}`];
+      parts = [`体力-${bodyCost(10, person, village)}`, `メンタル-${mindCost(10, "ind", person, village)}`];
       break;
     case "鍛錬":
-      parts = [`体力-${bodyCost(20, person)}`, `メンタル-${mindCost(15, "ind", person)}`];
+      parts = [`体力-${bodyCost(20, person, village)}`, `メンタル-${mindCost(15, "ind", person, village)}`];
       break;
     case "迎撃":
       parts = [`想定ダメージ${estimateDefendDamage(person, village)}`];

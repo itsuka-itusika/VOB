@@ -80,6 +80,8 @@
 
 - `js/domain/jobTables.js`
   - 仕事・行動候補の更新、強制行動制限を扱う。
+- `js/domain/jobMath.js`
+  - 仕事・行動の体力/メンタル消費計算と、副作用のない労働成果計算を扱う。`jobs.js` の実処理と `ui.js` の予測表示はここを参照し、季節・特性補正を重複実装しない。
 - `js/domain/rules.js`
   - 仕事未設定チェックなどで使う共通ルールを扱う。
 - `js/domain/personSchema.js`
