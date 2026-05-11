@@ -1,5 +1,7 @@
 // ランダムイベント会話データと、既存 fallback 展開ヘルパー。
 
+import { BODY_EXCHANGE_REACTION_LINES } from "./exchangeLines.js";
+
 export const BUDDING_EVENT_LINES = {
   male: {
     mythic: ["わあ……ひかってる。ぼく、ちゃんと見てたよ！", "すごいね……ぼく、ちょっとどきどきする。"],
@@ -668,29 +670,7 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     gal: "落雷とか本当にあるの？ まだビリビリするんだけど！",
     elder: "雷は恐ろしい。命があるだけでも幸いじゃ。"
   }),
-  lightning2: makeEventSpecificLines({
-    subject: "落雷による肉体交換",
-    normalM: "体が違うな……落ち着いて確認しよう。",
-    politeM: "これは肉体が入れ替わったのでしょうか。確認が必要です。",
-    strongM: "なんだこの体！？ すぐ状況を確かめるぞ！",
-    roughM: "おい、俺の体はどこ行ったんだよ！",
-    playfulM: "入れ替わってるっす！？ これどう動かすんすか！",
-    darkM: "手足の感覚が、自分のものじゃない。",
-    coolM: "肉体交換が発生した。感覚差を確認する。",
-    normalF: "自分の体ではありませんね……まず確認しましょう。",
-    politeF: "落ち着いて、互いの状態を確かめましょう。",
-    lady: "まあ、体が入れ替わるなんて非常識ですわ。",
-    livelyF: "うそ、入れ替わってる！？ どう動かせばいいの！？",
-    shyF: "え、えっ……私の体じゃない……どうしましょう。",
-    strongF: "慌てても仕方ないわ。まず状況確認よ！",
-    roughF: "ちょっと、私の体どこなのよ！",
-    softF: "驚きましたね。ゆっくり確認しましょう。",
-    cuteF: "体が違うよ……これ、夢じゃないよね。",
-    coolF: "肉体交換ね。混乱する前に情報を整理しましょう。",
-    neutral: "体の違和感が大きい。順に確かめるべきだ。",
-    gal: "入れ替わりとか意味わかんない！ でもちょっとすごい！",
-    elder: "体が替わるとはのう。長生きしても初めてじゃ。"
-  }),
+  lightning2: BODY_EXCHANGE_REACTION_LINES,
   snow: makeEventSpecificLines({
     subject: "大雪",
     normalM: "雪が深いな。体力を温存しよう。",

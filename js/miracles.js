@@ -6,6 +6,8 @@ import { updateUI } from "./ui.js";  // 実行後にUIを更新する
 import { doExchange } from "./exchange.js";
 import { createRandomVisitor, determineSpeechType } from "./createVillagers.js";
 import { refreshJobTable } from "./domain/jobTables.js";
+import { resolveDialogueTone } from "./data/dialogue/toneProfiles.js";
+import { BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
 /**
  * 奇跡リスト
  */
@@ -880,8 +882,8 @@ function openExchangeModal(personA, personB) {
     portraitB.src = 'images/portraits/DEFAULT.png';
   }
   
-  // 口調タイプの決定を修正
-  const getSpeechType = (person) => {
+  // 交換反応は精神側の実効口調で選び、襲撃者だけ専用キーを優先する。
+  const getExchangeLineKey = (person) => {
     // 襲撃者の場合は襲撃者タイプを使用
     if (person.mindTraits && person.mindTraits.includes("襲撃者")) {
       // 名前から襲撃者タイプを抽出
@@ -892,28 +894,25 @@ function openExchangeModal(personA, personB) {
         }
       }
     }
-    // 通常のキャラクターは既存の口調を使用
-    return person.speechType || (person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ");
+    return resolveDialogueTone(person);
   };
 
-  const speechTypeA = getSpeechType(personA);
-  const speechTypeB = getSpeechType(personB);
+  const speechTypeA = getExchangeLineKey(personA);
+  const speechTypeB = getExchangeLineKey(personB);
   
   // 入れ替わり時のセリフをランダムに選択
   const getRandomLine = (patterns, type, person) => {
-    const childLine = getChildlikeMiracleLine(person);
-    if (childLine) return childLine;
-    const lines = patterns[type] || patterns[person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"];
-    return lines[Math.floor(Math.random() * lines.length)];
+    const fallbackType = person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ";
+    return randFrom(patterns[type] || patterns[fallbackType] || patterns["普通Ｍ"]);
   };
   
   // 会話テキストを設定
   textA.innerHTML = `
-    <p><strong>${personA.name}:</strong> ${getRandomLine(EXCHANGE_SPEECH_PATTERNS, speechTypeA, personA)}</p>
+    <p><strong>${personA.name}:</strong> ${getRandomLine(BODY_EXCHANGE_REACTION_LINES, speechTypeA, personA)}</p>
   `;
   
   textB.innerHTML = `
-    <p><strong>${personB.name}:</strong> ${getRandomLine(EXCHANGE_SPEECH_PATTERNS, speechTypeB, personB)}</p>
+    <p><strong>${personB.name}:</strong> ${getRandomLine(BODY_EXCHANGE_REACTION_LINES, speechTypeB, personB)}</p>
   `;
   
   overlay.style.display = "block";
@@ -930,138 +929,3 @@ export function closeExchangeModal() {
   if (overlay) overlay.style.display = "none";
   if (modal) modal.style.display = "none";
 }
-
-/**
- * 交換の奇跡実行時のセリフパターン
- */
-const EXCHANGE_SPEECH_PATTERNS = {
-  "普通Ｍ": [
-    "なんだこれは...これが俺の体なのか？",
-    "体が入れ替わってしまった！どうしよう...",
-    "まさか本当に交換されるとは...どうすれば..."
-  ],
-  "丁寧Ｍ": [
-    "これは...私の体が変わってしまったようです。大変な事態ですね。",
-    "体が入れ替わるとは...心の準備ができておりませんでした。",
-    "これはいったいどうしたものでしょうか。戸惑いを隠せません。"
-  ],
-  "強気Ｍ": [
-    "おいおい、何が起きた？俺の体はどこだ！",
-    "くそっ、本当に入れ替わるとはな！だが、これも経験だ！",
-    "ふん、この体もなかなか悪くないぜ！すぐに慣れてやる！"
-  ],
-  "乱暴": [
-    "ふざけんな！元に戻せ！こんな体は嫌だ！",
-    "クソッ！何が起きやがった！この体はなんだ！",
-    "冗談じゃねぇ！誰だよこんなことしたのは！"
-  ],
-  "お調子者": [
-    "うわー！マジで入れ替わった！面白いっすね～",
-    "これって夢じゃないっすよね？凄いっす！どうなるんすかね～",
-    "新しい体、なかなか良さそうっすね！楽しませてもらいますよ～"
-  ],
-  "陰気": [
-    "な...何が...起きたんだ...",
-    "体が違う...一体どうすれば...",
-    "これは...夢...ではないよな..."
-  ],
-  "クールＭ": [
-    "ふむ、交換が成立したようだな。興味深い現象だ。",
-    "面白いじゃないか。この体で何ができるか試してみよう。",
-    "体の交換か。まあ、対処できないことではない。"
-  ],
-  
-  "普通Ｆ": [
-    "あら...これは私の体じゃありません！どうなってるの？",
-    "体が入れ替わってしまったの？信じられないわ...",
-    "これが交換の奇跡...想像以上のことが起きたわね..."
-  ],
-  "丁寧Ｆ": [
-    "まあ...これは驚きです。体が入れ替わってしまいましたわ。",
-    "どうしましょう、体が違うものになっています。慣れるには時間がかかりそうです。",
-    "これは想定外の事態です。どのように対処すべきでしょうか..."
-  ],
-  "お嬢様": [
-    "まあ！これはいったいどういうことかしら？私の体ではありませんわ！",
-    "なんということでしょう...体が入れ替わるなんて...心の準備ができておりませんでしたわ。",
-    "これは夢ではないのですね？現実に起きていることなのですわね？"
-  ],
-  "快活": [
-    "わー！本当に入れ替わっちゃったんだね！すごーい！",
-    "新しい体だー！どんな感じかな？ドキドキするね！",
-    "こんなことが本当にあるのね..."
-  ],
-  "内気": [
-    "あ...あの...体が...違います...ど、どうしよう...",
-    "こ、これは...私の体...ではないです...怖いです...",
-    "だ、誰か...助けて...ください...元に...戻りたいです..."
-  ],
-  "強気Ｆ": [
-    "何これ？本気で入れ替わったの？面白いじゃない！",
-    "ふん、この程度で動揺するわけないわ！すぐに慣れてやるわよ！",
-    "予想外ね...何とかこの体を使いこなさないと"
-  ],
-  "蓮っ葉": [
-    "ちょっと！マジで入れ替わっちゃったじゃん！どうなってんの？",
-    "うわ～、これが交換の奇跡？冗談でしょ～？",
-    "新しい体かぁ～。まあ、悪くないかもね～。楽しんじゃおっかな～"
-  ],
-  "おっとり": [
-    "あら...これは驚きですね。体が入れ替わってしまいましたわ。",
-    "どうしましょう...穏やかに受け入れるべきでしょうか...戸惑いますね。",
-    "思いがけない出来事ですが...きっと意味があるのでしょうね..."
-  ],
-  "クールＦ": [
-    "予想通りの結果ね。冷静に対処するだけよ。",
-    "交換が成立したわ。この状況を分析する必要があるわね。",
-    "興味深い現象ね。この体の特性を把握しておくべきね。"
-  ],
-  "ぶりっこ": [
-    "きゃー！体が変わっちゃったよ～！どうしよう～？",
-    "これってホントに交換されちゃったの～？信じられないよ～♪",
-    "新しい体だよ～。どんな感じかな～？ドキドキするね～♪"
-  ],
-  "中性的": [
-    "これは...体が入れ替わったみたいだね。不思議な感覚だ。",
-    "まさか本当に交換されるとは...どう対処すべきか考えないと。",
-    "新しい体、慣れるには時間がかかりそうだね。"
-  ],
-  "ギャル風": [
-    "マジ!?体入れ替わってるじゃん！ヤバくない？",
-    "うわー！これって入れ替わり！？信じらんない～！",
-    "新しい体ゲットしちゃった！どんな感じか試してみよっと！"
-  ],
-  // 襲撃者用のパターンを追加
-  "野盗": [
-    "くそっ、なんだこの体は！戦いづらいじゃねえか！",
-    "おい、どうなってやがる！元の体に戻せ！",
-    "ちっ、こんな体でも襲撃は続けるぜ！"
-  ],
-  "ゴブリン": [
-    "ゴブゴブ！体が変わったのだ！",
-    "キヒヒ！面白い体になったのだ！",
-    "この体でも人間をやっつけるのだ！"
-  ],
-  "狼": [
-    "グルル...（体が変わってしまった...）",
-    "ウゥゥ...（この体では狩りがしづらい...）",
-    "ガウッ！（それでも獲物は逃がさない！）"
-  ],
-  "キュクロプス": [
-    "なんだと！？この小さな体では力が出せん！",
-    "我が巨体はどこへ行った！返せ！",
-    "この体でも全てを踏み潰してやる！"
-  ],
-  "ハーピー": [
-    "あら、この体では空が飛べないじゃない！",
-    "私の美しい羽はどこへ行ったの！？",
-    "この姿でも村は襲ってあげるわ！"
-  ],
-  "老人": [
-    "おおっと...わしの体はどこへ行ってしもうたのう...",
-    "むむ...若返ったような...いや、体が入れ替わっておるのか...",
-    "この体は...なんとも不思議な感覚じゃ...",
-    "年寄りには刺激が強すぎるのう...こんな奇跡があるとは...",
-    "昔の体を思い出すようじゃ...しかし、これは別人の体なのじゃな..."
-  ]
-};

@@ -96,6 +96,7 @@
 通常会話は `js/dialogue/dialogueEngine.js` が入口です。表示側の `js/conversation.js` は `getConversationLine({ character, village })` を呼び、会話エンジンが口調、状態、仕事、季節などから候補を集めて 1 行を選びます。
 
 会話データは `js/data/dialogue/` 配下に分割されています。状態会話、季節会話、仕事会話、妊娠・成長会話、訪問者会話、ランダムイベント会話、口調定義を別ファイルで持ちます。
+肉体交換への反応は `js/data/dialogue/exchangeLines.js` に置き、交換の奇跡と落雷による肉体交換で共有します。
 
 詳細な追加ルールは `DIALOGUE_RULES.md` を参照してください。
 
