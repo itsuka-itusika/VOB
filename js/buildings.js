@@ -1,4 +1,5 @@
 import { refreshJobTable } from "./domain/jobTables.js";
+import { showVillageScaleMilestones } from "./villageScale.js";
 
 function ensureBuildingFlags(village) {
   if (!village.buildingFlags) village.buildingFlags = {};
@@ -247,6 +248,7 @@ function constructBuilding(building, village) {
 
   building.effect(village);
   refreshVillageJobTables(village);
+  showVillageScaleMilestones(village);
 
   import("./ui.js").then(module => module.updateUI(village));
   closeBuildingModal();

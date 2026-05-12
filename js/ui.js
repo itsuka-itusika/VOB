@@ -18,6 +18,7 @@ import { isRestrictedNoJobVillager } from "./domain/rules.js";
 import { showDictionaryEntry } from "./dictionary.js";
 import { getPortraitPath, getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "./util.js";
 import { formatRelationshipsForDisplay, normalizeRelationship } from "./relationships.js";
+import { applyVillageScaleArtClass, getVillageScaleTitle } from "./villageScale.js";
 
 
 function openConversationFor(person) {
@@ -681,6 +682,14 @@ function setSectionVisible(section, visible) {
 export function updateUI(v) {
   const rp = document.getElementById("resourcePanel");
   if (!rp) return;
+  applyVillageScaleArtClass(v.building);
+  const villageInfoHeading = document.getElementById("villageInfoHeading");
+  if (villageInfoHeading) {
+    villageInfoHeading.textContent = getVillageScaleTitle(v.building);
+  }
+  const mobileScaleTitleBox = isMobileViewMode()
+    ? `<div class="resource-box village-scale-title"><span class="resource-value">${getVillageScaleTitle(v.building)}</span></div>`
+    : "";
 
   // 季節に応じた背景色を設定
   let seasonColor = "#ffffff"; // デフォルトは白
@@ -696,6 +705,7 @@ export function updateUI(v) {
   rp.style.backgroundColor = seasonColor;
 
   rp.innerHTML = `
+    ${mobileScaleTitleBox}
     <div class="resource-box"><span class="resource-label">年/月</span><span class="resource-value">${v.year}年${v.month}月</span></div>
     <div class="resource-box"><span class="resource-label">食料</span><span class="resource-value">${v.food}</span></div>
     <div class="resource-box"><span class="resource-label">資材</span><span class="resource-value">${v.materials}</span></div>

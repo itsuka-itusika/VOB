@@ -3,6 +3,7 @@ import { Village, Villager } from "./classes.js";
 import { determineSpeechType, registerUsedName } from "./createVillagers.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { normalizeRelationships } from "./relationships.js";
+import { getInitialScaleStageIndex } from "./villageScale.js";
 
 function normalizeBodyTraitName(trait) {
   return trait === "幼児" || trait === "児童" ? "子供" : trait;
@@ -89,6 +90,9 @@ function convertVillageToObject(village) {
     tech: village.tech,
     security: village.security,
     building: village.building,
+    scaleTitleStage: Number.isInteger(village.scaleTitleStage)
+      ? village.scaleTitleStage
+      : getInitialScaleStageIndex(village.building),
     popLimit: village.popLimit,
     villageTraits: [...village.villageTraits],
     logs: [...village.logs],
@@ -201,6 +205,9 @@ function convertObjectToVillage(dataObj) {
   v.tech = dataObj.tech;
   v.security = dataObj.security;
   v.building = dataObj.building;
+  v.scaleTitleStage = Number.isInteger(dataObj.scaleTitleStage)
+    ? dataObj.scaleTitleStage
+    : getInitialScaleStageIndex(v.building);
   v.popLimit = dataObj.popLimit;
   if (Array.isArray(dataObj.villageTraits)) {
     v.villageTraits = [...dataObj.villageTraits];

@@ -19,6 +19,7 @@ export class Village {
     this.tech = 0;
     this.security = 60;
     this.building = 0;
+    this.scaleTitleStage = 0;
 
     this.villagers = [];
     this.pendingGoldenRainPregnancies = [];

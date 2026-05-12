@@ -69,6 +69,8 @@
   - 迎撃フェーズ、罠作成、戦闘、襲撃結果を扱う。
 - `js/raidRules.js`
   - 襲撃中の行動可否や状態判定をまとめる。
+- `js/villageScale.js`
+  - 規模に応じた村の呼称、呼称到達モーダル、達成済み段階の管理を扱う。
 - `js/saveLoad.js`
   - JSON ファイル保存/読込と localStorage 保存/読込を扱う。
 - `js/dictionary.js`
