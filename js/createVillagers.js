@@ -781,8 +781,10 @@ function selectVisitorType() {
 /**
  * 訪問者を生成する関数
  */
-export function createRandomVisitor(existingNames = []) {
-  const visitorType = selectVisitorType();
+export function createRandomVisitor(existingNames = [], forcedType = null) {
+  const visitorType = forcedType
+    ? (VISITOR_TYPES.find(type => type.type === forcedType) || selectVisitorType())
+    : selectVisitorType();
   
   // 性別を明示的に設定（visitorTypeに指定がなければランダム）
   const bodySex = visitorType.forcedSex || (Math.random() < 0.5 ? "男" : "女");
@@ -839,4 +841,8 @@ export function createRandomVisitor(existingNames = []) {
   }
 
   return visitor;
+}
+
+export function createRandomVisitorOfType(type, existingNames = []) {
+  return createRandomVisitor(existingNames, type);
 }

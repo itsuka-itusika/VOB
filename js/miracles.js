@@ -4,7 +4,7 @@ import { clampValue, round3, getPortraitPath } from "./util.js";
 import { addRelationship, removeRelationship, checkHasRelationship, getRelationshipTargetName, clearRelationshipsForDepartedVillager, addSpouseRelationships } from "./relationships.js";
 import { updateUI } from "./ui.js";  // 実行後にUIを更新する
 import { doExchange } from "./exchange.js";
-import { createRandomVisitor, determineSpeechType } from "./createVillagers.js";
+import { createRandomVisitor, createRandomVisitorOfType, determineSpeechType } from "./createVillagers.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { resolveDialogueTone } from "./data/dialogue/toneProfiles.js";
 import { BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
@@ -25,7 +25,8 @@ export const MIRACLES = [
   {id:"9",  name:"常春の奇跡(300)", cost:300,desc:"村特性→春に固定。次の季節まで継続"},
   {id:"10", name:"旅人の奇跡(60)", cost:60, desc:"ランダム来訪者(訪問者付与)"},
   {id:"11", name:"出立の奇跡(20)", cost:20, desc:"1人離脱→幸福度分の魔素獲得"},
-  {id:"14", name:"ミダスの奇跡(100)", cost:100, desc:"1ヶ月間、食料を得る代わりに資金を得る"}
+  {id:"14", name:"ミダスの奇跡(100)", cost:100, desc:"1ヶ月間、食料を得る代わりに資金を得る"},
+  {id:"15", name:"市場の奇跡(150)", cost:150, desc:"行商人の訪問者を3人生成"}
 ];
 
 /**
@@ -525,6 +526,9 @@ export function performMiracle(village) {
           village.log("【ミダスの奇跡】1ヶ月間、食料を得る行動が資金を得る");
           showMiracleResultModal(village, "ミダスの奇跡", "収穫の価値が黄金へと傾きました。", village.villagers);
           break;
+        case "15": // 市場の奇跡
+          marketMiracle(village);
+          break;
       }
       break;
   }
@@ -688,6 +692,23 @@ function travelerMiracle(v) {
   v.visitors.push(newV);
   v.log(`【旅人の奇跡】${newV.name}が来訪(訪問者)`);
   showMiracleResultModal(v, "旅人の奇跡", `${newV.name}が村を訪れました。`, [newV]);
+}
+
+/** 市場の奇跡(行商人3名来訪) */
+function marketMiracle(v) {
+  const newVisitors = [];
+  for (let i = 0; i < 3; i++) {
+    const existingNames = [
+      ...v.villagers.map(person => person.name),
+      ...v.visitors.map(person => person.name),
+      ...newVisitors.map(person => person.name)
+    ];
+    const merchant = createRandomVisitorOfType("行商人", existingNames);
+    newVisitors.push(merchant);
+    v.visitors.push(merchant);
+  }
+  v.log(`【市場の奇跡】行商人3人が村を訪れました`);
+  showMiracleResultModal(v, "市場の奇跡", "行商人たちが市を開くために村を訪れました。", newVisitors);
 }
 
 /** 出立の奇跡(対象を離脱→幸福度分魔素取得) */
