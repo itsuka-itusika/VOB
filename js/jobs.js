@@ -3,6 +3,11 @@
 import { randInt, randFloat, clampValue, round3 } from "./util.js";
 import { HobbyEffects } from "./HobbyEffects.js";
 import {
+  calculateAlchemyYield,
+  calculateBrewingYield,
+  calculateBunnySupport,
+  calculateCopyBookYield,
+  calculateDancerHappiness,
   calculateFarmYield,
   calculateFishYield,
   calculateGatherYield,
@@ -10,8 +15,16 @@ import {
   calculateHandiworkYield,
   calculateHuntYield,
   calculateLumberYield,
+  calculateMagicCraftYield,
+  calculateMassageHeal,
+  calculateMikoMana,
+  calculateNurseHeal,
+  calculatePoetHappiness,
+  calculatePriestMindHeal,
   calculateResearchYield,
   calculateTradingYield,
+  calculateWeavingYield,
+  getJobCostType,
   rollBodyCost,
   rollMindCost,
 } from "./domain/jobMath.js";
@@ -280,6 +293,14 @@ function calcMindCost(base, stat, person = null, village = null) {
   return rollMindCost(base, stat, person, village, randFloat);
 }
 
+function calcJobBodyCost(job, person, village) {
+  return calcBodyCost(getJobCostType(job).body, person.vit, person, village);
+}
+
+function calcJobMindCost(job, stat, person, village) {
+  return calcMindCost(getJobCostType(job).mind, stat, person, village);
+}
+
 // -------------------------
 // 各ジョブの具体処理
 // -------------------------
@@ -363,8 +384,8 @@ function doPlayJob(p, v) {
 }
 
 function doStudy(p, v) {
-  let tc=calcBodyCost(10, p.vit, p, v);
-  let mc=calcMindCost(10, p.ind, p, v);
+  let tc=calcJobBodyCost("学業", p, v);
+  let mc=calcJobMindCost("学業", p.ind, p, v);
   p.hp=clampValue(p.hp-tc,0,100);
   p.mp=clampValue(p.mp-mc,0,100);
 
@@ -374,8 +395,8 @@ function doStudy(p, v) {
 }
 
 function doTraining(p, v) {
-  let tc=calcBodyCost(20, p.vit, p, v);
-  let mc=calcMindCost(15, p.ind, p, v);
+  let tc=calcJobBodyCost("鍛錬", p, v);
+  let mc=calcJobMindCost("鍛錬", p.ind, p, v);
   p.hp=clampValue(p.hp-tc,0,100);
   p.mp=clampValue(p.mp-mc,0,100);
 
@@ -386,8 +407,8 @@ function doTraining(p, v) {
 }
 
 function doFarm(p, v) {
-  let tc=calcBodyCost(30, p.vit, p, v);
-  let mc=calcMindCost(15, p.ind, p, v);
+  let tc=calcJobBodyCost("農作業", p, v);
+  let mc=calcJobMindCost("農作業", p.ind, p, v);
   p.hp=clampValue(p.hp-tc,0,100);
   p.mp=clampValue(p.mp-mc,0,100);
 
@@ -429,8 +450,8 @@ function doFarm(p, v) {
 }
 
 function doLumber(p, v) {
-  let tc=calcBodyCost(30, p.vit, p, v);
-  let mc=calcMindCost(15, p.ind, p, v);
+  let tc=calcJobBodyCost("伐採", p, v);
+  let mc=calcJobMindCost("伐採", p.ind, p, v);
   p.hp=clampValue(p.hp-tc,0,100);
   p.mp=clampValue(p.mp-mc,0,100);
 
@@ -464,8 +485,8 @@ function doLumber(p, v) {
 }
 
 function doHunt(p, v) {
-  let tc=calcBodyCost(30, p.vit, p, v);
-  let mc=calcMindCost(15, p.ind, p, v);
+  let tc=calcJobBodyCost("狩猟", p, v);
+  let mc=calcJobMindCost("狩猟", p.ind, p, v);
   p.hp=clampValue(p.hp-tc,0,100);
   p.mp=clampValue(p.mp-mc,0,100);
 
@@ -477,10 +498,10 @@ function doHunt(p, v) {
     x = 0;
     result = "失敗";
   } else if (r <= 80) {
-    x = 20;
+    x = 30;
     result = "成功";
   } else {
-    x = 50;
+    x = 70;
     result = "大成功";
   }
   
@@ -519,8 +540,8 @@ function doHunt(p, v) {
 }
 
 function doFish(p, v) {
-  let tc=calcBodyCost(30, p.vit, p, v);
-  let mc=calcMindCost(15, p.ind, p, v);
+  let tc=calcJobBodyCost("漁", p, v);
+  let mc=calcJobMindCost("漁", p.ind, p, v);
   p.hp=clampValue(p.hp-tc,0,100);
   p.mp=clampValue(p.mp-mc,0,100);
 
@@ -532,10 +553,10 @@ function doFish(p, v) {
     x = 0;
     result = "失敗";
   } else if (r <= 80) {
-    x = 20;
+    x = 30;
     result = "成功";
   } else {
-    x = 50;
+    x = 70;
     result = "大成功";
   }
   
@@ -578,12 +599,12 @@ function doFish(p, v) {
 }
 
 function doGather(p, v) {
-  let tc=calcBodyCost(15, p.vit, p, v);
-  let mc=calcMindCost(15, p.ind, p, v);
+  let tc=calcJobBodyCost("採集", p, v);
+  let mc=calcJobMindCost("採集", p.ind, p, v);
   p.hp=clampValue(p.hp-tc,0,100);
   p.mp=clampValue(p.mp-mc,0,100);
 
-  let gatherYield = calculateGatherYield(p, v, randInt(1,3));
+  let gatherYield = calculateGatherYield(p, v);
   let f = gatherYield.food;
   let mm= gatherYield.materials;
 
@@ -616,8 +637,8 @@ function doGather(p, v) {
 }
 
 function doHandiwork(p, v) {
-  let tc = calcBodyCost(15, p.vit, p, v);
-  let mc = calcMindCost(15, p.ind, p, v);
+  let tc = calcJobBodyCost("内職", p, v);
+  let mc = calcJobMindCost("内職", p.ind, p, v);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
@@ -640,21 +661,20 @@ function doHandiwork(p, v) {
 }
 
 function doMagicCraft(p, v) {
-  let tc=calcBodyCost(15, p.vit, p, v);
-  let mc=calcMindCost(15, p.ind, p, v);
+  let tc=calcJobBodyCost("魔法細工", p, v);
+  let mc=calcJobMindCost("魔法細工", p.ind, p, v);
   p.hp=clampValue(p.hp-tc,0,100);
   p.mp=clampValue(p.mp-mc,0,100);
 
-  let base=15+30*((p.dex/20)*(p.mag/20));
-  let amt=Math.round(base);
+  let amt=calculateMagicCraftYield(p);
 
   v.funds=clampValue(v.funds+amt,0,99999);
   v.log(`${p.name}魔法細工:資金+${amt},体力-${tc},メンタル-${mc}`);
 }
 
 function doResearchJob(p, v) {
-  let tc = calcBodyCost(15, p.vit, p, v);
-  let mc = calcMindCost(30, p.int, p, v);
+  let tc = calcJobBodyCost("研究", p, v);
+  let mc = calcJobMindCost("研究", p.int, p, v);
 
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
@@ -679,8 +699,8 @@ function doResearchJob(p, v) {
 }
 
 function doEducationJob(p, v) {
-  let tc=calcBodyCost(15, p.vit, p, v);
-  let mc=calcMindCost(30, p.eth, p, v);
+  let tc=calcJobBodyCost("教育", p, v);
+  let mc=calcJobMindCost("教育", p.eth, p, v);
 
   p.hp=clampValue(p.hp-tc,0,100);
   p.mp=clampValue(p.mp-mc,0,100);
@@ -703,8 +723,8 @@ function doEducationJob(p, v) {
 }
 
 function doGuardJob(p, v) {
-  let tc = calcBodyCost(15, p.vit, p, v);
-  let mc = calcMindCost(30, p.cou, p, v);
+  let tc = calcJobBodyCost("警備", p, v);
+  let mc = calcJobMindCost("警備", p.cou, p, v);
 
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
@@ -766,25 +786,12 @@ function doLastMomentsJob(p, v) {
 }
 
 function doDancer(p, v) {
-  let tc = calcBodyCost(20, p.vit, p, v);
-  let mc = calcMindCost(20, p.sexdr, p, v);
+  let tc = calcJobBodyCost("踊り子", p, v);
+  let mc = calcJobMindCost("踊り子", p.sexdr, p, v);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
-  let inc = Math.round(5 * p.chr * p.sexdr / 400);
-  
-  // 酒場があれば効果1.2倍
-  if (v.buildingFlags && v.buildingFlags.hasTavern) {
-    inc = Math.round(inc * 1.2);
-  }
-  
-  // 澄んだ声または通る声の特性があれば効果1.2倍
-  if (p.bodyTraits.includes("澄んだ声") || p.bodyTraits.includes("通る声")) {
-    inc = Math.round(inc * 1.2);
-  }
-  if (p.bodyTraits.includes("太陽の巫女")) {
-    inc = Math.round(inc * 1.5);
-  }
+  let inc = calculateDancerHappiness(p, v);
   
   let affected = 0;
   v.villagers.forEach(target => {
@@ -810,28 +817,12 @@ function doDancer(p, v) {
 }
 
 function doPoet(p, v) {
-  let tc = calcBodyCost(20, p.vit, p, v);
-  let mc = calcMindCost(20, p.ind, p, v);
+  let tc = calcJobBodyCost("詩人", p, v);
+  let mc = calcJobMindCost("詩人", p.ind, p, v);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
-  let inc = Math.round(5 * p.chr * p.chr / 400);
-  
-  // 酒場があれば効果1.2倍
-  if (v.buildingFlags && v.buildingFlags.hasTavern) {
-    inc = Math.round(inc * 1.2);
-  }
-  
-  // 澄んだ声または通る声の特性があれば効果1.2倍
-  if (p.bodyTraits.includes("澄んだ声") || p.bodyTraits.includes("通る声")) {
-    inc = Math.round(inc * 1.2);
-  }
-  if (p.bodyTraits.includes("太陽の巫女")) {
-    inc = Math.round(inc * 1.5);
-  }
-  if (p.bodyTraits.includes("太陽の加護")) {
-    inc = Math.round(inc * 1.2);
-  }
+  let inc = calculatePoetHappiness(p, v);
   
   let affected = 0;
   v.villagers.forEach(target => {
@@ -853,8 +844,8 @@ function doPoet(p, v) {
 }
 
 function doNurse(p, v) {
-  let tc = calcBodyCost(20, p.vit, p, v);
-  let mc = calcMindCost(20, p.eth, p, v);
+  let tc = calcJobBodyCost("看護", p, v);
+  let mc = calcJobMindCost("看護", p.eth, p, v);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
@@ -872,12 +863,7 @@ function doNurse(p, v) {
   let logMsg;
   if (targets.length > 0) {
     let target = targets[Math.floor(Math.random() * targets.length)];
-    let heal = Math.round(20 * p.mag * p.eth / 400);
-    
-    // 診療所があれば効果1.2倍
-    if (v.buildingFlags && v.buildingFlags.hasClinic) {
-      heal = Math.round(heal * 1.2);
-    }
+    let heal = calculateNurseHeal(p, v);
     
     target.hp = clampValue(target.hp + heal, 0, 100);
     logMsg = `${p.name}看護:${target.name}の体力+${heal},体力-${tc},メンタル-${mc}`;
@@ -899,22 +885,12 @@ function doNurse(p, v) {
 }
 
 function doSister(p, v) {
-  let tc = calcBodyCost(10, p.vit, p, v);
-  let mc = calcMindCost(30, p.eth, p, v);
+  let tc = calcJobBodyCost("シスター", p, v);
+  let mc = calcJobMindCost("シスター", p.eth, p, v);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
-  let heal = Math.round(5 * p.chr * p.eth / 400);
-  
-  // 礼拝堂があれば効果1.2倍
-  if (v.buildingFlags && v.buildingFlags.hasChurch) {
-    heal = Math.round(heal * 1.2);
-  }
-  
-  // 澄んだ声または通る声の特性があれば効果1.2倍
-  if (p.bodyTraits.includes("澄んだ声") || p.bodyTraits.includes("通る声")) {
-    heal = Math.round(heal * 1.2);
-  }
+  let heal = calculatePriestMindHeal(p, v);
   
   let affected = 0;
   v.villagers.forEach(target => {
@@ -938,22 +914,12 @@ function doSister(p, v) {
 }
 
 function doPriest(p, v) {
-  let tc = calcBodyCost(10, p.vit, p, v);
-  let mc = calcMindCost(30, p.eth, p, v);
+  let tc = calcJobBodyCost("神官", p, v);
+  let mc = calcJobMindCost("神官", p.eth, p, v);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
-  let heal = Math.round(5 * p.chr * p.eth / 400);
-  
-  // 礼拝堂があれば効果1.2倍
-  if (v.buildingFlags && v.buildingFlags.hasChurch) {
-    heal = Math.round(heal * 1.2);
-  }
-  
-  // 澄んだ声または通る声の特性があれば効果1.2倍
-  if (p.bodyTraits.includes("澄んだ声") || p.bodyTraits.includes("通る声")) {
-    heal = Math.round(heal * 1.2);
-  }
+  let heal = calculatePriestMindHeal(p, v);
   
   let affected = 0;
   v.villagers.forEach(target => {
@@ -977,8 +943,8 @@ function doPriest(p, v) {
 }
 
 function doTrading(p, v) {
-  let tc = calcBodyCost(20, p.vit, p, v);
-  let mc = calcMindCost(20, p.ind, p, v);
+  let tc = calcJobBodyCost("行商", p, v);
+  let mc = calcJobMindCost("行商", p.ind, p, v);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
@@ -1002,14 +968,14 @@ function doTrading(p, v) {
 }
 
 function doMassage(p, v) {
-  let tc = calcBodyCost(20, p.vit, p, v);
+  let tc = calcJobBodyCost("あんま", p, v);
   let mc;
   let heal;
   let logMsg;
 
   if (p.bodySex === "男") {
-    mc = calcMindCost(20, p.ind, p, v);
-    heal = Math.round(20 * p.str/20 * p.dex/20);
+    mc = calcJobMindCost("あんま", p.ind, p, v);
+    heal = calculateMassageHeal(p);
     logMsg = `${p.name}あんま:体力-${tc},メンタル-${mc}`;
     
     // ステータス上昇判定
@@ -1022,8 +988,8 @@ function doMassage(p, v) {
       logMsg += ",器用+1";
     }
   } else {
-    mc = calcMindCost(20, p.sexdr, p, v);
-    heal = Math.round(20 * p.chr/20 * p.sexdr/20);
+    mc = calcJobMindCost("あんま", p.sexdr, p, v);
+    heal = calculateMassageHeal(p);
     logMsg = `${p.name}あんま:体力-${tc},メンタル-${mc}`;
     
     // ステータス上昇判定
@@ -1062,12 +1028,12 @@ function doMassage(p, v) {
 }
 
 function doMiko(p, v) {
-  let tc = calcBodyCost(20, p.vit, p, v);
-  let mc = calcMindCost(20, p.sexdr, p, v);
+  let tc = calcJobBodyCost("巫女", p, v);
+  let mc = calcJobMindCost("巫女", p.sexdr, p, v);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
-  let manaGain = Math.round(10 * p.chr/20 * p.mag/20 * p.sexdr/20);
+  let manaGain = calculateMikoMana(p);
   v.mana = clampValue(v.mana + manaGain, 0, 99999);
 
   let logMsg = `${p.name}巫女:体力-${tc},メンタル-${mc},魔素+${manaGain}`;
@@ -1086,13 +1052,13 @@ function doMiko(p, v) {
 }
 
 function doBunny(p, v) {
-  let tc = calcBodyCost(20, p.vit, p, v);
-  let mc = calcMindCost(20, p.sexdr, p, v);
+  let tc = calcJobBodyCost("バニー", p, v);
+  let mc = calcJobMindCost("バニー", p.sexdr, p, v);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
-  let happinessInc = Math.round(6 * p.chr/20 * p.sexdr/20);
-  let mentalHeal = Math.round(6 * p.chr/20 * p.sexdr/20);
+  let happinessInc = calculateBunnySupport(p);
+  let mentalHeal = calculateBunnySupport(p);
   let affected = 0;
 
   v.villagers.forEach(target => {
@@ -1119,13 +1085,13 @@ function doBunny(p, v) {
 }
 
 function doAlchemy(p, v) {
-  let tc = calcBodyCost(20, p.vit, p, v);
-  let mc = calcMindCost(20, p.int, p, v);
+  let tc = calcJobBodyCost("錬金術", p, v);
+  let mc = calcJobMindCost("錬金術", p.int, p, v);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
-  let fundsGain = Math.round(24 * p.mag/20 * p.int/20);
-  let techGain = Math.round(24 * p.mag/20 * p.int/20);
+  let fundsGain = calculateAlchemyYield(p);
+  let techGain = calculateAlchemyYield(p);
   
   v.funds = clampValue(v.funds + fundsGain, 0, 99999);
   v.tech = clampValue(v.tech + techGain, 0, 99999);
@@ -1146,13 +1112,13 @@ function doAlchemy(p, v) {
 }
 
 function doCopyBook(p, v) {
-  let tc = calcBodyCost(20, p.vit, p, v);
-  let mc = calcMindCost(20, p.ind, p, v);
+  let tc = calcJobBodyCost("写本", p, v);
+  let mc = calcJobMindCost("写本", p.ind, p, v);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
-  let fundsGain = Math.round(24 * p.dex/20 * p.int/20);
-  let techGain = Math.round(24 * p.dex/20 * p.int/20);
+  let fundsGain = calculateCopyBookYield(p);
+  let techGain = calculateCopyBookYield(p);
   
   v.funds = clampValue(v.funds + fundsGain, 0, 99999);
   v.tech = clampValue(v.tech + techGain, 0, 99999);
@@ -1173,18 +1139,12 @@ function doCopyBook(p, v) {
 }
 
 function doWeaving(p, v) {
-  let tc = calcBodyCost(20, p.vit, p, v);
-  let mc = calcMindCost(20, p.ind, p, v);
+  let tc = calcJobBodyCost("機織り", p, v);
+  let mc = calcJobMindCost("機織り", p.ind, p, v);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
-  let fundsGain = Math.round(30 * p.dex/20 * p.ind/20);
-  if (p.bodyTraits.includes("梟の巫女")) {
-    fundsGain = Math.round(fundsGain * 1.5);
-  }
-  if (p.bodyTraits.includes("梟の加護")) {
-    fundsGain = Math.round(fundsGain * 1.2);
-  }
+  let fundsGain = calculateWeavingYield(p);
   v.funds = clampValue(v.funds + fundsGain, 0, 99999);
 
   let logMsg = `${p.name}機織り:資金+${fundsGain},体力-${tc},メンタル-${mc}`;
@@ -1203,13 +1163,14 @@ function doWeaving(p, v) {
 }
 
 function doBrewing(p, v) {
-  let tc = calcBodyCost(20, p.vit, p, v);
-  let mc = calcMindCost(20, p.ind, p, v);
+  let tc = calcJobBodyCost("醸造", p, v);
+  let mc = calcJobMindCost("醸造", p.ind, p, v);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
-  let foodGain = Math.round(24 * p.mag/20 * p.ind/20);
-  let manaGain = Math.round(5 * p.mag/20 * p.ind/20);
+  let brewingYield = calculateBrewingYield(p);
+  let foodGain = brewingYield.food;
+  let manaGain = brewingYield.mana;
   
   v.food = clampValue(v.food + foodGain, 0, 99999);
   v.mana = clampValue(v.mana + manaGain, 0, 99999);
