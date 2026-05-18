@@ -207,7 +207,7 @@ export function calculateMagicCraftYield(person) {
 }
 
 export function calculateNurseHeal(person, village) {
-  let amount = Math.round(36 * statProduct(person, "mag", "eth"));
+  let amount = Math.round(25 * statProduct(person, "mag", "eth"));
   if (village?.buildingFlags?.hasClinic) {
     amount = Math.round(amount * 1.2);
   }
@@ -258,8 +258,8 @@ export function calculatePoetHappiness(person, village) {
 
 export function calculateMassageHeal(person) {
   return person?.bodySex === "男"
-    ? Math.round(36 * statProduct(person, "str", "dex"))
-    : Math.round(36 * statProduct(person, "chr", "sexdr"));
+    ? Math.round(30 * statProduct(person, "str", "dex"))
+    : Math.round(30 * statProduct(person, "chr", "sexdr"));
 }
 
 export function calculateMikoMana(person) {
