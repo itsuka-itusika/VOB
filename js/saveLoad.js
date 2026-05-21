@@ -114,6 +114,9 @@ function convertVillageToObject(village) {
       : getInitialScaleStageIndex(village.building),
     popLimit: village.popLimit,
     villageTraits: [...village.villageTraits],
+    treasures: Array.isArray(village.treasures)
+      ? JSON.parse(JSON.stringify(village.treasures))
+      : [],
     logs: [...village.logs],
     gameOver: village.gameOver,
     hasDonePreEvent: village.hasDonePreEvent,
@@ -233,6 +236,9 @@ function convertObjectToVillage(dataObj) {
   if (Array.isArray(dataObj.villageTraits)) {
     v.villageTraits = [...dataObj.villageTraits];
   }
+  v.treasures = Array.isArray(dataObj.treasures)
+    ? JSON.parse(JSON.stringify(dataObj.treasures))
+    : [];
   v.logs = Array.isArray(dataObj.logs) ? [...dataObj.logs] : [];
   v.gameOver = !!dataObj.gameOver;
   v.hasDonePreEvent = !!dataObj.hasDonePreEvent;

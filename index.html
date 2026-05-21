@@ -40,19 +40,17 @@
 
     <div class="top-actions">
       <div class="action-buttons">
-        <!-- 追加: セーブ/ロード ボタン群 -->
+        <!-- 保存/読込/説明メニュー -->
         <button id="autoAssignButton" onclick="onAutoAssignJobs()" data-mobile-label="自動">自動割り振り</button>
         <button id="raidAssignButton" onclick="onAutoAssignRaidActions()" style="display:none;" data-mobile-label="迎撃割当">迎撃割り振り</button>
         <button id="nextTurnButton" onclick="onNextTurn()">次の月へ</button>
-        <button onclick="openMiracleModal()" data-mobile-label="奇跡">奇跡の行使</button>
-        <button onclick="openBuildingModal()" data-mobile-label="建築">建築</button>
-        <button class="utility-direct-button" onclick="onSaveAsJsonFile()" data-mobile-label="JSON保存">JSON保存</button>
-        <button class="utility-direct-button" onclick="onLoadFromJsonFile()" data-mobile-label="JSON読込">JSON読込</button>
-        <button class="utility-direct-button" onclick="onSaveToLocalStorage()" data-mobile-label="端末保存">ローカル保存</button>
-        <button class="utility-direct-button" onclick="onLoadFromLocalStorage()" data-mobile-label="端末読込">ローカル読込</button>
-        <button class="utility-direct-button" onclick="window.open('Readme.txt', '_blank')" style="margin-left: 0px;" data-mobile-label="説明">更新履歴・説明</button>
-        <div class="mobile-utility-actions">
-          <select id="mobileUtilityActionSelect" aria-label="保存・読込操作">
+        <div class="special-action-buttons">
+          <button onclick="openMiracleModal()" data-mobile-label="奇跡">奇跡の行使</button>
+          <button onclick="openBuildingModal()" data-mobile-label="建築">建築</button>
+          <button onclick="openTreasureModal()" data-mobile-label="宝物">宝物</button>
+        </div>
+        <div class="utility-actions">
+          <select id="utilityActionSelect" aria-label="保存・読込操作">
             <option value="">保存/読込/説明</option>
             <option value="save-json">JSON保存</option>
             <option value="load-json">JSON読込</option>
@@ -60,7 +58,7 @@
             <option value="load-local">ローカル読込</option>
             <option value="readme">更新履歴・説明</option>
           </select>
-          <button type="button" onclick="runMobileUtilityAction()">実行</button>
+          <button type="button" onclick="runUtilityAction()">実行</button>
         </div>
         <div class="view-mode-toggle" role="group" aria-label="表示モード">
           <button type="button" id="pcModeButton" class="view-mode-button is-active" onclick="setViewMode('pc')" aria-pressed="true">PC</button>
@@ -297,6 +295,17 @@
   </div>
   <div class="modal-buttons">
     <button onclick="closeBuildingModal()">閉じる</button>
+  </div>
+</div>
+
+<!-- モーダル: 宝物 -->
+<div id="treasureOverlay"></div>
+<div id="treasureModal">
+  <div class="modal-header">宝物</div>
+  <div id="treasureContent" class="modal-content"></div>
+  <div class="modal-buttons">
+    <button onclick="useSelectedTreasure()">使う</button>
+    <button onclick="closeTreasureModal()">閉じる</button>
   </div>
 </div>
 

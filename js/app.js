@@ -16,6 +16,7 @@ import {
   saveVillageToJsonFile,
   saveVillageToLocalStorage
 } from "./saveLoad.js";
+import { closeTreasureModal, openTreasureModal, useSelectedTreasure } from "./treasures.js";
 import { updateUI } from "./ui.js";
 
 const VIEW_MODE_STORAGE_KEY = "vob.viewMode";
@@ -52,8 +53,8 @@ function loadFromLocalStorage() {
   replaceVillageState(loadedVillage, "ローカルストレージからロードしました");
 }
 
-function runMobileUtilityAction() {
-  const select = document.getElementById("mobileUtilityActionSelect");
+function runUtilityAction() {
+  const select = document.getElementById("utilityActionSelect");
   const action = select ? select.value : "";
   if (!action) return;
 
@@ -141,9 +142,12 @@ function bindGlobalHandlers() {
     onSaveToLocalStorage: () => saveVillageToLocalStorage(theVillage),
     onLoadFromJsonFile: openJsonLoadDialog,
     onLoadFromLocalStorage: loadFromLocalStorage,
-    runMobileUtilityAction,
+    runUtilityAction,
     openBuildingModal: () => openBuildingModal(theVillage),
     closeBuildingModal,
+    openTreasureModal: () => openTreasureModal(theVillage),
+    closeTreasureModal,
+    useSelectedTreasure: () => useSelectedTreasure(theVillage),
     onAutoAssignJobs: () => {
       autoAssignJobs(theVillage);
       updateUI(theVillage);
