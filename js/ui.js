@@ -412,7 +412,7 @@ function getTaskEstimate(person, task, village) {
       break;
     case "あんま":
       gain = calculateMassageHeal(person);
-      parts = [`体力回復+${gain}`, `体力-${jobBodyCost("あんま", person, village)}`, `メンタル-${jobMindCost("あんま", person.bodySex === "男" ? "ind" : "sexdr", person, village)}`];
+      parts = [`体力回復+${gain}`, `体力-${jobBodyCost("あんま", person, village)}`, `メンタル-${jobMindCost("あんま", person.bodySex === "男" ? "eth" : "sexdr", person, village)}`];
       break;
     case "シスター":
     case "神官":
@@ -425,7 +425,7 @@ function getTaskEstimate(person, task, village) {
       break;
     case "詩人":
       gain = calculatePoetHappiness(person, village);
-      parts = [`女性${affectedWomen}人幸福+${gain}`, `体力-${jobBodyCost("詩人", person, village)}`, `メンタル-${jobMindCost("詩人", "ind", person, village)}`];
+      parts = [`女性${affectedWomen}人幸福+${gain}`, `体力-${jobBodyCost("詩人", person, village)}`, `メンタル-${jobMindCost("詩人", "int", person, village)}`];
       break;
     case "バニー":
       gain = calculateBunnySupport(person);
@@ -436,7 +436,7 @@ function getTaskEstimate(person, task, village) {
       break;
     case "錬金術":
       gain = calculateAlchemyYield(person);
-      parts = [`資金/技術+${gain}`, `体力-${jobBodyCost("錬金術", person, village)}`, `メンタル-${jobMindCost("錬金術", "int", person, village)}`];
+      parts = [`資金/魔素+${gain}`, `体力-${jobBodyCost("錬金術", person, village)}`, `メンタル-${jobMindCost("錬金術", "int", person, village)}`];
       break;
     case "写本":
       gain = calculateCopyBookYield(person);
@@ -486,11 +486,11 @@ const JOB_KEY_STATS = {
   "警備": "筋力×倫理",
   "看護": "魔力×倫理",
   "踊り子": "魅力×好色",
-  "詩人": "魅力",
+  "詩人": "魅力×知力",
   "シスター": "魅力×倫理",
   "神官": "魅力×倫理",
   "行商": "魅力×知力",
-  "あんま": "体格別",
+  "あんま": "男性:筋力×倫理/女性:魅力×好色",
   "巫女": "魅力×魔力×好色",
   "バニー": "魅力×好色",
   "錬金術": "魔力×知力",

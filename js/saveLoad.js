@@ -14,6 +14,25 @@ function normalizeBodyTraitList(traits) {
   return traits.map(normalizeBodyTraitName);
 }
 
+function cloneNullableObject(value) {
+  return value == null ? null : { ...value };
+}
+
+function hasOwn(obj, key) {
+  return Object.prototype.hasOwnProperty.call(obj, key);
+}
+
+function normalizePortraitFile(fileName) {
+  const file = String(fileName || "").trim();
+  if (!file || file.toLowerCase() === "default.png") return "default.png";
+  return file;
+}
+
+function normalizeFiniteNumber(value, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
 /**
  * 村データをJSONファイルとしてダウンロードさせる
  */
@@ -165,13 +184,15 @@ function convertVillagerToObject(vill) {
     
     // 口調タイプと顔グラフィック情報を追加
     speechType: vill.speechType,
-    portraitFile: vill.portraitFile,
+    portraitFile: normalizePortraitFile(vill.portraitFile),
     merchantStock: vill.merchantStock ? { ...vill.merchantStock } : undefined,
     pregnancy: vill.pregnancy ? JSON.parse(JSON.stringify(vill.pregnancy)) : null,
     postpartumMonths: vill.postpartumMonths || 0,
+    ares: normalizeFiniteNumber(vill.ares, 0),
     potentialStats: vill.potentialStats ? { ...vill.potentialStats } : null,
     bodyPotentialStats: vill.bodyPotentialStats ? { ...vill.bodyPotentialStats } : null,
     mindPotentialStats: vill.mindPotentialStats ? { ...vill.mindPotentialStats } : null,
+    ...(Array.isArray(vill.raiderDialogues) ? { raiderDialogues: [...vill.raiderDialogues] } : {}),
     adultBodyTraits: normalizeBodyTraitList(vill.adultBodyTraits),
     adultMindTraits: Array.isArray(vill.adultMindTraits) ? [...vill.adultMindTraits] : [],
     adultHobby: vill.adultHobby || "",
@@ -306,7 +327,7 @@ function convertObjectToVillager(obj) {
   vill.speechType = obj.speechType || determineSpeechType(vill);
   
   // 顔グラフィックのファイル名を復元
-  vill.portraitFile = obj.portraitFile || "DEFAULT.png";
+  vill.portraitFile = normalizePortraitFile(obj.portraitFile);
   
   // 種族情報を復元
   vill.race = obj.race || "人間";
@@ -315,13 +336,17 @@ function convertObjectToVillager(obj) {
   }
   vill.pregnancy = obj.pregnancy ? JSON.parse(JSON.stringify(obj.pregnancy)) : null;
   vill.postpartumMonths = obj.postpartumMonths || 0;
+  vill.ares = normalizeFiniteNumber(obj.ares, 0);
   vill.potentialStats = obj.potentialStats ? { ...obj.potentialStats } : null;
-  vill.bodyPotentialStats = obj.bodyPotentialStats
-    ? { ...obj.bodyPotentialStats }
-    : (obj.potentialStats ? { ...obj.potentialStats } : null);
-  vill.mindPotentialStats = obj.mindPotentialStats
-    ? { ...obj.mindPotentialStats }
-    : (obj.potentialStats ? { ...obj.potentialStats } : null);
+  vill.bodyPotentialStats = hasOwn(obj, "bodyPotentialStats")
+    ? cloneNullableObject(obj.bodyPotentialStats)
+    : cloneNullableObject(obj.potentialStats);
+  vill.mindPotentialStats = hasOwn(obj, "mindPotentialStats")
+    ? cloneNullableObject(obj.mindPotentialStats)
+    : cloneNullableObject(obj.potentialStats);
+  if (Array.isArray(obj.raiderDialogues)) {
+    vill.raiderDialogues = [...obj.raiderDialogues];
+  }
   vill.adultBodyTraits = normalizeBodyTraitList(obj.adultBodyTraits);
   vill.adultMindTraits = Array.isArray(obj.adultMindTraits) ? [...obj.adultMindTraits] : [];
   vill.adultHobby = obj.adultHobby || "";

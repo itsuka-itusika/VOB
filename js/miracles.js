@@ -888,19 +888,19 @@ function openExchangeModal(personA, personB) {
     portraitA.src = getPortraitPath(personA);
     portraitA.onerror = () => {
       console.error(`Portrait image not found: ${portraitA.src}`);
-      portraitA.src = 'images/portraits/DEFAULT.png';
+      portraitA.src = 'images/portraits/default.png';
     };
     
     // 同様に、personBの体はpersonAの顔グラフィックを表示
     portraitB.src = getPortraitPath(personB);
     portraitB.onerror = () => {
       console.error(`Portrait image not found: ${portraitB.src}`);
-      portraitB.src = 'images/portraits/DEFAULT.png';
+      portraitB.src = 'images/portraits/default.png';
     };
   } catch (error) {
     console.error('Error loading portraits:', error);
-    portraitA.src = 'images/portraits/DEFAULT.png';
-    portraitB.src = 'images/portraits/DEFAULT.png';
+    portraitA.src = 'images/portraits/default.png';
+    portraitB.src = 'images/portraits/default.png';
   }
   
   // 交換反応は精神側の実効口調で選び、襲撃者だけ専用キーを優先する。

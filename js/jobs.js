@@ -818,7 +818,7 @@ function doDancer(p, v) {
 
 function doPoet(p, v) {
   let tc = calcJobBodyCost("詩人", p, v);
-  let mc = calcJobMindCost("詩人", p.ind, p, v);
+  let mc = calcJobMindCost("詩人", p.int, p, v);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
@@ -838,6 +838,10 @@ function doPoet(p, v) {
   if (Math.random() < 0.05) {
     p.chr++;
     logMsg += ",魅力+1";
+  }
+  if (Math.random() < 0.05) {
+    p.int++;
+    logMsg += ",知力+1";
   }
 
   v.log(logMsg);
@@ -974,7 +978,7 @@ function doMassage(p, v) {
   let logMsg;
 
   if (p.bodySex === "男") {
-    mc = calcJobMindCost("あんま", p.ind, p, v);
+    mc = calcJobMindCost("あんま", p.eth, p, v);
     heal = calculateMassageHeal(p);
     logMsg = `${p.name}あんま:体力-${tc},メンタル-${mc}`;
     
@@ -984,8 +988,8 @@ function doMassage(p, v) {
       logMsg += ",筋力+1";
     }
     if (Math.random() < 0.05) {
-      p.dex++;
-      logMsg += ",器用+1";
+      p.eth++;
+      logMsg += ",倫理+1";
     }
   } else {
     mc = calcJobMindCost("あんま", p.sexdr, p, v);
@@ -1091,12 +1095,12 @@ function doAlchemy(p, v) {
   p.mp = clampValue(p.mp-mc, 0, 100);
 
   let fundsGain = calculateAlchemyYield(p);
-  let techGain = calculateAlchemyYield(p);
+  let manaGain = calculateAlchemyYield(p);
   
   v.funds = clampValue(v.funds + fundsGain, 0, 99999);
-  v.tech = clampValue(v.tech + techGain, 0, 99999);
+  v.mana = clampValue(v.mana + manaGain, 0, 99999);
 
-  let logMsg = `${p.name}錬金:資金+${fundsGain},技術+${techGain},体力-${tc},メンタル-${mc}`;
+  let logMsg = `${p.name}錬金:資金+${fundsGain},魔素+${manaGain},体力-${tc},メンタル-${mc}`;
   
   // ステータス上昇判定
   if (Math.random() < 0.05) {

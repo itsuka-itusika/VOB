@@ -63,7 +63,7 @@ function getPortraitGroupKeyFromFile(portraitFile) {
 }
 
 function getFallbackToddlerPortraitGroup(character) {
-  if ((character.bodySex || character.spiritSex) === "逕ｷ") {
+  if ((character.bodySex || character.spiritSex) === "男") {
     if (character.chr >= 15) return "MC";
     if (character.chr <= 14 && character.vit >= 15) return "MD";
     if (character.chr <= 14 && character.vit <= 14) return "ME";

@@ -74,11 +74,11 @@ export function openConversationModal(character) {
     portrait.src = portraitPath;
     portrait.onerror = () => {
       console.error(`Portrait image not found: ${portraitPath}`);
-      portrait.src = 'images/portraits/DEFAULT.png';
+      portrait.src = 'images/portraits/default.png';
     };
   } catch (error) {
     console.error('Error loading portrait:', error);
-    portrait.src = 'images/portraits/DEFAULT.png';
+    portrait.src = 'images/portraits/default.png';
   }
   portrait.style.cursor = "pointer";
   portrait.title = "クリックで会話を更新";
@@ -594,6 +594,7 @@ function closeMerchantTradeModal() {
 
 // 勧誘成功時の処理を修正
 function handleRecruitmentSuccess(visitor, recruiter, successRate = 0) {
+  const originalVisitor = visitor;
   // 訪問者のタイプを取得（名前から抽出）
   const visitorType = visitor.name.includes("の") ? visitor.name.split("の")[0] : null;
   
@@ -609,12 +610,13 @@ function handleRecruitmentSuccess(visitor, recruiter, successRate = 0) {
   }
   
   // 名前から「〜の」を削除
-  if (visitor.name.includes("の")) {
-    visitor.name = visitor.name.split("の")[1];
+  const separatorIndex = visitor.name.indexOf("の");
+  if (separatorIndex >= 0) {
+    visitor.name = visitor.name.slice(separatorIndex + 1);
   }
   
   // 訪問者リストから削除し、村人リストに追加
-  theVillage.visitors = theVillage.visitors.filter(v => v.name !== visitor.name);
+  theVillage.visitors = theVillage.visitors.filter(v => v !== originalVisitor);
   theVillage.villagers.push(visitor);
   
   // 仕事テーブルを更新

@@ -240,7 +240,7 @@ export function calculateDancerHappiness(person, village) {
 }
 
 export function calculatePoetHappiness(person, village) {
-  let amount = Math.round(10 * statProduct(person, "chr", "chr"));
+  let amount = Math.round(10 * statProduct(person, "chr", "int"));
   if (village?.buildingFlags?.hasTavern) {
     amount = Math.round(amount * 1.2);
   }
@@ -258,7 +258,7 @@ export function calculatePoetHappiness(person, village) {
 
 export function calculateMassageHeal(person) {
   return person?.bodySex === "男"
-    ? Math.round(30 * statProduct(person, "str", "dex"))
+    ? Math.round(30 * statProduct(person, "str", "eth"))
     : Math.round(30 * statProduct(person, "chr", "sexdr"));
 }
 

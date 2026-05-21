@@ -49,7 +49,7 @@ export const FEMALE_PORTRAIT_FILES = {
 "BB11.png", "BB12.png", "BB13.png", "BB14.png", "BB15.png", "BB16.png", "BB17.png", "BB18.png", "BB19.png", "BB20.png",
 "BB21.png", "BB22.png", "BB23.png", "BB24.png", "BB25.png", "BB26.png", "BB27.png", "BB28.png", "BB29.png", "BB30.png",
 "BB31.png", "BB32.png", "BB33.png", "BB34.png", "BB35.png", "BB36.png", "BB37.png", "BB38.png", "BB39.png", "BB40.png",
-"BB41.png", "BB42.png", "BB43.png", "BB44.png", "BB45.png", "BB46.png", "BB47.png"
+"BB41.png", "BB42.png", "BB43.png", "BB44.png", "BB45.png", "BB46.png"
 
   ],
   
