@@ -367,15 +367,13 @@ function endRaidProcess(isSuccess, isPartSuccess, village) {
         village.villagers.forEach(p=>{
           p.happiness=clampValue(p.happiness+10,0,100);
         });
-        village.fame+=10;
-        village.log("防衛成功(部分):村人幸福+10,名声+10");
+        village.log("防衛成功(部分):村人幸福+10");
       } else {
         // 完全成功
         village.villagers.forEach(p=>{
           p.happiness=clampValue(p.happiness+20,0,100);
         });
-        village.fame+=20;
-        village.log("防衛成功(敵全滅):村人幸福+20,名声+20");
+        village.log("防衛成功(敵全滅):村人幸福+20");
       }
     } else {
       // 失敗

@@ -321,8 +321,7 @@ export class HobbyEffects {
 
   static applyPoetry(p, v) {
     p.mp = clampValue(p.mp + 10, 0, 100);
-    v.fame = clampValue(v.fame + 1, 0, 99999);
-    return `(詩作:メンタル+10,名声+1${this.maybeRaiseStat(p, "chr", 0.25)}${this.maybeRaiseStat(p, "mag", 0.15)})`;
+    return `(詩作:メンタル+10${this.maybeRaiseStat(p, "chr", 0.25)}${this.maybeRaiseStat(p, "mag", 0.15)})`;
   }
 
   static applyFanActivity(p, v) {
@@ -369,8 +368,7 @@ export class HobbyEffects {
   static applyTeaParty(p, v) {
     p.mp = clampValue(p.mp + 18, 0, 100);
     p.happiness = clampValue(p.happiness + 10, 0, 100);
-    v.fame = clampValue(v.fame + 1, 0, 99999);
-    return `(お茶会:メンタル+18,幸福+10,名声+1${this.maybeRaiseStat(p, "chr", 0.2)})`;
+    return `(お茶会:メンタル+18,幸福+10${this.maybeRaiseStat(p, "chr", 0.2)})`;
   }
 
   static applyFashionHobby(p) {

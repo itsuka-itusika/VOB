@@ -105,10 +105,10 @@ function convertVillageToObject(village) {
     materials: village.materials,
     funds: village.funds,
     mana: village.mana,
-    fame: village.fame,
     tech: village.tech,
     security: village.security,
     building: village.building,
+    heresy: normalizeFiniteNumber(village.heresy, 0),
     scaleTitleStage: Number.isInteger(village.scaleTitleStage)
       ? village.scaleTitleStage
       : getInitialScaleStageIndex(village.building),
@@ -222,10 +222,10 @@ function convertObjectToVillage(dataObj) {
   v.materials = dataObj.materials;
   v.funds = dataObj.funds;
   v.mana = dataObj.mana;
-  v.fame = dataObj.fame;
   v.tech = dataObj.tech;
   v.security = dataObj.security;
   v.building = dataObj.building;
+  v.heresy = normalizeFiniteNumber(dataObj.heresy, 0);
   v.scaleTitleStage = Number.isInteger(dataObj.scaleTitleStage)
     ? dataObj.scaleTitleStage
     : getInitialScaleStageIndex(v.building);

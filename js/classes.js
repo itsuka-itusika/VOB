@@ -15,10 +15,10 @@ export class Village {
     this.materials = 120;
     this.funds = 0;
     this.mana = 40;
-    this.fame = 0;
     this.tech = 0;
     this.security = 60;
     this.building = 0;
+    this.heresy = 0;
     this.scaleTitleStage = 0;
 
     this.villagers = [];

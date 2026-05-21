@@ -24,7 +24,7 @@ export const MIRACLES = [
   {id:"8",  name:"竈女神の奇跡(60)", cost:60, desc:"恋人を結婚100%(いなければ30返還)"},
   {id:"9",  name:"常春の奇跡(300)", cost:300,desc:"村特性→春に固定。次の季節まで継続"},
   {id:"10", name:"旅人の奇跡(60)", cost:60, desc:"ランダム来訪者(訪問者付与)"},
-  {id:"11", name:"出立の奇跡(20)", cost:20, desc:"1人離脱→幸福度分の魔素獲得"},
+  {id:"11", name:"出立の奇跡(50)", cost:50, desc:"1人離脱→幸福度分の魔素獲得"},
   {id:"14", name:"ミダスの奇跡(100)", cost:100, desc:"1ヶ月間、食料を得る代わりに資金を得る"},
   {id:"15", name:"市場の奇跡(150)", cost:150, desc:"行商人の訪問者を3人生成"}
 ];
@@ -106,6 +106,28 @@ function getMiracleBlockReason(costInfo, village) {
   if (village.mana < costInfo.mana) reasons.push("魔素不足");
   if (village.funds < costInfo.funds) reasons.push("資金不足");
   return reasons.join(", ");
+}
+
+function getHeresyIncreaseForManaCost(cost) {
+  return Math.floor((Number(cost) || 0) / 10);
+}
+
+function spendMiracleMana(village, cost) {
+  village.mana = clampValue(village.mana - cost, 0, 99999);
+  village.heresy = clampValue(
+    (Number(village.heresy) || 0) + getHeresyIncreaseForManaCost(cost),
+    0,
+    99999
+  );
+}
+
+function refundMiracleMana(village, cost) {
+  village.mana = clampValue(village.mana + cost, 0, 99999);
+  village.heresy = clampValue(
+    (Number(village.heresy) || 0) - getHeresyIncreaseForManaCost(cost),
+    0,
+    99999
+  );
 }
 
 function getMiracleTargetCount(mid) {
@@ -284,6 +306,7 @@ function renderMiracleCards(village, selectedId = "12") {
     <div class="miracle-resources">
       <div>魔素: ${village.mana}</div>
       <div>資金: ${village.funds}</div>
+      <div>異端: ${village.heresy || 0}</div>
       <div>村人: ${village.villagers.length}</div>
     </div>
     <div class="miracle-list">
@@ -394,7 +417,7 @@ export function performMiracle(village) {
   // 実行
   switch(mid) {
     case "4": // 宴会
-      village.mana-=cost;
+      spendMiracleMana(village, cost);
       village.funds-=cost;
       village.villagers.forEach(p=>{
         p.hp=clampValue(p.hp+30,0,100);
@@ -406,7 +429,7 @@ export function performMiracle(village) {
       break;
 
     case "5": // 狂宴
-      village.mana-=cost;
+      spendMiracleMana(village, cost);
       village.funds-=cost;
       village.villagers.forEach(p=>{
         p.hp=clampValue(p.hp+100,0,100);
@@ -425,7 +448,7 @@ export function performMiracle(village) {
 
     default:
       // 通常コスト (mana消費)
-      village.mana-=cost;
+      spendMiracleMana(village, cost);
       switch(mid) {
         case "1": // 豊穣
           village.villageTraits.push("豊穣");
@@ -440,12 +463,12 @@ export function performMiracle(village) {
         case "3": // クピド(2人強制結婚)
           if (!vA||!vB||vA===vB) {
             village.log("【クピド】2人を選択してください");
-            village.mana+=cost; // 戻す
+            refundMiracleMana(village, cost); // 戻す
             return;
           }
           if (!village.villagers.includes(vA) || !village.villagers.includes(vB)) {
             village.log("【クピド】村人以外は対象外です");
-            village.mana+=cost;
+            refundMiracleMana(village, cost);
             return;
           }
           forceMarriage(vA,vB,village);
@@ -453,7 +476,7 @@ export function performMiracle(village) {
         case "6": // 癒し(1人回復)
           if (!vA || !village.villagers.includes(vA)) {
             village.log("【癒し】対象1人を選択");
-            village.mana+=cost; 
+            refundMiracleMana(village, cost);
             return;
           }
           healMiracle(vA,village);
@@ -461,7 +484,7 @@ export function performMiracle(village) {
         case "7": // 戦神(1人)
           if (!vA || !village.villagers.includes(vA)) {
             village.log("【戦神】対象1人を選択");
-            village.mana+=cost;
+            refundMiracleMana(village, cost);
             return;
           }
           warMiracle(vA,village);
@@ -484,7 +507,7 @@ export function performMiracle(village) {
         case "11": // 出立
           if (!vA || !village.villagers.includes(vA)) {
             village.log("【出立の奇跡】対象1人を選択");
-            village.mana+=cost;
+            refundMiracleMana(village, cost);
             return;
           }
           departureMiracle(vA,village);
@@ -492,13 +515,13 @@ export function performMiracle(village) {
         case "12": // 交換
           if (!vA||!vB||vA===vB) {
             village.log("【交換の奇跡】2人を選択");
-            village.mana+=cost;
+            refundMiracleMana(village, cost);
             return;
           }
           // 通常の交換は村人同士のみ
           if (!isNormalExchangeCandidate(vA, village) || !isNormalExchangeCandidate(vB, village)) {
             village.log("【交換の奇跡】村人以外は対象外です");
-            village.mana+=cost;
+            refundMiracleMana(village, cost);
             return;
           }
           doExchange(vA,vB,village,false);
@@ -510,7 +533,7 @@ export function performMiracle(village) {
         case "13": // 交換(強)
           if (!vA||!vB||vA===vB) {
             village.log("【交換の奇跡・強】2人を選択");
-            village.mana+=cost;
+            refundMiracleMana(village, cost);
             return;
           }
           doExchange(vA,vB,village,false);
@@ -652,7 +675,7 @@ function hearthMiracle(v) {
   let c=v.villagers.filter(x=> x.spiritAge>=18 && checkHasRelationship(x,"恋人") && !checkHasRelationship(x,"既婚"));
   if (c.length===0) {
     v.log("【竈女神の奇跡】結婚すべき恋人なし→30魔素返還");
-    v.mana=clampValue(v.mana+30,0,99999);
+    refundMiracleMana(v, 30);
     return;
   }
   let done=[];
