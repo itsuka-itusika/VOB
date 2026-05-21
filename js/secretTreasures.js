@@ -1,5 +1,6 @@
 import { doExchange } from "./exchange.js";
 import { refreshJobTable } from "./domain/jobTables.js";
+import { openExchangeModal, showMarriageMiracleModal, showMiracleResultModal } from "./miracles.js";
 import { startRaidEvent } from "./raidStart.js";
 import { addRelationship, removeRelationship, addSpouseRelationships } from "./relationships.js";
 import { updateChildGrowthStage } from "./reproduction.js";
@@ -35,6 +36,10 @@ function forceMarriage(a, b, village) {
   a.happiness = clampValue(a.happiness + 50, 0, 100);
   b.happiness = clampValue(b.happiness + 50, 0, 100);
   village.log(`【秘宝】黄金の矢により${a.name}と${b.name}が結ばれました`);
+}
+
+function showSecretTreasureResult(village, title, message, people = []) {
+  showMiracleResultModal(village, title, message, people, { allowEmpty: true });
 }
 
 function restoreBadStatus(person, village, options = {}) {
@@ -124,6 +129,7 @@ function applyEverSpring(village) {
   village.villageTraits = (village.villageTraits || []).filter(trait => !SEASON_TRAITS_TO_REMOVE.includes(trait));
   if (!village.villageTraits.includes("春")) village.villageTraits.push("春");
   village.log("【秘宝】冥王妃の神像を使いました。村に常春の気配が定着しました");
+  showSecretTreasureResult(village, "冥王妃の神像", "村に穏やかな春の気配が定着しました。", getVillagers(village));
 }
 
 function applyNike(village) {
@@ -137,6 +143,7 @@ function applyNike(village) {
     refreshJobTable(person, village);
   });
   village.log("【秘宝】腕の無い天使像を使いました。村人全員にニケを付与しました");
+  showSecretTreasureResult(village, "腕の無い天使像", "村人たちに勝利を呼ぶ気配が宿りました。", getVillagers(village));
 }
 
 function growToSixteen(person, village) {
@@ -154,6 +161,7 @@ function growToSixteen(person, village) {
     refreshJobTable(person, village);
   }
   village.log(`【秘宝】クロノスの秘薬により${person.name}は16歳まで成長しました`);
+  showSecretTreasureResult(village, "クロノスの秘薬", `${person.name}は急速に成長し、若い姿を得ました。`, [person]);
 }
 
 function getPublicBathBonus(village) {
@@ -185,6 +193,9 @@ export const SECRET_TREASURES = [
     use: (village) => {
       const [a, b] = pickTwoRandom(getVillagers(village));
       forceMarriage(a, b, village);
+      showMarriageMiracleModal(village, "黄金の矢", [[a, b]], {
+        message: "秘宝の力により新たな夫婦が結ばれました。"
+      });
     }
   },
   {
@@ -195,6 +206,7 @@ export const SECRET_TREASURES = [
     blockedReason: "襲撃中は使用できません",
     use: (village) => {
       village.log("【秘宝】黄金の林檎を使いました。襲撃を呼び寄せます");
+      showSecretTreasureResult(village, "黄金の林檎", "黄金の林檎の甘い香りが災いを呼び、村の外に不穏な影が集まりました。");
       startRaidEvent(village);
     }
   },
@@ -206,6 +218,7 @@ export const SECRET_TREASURES = [
     use: (village, target) => {
       const recovered = restoreBadStatus(target, village, { fullHp: true });
       village.log(`【秘宝】ネクタルを${target.name}に使いました。体力100${recovered.length ? `、${recovered.join("・")}を解除` : ""}`);
+      showSecretTreasureResult(village, "ネクタル", `${target.name}の傷と疲れが癒されました。`, [target]);
     }
   },
   {
@@ -219,6 +232,7 @@ export const SECRET_TREASURES = [
       if (target.potentialStats) target.potentialStats.int = clampValue((Number(target.potentialStats.int) || 0) + 5, 0, 100);
       refreshJobTable(target, village);
       village.log(`【秘宝】奇妙な計算機械を${target.name}に使いました。知力+5`);
+      showSecretTreasureResult(village, "奇妙な計算機械", `${target.name}の内に新たな思考の歯車が噛み合いました。`, [target]);
     }
   },
   {
@@ -235,6 +249,7 @@ export const SECRET_TREASURES = [
         ...vitalRecovered
       ].filter(Boolean);
       village.log(`【秘宝】蛇の巻き付いた杖を${target.name}に使いました${details.length ? `。${details.join("、")}` : ""}`);
+      showSecretTreasureResult(village, "蛇の巻き付いた杖", `${target.name}に杖の力が巡りました。`, [target]);
     }
   },
   {
@@ -254,6 +269,7 @@ export const SECRET_TREASURES = [
       if (!village.buildingFlags) village.buildingFlags = {};
       village.buildingFlags.publicBathRecoveryBonus = (Number(village.buildingFlags.publicBathRecoveryBonus) || 0) + 1;
       village.log(`【秘宝】老神官の石像を使いました。公衆浴場の回復追加量+1（現在+${getPublicBathBonus(village)}）`);
+      showSecretTreasureResult(village, "老神官の石像", "公衆浴場に古い祈りが染み込み、湯の癒やしが深まりました。");
     }
   },
   {
@@ -265,8 +281,12 @@ export const SECRET_TREASURES = [
     use: (village) => {
       const villager = randFrom(getVillagers(village));
       const outsider = randFrom([...(village.visitors || []), ...(village.raidEnemies || [])]);
-      doExchange(villager, outsider, village, false);
+      doExchange(villager, outsider, village, true);
       village.log(`【秘宝】牧神の管笛により${villager.name}と${outsider.name}が入れ替わりました`);
+      openExchangeModal(villager, outsider, {
+        title: "牧神の管笛",
+        message: "笛の音に導かれ、二人の魂は互いの体を見て驚いている..."
+      });
     }
   }
 ];

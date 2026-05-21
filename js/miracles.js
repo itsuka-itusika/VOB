@@ -844,13 +844,15 @@ function getDepartureMiracleLine(person) {
   return randFrom(lines[type] || lines[person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
 }
 
-function showMiracleResultModal(village, miracleName, message, people) {
+export function showMiracleResultModal(village, miracleName, message, people = [], options = {}) {
   if (typeof document === "undefined") return;
   const entries = (people || []).filter(Boolean);
-  if (entries.length === 0) return;
+  if (entries.length === 0 && !options.allowEmpty) return;
   const overlay = document.createElement("div");
+  overlay.className = "effect-result-overlay";
   overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;";
   const modal = document.createElement("div");
+  modal.className = "effect-result-modal";
   modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;max-width:620px;width:calc(100% - 32px);max-height:min(80vh,720px);overflow:auto;border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
   const rows = entries.map(person => `
     <div style="display:grid;grid-template-columns:72px 1fr;gap:12px;margin:12px 0;align-items:center;">
@@ -894,13 +896,16 @@ function getMarriageMiracleLine(person, partner, miracleName) {
   return randFrom(lines[type] || lines[person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
 }
 
-function showMarriageMiracleModal(village, miracleName, pairs) {
+export function showMarriageMiracleModal(village, miracleName, pairs, options = {}) {
   if (typeof document === "undefined" || !pairs.length) return;
 
   const overlay = document.createElement("div");
+  overlay.className = "effect-result-overlay";
   overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;";
   const modal = document.createElement("div");
+  modal.className = "effect-result-modal";
   modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;max-width:620px;width:calc(100% - 32px);max-height:min(80vh,720px);overflow:auto;border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
+  const message = options.message || "奇跡により新たな夫婦が結ばれました。";
 
   const rows = pairs.map(([a, b]) => `
     <div style="display:grid;grid-template-columns:72px 1fr;gap:12px;margin:12px 0;padding-bottom:12px;border-bottom:1px solid #ddd;align-items:center;">
@@ -915,7 +920,7 @@ function showMarriageMiracleModal(village, miracleName, pairs) {
 
   modal.innerHTML = `
     <h2>${miracleName}</h2>
-    <p>奇跡により新たな夫婦が結ばれました。</p>
+    <p>${message}</p>
     ${rows}
     <button type="button" data-close-marriage-miracle-modal>閉じる</button>
   `;
@@ -938,7 +943,7 @@ function randFrom(lines) {
 /**
  * 交換の奇跡モーダルを開く
  */
-function openExchangeModal(personA, personB) {
+export function openExchangeModal(personA, personB, options = {}) {
   const overlay = document.getElementById("exchangeOverlay");
   const modal = document.getElementById("exchangeModal");
   const portraitA = document.getElementById("exchangePortraitA");
@@ -947,6 +952,11 @@ function openExchangeModal(personA, personB) {
   const textB = document.getElementById("exchangeTextB");
   
   if (!overlay || !modal || !portraitA || !portraitB || !textA || !textB) return;
+
+  const title = modal.querySelector(".exchange-title h3");
+  const message = modal.querySelector(".exchange-title p");
+  if (title) title.textContent = options.title || "交換の奇跡";
+  if (message) message.textContent = options.message || "二人の魂は互いの体を見て驚いている...";
   
   // 顔グラフィックを設定（エラーハンドリング付き）
   try {
