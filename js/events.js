@@ -233,6 +233,22 @@ export function endOfMonthProcess(v) {
     }
   });
 
+  // ニケの効果期間更新 (1ヶ月経過した場合、効果を終了)
+  v.villagers.forEach(p => {
+    if (p.mindTraits.includes("ニケ")) {
+      if (typeof p.nikeMonths !== "number") {
+        p.nikeMonths = 0;
+      }
+      p.nikeMonths++;
+      if (p.nikeMonths >= 1) {
+        p.mindTraits = p.mindTraits.filter(trait => trait !== "ニケ");
+        p.cou = clampValue(p.cou - 10, 0, 100);
+        p.nikeMonths = 0;
+        v.log(`【ニケ終了】${p.name}のニケ効果が切れました`);
+      }
+    }
+  });
+
   // 状態異常の解除処理
   v.villagers.forEach(p => {
     // 身体特性からの状態異常解除

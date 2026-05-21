@@ -132,6 +132,8 @@ export class Villager {
     this.bodyOwner = name;
     // アレス変数を初期化（戦神の加護効果期間管理用）
     this.ares = 0;
+    // ニケ効果期間管理用
+    this.nikeMonths = 0;
 
     /** 顔グラフィックのファイル名 */
     this.portraitFile = "default.png";

@@ -192,6 +192,7 @@ function convertVillagerToObject(vill) {
     pregnancy: vill.pregnancy ? JSON.parse(JSON.stringify(vill.pregnancy)) : null,
     postpartumMonths: vill.postpartumMonths || 0,
     ares: normalizeFiniteNumber(vill.ares, 0),
+    nikeMonths: normalizeFiniteNumber(vill.nikeMonths, 0),
     potentialStats: vill.potentialStats ? { ...vill.potentialStats } : null,
     bodyPotentialStats: vill.bodyPotentialStats ? { ...vill.bodyPotentialStats } : null,
     mindPotentialStats: vill.mindPotentialStats ? { ...vill.mindPotentialStats } : null,
@@ -343,6 +344,7 @@ function convertObjectToVillager(obj) {
   vill.pregnancy = obj.pregnancy ? JSON.parse(JSON.stringify(obj.pregnancy)) : null;
   vill.postpartumMonths = obj.postpartumMonths || 0;
   vill.ares = normalizeFiniteNumber(obj.ares, 0);
+  vill.nikeMonths = normalizeFiniteNumber(obj.nikeMonths, 0);
   vill.potentialStats = obj.potentialStats ? { ...obj.potentialStats } : null;
   vill.bodyPotentialStats = hasOwn(obj, "bodyPotentialStats")
     ? cloneNullableObject(obj.bodyPotentialStats)

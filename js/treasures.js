@@ -1,53 +1,253 @@
-import { clampValue } from "./util.js";
+import { doExchange } from "./exchange.js";
+import { refreshJobTable } from "./domain/jobTables.js";
+import { startRaidEvent } from "./raidStart.js";
+import { addRelationship, removeRelationship, addSpouseRelationships } from "./relationships.js";
+import { updateChildGrowthStage } from "./reproduction.js";
+import { clampValue, round3 } from "./util.js";
 import { updateUI } from "./ui.js";
+
+const SEASON_TRAITS_TO_REMOVE = ["夏", "秋", "冬", "冷夏", "飛蝗", "厳冬", "疫病流行"];
+const BAD_BODY_TRAITS = ["負傷", "疲労", "過労", "飢餓", "凍え", "病気", "疫病", "産褥", "危篤"];
+const BAD_MIND_TRAITS = ["心労", "抑鬱"];
+
+function getVillagers(village) {
+  return Array.isArray(village.villagers) ? village.villagers : [];
+}
+
+function randFrom(items) {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+function pickTwoRandom(items) {
+  if (items.length < 2) return [];
+  const firstIndex = Math.floor(Math.random() * items.length);
+  let secondIndex = Math.floor(Math.random() * (items.length - 1));
+  if (secondIndex >= firstIndex) secondIndex += 1;
+  return [items[firstIndex], items[secondIndex]];
+}
+
+function forceMarriage(a, b, village) {
+  removeRelationship(a, `恋人:${b.name}`);
+  removeRelationship(b, `恋人:${a.name}`);
+  addRelationship(a, "既婚");
+  addRelationship(b, "既婚");
+  addSpouseRelationships(a, b);
+  a.happiness = clampValue(a.happiness + 50, 0, 100);
+  b.happiness = clampValue(b.happiness + 50, 0, 100);
+  village.log(`【宝物】黄金の矢により${a.name}と${b.name}が結ばれました`);
+}
+
+function restoreBadStatus(person, village, options = {}) {
+  const recovered = [];
+  person.bodyTraits = Array.isArray(person.bodyTraits) ? person.bodyTraits : [];
+  person.mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
+
+  BAD_BODY_TRAITS.forEach(trait => {
+    if (!person.bodyTraits.includes(trait)) return;
+    recovered.push(trait);
+    person.bodyTraits = person.bodyTraits.filter(item => item !== trait);
+    switch (trait) {
+      case "飢餓":
+      case "凍え":
+        person.str = round3(person.str / 0.5);
+        person.vit = round3(person.vit / 0.5);
+        person.dex = round3(person.dex / 0.5);
+        break;
+      case "疫病":
+        person.hp = clampValue(round3(person.hp / 0.5), 0, 100);
+        person.str = round3(person.str / 0.5);
+        person.vit = round3(person.vit / 0.5);
+        person.dex = round3(person.dex / 0.5);
+        break;
+      case "疲労":
+        person.str = round3(person.str / 0.8);
+        person.vit = round3(person.vit / 0.8);
+        person.dex = round3(person.dex / 0.8);
+        break;
+      case "過労":
+        person.str = round3(person.str / 0.25);
+        person.vit = round3(person.vit / 0.25);
+        person.dex = round3(person.dex / 0.25);
+        break;
+      case "産褥":
+        person.str = round3(person.str / 0.5);
+        person.vit = round3(person.vit / 0.5);
+        person.postpartumMonths = 0;
+        break;
+    }
+  });
+
+  BAD_MIND_TRAITS.forEach(trait => {
+    if (!person.mindTraits.includes(trait)) return;
+    recovered.push(trait);
+    person.mindTraits = person.mindTraits.filter(item => item !== trait);
+    switch (trait) {
+      case "心労":
+        person.int = round3(person.int / 0.8);
+        person.cou = round3(person.cou / 0.8);
+        person.ind = round3(person.ind / 0.8);
+        person.eth = round3(person.eth / 0.8);
+        person.sexdr = round3(person.sexdr / 0.8);
+        break;
+      case "抑鬱":
+        person.int = round3(person.int / 0.25);
+        person.cou = round3(person.cou / 0.25);
+        person.ind = round3(person.ind / 0.25);
+        person.eth = round3(person.eth / 0.25);
+        person.sexdr = round3(person.sexdr / 0.25);
+        break;
+    }
+  });
+
+  if (options.fullHp) person.hp = 100;
+  refreshJobTable(person, village);
+  if (!person.actionTable.includes(person.action)) {
+    person.action = person.actionTable.includes("休養") ? "休養" : (person.actionTable[0] || "なし");
+  }
+  return recovered;
+}
+
+function applyEverSpring(village) {
+  village.villageTraits = (village.villageTraits || []).filter(trait => !SEASON_TRAITS_TO_REMOVE.includes(trait));
+  if (!village.villageTraits.includes("春")) village.villageTraits.push("春");
+  village.log("【宝物】冥王妃の神像を使いました。村に常春の気配が定着しました");
+}
+
+function applyNike(village) {
+  getVillagers(village).forEach(person => {
+    person.mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
+    if (!person.mindTraits.includes("ニケ")) {
+      person.mindTraits.push("ニケ");
+      person.cou = clampValue((Number(person.cou) || 0) + 10, 0, 100);
+    }
+    person.nikeMonths = 0;
+    refreshJobTable(person, village);
+  });
+  village.log("【宝物】腕の無い天使像を使いました。村人全員にニケを付与しました");
+}
+
+function growToSixteen(person, village) {
+  const oldBodyAge = Number(person.bodyAge) || 0;
+  const oldSpiritAge = Number(person.spiritAge) || 0;
+  if (oldBodyAge > 15 && oldSpiritAge > 15) return;
+  const hasPotential = !!(person.potentialStats || person.bodyPotentialStats || person.mindPotentialStats);
+
+  if (oldBodyAge <= 15) person.bodyAge = 16;
+  if (oldSpiritAge <= 15) person.spiritAge = 16;
+  updateChildGrowthStage(person, village, { announce: true });
+  if (!hasPotential) {
+    person.bodyTraits = (person.bodyTraits || []).filter(trait => !["赤子", "子供", "少年", "少女"].includes(trait));
+    person.mindTraits = (person.mindTraits || []).filter(trait => !["無垢", "萌芽", "思春期"].includes(trait));
+    refreshJobTable(person, village);
+  }
+  village.log(`【宝物】クロノスの秘薬により${person.name}は16歳まで成長しました`);
+}
+
+function getPublicBathBonus(village) {
+  const flags = village.buildingFlags || {};
+  return 10 + (Number(flags.publicBathRecoveryBonus) || 0);
+}
 
 export const TREASURES = [
   {
-    id: "grain_charm",
-    name: "豊穣の種",
-    desc: "使うと食料+100。",
+    id: "persephone_statue",
+    name: "冥王妃の神像",
+    desc: "常春の奇跡と同じ効果。季節系の村特性を取り除き、春に固定する。",
+    use: applyEverSpring
+  },
+  {
+    id: "armless_angel",
+    name: "腕の無い天使像",
+    desc: "村人全員に1ヶ月の間、精神特性「ニケ」を付与する。ニケ: 勇気+10。",
+    canUse: (village) => getVillagers(village).length > 0,
+    blockedReason: "村人がいません",
+    use: applyNike
+  },
+  {
+    id: "golden_arrow",
+    name: "黄金の矢",
+    desc: "ランダムな村人2名にクピドの奇跡の効果を与える。",
+    canUse: (village) => getVillagers(village).length >= 2,
+    blockedReason: "村人が2名以上必要です",
     use: (village) => {
-      village.food = clampValue(village.food + 100, 0, 99999);
-      village.log("【宝物】豊穣の種を使いました。食料+100");
+      const [a, b] = pickTwoRandom(getVillagers(village));
+      forceMarriage(a, b, village);
     }
   },
   {
-    id: "timber_charm",
-    name: "古い建材",
-    desc: "使うと資材+100。",
+    id: "golden_apple",
+    name: "黄金の林檎",
+    desc: "襲撃を発生させる。襲撃中は使用不可。",
+    canUse: (village) => !village.villageTraits?.includes("襲撃中") && !(Array.isArray(village.raidEnemies) && village.raidEnemies.length > 0),
+    blockedReason: "襲撃中は使用できません",
     use: (village) => {
-      village.materials = clampValue(village.materials + 100, 0, 99999);
-      village.log("【宝物】古い建材を使いました。資材+100");
+      village.log("【宝物】黄金の林檎を使いました。襲撃を呼び寄せます");
+      startRaidEvent(village);
     }
   },
   {
-    id: "merchant_coin",
-    name: "旅商の金貨",
-    desc: "使うと資金+100。",
-    use: (village) => {
-      village.funds = clampValue(village.funds + 100, 0, 99999);
-      village.log("【宝物】旅商の金貨を使いました。資金+100");
+    id: "nectar",
+    name: "ネクタル",
+    desc: "指定した村人1名の体力を100にし、負傷・産褥などの状態異常を解除して行動可能にする。",
+    target: "villager",
+    use: (village, target) => {
+      const recovered = restoreBadStatus(target, village, { fullHp: true });
+      village.log(`【宝物】ネクタルを${target.name}に使いました。体力100${recovered.length ? `、${recovered.join("・")}を解除` : ""}`);
     }
   },
   {
-    id: "mana_crystal",
-    name: "魔素結晶",
-    desc: "使うと魔素+80。",
-    use: (village) => {
-      village.mana = clampValue(village.mana + 80, 0, 99999);
-      village.log("【宝物】魔素結晶を使いました。魔素+80");
+    id: "strange_calculator",
+    name: "奇妙な計算機械",
+    desc: "指定した村人1名の知力を永続的に5上げる。",
+    target: "villager",
+    use: (village, target) => {
+      target.int = clampValue((Number(target.int) || 0) + 5, 0, 100);
+      if (target.mindPotentialStats) target.mindPotentialStats.int = clampValue((Number(target.mindPotentialStats.int) || 0) + 5, 0, 100);
+      if (target.potentialStats) target.potentialStats.int = clampValue((Number(target.potentialStats.int) || 0) + 5, 0, 100);
+      refreshJobTable(target, village);
+      village.log(`【宝物】奇妙な計算機械を${target.name}に使いました。知力+5`);
     }
   },
   {
-    id: "healing_balm",
-    name: "癒しの香油",
-    desc: "使うと村人全員の体力・メンタル+30。",
+    id: "serpent_staff",
+    name: "蛇の巻き付いた杖",
+    desc: "指定した村人1名の負傷・産褥・疫病・危篤などの状態異常を解除して行動可能にする。",
+    target: "villager",
+    use: (village, target) => {
+      const recovered = restoreBadStatus(target, village);
+      village.log(`【宝物】蛇の巻き付いた杖を${target.name}に使いました${recovered.length ? `。${recovered.join("・")}を解除` : ""}`);
+    }
+  },
+  {
+    id: "chronos_elixir",
+    name: "クロノスの秘薬",
+    desc: "肉体年齢15以下または精神年齢15以下の村人に使用可能。該当する年齢を16まで成長させ、潜在成長も反映する。",
+    target: "childVillager",
+    use: (village, target) => growToSixteen(target, village)
+  },
+  {
+    id: "old_priest_statue",
+    name: "老神官の石像",
+    desc: "公衆浴場がある時に使用可能。公衆浴場の回復効果をそれぞれ+1する。",
+    canUse: (village) => !!(village.buildingFlags && village.buildingFlags.hasPublicBath),
+    blockedReason: "公衆浴場が必要です",
     use: (village) => {
-      (village.villagers || []).forEach(person => {
-        person.hp = clampValue(person.hp + 30, 0, 100);
-        person.mp = clampValue(person.mp + 30, 0, 100);
-      });
-      village.log("【宝物】癒しの香油を使いました。村人全員の体力・メンタル+30");
+      if (!village.buildingFlags) village.buildingFlags = {};
+      village.buildingFlags.publicBathRecoveryBonus = (Number(village.buildingFlags.publicBathRecoveryBonus) || 0) + 1;
+      village.log(`【宝物】老神官の石像を使いました。公衆浴場の回復追加量+1（現在+${getPublicBathBonus(village)}）`);
+    }
+  },
+  {
+    id: "pan_flute",
+    name: "牧神の管笛",
+    desc: "訪問者、襲撃者がいる時に使用可能。ランダムな村人と訪問者/襲撃者を入れ替える。",
+    canUse: (village) => getVillagers(village).length > 0 && [...(village.visitors || []), ...(village.raidEnemies || [])].length > 0,
+    blockedReason: "村人と、訪問者または襲撃者が必要です",
+    use: (village) => {
+      const villager = randFrom(getVillagers(village));
+      const outsider = randFrom([...(village.visitors || []), ...(village.raidEnemies || [])]);
+      doExchange(villager, outsider, village, false);
+      village.log(`【宝物】牧神の管笛により${villager.name}と${outsider.name}が入れ替わりました`);
     }
   }
 ];
@@ -63,6 +263,48 @@ function getTreasureLabel(entry) {
   if (definition) return definition.name;
   if (typeof entry === "string") return entry;
   return entry?.name || entry?.id || "不明な宝物";
+}
+
+function getTargetCandidates(village, definition) {
+  const villagers = getVillagers(village);
+  if (definition.target === "childVillager") {
+    return villagers.filter(person => (Number(person.bodyAge) || 0) <= 15 || (Number(person.spiritAge) || 0) <= 15);
+  }
+  if (definition.target === "villager") return villagers;
+  return [];
+}
+
+function isTreasureUsable(village, definition) {
+  if (!definition) return false;
+  if (definition.canUse && !definition.canUse(village)) return false;
+  if (definition.target && getTargetCandidates(village, definition).length === 0) return false;
+  return true;
+}
+
+function getTreasureBlockedReason(village, definition) {
+  if (!definition) return "利用効果が定義されていません";
+  if (definition.canUse && !definition.canUse(village)) return definition.blockedReason || "使用条件を満たしていません";
+  if (definition.target && getTargetCandidates(village, definition).length === 0) return "対象になる村人がいません";
+  return "";
+}
+
+function renderTargetSelect(village, definition, container) {
+  const oldTarget = container.querySelector(".treasure-target-label");
+  if (oldTarget) oldTarget.remove();
+  if (!definition?.target) return;
+
+  const candidates = getTargetCandidates(village, definition);
+  const label = document.createElement("label");
+  label.className = "treasure-target-label";
+  label.innerHTML = `<span>対象を選択:</span><select id="treasureTargetSelect"></select>`;
+  const select = label.querySelector("select");
+  candidates.forEach((person, index) => {
+    const option = document.createElement("option");
+    option.value = String(index);
+    option.textContent = `${person.name}（肉体${person.bodyAge}歳 / 精神${person.spiritAge}歳）`;
+    select.appendChild(option);
+  });
+  container.querySelector(".treasure-description")?.before(label);
 }
 
 function renderTreasureModal(village) {
@@ -88,17 +330,19 @@ function renderTreasureModal(village) {
     const definition = getTreasureDefinition(entry);
     const option = document.createElement("option");
     option.value = String(index);
-    option.textContent = definition ? definition.name : `${getTreasureLabel(entry)}（利用不可）`;
-    option.disabled = !definition;
+    option.textContent = getTreasureLabel(entry);
+    option.disabled = !isTreasureUsable(village, definition);
     select.appendChild(option);
   });
 
   const updateDescription = () => {
     const definition = getTreasureDefinition(treasures[Number(select.value)]);
     const description = content.querySelector("#treasureDescription");
+    renderTargetSelect(village, definition, content);
     if (description) {
+      const reason = getTreasureBlockedReason(village, definition);
       description.textContent = definition
-        ? definition.desc
+        ? `${definition.desc}${reason ? ` 使用不可: ${reason}` : ""}`
         : "この宝物はまだ利用効果が定義されていません。";
     }
   };
@@ -135,13 +379,25 @@ export function useSelectedTreasure(village) {
   const treasures = Array.isArray(village.treasures) ? village.treasures : [];
   const index = Number(select.value);
   const definition = getTreasureDefinition(treasures[index]);
-  if (!definition) {
-    village.log("【宝物】利用できる宝物が選択されていません");
+  if (!isTreasureUsable(village, definition)) {
+    village.log(`【宝物】${getTreasureBlockedReason(village, definition)}`);
+    renderTreasureModal(village);
     return;
   }
 
+  let target = null;
+  if (definition.target) {
+    const candidates = getTargetCandidates(village, definition);
+    const targetSelect = document.getElementById("treasureTargetSelect");
+    target = candidates[Number(targetSelect?.value || 0)];
+    if (!target) {
+      village.log("【宝物】対象を選択してください");
+      return;
+    }
+  }
+
   if (!window.confirm(`${definition.name}を使いますか？`)) return;
-  definition.use(village);
+  definition.use(village, target);
   treasures.splice(index, 1);
   village.treasures = treasures;
   renderTreasureModal(village);

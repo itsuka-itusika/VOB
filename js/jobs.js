@@ -330,8 +330,9 @@ function doRestJob(p, v) {
   mpG=Math.floor(mpG*multi);
 
   if (v.buildingFlags && v.buildingFlags.hasPublicBath) {
-    hpG += 10;
-    mpG += 10;
+    const bathBonus = 10 + (Number(v.buildingFlags.publicBathRecoveryBonus) || 0);
+    hpG += bathBonus;
+    mpG += bathBonus;
     msg += "(公衆浴場)";
   }
 
@@ -361,9 +362,10 @@ function doLeisureJob(p, v) {
     p.happiness=clampValue(p.happiness+20,0,100);
   }
   if (v.buildingFlags && v.buildingFlags.hasPublicBath) {
-    base += 10;
-    p.hp=clampValue(p.hp+10,0,100);
-    bathMsg = ",体力+10(公衆浴場)";
+    const bathBonus = 10 + (Number(v.buildingFlags.publicBathRecoveryBonus) || 0);
+    base += bathBonus;
+    p.hp=clampValue(p.hp+bathBonus,0,100);
+    bathMsg = `,体力+${bathBonus}(公衆浴場)`;
   }
   if (hasCurrentHobbyMate(p)) {
     base = Math.round(base * 1.5);

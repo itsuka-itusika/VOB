@@ -773,13 +773,18 @@ section h2 {
 #treasureContent {
   margin-top: 5px;
 }
-.treasure-select-label {
+.treasure-select-label,
+.treasure-target-label {
   display: grid;
   gap: 6px;
 }
-.treasure-select-label select {
+.treasure-select-label select,
+.treasure-target-label select {
   width: 100%;
   max-width: 360px;
+}
+.treasure-target-label {
+  margin-top: 10px;
 }
 .treasure-description {
   margin-top: 12px;
