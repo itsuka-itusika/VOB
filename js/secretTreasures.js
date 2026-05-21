@@ -34,7 +34,7 @@ function forceMarriage(a, b, village) {
   addSpouseRelationships(a, b);
   a.happiness = clampValue(a.happiness + 50, 0, 100);
   b.happiness = clampValue(b.happiness + 50, 0, 100);
-  village.log(`【宝物】黄金の矢により${a.name}と${b.name}が結ばれました`);
+  village.log(`【秘宝】黄金の矢により${a.name}と${b.name}が結ばれました`);
 }
 
 function restoreBadStatus(person, village, options = {}) {
@@ -107,10 +107,23 @@ function restoreBadStatus(person, village, options = {}) {
   return recovered;
 }
 
+function restoreLowVitals(person) {
+  const recovered = [];
+  if ((Number(person.hp) || 0) <= 33) {
+    person.hp = 34;
+    recovered.push("体力を34まで回復");
+  }
+  if ((Number(person.mp) || 0) <= 33) {
+    person.mp = 34;
+    recovered.push("メンタルを34まで回復");
+  }
+  return recovered;
+}
+
 function applyEverSpring(village) {
   village.villageTraits = (village.villageTraits || []).filter(trait => !SEASON_TRAITS_TO_REMOVE.includes(trait));
   if (!village.villageTraits.includes("春")) village.villageTraits.push("春");
-  village.log("【宝物】冥王妃の神像を使いました。村に常春の気配が定着しました");
+  village.log("【秘宝】冥王妃の神像を使いました。村に常春の気配が定着しました");
 }
 
 function applyNike(village) {
@@ -123,7 +136,7 @@ function applyNike(village) {
     person.nikeMonths = 0;
     refreshJobTable(person, village);
   });
-  village.log("【宝物】腕の無い天使像を使いました。村人全員にニケを付与しました");
+  village.log("【秘宝】腕の無い天使像を使いました。村人全員にニケを付与しました");
 }
 
 function growToSixteen(person, village) {
@@ -140,7 +153,7 @@ function growToSixteen(person, village) {
     person.mindTraits = (person.mindTraits || []).filter(trait => !["無垢", "萌芽", "思春期"].includes(trait));
     refreshJobTable(person, village);
   }
-  village.log(`【宝物】クロノスの秘薬により${person.name}は16歳まで成長しました`);
+  village.log(`【秘宝】クロノスの秘薬により${person.name}は16歳まで成長しました`);
 }
 
 function getPublicBathBonus(village) {
@@ -148,7 +161,7 @@ function getPublicBathBonus(village) {
   return 10 + (Number(flags.publicBathRecoveryBonus) || 0);
 }
 
-export const TREASURES = [
+export const SECRET_TREASURES = [
   {
     id: "persephone_statue",
     name: "冥王妃の神像",
@@ -181,7 +194,7 @@ export const TREASURES = [
     canUse: (village) => !village.villageTraits?.includes("襲撃中") && !(Array.isArray(village.raidEnemies) && village.raidEnemies.length > 0),
     blockedReason: "襲撃中は使用できません",
     use: (village) => {
-      village.log("【宝物】黄金の林檎を使いました。襲撃を呼び寄せます");
+      village.log("【秘宝】黄金の林檎を使いました。襲撃を呼び寄せます");
       startRaidEvent(village);
     }
   },
@@ -192,7 +205,7 @@ export const TREASURES = [
     target: "villager",
     use: (village, target) => {
       const recovered = restoreBadStatus(target, village, { fullHp: true });
-      village.log(`【宝物】ネクタルを${target.name}に使いました。体力100${recovered.length ? `、${recovered.join("・")}を解除` : ""}`);
+      village.log(`【秘宝】ネクタルを${target.name}に使いました。体力100${recovered.length ? `、${recovered.join("・")}を解除` : ""}`);
     }
   },
   {
@@ -205,17 +218,23 @@ export const TREASURES = [
       if (target.mindPotentialStats) target.mindPotentialStats.int = clampValue((Number(target.mindPotentialStats.int) || 0) + 5, 0, 100);
       if (target.potentialStats) target.potentialStats.int = clampValue((Number(target.potentialStats.int) || 0) + 5, 0, 100);
       refreshJobTable(target, village);
-      village.log(`【宝物】奇妙な計算機械を${target.name}に使いました。知力+5`);
+      village.log(`【秘宝】奇妙な計算機械を${target.name}に使いました。知力+5`);
     }
   },
   {
     id: "serpent_staff",
     name: "蛇の巻き付いた杖",
-    desc: "指定した村人1名の負傷・産褥・疫病・危篤などの状態異常を解除して行動可能にする。",
+    desc: "指定した村人1名の負傷・産褥・疫病・危篤などの状態異常を解除し、体力・メンタルが33以下なら34まで回復する。",
     target: "villager",
     use: (village, target) => {
       const recovered = restoreBadStatus(target, village);
-      village.log(`【宝物】蛇の巻き付いた杖を${target.name}に使いました${recovered.length ? `。${recovered.join("・")}を解除` : ""}`);
+      const vitalRecovered = restoreLowVitals(target);
+      if (vitalRecovered.length) refreshJobTable(target, village);
+      const details = [
+        recovered.length ? `${recovered.join("・")}を解除` : "",
+        ...vitalRecovered
+      ].filter(Boolean);
+      village.log(`【秘宝】蛇の巻き付いた杖を${target.name}に使いました${details.length ? `。${details.join("、")}` : ""}`);
     }
   },
   {
@@ -234,7 +253,7 @@ export const TREASURES = [
     use: (village) => {
       if (!village.buildingFlags) village.buildingFlags = {};
       village.buildingFlags.publicBathRecoveryBonus = (Number(village.buildingFlags.publicBathRecoveryBonus) || 0) + 1;
-      village.log(`【宝物】老神官の石像を使いました。公衆浴場の回復追加量+1（現在+${getPublicBathBonus(village)}）`);
+      village.log(`【秘宝】老神官の石像を使いました。公衆浴場の回復追加量+1（現在+${getPublicBathBonus(village)}）`);
     }
   },
   {
@@ -247,22 +266,41 @@ export const TREASURES = [
       const villager = randFrom(getVillagers(village));
       const outsider = randFrom([...(village.visitors || []), ...(village.raidEnemies || [])]);
       doExchange(villager, outsider, village, false);
-      village.log(`【宝物】牧神の管笛により${villager.name}と${outsider.name}が入れ替わりました`);
+      village.log(`【秘宝】牧神の管笛により${villager.name}と${outsider.name}が入れ替わりました`);
     }
   }
 ];
 
-function getTreasureDefinition(entry) {
-  const id = typeof entry === "string" ? entry : entry?.id;
-  const name = typeof entry === "string" ? entry : entry?.name;
-  return TREASURES.find(treasure => treasure.id === id || treasure.name === id || treasure.name === name) || null;
+export function grantRandomSecretTreasure(village) {
+  const definition = randFrom(SECRET_TREASURES);
+  if (!definition) return null;
+  if (!Array.isArray(village.secretTreasures)) village.secretTreasures = [];
+  village.secretTreasures.push({ id: definition.id });
+  return definition;
 }
 
-function getTreasureLabel(entry) {
-  const definition = getTreasureDefinition(entry);
+function ensureSecretTreasures(village) {
+  if (Array.isArray(village.secretTreasures)) return village.secretTreasures;
+  if (Array.isArray(village.treasures)) {
+    village.secretTreasures = village.treasures;
+    delete village.treasures;
+    return village.secretTreasures;
+  }
+  village.secretTreasures = [];
+  return village.secretTreasures;
+}
+
+function getSecretTreasureDefinition(entry) {
+  const id = typeof entry === "string" ? entry : entry?.id;
+  const name = typeof entry === "string" ? entry : entry?.name;
+  return SECRET_TREASURES.find(secretTreasure => secretTreasure.id === id || secretTreasure.name === id || secretTreasure.name === name) || null;
+}
+
+function getSecretTreasureLabel(entry) {
+  const definition = getSecretTreasureDefinition(entry);
   if (definition) return definition.name;
   if (typeof entry === "string") return entry;
-  return entry?.name || entry?.id || "不明な宝物";
+  return entry?.name || entry?.id || "不明な秘宝";
 }
 
 function getTargetCandidates(village, definition) {
@@ -274,14 +312,14 @@ function getTargetCandidates(village, definition) {
   return [];
 }
 
-function isTreasureUsable(village, definition) {
+function isSecretTreasureUsable(village, definition) {
   if (!definition) return false;
   if (definition.canUse && !definition.canUse(village)) return false;
   if (definition.target && getTargetCandidates(village, definition).length === 0) return false;
   return true;
 }
 
-function getTreasureBlockedReason(village, definition) {
+function getSecretTreasureBlockedReason(village, definition) {
   if (!definition) return "利用効果が定義されていません";
   if (definition.canUse && !definition.canUse(village)) return definition.blockedReason || "使用条件を満たしていません";
   if (definition.target && getTargetCandidates(village, definition).length === 0) return "対象になる村人がいません";
@@ -289,14 +327,14 @@ function getTreasureBlockedReason(village, definition) {
 }
 
 function renderTargetSelect(village, definition, container) {
-  const oldTarget = container.querySelector(".treasure-target-label");
+  const oldTarget = container.querySelector(".secret-treasure-target-label");
   if (oldTarget) oldTarget.remove();
   if (!definition?.target) return;
 
   const candidates = getTargetCandidates(village, definition);
   const label = document.createElement("label");
-  label.className = "treasure-target-label";
-  label.innerHTML = `<span>対象を選択:</span><select id="treasureTargetSelect"></select>`;
+  label.className = "secret-treasure-target-label";
+  label.innerHTML = `<span>対象を選択:</span><select id="secretTreasureTargetSelect"></select>`;
   const select = label.querySelector("select");
   candidates.forEach((person, index) => {
     const option = document.createElement("option");
@@ -304,102 +342,102 @@ function renderTargetSelect(village, definition, container) {
     option.textContent = `${person.name}（肉体${person.bodyAge}歳 / 精神${person.spiritAge}歳）`;
     select.appendChild(option);
   });
-  container.querySelector(".treasure-description")?.before(label);
+  container.querySelector(".secret-treasure-description")?.before(label);
 }
 
-function renderTreasureModal(village) {
-  const content = document.getElementById("treasureContent");
+function renderSecretTreasureModal(village) {
+  const content = document.getElementById("secretTreasureContent");
   if (!content) return;
 
-  const treasures = Array.isArray(village.treasures) ? village.treasures : [];
-  if (treasures.length === 0) {
-    content.innerHTML = "<p>所持している宝物はありません。</p>";
+  const secretTreasures = ensureSecretTreasures(village);
+  if (secretTreasures.length === 0) {
+    content.innerHTML = "<p>所持している秘宝はありません。</p>";
     return;
   }
 
   content.innerHTML = `
-    <label class="treasure-select-label">
-      <span>宝物を選択:</span>
-      <select id="treasureSelect"></select>
+    <label class="secret-treasure-select-label">
+      <span>秘宝を選択:</span>
+      <select id="secretTreasureSelect"></select>
     </label>
-    <div id="treasureDescription" class="treasure-description"></div>
+    <div id="secretTreasureDescription" class="secret-treasure-description"></div>
   `;
 
-  const select = content.querySelector("#treasureSelect");
-  treasures.forEach((entry, index) => {
-    const definition = getTreasureDefinition(entry);
+  const select = content.querySelector("#secretTreasureSelect");
+  secretTreasures.forEach((entry, index) => {
+    const definition = getSecretTreasureDefinition(entry);
     const option = document.createElement("option");
     option.value = String(index);
-    option.textContent = getTreasureLabel(entry);
-    option.disabled = !isTreasureUsable(village, definition);
+    option.textContent = getSecretTreasureLabel(entry);
+    option.disabled = !isSecretTreasureUsable(village, definition);
     select.appendChild(option);
   });
 
   const updateDescription = () => {
-    const definition = getTreasureDefinition(treasures[Number(select.value)]);
-    const description = content.querySelector("#treasureDescription");
+    const definition = getSecretTreasureDefinition(secretTreasures[Number(select.value)]);
+    const description = content.querySelector("#secretTreasureDescription");
     renderTargetSelect(village, definition, content);
     if (description) {
-      const reason = getTreasureBlockedReason(village, definition);
+      const reason = getSecretTreasureBlockedReason(village, definition);
       description.textContent = definition
         ? `${definition.desc}${reason ? ` 使用不可: ${reason}` : ""}`
-        : "この宝物はまだ利用効果が定義されていません。";
+        : "この秘宝はまだ利用効果が定義されていません。";
     }
   };
   select.addEventListener("change", updateDescription);
   updateDescription();
 }
 
-export function openTreasureModal(village) {
+export function openSecretTreasureModal(village) {
   if (village.gameOver) {
-    village.log("ゲームオーバー→宝物利用不可");
+    village.log("ゲームオーバー→秘宝利用不可");
     return;
   }
-  if (!Array.isArray(village.treasures)) village.treasures = [];
+  ensureSecretTreasures(village);
 
-  const overlay = document.getElementById("treasureOverlay");
-  const modal = document.getElementById("treasureModal");
+  const overlay = document.getElementById("secretTreasureOverlay");
+  const modal = document.getElementById("secretTreasureModal");
   if (!overlay || !modal) return;
 
-  renderTreasureModal(village);
+  renderSecretTreasureModal(village);
   overlay.style.display = "block";
   modal.style.display = "block";
 }
 
-export function closeTreasureModal() {
-  const overlay = document.getElementById("treasureOverlay");
-  const modal = document.getElementById("treasureModal");
+export function closeSecretTreasureModal() {
+  const overlay = document.getElementById("secretTreasureOverlay");
+  const modal = document.getElementById("secretTreasureModal");
   if (overlay) overlay.style.display = "none";
   if (modal) modal.style.display = "none";
 }
 
-export function useSelectedTreasure(village) {
-  const select = document.getElementById("treasureSelect");
+export function useSelectedSecretTreasure(village) {
+  const select = document.getElementById("secretTreasureSelect");
   if (!select) return;
-  const treasures = Array.isArray(village.treasures) ? village.treasures : [];
+  const secretTreasures = ensureSecretTreasures(village);
   const index = Number(select.value);
-  const definition = getTreasureDefinition(treasures[index]);
-  if (!isTreasureUsable(village, definition)) {
-    village.log(`【宝物】${getTreasureBlockedReason(village, definition)}`);
-    renderTreasureModal(village);
+  const definition = getSecretTreasureDefinition(secretTreasures[index]);
+  if (!isSecretTreasureUsable(village, definition)) {
+    village.log(`【秘宝】${getSecretTreasureBlockedReason(village, definition)}`);
+    renderSecretTreasureModal(village);
     return;
   }
 
   let target = null;
   if (definition.target) {
     const candidates = getTargetCandidates(village, definition);
-    const targetSelect = document.getElementById("treasureTargetSelect");
+    const targetSelect = document.getElementById("secretTreasureTargetSelect");
     target = candidates[Number(targetSelect?.value || 0)];
     if (!target) {
-      village.log("【宝物】対象を選択してください");
+      village.log("【秘宝】対象を選択してください");
       return;
     }
   }
 
   if (!window.confirm(`${definition.name}を使いますか？`)) return;
   definition.use(village, target);
-  treasures.splice(index, 1);
-  village.treasures = treasures;
-  renderTreasureModal(village);
+  secretTreasures.splice(index, 1);
+  village.secretTreasures = secretTreasures;
+  renderSecretTreasureModal(village);
   updateUI(village);
 }

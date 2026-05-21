@@ -33,6 +33,16 @@ function normalizeFiniteNumber(value, fallback = 0) {
   return Number.isFinite(number) ? number : fallback;
 }
 
+function cloneArray(value) {
+  return Array.isArray(value) ? JSON.parse(JSON.stringify(value)) : [];
+}
+
+function normalizeSecretTreasures(source) {
+  if (Array.isArray(source?.secretTreasures)) return cloneArray(source.secretTreasures);
+  if (Array.isArray(source?.treasures)) return cloneArray(source.treasures);
+  return [];
+}
+
 /**
  * 村データをJSONファイルとしてダウンロードさせる
  */
@@ -114,9 +124,7 @@ function convertVillageToObject(village) {
       : getInitialScaleStageIndex(village.building),
     popLimit: village.popLimit,
     villageTraits: [...village.villageTraits],
-    treasures: Array.isArray(village.treasures)
-      ? JSON.parse(JSON.stringify(village.treasures))
-      : [],
+    secretTreasures: normalizeSecretTreasures(village),
     logs: [...village.logs],
     gameOver: village.gameOver,
     hasDonePreEvent: village.hasDonePreEvent,
@@ -237,9 +245,7 @@ function convertObjectToVillage(dataObj) {
   if (Array.isArray(dataObj.villageTraits)) {
     v.villageTraits = [...dataObj.villageTraits];
   }
-  v.treasures = Array.isArray(dataObj.treasures)
-    ? JSON.parse(JSON.stringify(dataObj.treasures))
-    : [];
+  v.secretTreasures = normalizeSecretTreasures(dataObj);
   v.logs = Array.isArray(dataObj.logs) ? [...dataObj.logs] : [];
   v.gameOver = !!dataObj.gameOver;
   v.hasDonePreEvent = !!dataObj.hasDonePreEvent;

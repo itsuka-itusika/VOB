@@ -29,6 +29,7 @@ import {
   rollMindCost,
 } from "./domain/jobMath.js";
 import { refreshJobTable } from "./domain/jobTables.js";
+import { rollSecretTreasureJobEvents, showSecretTreasureEventModals } from "./secretTreasureEvents.js";
 
 const HEALING_RECOVERABLE_BODY_TRAITS = ["負傷", "疫病"];
 
@@ -47,6 +48,8 @@ export function handleAllVillagerJobs(village) {
   village.log("【村人の行動フェーズ】");
 
   const actionLogs = [];
+  const secretTreasureFlags = { field: false, fishing: false };
+  let secretTreasureEvents = [];
   const originalLog = village.log;
   const writeLog = originalLog.bind(village);
 
@@ -65,17 +68,18 @@ export function handleAllVillagerJobs(village) {
       if (roll <= saboProb && p.action !== "休養" && p.action !== "余暇" && p.action !== "なし" && p.action !== "迎撃" && p.action !== "罠作成" && p.action !== "療養" && p.action !== "臨終") {
         doSabori(p, village);
       } else {
-        doJobAction(p, village);
+        doJobAction(p, village, secretTreasureFlags);
       }
     });
+    secretTreasureEvents = rollSecretTreasureJobEvents(village, secretTreasureFlags);
   } finally {
     village.log = originalLog;
   }
 
-  showActionPhaseResultModal(village, actionLogs);
+  showActionPhaseResultModal(village, actionLogs, () => showSecretTreasureEventModals(secretTreasureEvents));
 }
 
-function showActionPhaseResultModal(village, messages) {
+function showActionPhaseResultModal(village, messages, afterClose = null) {
   if (typeof document === "undefined" || messages.length === 0) return;
 
   document.getElementById("actionPhaseOverlay")?.remove();
@@ -151,9 +155,13 @@ function showActionPhaseResultModal(village, messages) {
     cursor: pointer;
   `;
 
+  let closed = false;
   const close = () => {
+    if (closed) return;
+    closed = true;
     overlay.remove();
     modal.remove();
+    if (typeof afterClose === "function") afterClose();
   };
   closeButton.addEventListener("click", close);
   overlay.addEventListener("click", close);
@@ -179,7 +187,7 @@ function doSabori(p, v) {
   }
 }
 
-function doJobAction(p, v) {
+function doJobAction(p, v, secretTreasureFlags = null) {
   switch(p.action) {
     case "なし":
       v.log(`${p.name}は行動がない`);
@@ -201,6 +209,7 @@ function doJobAction(p, v) {
       break;
     case "農作業":
       doFarm(p, v);
+      if (secretTreasureFlags) secretTreasureFlags.field = true;
       break;
     case "伐採":
       doLumber(p, v);
@@ -210,6 +219,7 @@ function doJobAction(p, v) {
       break;
     case "漁":
       doFish(p, v);
+      if (secretTreasureFlags) secretTreasureFlags.fishing = true;
       break;
     case "採集":
       doGather(p, v);
@@ -273,6 +283,7 @@ function doJobAction(p, v) {
       break;
     case "醸造":
       doBrewing(p, v);
+      if (secretTreasureFlags) secretTreasureFlags.field = true;
       break;
     // "罠作成", "迎撃" は襲撃専用(raid.js)で処理するので、ここはログだけ
     case "罠作成":

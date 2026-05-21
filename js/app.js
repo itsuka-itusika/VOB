@@ -16,7 +16,7 @@ import {
   saveVillageToJsonFile,
   saveVillageToLocalStorage
 } from "./saveLoad.js";
-import { closeTreasureModal, openTreasureModal, useSelectedTreasure } from "./treasures.js";
+import { closeSecretTreasureModal, openSecretTreasureModal, useSelectedSecretTreasure } from "./secretTreasures.js";
 import { updateUI } from "./ui.js";
 
 const VIEW_MODE_STORAGE_KEY = "vob.viewMode";
@@ -145,9 +145,9 @@ function bindGlobalHandlers() {
     runUtilityAction,
     openBuildingModal: () => openBuildingModal(theVillage),
     closeBuildingModal,
-    openTreasureModal: () => openTreasureModal(theVillage),
-    closeTreasureModal,
-    useSelectedTreasure: () => useSelectedTreasure(theVillage),
+    openSecretTreasureModal: () => openSecretTreasureModal(theVillage),
+    closeSecretTreasureModal,
+    useSelectedSecretTreasure: () => useSelectedSecretTreasure(theVillage),
     onAutoAssignJobs: () => {
       autoAssignJobs(theVillage);
       updateUI(theVillage);

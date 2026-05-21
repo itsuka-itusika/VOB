@@ -4,6 +4,13 @@ import { getPortraitPath, isForcedHealingAction } from "./util.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { ACTION_DEFEND, ACTION_TRAP, isRaidActionAssignable } from "./raidRules.js";
 import { getConversationLine } from "./dialogue/dialogueEngine.js";
+import { MERCHANT_SECRET_TREASURE_LINES } from "./data/dialogue/visitorLines.js";
+import {
+  buyMerchantSecretTreasure,
+  MERCHANT_SECRET_TREASURE_CHANCE,
+  MERCHANT_SECRET_TREASURE_PRICE,
+  showSecretTreasureEventModals
+} from "./secretTreasureEvents.js";
 
 // 訪問者タイプごとの勧誘成功率係数
 const RECRUITMENT_COEFFICIENTS = {
@@ -22,7 +29,17 @@ const MERCHANT_TRADE = {
   materials: { label: "資材", stockKey: "materials", unit: 10, price: 12, initialStock: 80 }
 };
 
+function randFrom(items) {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
 function createConversationStatusHtml(character) {
+  if (isMerchantVisitor(character)) {
+    const stock = ensureMerchantStock(character);
+    if (stock.secretTreasure) {
+      return `<p><strong></strong> ${randFrom(MERCHANT_SECRET_TREASURE_LINES)}</p>`;
+    }
+  }
   const line = getConversationLine({ character, village: theVillage });
   return `<p><strong></strong> ${line || "..."}</p>`;
 }
@@ -49,6 +66,9 @@ function ensureMerchantStock(visitor) {
   }
   if (typeof visitor.merchantStock.materials !== "number") {
     visitor.merchantStock.materials = MERCHANT_TRADE.materials.initialStock;
+  }
+  if (typeof visitor.merchantStock.secretTreasure !== "boolean") {
+    visitor.merchantStock.secretTreasure = Math.random() < MERCHANT_SECRET_TREASURE_CHANCE;
   }
   return visitor.merchantStock;
 }
@@ -537,6 +557,20 @@ function openMerchantTradeModal(visitor) {
       rows.appendChild(row);
     });
 
+    if (stock.secretTreasure) {
+      const canBuySecretTreasure = theVillage.funds >= MERCHANT_SECRET_TREASURE_PRICE;
+      const row = document.createElement("div");
+      row.style.cssText = "display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #ddd;";
+      row.innerHTML = `
+        <div>
+          <div><strong>秘宝</strong> 1個 / 資金${MERCHANT_SECRET_TREASURE_PRICE}</div>
+          <div style="font-size:0.85em;color:#555;">由来の知れない、布に包まれた品</div>
+        </div>
+        <button data-buy-secret-treasure ${canBuySecretTreasure ? "" : "disabled"}>購入</button>
+      `;
+      rows.appendChild(row);
+    }
+
     rows.querySelectorAll("[data-buy]").forEach(button => {
       button.addEventListener("click", () => {
         buyFromMerchant(visitor, button.dataset.buy, 1);
@@ -548,6 +582,17 @@ function openMerchantTradeModal(visitor) {
         buyFromMerchant(visitor, button.dataset.buyMax, Infinity);
         render();
       });
+    });
+    rows.querySelector("[data-buy-secret-treasure]")?.addEventListener("click", () => {
+      const event = buyMerchantSecretTreasure(theVillage, stock);
+      if (!event) {
+        alert("秘宝を購入できません。資金が不足しているか、すでに売り切れています。");
+        return;
+      }
+      closeMerchantTradeModal();
+      closeConversationModal();
+      updateUI(theVillage);
+      showSecretTreasureEventModals([event]);
     });
 
     document.getElementById("closeMerchantTrade").addEventListener("click", closeMerchantTradeModal);

@@ -59,6 +59,10 @@
   - 恋人・配偶者・親子などの関係を正規化し、追加・削除・表示する。
 - `js/miracles.js`
   - 奇跡モーダル、奇跡の実行、交換の奇跡、奇跡結果を扱う。
+- `js/secretTreasures.js`
+  - 秘宝データ、秘宝モーダル、使い切り効果を扱う。
+- `js/secretTreasureEvents.js`
+  - 仕事や行商人取引による秘宝入手判定、入手ログ、入手イベントモーダルを扱う。
 - `js/exchange.js`
   - 肉体と精神の交換処理を扱う。
 - `js/buildings.js`

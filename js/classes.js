@@ -25,7 +25,7 @@ export class Village {
     this.pendingGoldenRainPregnancies = [];
     this.popLimit = 8;
     this.villageTraits = ["春"];
-    this.treasures = [];
+    this.secretTreasures = [];
 
     this.logs = [];
     this.gameOver = false;
@@ -59,7 +59,7 @@ export class Village {
     this.modalStates = {
       miracle: false,
       building: false,
-      treasure: false,
+      secretTreasure: false,
       conversation: false,
       exchange: false,
       raid: false

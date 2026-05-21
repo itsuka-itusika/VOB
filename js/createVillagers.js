@@ -10,6 +10,7 @@ import {
   TODDLER_PORTRAIT_FILES,
   VISITOR_TYPES
 } from "./data/villagerData.js";
+import { MERCHANT_SECRET_TREASURE_CHANCE } from "./secretTreasureEvents.js";
 export { MALE_PORTRAIT_FILES, TODDLER_PORTRAIT_FILES } from "./data/villagerData.js";
 
 /**
@@ -817,7 +818,8 @@ export function createRandomVisitor(existingNames = [], forcedType = null) {
   if (visitorType.type === "行商人") {
     visitor.merchantStock = {
       food: 100,
-      materials: 80
+      materials: 80,
+      secretTreasure: Math.random() < MERCHANT_SECRET_TREASURE_CHANCE
     };
   }
 

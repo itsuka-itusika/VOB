@@ -47,7 +47,7 @@
         <div class="special-action-buttons">
           <button onclick="openMiracleModal()" data-mobile-label="奇跡">奇跡の行使</button>
           <button onclick="openBuildingModal()" data-mobile-label="建築">建築</button>
-          <button onclick="openTreasureModal()" data-mobile-label="宝物">宝物</button>
+          <button onclick="openSecretTreasureModal()" data-mobile-label="秘宝">秘宝</button>
         </div>
         <div class="utility-actions">
           <select id="utilityActionSelect" aria-label="保存・読込操作">
@@ -298,14 +298,14 @@
   </div>
 </div>
 
-<!-- モーダル: 宝物 -->
-<div id="treasureOverlay"></div>
-<div id="treasureModal">
-  <div class="modal-header">宝物</div>
-  <div id="treasureContent" class="modal-content"></div>
+<!-- モーダル: 秘宝 -->
+<div id="secretTreasureOverlay"></div>
+<div id="secretTreasureModal">
+  <div class="modal-header">秘宝</div>
+  <div id="secretTreasureContent" class="modal-content"></div>
   <div class="modal-buttons">
-    <button onclick="useSelectedTreasure()">使う</button>
-    <button onclick="closeTreasureModal()">閉じる</button>
+    <button onclick="useSelectedSecretTreasure()">使う</button>
+    <button onclick="closeSecretTreasureModal()">閉じる</button>
   </div>
 </div>
 
