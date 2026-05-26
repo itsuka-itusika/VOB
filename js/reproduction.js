@@ -20,6 +20,17 @@ const CHILD_MIND_TRAITS = ["無垢", "萌芽", "思春期"];
 const PREGNANCY_FULL_TERM_MONTHS = 10;
 const POSTPARTUM_MONTHS = 3;
 const THUNDER_BLESSING_TRAIT = "雷霆神の加護";
+const GENETIC_EXCLUDED_BODY_TRAITS = new Set([
+  "火星の加護",
+  "飢餓",
+  "凍え",
+  "疲労",
+  "過労",
+  "疫病",
+  "産褥",
+  "中年",
+  "老人"
+]);
 const VIRTUAL_THUNDER_FATHER = {
   name: "不明",
   bodyOwner: "不明",
@@ -54,6 +65,60 @@ function removeTraits(list, traits) {
   return Array.isArray(list) ? list.filter(trait => !traits.includes(trait)) : [];
 }
 
+function divideSnapshotStats(snapshot, stats, factor) {
+  stats.forEach(stat => {
+    snapshot[stat] = round3((Number(snapshot[stat]) || 1) / factor);
+  });
+}
+
+function subtractSnapshotStat(snapshot, stat, amount) {
+  snapshot[stat] = clampValue((Number(snapshot[stat]) || 0) - amount, 0, 100);
+}
+
+function removeTemporaryInheritanceModifiers(snapshot, person) {
+  if (hasMindTrait(person, "狂乱")) {
+    divideSnapshotStats(snapshot, ["eth"], 0.2);
+    subtractSnapshotStat(snapshot, "sexdr", 15);
+  }
+  if (hasTrait(person, "火星の加護")) {
+    divideSnapshotStats(snapshot, ["str", "vit", "cou"], 1.6);
+    divideSnapshotStats(snapshot, ["int", "ind", "eth"], 0.2);
+  }
+  if (hasMindTrait(person, "ニケ")) {
+    subtractSnapshotStat(snapshot, "cou", 10);
+  }
+  if (hasTrait(person, "飢餓")) {
+    divideSnapshotStats(snapshot, ["str", "vit", "dex"], 0.5);
+  }
+  if (hasTrait(person, "凍え")) {
+    divideSnapshotStats(snapshot, ["str", "vit", "dex"], 0.8);
+  }
+  if (hasTrait(person, "疲労")) {
+    divideSnapshotStats(snapshot, ["str", "vit", "dex"], 0.8);
+  }
+  if (hasTrait(person, "過労")) {
+    divideSnapshotStats(snapshot, ["str", "vit", "dex"], 0.25);
+  }
+  if (hasTrait(person, "疫病")) {
+    divideSnapshotStats(snapshot, ["str", "vit", "dex"], 0.5);
+  }
+  if (hasTrait(person, "産褥")) {
+    divideSnapshotStats(snapshot, ["str", "vit"], 0.5);
+  }
+  if (hasMindTrait(person, "心労")) {
+    divideSnapshotStats(snapshot, ["int", "ind", "eth", "cou", "sexdr"], 0.8);
+  }
+  if (hasMindTrait(person, "抑鬱")) {
+    divideSnapshotStats(snapshot, ["int", "ind", "eth", "cou", "sexdr"], 0.25);
+  }
+  if (hasTrait(person, "老人")) {
+    divideSnapshotStats(snapshot, ["str", "vit", "chr"], 0.5);
+  }
+  if (hasTrait(person, "中年")) {
+    divideSnapshotStats(snapshot, ["str", "vit", "chr"], 0.75);
+  }
+}
+
 function isHumanoid(person) {
   return HUMANOID_RACES.has(person?.race || "人間");
 }
@@ -69,11 +134,14 @@ function snapshotParent(person) {
     bodyOwner: person.bodyOwner || person.name,
     race: person.race || "人間",
     bodySex: person.bodySex,
-    bodyTraits: Array.isArray(person.bodyTraits) ? [...person.bodyTraits] : []
+    bodyTraits: Array.isArray(person.bodyTraits)
+      ? person.bodyTraits.filter(trait => !GENETIC_EXCLUDED_BODY_TRAITS.has(trait))
+      : []
   };
   [...PHYSICAL_STATS, ...MENTAL_STATS].forEach(stat => {
     snap[stat] = Number(person[stat]) || 1;
   });
+  removeTemporaryInheritanceModifiers(snap, person);
   return snap;
 }
 

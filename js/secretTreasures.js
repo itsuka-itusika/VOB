@@ -69,10 +69,14 @@ function restoreBadStatus(person, village, options = {}) {
     person.bodyTraits = person.bodyTraits.filter(item => item !== trait);
     switch (trait) {
       case "飢餓":
-      case "凍え":
         person.str = round3(person.str / 0.5);
         person.vit = round3(person.vit / 0.5);
         person.dex = round3(person.dex / 0.5);
+        break;
+      case "凍え":
+        person.str = round3(person.str / 0.8);
+        person.vit = round3(person.vit / 0.8);
+        person.dex = round3(person.dex / 0.8);
         break;
       case "疫病":
         person.hp = clampValue(round3(person.hp / 0.5), 0, 100);

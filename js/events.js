@@ -167,8 +167,15 @@ function getVisitorLimit(village) {
 function getPublicBathMonthlyRecovery(person, village) {
   const flags = village.buildingFlags || {};
   if (!flags.hasPublicBath) return 0;
+  if (isPublicBathRecoveryBlocked(person)) return 0;
   const traitBonus = Array.isArray(person.mindTraits) && person.mindTraits.includes("風呂好き") ? 2 : 0;
   return 5 + (Number(flags.publicBathRecoveryBonus) || 0) + traitBonus;
+}
+
+function isPublicBathRecoveryBlocked(person) {
+  const bodyTraits = Array.isArray(person.bodyTraits) ? person.bodyTraits : [];
+  const mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
+  return bodyTraits.includes("過労") || mindTraits.includes("抑鬱");
 }
 
 function applyPublicBathMonthlyRecovery(village) {
@@ -176,15 +183,27 @@ function applyPublicBathMonthlyRecovery(village) {
 
   const baseRecovery = 5 + (Number(village.buildingFlags.publicBathRecoveryBonus) || 0);
   let bathLoverCount = 0;
+  let recoveredCount = 0;
+  let blockedCount = 0;
   village.villagers.forEach(person => {
+    if (isPublicBathRecoveryBlocked(person)) {
+      blockedCount++;
+      return;
+    }
     const recovery = getPublicBathMonthlyRecovery(person, village);
     if (recovery > baseRecovery) bathLoverCount++;
+    recoveredCount++;
     person.hp = clampValue(person.hp + recovery, 0, 100);
     person.mp = clampValue(person.mp + recovery, 0, 100);
   });
 
+  if (recoveredCount === 0) {
+    village.log("公衆浴場:回復対象者なし（過労・抑鬱は対象外）");
+    return;
+  }
   const bathLoverText = bathLoverCount > 0 ? `、風呂好き${bathLoverCount}人はさらに+2` : "";
-  village.log(`公衆浴場:全員体力/メンタル+${baseRecovery}${bathLoverText}`);
+  const blockedText = blockedCount > 0 ? `、過労・抑鬱${blockedCount}人は回復なし` : "";
+  village.log(`公衆浴場:${recoveredCount}人体力/メンタル+${baseRecovery}${bathLoverText}${blockedText}`);
 }
 
 function hasWatermill(village) {
@@ -252,7 +271,20 @@ export function endOfMonthProcess(v) {
   // "襲撃中" はここでは消さない(raid.js 内で完了時に消す)
   v.villageTraits = v.villageTraits.filter(tr=> !removeList.includes(tr));
 
-  // 狂乱の解除処理を最初に行う
+  // 危篤者の死亡処理（危篤者は必ず死亡）
+  let deadPeople = v.villagers.filter(p => p.bodyTraits.includes("危篤"));
+  deadPeople.forEach(p => {
+    let index = v.villagers.indexOf(p);
+    if (index !== -1) {
+      clearRelationshipsForDepartedVillager(v, p);
+      v.villagers.splice(index, 1);
+      v.log(`${p.name}は老衰により死亡した...`);
+    }
+  });
+
+  handlePregnancyChecks(v);
+
+  // 狂乱の解除処理
   v.villagers.forEach(p => {
     if (p.mindTraits.includes("狂乱")) {
       p.mindTraits = p.mindTraits.filter(t => t !== "狂乱");
@@ -373,19 +405,6 @@ export function endOfMonthProcess(v) {
     });
   });
 
-  // 危篤者の死亡処理（危篤者は必ず死亡）
-  let deadPeople = v.villagers.filter(p => p.bodyTraits.includes("危篤"));
-  deadPeople.forEach(p => {
-    let index = v.villagers.indexOf(p);
-    if (index !== -1) {
-      clearRelationshipsForDepartedVillager(v, p);
-      v.villagers.splice(index, 1);
-      v.log(`${p.name}は老衰により死亡した...`);
-    }
-  });
-
-  handlePregnancyChecks(v);
-
   // ログ出力を元に戻す処理を削除
   // v.log = originalLog;
 
@@ -471,11 +490,6 @@ export function doMonthStartProcess(v) {
     });
   }
 
-  applyPublicBathMonthlyRecovery(v);
-  applyWatermillMonthlyFood(v);
-  applyFountainMonthlyHappiness(v);
-
-
   // 体力・メンタル状態によるペナルティ
   v.villagers.forEach(p => {
     // 体力に関するペナルティ
@@ -530,6 +544,11 @@ export function doMonthStartProcess(v) {
       v.log(`${p.name}は心労状態になった`);
     }
   });
+
+  applyPublicBathMonthlyRecovery(v);
+  applyWatermillMonthlyFood(v);
+  applyFountainMonthlyHappiness(v);
+
   // 幸福度調整
   v.villagers.forEach(p=>{
     if (p.happiness>50) {
