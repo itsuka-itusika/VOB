@@ -340,13 +340,6 @@ function doRestJob(p, v) {
   hpG=Math.floor(hpG*multi);
   mpG=Math.floor(mpG*multi);
 
-  if (v.buildingFlags && v.buildingFlags.hasPublicBath) {
-    const bathBonus = 10 + (Number(v.buildingFlags.publicBathRecoveryBonus) || 0);
-    hpG += bathBonus;
-    mpG += bathBonus;
-    msg += "(公衆浴場)";
-  }
-
   p.hp=clampValue(p.hp+hpG,0,100);
   p.mp=clampValue(p.mp+mpG,0,100);
 
@@ -366,17 +359,10 @@ function hasCurrentHobbyMate(p) {
 
 function doLeisureJob(p, v) {
   let base=50;
-  let bathMsg = "";
   let hobbyMateMsg = "";
   if (p.mindTraits.includes("ニート")) {
     base=100;
     p.happiness=clampValue(p.happiness+20,0,100);
-  }
-  if (v.buildingFlags && v.buildingFlags.hasPublicBath) {
-    const bathBonus = 10 + (Number(v.buildingFlags.publicBathRecoveryBonus) || 0);
-    base += bathBonus;
-    p.hp=clampValue(p.hp+bathBonus,0,100);
-    bathMsg = `,体力+${bathBonus}(公衆浴場)`;
   }
   if (hasCurrentHobbyMate(p)) {
     base = Math.round(base * 1.5);
@@ -385,7 +371,7 @@ function doLeisureJob(p, v) {
   p.mp=clampValue(p.mp+base,0,100);
 
   let hobbyMsg = HobbyEffects.apply(p, v);
-  v.log(`${p.name}余暇:メンタル+${base}${bathMsg}${hobbyMateMsg}${hobbyMsg}`);
+  v.log(`${p.name}余暇:メンタル+${base}${hobbyMateMsg}${hobbyMsg}`);
 }
 
 function doPlayJob(p, v) {

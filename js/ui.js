@@ -333,7 +333,6 @@ function getTaskEstimate(person, task, village) {
   const sexdr = Number(person.sexdr) || 0;
   const str = Number(person.str) || 0;
   const vit = Number(person.vit) || 0;
-  const bath = village.buildingFlags && village.buildingFlags.hasPublicBath;
   const church = village.buildingFlags && village.buildingFlags.hasChurch;
   const clinic = village.buildingFlags && village.buildingFlags.hasClinic;
   const library = village.buildingFlags && village.buildingFlags.hasLibrary;
@@ -353,14 +352,13 @@ function getTaskEstimate(person, task, village) {
       let mp = person.mindTraits.includes("ワーカホリック") ? -10 : 21;
       hp = Math.floor(hp * ageRestMultiplier(person));
       mp = Math.floor(mp * ageRestMultiplier(person));
-      if (bath) { hp += 10; mp += 10; }
       parts = [`体力+${hp}`, `メンタル${mp >= 0 ? "+" : ""}${mp}`];
       break;
     }
     case "余暇": {
-      let mp = (person.mindTraits.includes("ニート") ? 100 : 50) + (bath ? 10 : 0);
+      let mp = person.mindTraits.includes("ニート") ? 100 : 50;
       if (hasCurrentHobbyMate(person)) mp = Math.round(mp * 1.5);
-      parts = [bath ? "体力+10" : "", `メンタル+${mp}`];
+      parts = [`メンタル+${mp}`];
       break;
     }
     case "遊び":

@@ -637,6 +637,7 @@ export function assignBodyMindTraits(v) {
     { name: "大食い", condition: (v) =>(v.vit >= 22 && v.chr<=16), chance:0.1, target:"mind" },
     { name: "小食", condition: (v) =>(v.vit <= 12), chance:0.1, target:"mind" },
     { name: "汗かき", condition: (v)=>(v.vit>=24 && v.chr<=12), chance:0.2, target:"mind" },
+    { name: "風呂好き", condition: (v)=>(v.bodySex==="女" && v.chr>=18 && v.eth>=12), chance:0.05, target:"mind" },
   ];
   nonExclusiveTraits.forEach(def => {
     if (def.condition(v)) {

@@ -163,6 +163,42 @@ function getVisitorLimit(village) {
   return Math.max(1, savedLimit, tavernLimit);
 }
 
+function getPublicBathMonthlyRecovery(person, village) {
+  const flags = village.buildingFlags || {};
+  if (!flags.hasPublicBath) return 0;
+  const traitBonus = Array.isArray(person.mindTraits) && person.mindTraits.includes("風呂好き") ? 2 : 0;
+  return 5 + (Number(flags.publicBathRecoveryBonus) || 0) + traitBonus;
+}
+
+function applyPublicBathMonthlyRecovery(village) {
+  if (!(village.buildingFlags && village.buildingFlags.hasPublicBath)) return;
+
+  const baseRecovery = 5 + (Number(village.buildingFlags.publicBathRecoveryBonus) || 0);
+  let bathLoverCount = 0;
+  village.villagers.forEach(person => {
+    const recovery = getPublicBathMonthlyRecovery(person, village);
+    if (recovery > baseRecovery) bathLoverCount++;
+    person.hp = clampValue(person.hp + recovery, 0, 100);
+    person.mp = clampValue(person.mp + recovery, 0, 100);
+  });
+
+  const bathLoverText = bathLoverCount > 0 ? `、風呂好き${bathLoverCount}人はさらに+2` : "";
+  village.log(`公衆浴場:全員体力/メンタル+${baseRecovery}${bathLoverText}`);
+}
+
+function hasWatermill(village) {
+  return !!(
+    (village.buildingFlags && village.buildingFlags.hasWatermill) ||
+    (Array.isArray(village.buildings) && village.buildings.includes("watermill"))
+  );
+}
+
+function applyWatermillMonthlyFood(village) {
+  if (!hasWatermill(village)) return;
+  village.food = clampValue(village.food + 10, 0, 99999);
+  village.log("水車小屋:食料+10");
+}
+
 // -------------------------
 // 月末処理
 // -------------------------
@@ -417,6 +453,9 @@ export function doMonthStartProcess(v) {
       p.happiness = clampValue(p.happiness - 30, 0, 100);  // 幸福度-30
     });
   }
+
+  applyPublicBathMonthlyRecovery(v);
+  applyWatermillMonthlyFood(v);
 
 
   // 体力・メンタル状態によるペナルティ

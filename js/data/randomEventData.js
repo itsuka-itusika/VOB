@@ -11,7 +11,7 @@ export const EVENT_KIND_TITLES = {
 };
 
 export const EVENT_POOLS = {
-  good: ["cat", "gold", "strangeRain", "fireworks", "hotSpring", "hobbyFriends", "menFriendship", "lover", "yuri", "tattoo", "fashion", "muscle", "selfPleasure"],
+  good: ["cat", "gold", "strangeRain", "fireworks", "hotSpring", "bathPerk", "hobbyFriends", "menFriendship", "lover", "yuri", "tattoo", "fashion", "muscle", "selfPleasure"],
   bad: ["storm", "downpour", "heat", "fire", "thief", "rats", "lightning1", "lightning2", "snow", "fight", "drunk", "epidemic"]
 };
 export const GOLDEN_RAIN_RACES = new Set(["人間", "ハーピー", "半神", "キュクロプス", "サイクロプス"]);
@@ -28,6 +28,7 @@ export const EVENT_SUBJECTS = {
   strangeRain: "不思議な雨",
   fireworks: "花火師の来訪",
   hotSpring: "秘湯発見",
+  bathPerk: "役得",
   hobbyFriends: "趣味仲間",
   menFriendship: "男同士の友情",
   lover: "恋の気配",
@@ -62,6 +63,7 @@ export const EVENT_MOODS = {
   strangeRain: "gain",
   fireworks: "happy",
   hotSpring: "happy",
+  bathPerk: "selfChange",
   hobbyFriends: "friendship",
   menFriendship: "friendship",
   lover: "romance",
@@ -295,6 +297,7 @@ export const EVENT_SECOND_LINE_BASES = {
   strangeRain: "空を見上げても理由は分からないが食料は食料だ",
   fireworks: "夜空が明るくなって、皆の顔も緩んでいる",
   hotSpring: "湯けむりの奥から、村の新しい楽しみが見つかった",
+  bathPerk: "長風呂で気分がすっかりほぐれた",
   menFriendship: "こういう相手がいると少し強くなれる気がする",
   lover: "あの人のことが妙に頭から離れない",
   yuri: "この気持ちは相手が女でも変わらない",

@@ -166,7 +166,7 @@ function growToSixteen(person, village) {
 
 function getPublicBathBonus(village) {
   const flags = village.buildingFlags || {};
-  return 10 + (Number(flags.publicBathRecoveryBonus) || 0);
+  return 5 + (Number(flags.publicBathRecoveryBonus) || 0);
 }
 
 export const SECRET_TREASURES = [
@@ -262,7 +262,7 @@ export const SECRET_TREASURES = [
   {
     id: "old_priest_statue",
     name: "老神官の石像",
-    desc: "公衆浴場がある時に使用可能。公衆浴場の回復効果をそれぞれ+1する。",
+    desc: "公衆浴場がある時に使用可能。公衆浴場の毎月の体力・メンタル回復をそれぞれ+1する。",
     canUse: (village) => !!(village.buildingFlags && village.buildingFlags.hasPublicBath),
     blockedReason: "公衆浴場が必要です",
     use: (village) => {

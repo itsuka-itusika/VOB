@@ -113,8 +113,8 @@ export const BUILDINGS = [
     materials: 50,
     funds: 0,
     tech: 100,
-    desc: "水力施設。規模+20",
-    effect: standardBuildingEffect({ scale: 20, log: "水車小屋建設完了: 規模+20" })
+    desc: "水力施設。毎月食料+10。規模+20",
+    effect: standardBuildingEffect({ scale: 20, flag: "hasWatermill", log: "水車小屋建設完了: 毎月食料+10、規模+20" })
   },
   {
     id: "publicBath",
@@ -122,9 +122,9 @@ export const BUILDINGS = [
     materials: 80,
     funds: 80,
     tech: 50,
-    desc: "秘湯発見で解放。休養と余暇の回復量が上がる。規模+20",
+    desc: "秘湯発見で解放。毎月、全員の体力とメンタルが少し回復する。規模+20",
     isUnlocked: (village) => !!(village.buildingFlags && village.buildingFlags.canBuildPublicBath),
-    effect: standardBuildingEffect({ scale: 20, flag: "hasPublicBath", log: "公衆浴場建設完了: 休養と余暇の回復量上昇、規模+20" })
+    effect: standardBuildingEffect({ scale: 20, flag: "hasPublicBath", log: "公衆浴場建設完了: 毎月の体力・メンタル回復、規模+20" })
   }
 ];
 
