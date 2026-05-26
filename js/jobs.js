@@ -1171,7 +1171,7 @@ function doBrewing(p, v) {
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
-  let brewingYield = calculateBrewingYield(p);
+  let brewingYield = calculateBrewingYield(p, v);
   let foodGain = brewingYield.food;
   let manaGain = brewingYield.mana;
   

@@ -262,6 +262,10 @@ function convertObjectToVillage(dataObj) {
   if (v.buildingFlags.hasTavern || v.buildings.includes("tavern")) {
     v.visitorLimit = Math.max(v.visitorLimit, 2);
   }
+  if ((Number(v.building) || 0) >= 250) {
+    const baseLimit = (v.buildingFlags.hasTavern || v.buildings.includes("tavern")) ? 2 : 1;
+    v.visitorLimit = Math.max(v.visitorLimit, baseLimit + 1);
+  }
   v.pendingGoldenRainPregnancies = Array.isArray(dataObj.pendingGoldenRainPregnancies)
     ? JSON.parse(JSON.stringify(dataObj.pendingGoldenRainPregnancies))
     : [];

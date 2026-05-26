@@ -159,8 +159,9 @@ export function runMonthStartPhase(village) {
 
 function getVisitorLimit(village) {
   const savedLimit = Number(village.visitorLimit) || 1;
-  const tavernLimit = village.buildingFlags && village.buildingFlags.hasTavern ? 2 : 1;
-  return Math.max(1, savedLimit, tavernLimit);
+  const baseLimit = village.buildingFlags && village.buildingFlags.hasTavern ? 2 : 1;
+  const prosperityBonus = (Number(village.building) || 0) >= 250 ? 1 : 0;
+  return Math.max(1, savedLimit, baseLimit + prosperityBonus);
 }
 
 function getPublicBathMonthlyRecovery(person, village) {

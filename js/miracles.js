@@ -14,11 +14,11 @@ import { BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
 export const MIRACLES = [
   {id:"12", name:"交換の奇跡(20)", cost:20, desc:"2人の肉体を交換"},
   {id:"13", name:"交換の奇跡・強(80)", cost:80, desc:"村外含む2人交換"},
-  {id:"1",  name:"豊穣の奇跡(100)", cost:100, desc:"今月のみ収穫2倍(豊穣)"},
+  {id:"1",  name:"豊穣の奇跡(100)", cost:100, desc:"今月のみ収穫・醸造2倍(豊穣)"},
   {id:"2",  name:"マナの奇跡(40)",  cost:40,  desc:"食料+80"},
   {id:"3",  name:"クピドの奇跡(80)", cost:80, desc:"2人を強制結婚(条件無視)"},
-  {id:"4",  name:"宴会の奇跡(人数×15)", cost:-1, desc:"全員体力/メンタル+30,幸福+20 (資金×人数分も要)"},
-  {id:"5",  name:"狂宴の奇跡(人数×30)", cost:-2, desc:"全員体力/メンタル+100,幸福+50,倫理↓,好色+15"},
+  {id:"4",  name:"宴会の奇跡(人数×15)", cost:-1, desc:"全員体力/メンタル+20,幸福+20 (資金×人数分も要)"},
+  {id:"5",  name:"狂宴の奇跡(人数×30)", cost:-2, desc:"全員体力/メンタル+60,幸福+50,倫理↓,好色+15"},
   {id:"6",  name:"癒しの奇跡(80)", cost:80, desc:"1人の負傷/疫病/疲労等回復,体力/メンタル+50"},
   {id:"7",  name:"戦神の奇跡(80)", cost:80, desc:"1人に火星の加護(3ヶ月)"},
   {id:"8",  name:"竈女神の奇跡(60)", cost:60, desc:"恋人を結婚100%(いなければ30返還)"},
@@ -420,11 +420,11 @@ export function performMiracle(village) {
       spendMiracleMana(village, cost);
       village.funds-=cost;
       village.villagers.forEach(p=>{
-        p.hp=clampValue(p.hp+30,0,100);
-        p.mp=clampValue(p.mp+30,0,100);
+        p.hp=clampValue(p.hp+20,0,100);
+        p.mp=clampValue(p.mp+20,0,100);
         p.happiness=clampValue(p.happiness+20,0,100);
       });
-      village.log(`【宴会】全員体力/メンタル+30,幸福+20(費用:${cost})`);
+      village.log(`【宴会】全員体力/メンタル+20,幸福+20(費用:${cost})`);
       showMiracleResultModal(village, "宴会の奇跡", "村中に賑やかな宴が開かれました。", village.villagers);
       break;
 
@@ -432,8 +432,8 @@ export function performMiracle(village) {
       spendMiracleMana(village, cost);
       village.funds-=cost;
       village.villagers.forEach(p=>{
-        p.hp=clampValue(p.hp+100,0,100);
-        p.mp=clampValue(p.mp+100,0,100);
+        p.hp=clampValue(p.hp+60,0,100);
+        p.mp=clampValue(p.mp+60,0,100);
         p.happiness=clampValue(p.happiness+50,0,100);
         // 狂乱特性を付与（まだ持っていない場合のみ）
         if (!p.mindTraits.includes("狂乱")) {
@@ -442,7 +442,7 @@ export function performMiracle(village) {
           p.sexdr=clampValue(p.sexdr+15,0,100);
         }
       });
-      village.log(`【狂宴】全員体力/メンタル+100,幸福+50,狂乱付与(倫理*0.2,好色+15)`);
+      village.log(`【狂宴】全員体力/メンタル+60,幸福+50,狂乱付与(倫理*0.2,好色+15)`);
       showMiracleResultModal(village, "狂宴の奇跡", "理性を揺らす熱気が村を満たしました。", village.villagers);
       break;
 
@@ -452,7 +452,7 @@ export function performMiracle(village) {
       switch(mid) {
         case "1": // 豊穣
           village.villageTraits.push("豊穣");
-          village.log("【豊穣の奇跡】収穫2倍1ヶ月付与");
+          village.log("【豊穣の奇跡】収穫・醸造2倍1ヶ月付与");
           showMiracleResultModal(village, "豊穣の奇跡", "畑と森に豊かな気配が満ちました。", village.villagers);
           break;
         case "2": // マナの奇跡

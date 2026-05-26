@@ -10,6 +10,20 @@ import { updateUI } from "./ui.js";
 const SEASON_TRAITS_TO_REMOVE = ["夏", "秋", "冬", "冷夏", "飛蝗", "厳冬", "疫病流行"];
 const BAD_BODY_TRAITS = ["負傷", "疲労", "過労", "飢餓", "凍え", "病気", "疫病", "産褥", "危篤"];
 const BAD_MIND_TRAITS = ["心労", "抑鬱"];
+const SECRET_TREASURE_SELL_PRICES = {
+  persephone_statue: 300,
+  armless_angel: 200,
+  golden_arrow: 150,
+  golden_apple: 150,
+  nectar: 300,
+  strange_calculator: 300,
+  serpent_staff: 500,
+  chronos_elixir: 500,
+  old_priest_statue: 100,
+  pan_flute: 100,
+  golden_mask: 300,
+  blue_stone_tablet: 150
+};
 
 function getVillagers(village) {
   return Array.isArray(village.villagers) ? village.villagers : [];
@@ -44,10 +58,12 @@ function showSecretTreasureResult(village, title, message, people = []) {
 
 function restoreBadStatus(person, village, options = {}) {
   const recovered = [];
+  const excludedTraits = Array.isArray(options.excludeTraits) ? options.excludeTraits : [];
   person.bodyTraits = Array.isArray(person.bodyTraits) ? person.bodyTraits : [];
   person.mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
 
   BAD_BODY_TRAITS.forEach(trait => {
+    if (excludedTraits.includes(trait)) return;
     if (!person.bodyTraits.includes(trait)) return;
     recovered.push(trait);
     person.bodyTraits = person.bodyTraits.filter(item => item !== trait);
@@ -83,6 +99,7 @@ function restoreBadStatus(person, village, options = {}) {
   });
 
   BAD_MIND_TRAITS.forEach(trait => {
+    if (excludedTraits.includes(trait)) return;
     if (!person.mindTraits.includes(trait)) return;
     recovered.push(trait);
     person.mindTraits = person.mindTraits.filter(item => item !== trait);
@@ -169,17 +186,24 @@ function getPublicBathBonus(village) {
   return 5 + (Number(flags.publicBathRecoveryBonus) || 0);
 }
 
+function hasUsedOldPriestStatue(village) {
+  const flags = village.buildingFlags || {};
+  return Boolean(flags.usedOldPriestStatue) || (Number(flags.publicBathRecoveryBonus) || 0) > 0;
+}
+
 export const SECRET_TREASURES = [
   {
     id: "persephone_statue",
     name: "冥王妃の神像",
     desc: "常春の奇跡と同じ効果。季節系の村特性を取り除き、春に固定する。",
+    sellPrice: SECRET_TREASURE_SELL_PRICES.persephone_statue,
     use: applyEverSpring
   },
   {
     id: "armless_angel",
     name: "腕の無い天使像",
     desc: "村人全員に1ヶ月の間、精神特性「ニケ」を付与する。ニケ: 勇気+10。",
+    sellPrice: SECRET_TREASURE_SELL_PRICES.armless_angel,
     canUse: (village) => getVillagers(village).length > 0,
     blockedReason: "村人がいません",
     use: applyNike
@@ -188,6 +212,7 @@ export const SECRET_TREASURES = [
     id: "golden_arrow",
     name: "黄金の矢",
     desc: "ランダムな村人2名にクピドの奇跡の効果を与える。",
+    sellPrice: SECRET_TREASURE_SELL_PRICES.golden_arrow,
     canUse: (village) => getVillagers(village).length >= 2,
     blockedReason: "村人が2名以上必要です",
     use: (village) => {
@@ -202,6 +227,7 @@ export const SECRET_TREASURES = [
     id: "golden_apple",
     name: "黄金の林檎",
     desc: "襲撃を発生させる。襲撃中は使用不可。",
+    sellPrice: SECRET_TREASURE_SELL_PRICES.golden_apple,
     canUse: (village) => !village.villageTraits?.includes("襲撃中") && !(Array.isArray(village.raidEnemies) && village.raidEnemies.length > 0),
     blockedReason: "襲撃中は使用できません",
     use: (village) => {
@@ -213,10 +239,11 @@ export const SECRET_TREASURES = [
   {
     id: "nectar",
     name: "ネクタル",
-    desc: "指定した村人1名の体力を100にし、負傷・産褥などの状態異常を解除して行動可能にする。",
+    desc: "指定した村人1名の体力を100にし、負傷・産褥などの状態異常を解除して行動可能にする。危篤は解除できない。",
+    sellPrice: SECRET_TREASURE_SELL_PRICES.nectar,
     target: "villager",
     use: (village, target) => {
-      const recovered = restoreBadStatus(target, village, { fullHp: true });
+      const recovered = restoreBadStatus(target, village, { fullHp: true, excludeTraits: ["危篤"] });
       village.log(`【秘宝】ネクタルを${target.name}に使いました。体力100${recovered.length ? `、${recovered.join("・")}を解除` : ""}`);
       showSecretTreasureResult(village, "ネクタル", `${target.name}の傷と疲れが癒されました。`, [target]);
     }
@@ -225,6 +252,7 @@ export const SECRET_TREASURES = [
     id: "strange_calculator",
     name: "奇妙な計算機械",
     desc: "指定した村人1名の知力を永続的に5上げる。",
+    sellPrice: SECRET_TREASURE_SELL_PRICES.strange_calculator,
     target: "villager",
     use: (village, target) => {
       target.int = clampValue((Number(target.int) || 0) + 5, 0, 100);
@@ -239,6 +267,7 @@ export const SECRET_TREASURES = [
     id: "serpent_staff",
     name: "蛇の巻き付いた杖",
     desc: "指定した村人1名の負傷・産褥・疫病・危篤などの状態異常を解除し、体力・メンタルが33以下なら34まで回復する。",
+    sellPrice: SECRET_TREASURE_SELL_PRICES.serpent_staff,
     target: "villager",
     use: (village, target) => {
       const recovered = restoreBadStatus(target, village);
@@ -256,18 +285,25 @@ export const SECRET_TREASURES = [
     id: "chronos_elixir",
     name: "クロノスの秘薬",
     desc: "肉体年齢15以下または精神年齢15以下の村人に使用可能。該当する年齢を16まで成長させ、潜在成長も反映する。",
+    sellPrice: SECRET_TREASURE_SELL_PRICES.chronos_elixir,
     target: "childVillager",
     use: (village, target) => growToSixteen(target, village)
   },
   {
     id: "old_priest_statue",
     name: "老神官の石像",
-    desc: "公衆浴場がある時に使用可能。公衆浴場の毎月の体力・メンタル回復をそれぞれ+1する。",
-    canUse: (village) => !!(village.buildingFlags && village.buildingFlags.hasPublicBath),
-    blockedReason: "公衆浴場が必要です",
+    desc: "公衆浴場がある時に1回だけ使用可能。公衆浴場の毎月の体力・メンタル回復をそれぞれ+1する。",
+    sellPrice: SECRET_TREASURE_SELL_PRICES.old_priest_statue,
+    canUse: (village) => !!(village.buildingFlags && village.buildingFlags.hasPublicBath) && !hasUsedOldPriestStatue(village),
+    blockedReason: (village) => {
+      if (!(village.buildingFlags && village.buildingFlags.hasPublicBath)) return "公衆浴場が必要です";
+      if (hasUsedOldPriestStatue(village)) return "老神官の石像は使用済みです";
+      return "使用条件を満たしていません";
+    },
     use: (village) => {
       if (!village.buildingFlags) village.buildingFlags = {};
       village.buildingFlags.publicBathRecoveryBonus = (Number(village.buildingFlags.publicBathRecoveryBonus) || 0) + 1;
+      village.buildingFlags.usedOldPriestStatue = true;
       village.log(`【秘宝】老神官の石像を使いました。公衆浴場の回復追加量+1（現在+${getPublicBathBonus(village)}）`);
       showSecretTreasureResult(village, "老神官の石像", "公衆浴場に古い祈りが染み込み、湯の癒やしが深まりました。");
     }
@@ -276,6 +312,7 @@ export const SECRET_TREASURES = [
     id: "pan_flute",
     name: "牧神の管笛",
     desc: "訪問者、襲撃者がいる時に使用可能。ランダムな村人と訪問者/襲撃者を入れ替える。",
+    sellPrice: SECRET_TREASURE_SELL_PRICES.pan_flute,
     canUse: (village) => getVillagers(village).length > 0 && [...(village.visitors || []), ...(village.raidEnemies || [])].length > 0,
     blockedReason: "村人と、訪問者または襲撃者が必要です",
     use: (village) => {
@@ -288,6 +325,22 @@ export const SECRET_TREASURES = [
         message: "笛の音に導かれ、二人の魂は互いの体を見て驚いている..."
       });
     }
+  },
+  {
+    id: "golden_mask",
+    name: "黄金の仮面",
+    desc: "使用効果はないが、高く売ることができる秘宝。",
+    sellPrice: SECRET_TREASURE_SELL_PRICES.golden_mask,
+    canUse: () => false,
+    blockedReason: "使用効果はありません"
+  },
+  {
+    id: "blue_stone_tablet",
+    name: "青石の石板",
+    desc: "使用効果はないが、売ることができる秘宝。",
+    sellPrice: SECRET_TREASURE_SELL_PRICES.blue_stone_tablet,
+    canUse: () => false,
+    blockedReason: "使用効果はありません"
   }
 ];
 
@@ -341,7 +394,11 @@ function isSecretTreasureUsable(village, definition) {
 
 function getSecretTreasureBlockedReason(village, definition) {
   if (!definition) return "利用効果が定義されていません";
-  if (definition.canUse && !definition.canUse(village)) return definition.blockedReason || "使用条件を満たしていません";
+  if (definition.canUse && !definition.canUse(village)) {
+    return typeof definition.blockedReason === "function"
+      ? definition.blockedReason(village)
+      : definition.blockedReason || "使用条件を満たしていません";
+  }
   if (definition.target && getTargetCandidates(village, definition).length === 0) return "対象になる村人がいません";
   return "";
 }
@@ -389,7 +446,6 @@ function renderSecretTreasureModal(village) {
     const option = document.createElement("option");
     option.value = String(index);
     option.textContent = getSecretTreasureLabel(entry);
-    option.disabled = !isSecretTreasureUsable(village, definition);
     select.appendChild(option);
   });
 
@@ -399,8 +455,9 @@ function renderSecretTreasureModal(village) {
     renderTargetSelect(village, definition, content);
     if (description) {
       const reason = getSecretTreasureBlockedReason(village, definition);
+      const sellPrice = Number(definition?.sellPrice) || 0;
       description.textContent = definition
-        ? `${definition.desc}${reason ? ` 使用不可: ${reason}` : ""}`
+        ? `${definition.desc} 売却価格: 資金${sellPrice}。${reason ? ` 使用不可: ${reason}` : ""}`
         : "この秘宝はまだ利用効果が定義されていません。";
     }
   };
@@ -458,6 +515,28 @@ export function useSelectedSecretTreasure(village) {
   definition.use(village, target);
   secretTreasures.splice(index, 1);
   village.secretTreasures = secretTreasures;
+  renderSecretTreasureModal(village);
+  updateUI(village);
+}
+
+export function sellSelectedSecretTreasure(village) {
+  const select = document.getElementById("secretTreasureSelect");
+  if (!select) return;
+  const secretTreasures = ensureSecretTreasures(village);
+  const index = Number(select.value);
+  const definition = getSecretTreasureDefinition(secretTreasures[index]);
+  if (!definition) {
+    village.log("【秘宝】売却できない秘宝です");
+    renderSecretTreasureModal(village);
+    return;
+  }
+
+  const price = Number(definition.sellPrice) || 0;
+  if (!window.confirm(`${definition.name}を資金${price}で売却しますか？`)) return;
+  village.funds = clampValue((Number(village.funds) || 0) + price, 0, 99999);
+  secretTreasures.splice(index, 1);
+  village.secretTreasures = secretTreasures;
+  village.log(`【秘宝売却】${definition.name}を売却しました。資金+${price}`);
   renderSecretTreasureModal(village);
   updateUI(village);
 }

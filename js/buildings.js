@@ -19,6 +19,10 @@ function standardBuildingEffect({ scale, flag, log, after }) {
   };
 }
 
+function isScaleAtLeast(village, threshold) {
+  return (Number(village?.building) || 0) >= threshold;
+}
+
 /** 建築物の定義 */
 export const BUILDINGS = [
   {
@@ -125,6 +129,36 @@ export const BUILDINGS = [
     desc: "秘湯発見で解放。毎月、全員の体力とメンタルが少し回復する。規模+20",
     isUnlocked: (village) => !!(village.buildingFlags && village.buildingFlags.canBuildPublicBath),
     effect: standardBuildingEffect({ scale: 20, flag: "hasPublicBath", log: "公衆浴場建設完了: 毎月の体力・メンタル回復、規模+20" })
+  },
+  {
+    id: "watchtower",
+    name: "櫓",
+    materials: 100,
+    funds: 50,
+    tech: 0,
+    desc: "豊かな村で解放。見張り台を築く。規模+20",
+    isUnlocked: (village) => isScaleAtLeast(village, 180),
+    effect: standardBuildingEffect({ scale: 20, flag: "hasWatchtower", log: "櫓建設完了: 見張り台を築きました、規模+20" })
+  },
+  {
+    id: "moat",
+    name: "環濠",
+    materials: 50,
+    funds: 50,
+    tech: 50,
+    desc: "豊かな村で解放。村の周囲に濠を巡らせる。規模+30",
+    isUnlocked: (village) => isScaleAtLeast(village, 180),
+    effect: standardBuildingEffect({ scale: 30, flag: "hasMoat", log: "環濠建設完了: 村の周囲に濠を巡らせました、規模+30" })
+  },
+  {
+    id: "prison",
+    name: "牢獄",
+    materials: 50,
+    funds: 50,
+    tech: 0,
+    desc: "繁栄した郷村で解放。罪人や捕虜を閉じ込める施設。規模+20",
+    isUnlocked: (village) => isScaleAtLeast(village, 250),
+    effect: standardBuildingEffect({ scale: 20, flag: "hasPrison", log: "牢獄建設完了: 牢獄を築きました、規模+20" })
   }
 ];
 

@@ -192,7 +192,7 @@ function hasTrait(person, trait) {
 function getJobTraitMultiplier(person, job, village) {
   let mul = 1;
   const villageTraits = Array.isArray(village?.villageTraits) ? village.villageTraits : [];
-  if (villageTraits.includes("豊穣") && ["農作業", "伐採", "狩猟", "漁", "採集"].includes(job)) mul *= 2;
+  if (villageTraits.includes("豊穣") && ["農作業", "伐採", "狩猟", "漁", "採集", "醸造"].includes(job)) mul *= 2;
   if (villageTraits.includes("秋") && ["農作業", "採集"].includes(job)) mul *= 1.5;
   if (villageTraits.includes("冬") && job === "農作業") mul *= 0.5;
   if (villageTraits.includes("冬") && job === "狩猟") mul *= 1.2;

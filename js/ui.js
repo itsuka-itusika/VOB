@@ -444,7 +444,7 @@ function getTaskEstimate(person, task, village) {
       parts = [`資金+${calculateWeavingYield(person)}`, `体力-${jobBodyCost("機織り", person, village)}`, `メンタル-${jobMindCost("機織り", "ind", person, village)}`];
       break;
     case "醸造": {
-      const brewingYield = calculateBrewingYield(person);
+      const brewingYield = calculateBrewingYield(person, village);
       parts = [`食料+${brewingYield.food}`, `魔素+${brewingYield.mana}`, `体力-${jobBodyCost("醸造", person, village)}`, `メンタル-${jobMindCost("醸造", "ind", person, village)}`];
       break;
     }

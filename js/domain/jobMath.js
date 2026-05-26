@@ -42,7 +42,7 @@ export const JOB_COST_TYPES = {
   "醸造": WORK_COST_TYPES.BALANCED
 };
 
-const ABUNDANCE_JOBS = ["農作業", "伐採", "狩猟", "漁", "採集"];
+const ABUNDANCE_JOBS = ["農作業", "伐採", "狩猟", "漁", "採集", "醸造"];
 const AUTUMN_JOBS = ["農作業", "採集"];
 const COLD_SUMMER_JOBS = ["農作業", "伐採"];
 const GREEN_THUMB_JOBS = ["農作業", "伐採", "採集"];
@@ -289,9 +289,10 @@ export function calculateWeavingYield(person) {
   return amount;
 }
 
-export function calculateBrewingYield(person) {
+export function calculateBrewingYield(person, village) {
+  const mul = getLaborYieldMultiplier("醸造", person, village);
   return {
-    food: Math.round(34 * statProduct(person, "mag", "ind")),
-    mana: Math.round(8 * statProduct(person, "mag", "ind")),
+    food: Math.round(34 * statProduct(person, "mag", "ind") * mul),
+    mana: Math.round(8 * statProduct(person, "mag", "ind") * mul),
   };
 }
