@@ -121,6 +121,24 @@ export const BUILDINGS = [
     effect: standardBuildingEffect({ scale: 20, flag: "hasWatermill", log: "水車小屋建設完了: 毎月食料+10、規模+20" })
   },
   {
+    id: "huntingLodge",
+    name: "狩猟小屋",
+    materials: 80,
+    funds: 50,
+    tech: 0,
+    desc: "狩猟の失敗率-10%、成功率+10%。規模+20",
+    effect: standardBuildingEffect({ scale: 20, flag: "hasHuntingLodge", log: "狩猟小屋建設完了: 狩猟の失敗率-10%、成功率+10%、規模+20" })
+  },
+  {
+    id: "dock",
+    name: "船着き場",
+    materials: 80,
+    funds: 50,
+    tech: 0,
+    desc: "漁の失敗率-10%、成功率+10%。規模+20",
+    effect: standardBuildingEffect({ scale: 20, flag: "hasDock", log: "船着き場建設完了: 漁の失敗率-10%、成功率+10%、規模+20" })
+  },
+  {
     id: "publicBath",
     name: "公衆浴場",
     materials: 80,

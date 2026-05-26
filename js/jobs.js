@@ -493,10 +493,12 @@ function doHunt(p, v) {
   let r = randInt(1,100);
   let x = 0;
   let result = "";
-  if (r <= 20) {
+  const failureThreshold = v.buildingFlags?.hasHuntingLodge ? 10 : 20;
+  const successThreshold = v.buildingFlags?.hasHuntingLodge ? 80 : 80;
+  if (r <= failureThreshold) {
     x = 0;
     result = "失敗";
-  } else if (r <= 80) {
+  } else if (r <= successThreshold) {
     x = 30;
     result = "成功";
   } else {
@@ -548,10 +550,12 @@ function doFish(p, v) {
   let r = randInt(1,100);
   let x = 0;
   let result = "";
-  if (r <= 20) {
+  const failureThreshold = v.buildingFlags?.hasDock ? 10 : 20;
+  const successThreshold = v.buildingFlags?.hasDock ? 80 : 80;
+  if (r <= failureThreshold) {
     x = 0;
     result = "失敗";
-  } else if (r <= 80) {
+  } else if (r <= successThreshold) {
     x = 30;
     result = "成功";
   } else {

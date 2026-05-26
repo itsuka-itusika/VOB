@@ -6,6 +6,7 @@ const WINTER_TRAIT = "冬";
 const SEASONAL_COST_MULTIPLIER = 1.2;
 // UI 予測ではランダム分岐の期待値を使う。実処理では成功判定後の値を渡す。
 const RANDOM_HARVEST_EXPECTED_BASE = 32;
+const IMPROVED_HARVEST_EXPECTED_BASE = 35;
 const MID_TEEN_TRAIT = "思春期";
 
 export const WORK_COST_TYPES = {
@@ -161,13 +162,22 @@ export function calculateLumberYield(person, village) {
   return Math.round(base * getLaborYieldMultiplier("伐採", person, village));
 }
 
-export function calculateHuntYield(person, village, baseValue = RANDOM_HARVEST_EXPECTED_BASE) {
-  const base = (Number(baseValue) || 0) * statProduct(person, "str", "cou");
+function getExpectedHarvestBase(job, village) {
+  const flags = village?.buildingFlags || {};
+  if (job === "狩猟" && flags.hasHuntingLodge) return IMPROVED_HARVEST_EXPECTED_BASE;
+  if (job === "漁" && flags.hasDock) return IMPROVED_HARVEST_EXPECTED_BASE;
+  return RANDOM_HARVEST_EXPECTED_BASE;
+}
+
+export function calculateHuntYield(person, village, baseValue = null) {
+  const resolvedBaseValue = baseValue ?? getExpectedHarvestBase("狩猟", village);
+  const base = (Number(resolvedBaseValue) || 0) * statProduct(person, "str", "cou");
   return Math.round(base * getLaborYieldMultiplier("狩猟", person, village));
 }
 
-export function calculateFishYield(person, village, baseValue = RANDOM_HARVEST_EXPECTED_BASE) {
-  const base = (Number(baseValue) || 0) * statProduct(person, "vit", "cou");
+export function calculateFishYield(person, village, baseValue = null) {
+  const resolvedBaseValue = baseValue ?? getExpectedHarvestBase("漁", village);
+  const base = (Number(resolvedBaseValue) || 0) * statProduct(person, "vit", "cou");
   return Math.round(base * getLaborYieldMultiplier("漁", person, village));
 }
 
