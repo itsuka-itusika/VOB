@@ -146,9 +146,13 @@ function applyMonthStartRestrictions(village) {
 }
 
 export function runMonthStartPhase(village) {
+  const monthStartSeason = [3,6,9,12].includes(village.month)
+    ? updateSeason(village, { showDialog: false, logChange: false })
+    : "";
   doMonthStartProcess(village);
-  if ([3,6,9,12].includes(village.month)) {
-    updateSeason(village);
+  if (monthStartSeason) {
+    showSeasonChangeDialog(monthStartSeason);
+    village.log(`${monthStartSeason}が訪れた`);
   }
   doFixedEventPre(village);
   handleBirthAndPostpartum(village);
@@ -694,7 +698,7 @@ export function doAgingProcess(v) {
 // -------------------------
 // 季節更新
 // -------------------------
-export function updateSeason(v) {
+export function updateSeason(v, { showDialog = true, logChange = true } = {}) {
   ["春","夏","秋","冬"].forEach(ss=>{
     let i=v.villageTraits.indexOf(ss);
     if (i>=0) v.villageTraits.splice(i,1);
@@ -709,13 +713,15 @@ export function updateSeason(v) {
   if (newS) {
     v.villageTraits.push(newS);
     // 季節変更ダイアログを表示
-    showSeasonChangeDialog(newS);
-    v.log(`${newS}が訪れた`);
+    if (showDialog) showSeasonChangeDialog(newS);
+    if (logChange) v.log(`${newS}が訪れた`);
   }
+  return newS;
 }
 
 // 季節変更ダイアログを表示する関数
 function showSeasonChangeDialog(season) {
+  if (typeof document === "undefined") return;
   const seasonData = {
     "春": {
       image: "../images/seasons/spring.png",
