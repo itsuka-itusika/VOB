@@ -65,57 +65,39 @@ function newYearFestival(v) {
 
 function resurrectionFestival(v) {
   showFestivalModal("resurrection");
-  v.log("【復活祭】体力+20,メンタル+20 +追加魔素");
+  v.log("【復活祭】体力+20,メンタル+20");
   v.villagers.forEach(p=>{
     p.hp=clampValue(p.hp+20,0,100);
     p.mp=clampValue(p.mp+20,0,100);
   });
-  let total=0;
-  v.villagers.forEach(p=>{
-    let amt=10*(p.happiness/100);
-    total+=amt;
-  });
-  let g=Math.floor(total);
-  v.mana=clampValue(v.mana+g,0,99999);
-  v.log(`復活祭:魔素+${g}`);
 }
 
 function summerSolsticeFestival(v) {
   showFestivalModal("summerSolstice");
-  v.log("【夏至祭】体力+20,メンタル+20,幸福+20-30 +結婚判定");
+  v.log("【夏至祭】体力+20,メンタル+20 +結婚判定");
   v.villagers.forEach(p=>{
     p.hp=clampValue(p.hp+20,0,100);
     p.mp=clampValue(p.mp+20,0,100);
-    let inc=randInt(20,30);
-    p.happiness=clampValue(p.happiness+inc,0,100);
   });
   doMarriageCheck(v);
 }
 
 function harvestFestival(v) {
   showFestivalModal("harvest");
-  v.log("【収穫祭】全員体力+40,メンタル+20");
+  v.log("【収穫祭】全員体力+30,メンタル+10");
   v.villagers.forEach(p=>{
-    p.hp=clampValue(p.hp+40,0,100);
-    p.mp=clampValue(p.mp+20,0,100);
+    p.hp=clampValue(p.hp+30,0,100);
+    p.mp=clampValue(p.mp+10,0,100);
   });
 }
 
 function starsFestival(v) {
   showFestivalModal("stars");
-  v.log("【星霜祭】体力+20,メンタル+20 +追加魔素 +恋人判定");
+  v.log("【星霜祭】体力+10,メンタル+30 +恋人判定");
   v.villagers.forEach(p=>{
-    p.hp=clampValue(p.hp+20,0,100);
-    p.mp=clampValue(p.mp+20,0,100);
+    p.hp=clampValue(p.hp+10,0,100);
+    p.mp=clampValue(p.mp+30,0,100);
   });
-  let total=0;
-  v.villagers.forEach(p=>{
-    let amt=10*(p.happiness/100);
-    total+=amt;
-  });
-  let g=Math.floor(total);
-  v.mana=clampValue(v.mana+g,0,99999);
-  v.log(`星霜祭:魔素+${g}`);
   doLoverCheck(v);
 }
 
@@ -737,7 +719,7 @@ function showSeasonChangeDialog(season) {
       message: "太陽が高く昇り、生命力溢れる季節となりました。",
       accent: "#ffe39a",
       tips: [
-        "夏至祭では体力・メンタル・幸福が回復し、結婚判定があります。",
+        "夏至祭では体力・メンタルが回復し、結婚判定があります。",
         "ランダムイベントの猛暑や冷夏には注意してください。"
       ]
     },
