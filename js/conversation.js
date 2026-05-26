@@ -282,8 +282,11 @@ function calculateRecruitmentSuccessRate(visitor, recruiter) {
 }
 
 function canAttemptSeduction(visitor, seducer) {
+  // 誘惑は、訪問者の精神性別と誘惑者の肉体性別が異なる場合のみ可能。
+  // 誘惑者側は「見た目・身体」として bodySex を参照し、
+  // 訪問者側は「惹かれる向き」として spiritSex を参照する。
   if (visitor.spiritSex === seducer.bodySex) {
-    return { ok: false, reason: "性別不一致" };
+    return { ok: false, reason: "対象外性別" };
   }
   if (seducer.sexdr < 21) {
     return { ok: false, reason: "好色不足" };
@@ -462,12 +465,12 @@ function openSeductionModal(visitor) {
     if (!seducer) return;
     
     // 条件チェック
-    // 1. 精神性別と肉体性別が異なるか
+    // 1. 訪問者の精神性別と誘惑者の肉体性別が異なるか
     // 2. 誘惑者の好色が21以上か
     const seductionCheck = canAttemptSeduction(visitor, seducer);
-    if (!seductionCheck.ok && seductionCheck.reason === "性別不一致") {
-      alert("誘惑者の肉体性別と訪問者の精神性別が同じです。誘惑できません。");
-      theVillage.log(`${seducer.name}の誘惑は失敗しました。(理由: 性別の不一致)`);
+    if (!seductionCheck.ok && seductionCheck.reason === "対象外性別") {
+      alert("誘惑は、誘惑者の肉体性別が、訪問者の精神性別にとって異性である場合に実行できます。誘惑者自身の精神性別ではなく、現在の肉体性別が参照されます。");
+      theVillage.log(`${seducer.name}の誘惑は失敗しました。(理由: 対象外性別)`);
       return;
     }
     
