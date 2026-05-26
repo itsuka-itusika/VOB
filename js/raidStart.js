@@ -161,17 +161,19 @@ export function startRaidEvent(village) {
     village.log(`${raiderType.type}(${enemyCount}体)が襲来！`);
   }
 
-  let nextBtn = document.getElementById("nextTurnButton");
-  if (nextBtn) {
-    nextBtn.innerHTML = `<b style="color:red;">迎撃開始</b>`;
-  }
-  let autoAssignBtn = document.getElementById("autoAssignButton");
-  if (autoAssignBtn) {
-    autoAssignBtn.textContent = "自動割り振り";
-  }
-  const raidAssignBtn = document.getElementById("raidAssignButton");
-  if (raidAssignBtn) {
-    raidAssignBtn.style.display = "";
+  if (typeof document !== "undefined") {
+    let nextBtn = document.getElementById("nextTurnButton");
+    if (nextBtn) {
+      nextBtn.innerHTML = `<b style="color:red;">迎撃開始</b>`;
+    }
+    let autoAssignBtn = document.getElementById("autoAssignButton");
+    if (autoAssignBtn) {
+      autoAssignBtn.textContent = "自動割り振り";
+    }
+    const raidAssignBtn = document.getElementById("raidAssignButton");
+    if (raidAssignBtn) {
+      raidAssignBtn.style.display = "";
+    }
   }
 
   showRaidWarningModal({
@@ -179,6 +181,8 @@ export function startRaidEvent(village) {
     enemyCount
   });
 
-  const raidSection = document.getElementById("raidEnemiesSection");
-  if (raidSection) raidSection.style.display = "block";
+  if (typeof document !== "undefined") {
+    const raidSection = document.getElementById("raidEnemiesSection");
+    if (raidSection) raidSection.style.display = "block";
+  }
 }
