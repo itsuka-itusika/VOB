@@ -9,6 +9,9 @@ import { handleBirthAndPostpartum, handlePregnancyChecks, updateChildGrowthStage
 import { showFestivalModal } from "./festivalModal.js";
 import { applyForcedActionRestriction, refreshJobTable } from "./domain/jobTables.js";
 
+const OPENING_RAID_GRACE_YEAR = 1091;
+const OPENING_RAID_GRACE_LAST_MONTH = 6;
+
 /**
  * 固定イベント(前半) - 新年祭,夏至祭,星霜祭など
  */
@@ -112,10 +115,17 @@ export function doRandomEventPost(village) {
 }
 
 export function doRaidStartCheck(village) {
+  if (isOpeningRaidGraceActive(village)) return;
+
   const raidProb = village.villageTraits.includes("荒廃") ? 0.4 : 0.2;
   if (Math.random() < raidProb) {
     startRaidEvent(village);
   }
+}
+
+function isOpeningRaidGraceActive(village) {
+  return Number(village.year) === OPENING_RAID_GRACE_YEAR
+    && Number(village.month) <= OPENING_RAID_GRACE_LAST_MONTH;
 }
 
 function applyMonthStartRestrictions(village) {
