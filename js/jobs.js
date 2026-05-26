@@ -172,6 +172,7 @@ function showActionPhaseResultModal(village, messages, afterClose = null) {
   modal.appendChild(footer);
   document.body.appendChild(overlay);
   document.body.appendChild(modal);
+  closeButton.focus();
 }
 
 function doSabori(p, v) {

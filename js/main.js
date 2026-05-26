@@ -24,10 +24,53 @@ function applyTurnStartRestrictions(village) {
   });
 }
 
+const TURN_BLOCKING_MODAL_SELECTORS = [
+  "#actionPhaseModal",
+  "#randomEventModal",
+  "#festivalModal",
+  "#seasonChangeDialog",
+  "#raidWarningModal",
+  "#secretTreasureEventModal",
+  ".effect-result-modal",
+  "#recruitmentModal",
+  "#seductionModal",
+  "#merchantTradeModal",
+  "#miracleModal",
+  "#buildingModal",
+  "#secretTreasureModal",
+  "#conversationModal",
+  "#exchangeModal",
+  "#raidModal",
+  "#villageScaleModal",
+  "[data-close-relationship-modal]",
+  "[data-close-reproduction-modal]"
+];
+
+function isVisibleElement(element) {
+  if (!element || !element.isConnected || typeof window === "undefined") return false;
+  let current = element;
+  while (current && current !== document.body) {
+    const style = window.getComputedStyle(current);
+    if (style.display === "none" || style.visibility === "hidden") return false;
+    current = current.parentElement;
+  }
+  return true;
+}
+
+function isTurnBlockingModalOpen() {
+  if (typeof document === "undefined") return false;
+  return TURN_BLOCKING_MODAL_SELECTORS.some(selector => {
+    const element = document.querySelector(selector);
+    return isVisibleElement(element);
+  });
+}
+
 /**
  * 「次の月へ」ボタン
  */
 export function onNextTurn() {
+  if (isTurnBlockingModalOpen()) return;
+
   if (theVillage.gameOver) {
     theVillage.log("ゲームオーバー済みです。操作不可");
     return;
