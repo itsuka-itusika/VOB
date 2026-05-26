@@ -70,6 +70,13 @@ export class RandomEvents {
     return kind === "good" ? "happy" : "hardship";
   }
 
+  static hasBuilding(village, flagName, buildingId) {
+    return !!(
+      (village?.buildingFlags && village.buildingFlags[flagName]) ||
+      (Array.isArray(village?.buildings) && village.buildings.includes(buildingId))
+    );
+  }
+
   static getSpeechType(character) {
     return resolveStoredSpeechType(character);
   }
@@ -321,6 +328,34 @@ export class RandomEvents {
         if (!v.buildingFlags) v.buildingFlags = {};
         v.buildingFlags.canBuildPublicBath = true;
         v.log(`秘湯発見:全員体力+${hpGain},公衆浴場建設解放`);
+        break;
+      }
+      case "bathPerk": {
+        if (!this.hasBuilding(v, "hasPublicBath", "publicBath")) {
+          return null;
+        }
+
+        const candidates = v.villagers.filter(person =>
+          Number(person.eth) <= 14 &&
+          Number(person.sexdr) >= 20 &&
+          person.bodySex === "女" &&
+          person.spiritSex === "男" &&
+          Number(person.spiritAge) >= 12
+        );
+
+        if (candidates.length === 0) {
+          return null;
+        }
+
+        const person = this.randChoice(candidates);
+        v.security = clampValue(v.security - 5, 0, 100);
+        person.happiness = clampValue(person.happiness + 30, 0, 100);
+        person.mp = clampValue(person.mp + 20, 0, 100);
+        if (!person.mindTraits.includes("風呂好き")) {
+          person.mindTraits.push("風呂好き");
+        }
+        this.addForcedSpeaker(person);
+        v.log(`${person.name}は長風呂を楽しんだ`);
         break;
       }
       case "hobbyFriends": {
