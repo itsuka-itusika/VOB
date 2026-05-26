@@ -121,6 +121,15 @@ export const BUILDINGS = [
     effect: standardBuildingEffect({ scale: 20, flag: "hasWatermill", log: "水車小屋建設完了: 毎月食料+10、規模+20" })
   },
   {
+    id: "fountain",
+    name: "噴水",
+    materials: 20,
+    funds: 30,
+    tech: 0,
+    desc: "公共施設。毎月、村人全員の幸福度+1〜2。規模+10",
+    effect: standardBuildingEffect({ scale: 10, flag: "hasFountain", log: "噴水建設完了: 毎月、村人全員の幸福度+1〜2、規模+10" })
+  },
+  {
     id: "huntingLodge",
     name: "狩猟小屋",
     materials: 80,

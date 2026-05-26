@@ -200,6 +200,22 @@ function applyWatermillMonthlyFood(village) {
   village.log("水車小屋:食料+10");
 }
 
+function hasFountain(village) {
+  return !!(
+    (village.buildingFlags && village.buildingFlags.hasFountain) ||
+    (Array.isArray(village.buildings) && village.buildings.includes("fountain"))
+  );
+}
+
+function applyFountainMonthlyHappiness(village) {
+  if (!hasFountain(village)) return;
+  village.villagers.forEach(person => {
+    const gain = randInt(1, 2);
+    person.happiness = clampValue(person.happiness + gain, 0, 100);
+  });
+  village.log("噴水:全員幸福度+1〜2");
+}
+
 // -------------------------
 // 月末処理
 // -------------------------
@@ -457,6 +473,7 @@ export function doMonthStartProcess(v) {
 
   applyPublicBathMonthlyRecovery(v);
   applyWatermillMonthlyFood(v);
+  applyFountainMonthlyHappiness(v);
 
 
   // 体力・メンタル状態によるペナルティ
