@@ -162,7 +162,7 @@ export const BUILDINGS = [
     name: "櫓",
     materials: 100,
     funds: 50,
-    tech: 0,
+    tech: 50,
     desc: "豊かな村で解放。見張り台を築く。規模+20",
     isUnlocked: (village) => isScaleAtLeast(village, 180),
     effect: standardBuildingEffect({ scale: 20, flag: "hasWatchtower", log: "櫓建設完了: 見張り台を築きました、規模+20" })
@@ -172,7 +172,7 @@ export const BUILDINGS = [
     name: "環濠",
     materials: 50,
     funds: 50,
-    tech: 50,
+    tech: 100,
     desc: "豊かな村で解放。村の周囲に濠を巡らせる。規模+30",
     isUnlocked: (village) => isScaleAtLeast(village, 180),
     effect: standardBuildingEffect({ scale: 30, flag: "hasMoat", log: "環濠建設完了: 村の周囲に濠を巡らせました、規模+30" })
