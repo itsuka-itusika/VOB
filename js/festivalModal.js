@@ -32,7 +32,7 @@ const FESTIVAL_DATA = {
     month: "12月",
     image: "../images/festivals/stars.png",
     flavor: "冬の星々を見上げ、過ぎた歳月とまだ見ぬ縁に祈りを捧げる。",
-    effect: "全村人の体力+10、メンタル+30。恋人判定が発生。"
+    effect: "恋人判定が発生。"
   }
 };
 

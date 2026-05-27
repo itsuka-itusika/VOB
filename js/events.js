@@ -15,7 +15,7 @@ const OPENING_RAID_GRACE_YEAR = 1091;
 const OPENING_RAID_GRACE_LAST_MONTH = 6;
 
 /**
- * 固定イベント(前半) - 新年祭,夏至祭,星霜祭など
+ * 固定イベント(前半) - 新年祭など
  */
 export function doFixedEventPre(village) {
   if (!village.hasDonePreEvent) {
@@ -24,20 +24,12 @@ export function doFixedEventPre(village) {
         newYearFestival(village);
         village.hasDonePreEvent = true;
         break;
-      case 6:
-        summerSolsticeFestival(village);
-        village.hasDonePreEvent = true;
-        break;
-      case 12:
-        starsFestival(village);
-        village.hasDonePreEvent = true;
-        break;
     }
   }
 }
 
 /**
- * 固定イベント(後半) - 復活祭,収穫祭など
+ * 固定イベント(後半) - 復活祭,夏至祭,収穫祭,星霜祭など
  */
 export function doFixedEventPost(village) {
   if (!village.hasDonePostEvent) {
@@ -46,8 +38,16 @@ export function doFixedEventPost(village) {
         resurrectionFestival(village);
         village.hasDonePostEvent=true;
         break;
+      case 6:
+        summerSolsticeFestival(village);
+        village.hasDonePostEvent=true;
+        break;
       case 10:
         harvestFestival(village);
+        village.hasDonePostEvent=true;
+        break;
+      case 12:
+        starsFestival(village);
         village.hasDonePostEvent=true;
         break;
     }
@@ -98,11 +98,7 @@ function harvestFestival(v) {
 
 function starsFestival(v) {
   showFestivalModal("stars");
-  v.log("【星霜祭】体力+10,メンタル+30 +恋人判定");
-  v.villagers.forEach(p=>{
-    p.hp=clampValue(p.hp+10,0,100);
-    p.mp=clampValue(p.mp+30,0,100);
-  });
+  v.log("【星霜祭】恋人判定");
   doLoverCheck(v);
 }
 
@@ -669,7 +665,7 @@ function showSeasonChangeDialog(season) {
       message: "太陽が高く昇り、生命力溢れる季節となりました。",
       accent: "#ffe39a",
       tips: [
-        "夏至祭では体力・メンタルが回復し、結婚判定があります。",
+        "月末の夏至祭では体力・メンタルが回復し、結婚判定があります。",
         "ランダムイベントの猛暑や冷夏には注意してください。"
       ]
     },
