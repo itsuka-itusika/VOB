@@ -219,12 +219,17 @@ function doOneCombatAction(action, village) {
     let dmg=result.damage;
     
     // 精神特性による修正
-    if (actor.mindTraits.includes("歴戦")) {
+    if (hasTrait(actor, "歴戦")) {
       dmg = Math.floor(dmg * 1.2);
       logDiv.innerHTML+=`<br>【迎撃】${actor.name}は歴戦の経験で強力な攻撃！`;
     }
+
+    if (hasTrait(actor, "火星の加護")) {
+      dmg = Math.floor(dmg * 1.2);
+      logDiv.innerHTML+=`<br>【迎撃】${actor.name}は火星の加護で攻撃の勢いを増した！`;
+    }
     
-    if (actor.mindTraits.includes("非戦主義")) {
+    if (hasTrait(actor, "非戦主義")) {
       dmg = 0;
       logDiv.innerHTML+=`<br>【迎撃】${actor.name}は非戦主義のため攻撃を拒否！`;
     }
@@ -249,6 +254,11 @@ function doOneCombatAction(action, village) {
     }
   }
   updateRaidTables(village);
+}
+
+function hasTrait(person, trait) {
+  return (Array.isArray(person?.bodyTraits) && person.bodyTraits.includes(trait)) ||
+    (Array.isArray(person?.mindTraits) && person.mindTraits.includes(trait));
 }
 
 function calcAttackDamage(atk, def, isCounter) {

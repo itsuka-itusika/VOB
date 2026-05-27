@@ -159,6 +159,14 @@ function convertVillageToObject(village) {
  */
 function convertVillagerToObject(vill) {
   syncEffectiveStats(vill);
+  const bodyTraits = normalizeBodyTraitList(vill.bodyTraits);
+  const mindTraits = Array.isArray(vill.mindTraits) ? [...vill.mindTraits] : [];
+  if (bodyTraits.includes("火星の加護")) {
+    bodyTraits.splice(bodyTraits.indexOf("火星の加護"), 1);
+    if (!mindTraits.includes("火星の加護")) {
+      mindTraits.push("火星の加護");
+    }
+  }
   return {
     name: vill.name,
     bodySex: vill.bodySex,
@@ -187,8 +195,8 @@ function convertVillagerToObject(vill) {
     spiritAge: vill.spiritAge,
     spiritSex: vill.spiritSex,
 
-    bodyTraits: normalizeBodyTraitList(vill.bodyTraits),
-    mindTraits: [...vill.mindTraits],
+    bodyTraits,
+    mindTraits,
     hobby: vill.hobby,
     relationships: [...normalizeRelationships(vill)],
 
@@ -328,6 +336,10 @@ function convertObjectToVillager(obj) {
 
   vill.bodyTraits = normalizeBodyTraitList(obj.bodyTraits);
   vill.mindTraits = Array.isArray(obj.mindTraits) ? [...obj.mindTraits] : [];
+  const migrateBodyAresToMind = vill.bodyTraits.includes("火星の加護");
+  if (vill.bodyTraits.includes("火星の加護")) {
+    vill.bodyTraits = vill.bodyTraits.filter(trait => trait !== "火星の加護");
+  }
   if (obj.hobby === "大食い") {
     vill.hobby = "ドカ食い";
   } else if (obj.hobby === "狩猟") {
@@ -387,6 +399,10 @@ function convertObjectToVillager(obj) {
   vill.adultModalShown = !!obj.adultModalShown;
 
   hydrateStatLayersFromObject(vill, obj);
+  if (migrateBodyAresToMind && !vill.mindTraits.includes("火星の加護")) {
+    vill.mindTraits.push("火星の加護");
+    syncEffectiveStats(vill);
+  }
 
   return vill;
 }

@@ -336,11 +336,14 @@ function chooseRaidFallbackAction(person, currentJob, currentAction) {
 
 function getExpectedDefenderDamage(person) {
   const mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
+  const bodyTraits = Array.isArray(person.bodyTraits) ? person.bodyTraits : [];
   if (mindTraits.includes(TRAIT_PACIFIST)) return 0;
 
   const physical = ((Number(person.str) || 0) * (Number(person.cou) || 0) / 400) * 50;
   const magical = ((Number(person.mag) || 0) * (Number(person.cou) || 0) / 400) * 25;
-  const traitMultiplier = mindTraits.includes("歴戦") ? 1.2 : 1;
+  let traitMultiplier = 1;
+  if (mindTraits.includes("歴戦")) traitMultiplier *= 1.2;
+  if (mindTraits.includes("火星の加護") || bodyTraits.includes("火星の加護")) traitMultiplier *= 1.2;
   return Math.max(physical, magical) * traitMultiplier;
 }
 

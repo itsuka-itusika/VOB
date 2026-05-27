@@ -298,16 +298,26 @@ export function endOfMonthProcess(v) {
 
   // 火星の加護の効果期間更新 (3ヶ月経過した場合、効果を終了)
   v.villagers.forEach(p => {
-    if (p.bodyTraits.includes("火星の加護")) {
+    p.bodyTraits = Array.isArray(p.bodyTraits) ? p.bodyTraits : [];
+    p.mindTraits = Array.isArray(p.mindTraits) ? p.mindTraits : [];
+    if (p.bodyTraits.includes("火星の加護") || p.mindTraits.includes("火星の加護")) {
+      p.bodyTraits = p.bodyTraits.filter(trait => trait !== "火星の加護");
+      if (!p.mindTraits.includes("火星の加護")) {
+        p.mindTraits.push("火星の加護");
+      }
       if (typeof p.ares !== 'number') {
          p.ares = 0;
       }
       p.ares++;
       if (p.ares >= 3) {
-         p.bodyTraits = p.bodyTraits.filter(trait => trait !== "火星の加護");
+         p.mindTraits = p.mindTraits.filter(trait => trait !== "火星の加護");
          p.ares = 0;
          syncEffectiveStats(p);
+         refreshJobTable(p, v);
          v.log(`【戦神の奇跡終了】${p.name}の火星の加護効果が切れました`);
+      } else {
+         syncEffectiveStats(p);
+         refreshJobTable(p, v);
       }
     }
   });

@@ -23,7 +23,7 @@ export const MIRACLES = [
   {id:"5",  name:"狂宴の奇跡(人数×30)", cost:-2, desc:"全員体力/メンタル+60,幸福+50,倫理↓,好色+15"},
   {id:"6",  name:"癒しの奇跡(80)", cost:80, desc:"1人の負傷/疫病/疲労等回復,体力+50"},
   {id:"16", name:"酒杯の奇跡(50)", cost:50, desc:"1人の心労/抑鬱回復,メンタル+50,幸福+30,酩酊付与"},
-  {id:"7",  name:"戦神の奇跡(80)", cost:80, desc:"1人に火星の加護(3ヶ月)"},
+  {id:"7",  name:"戦神の奇跡(80)", cost:80, desc:"1人に火星の加護(3ヶ月,勇気+15,知力/勤勉/倫理低下)"},
   {id:"8",  name:"竈女神の奇跡(60)", cost:60, desc:"恋人を結婚100%(いなければ30返還)"},
   {id:"9",  name:"常春の奇跡(300)", cost:300,desc:"村特性→春に固定。次の季節まで継続"},
   {id:"10", name:"旅人の奇跡(60)", cost:60, desc:"ランダム来訪者(訪問者付与)"},
@@ -639,11 +639,14 @@ function gobletMiracle(p,v) {
 /** 戦神(戦神の加護) */
 function warMiracle(p, v) {
   p.ares = 0;
-  if (!p.bodyTraits.includes("火星の加護")) {
-    p.bodyTraits.push("火星の加護");
+  p.bodyTraits = Array.isArray(p.bodyTraits) ? p.bodyTraits.filter(trait => trait !== "火星の加護") : [];
+  p.mindTraits = Array.isArray(p.mindTraits) ? p.mindTraits : [];
+  if (!p.mindTraits.includes("火星の加護")) {
+    p.mindTraits.push("火星の加護");
   }
   syncEffectiveStats(p);
-  v.log(`【戦神の奇跡】${p.name}に火星の加護付与(ステータス補正なし)3ヶ月継続`);
+  refreshJobTable(p, v);
+  v.log(`【戦神の奇跡】${p.name}に火星の加護付与(勇気+15,知力/勤勉/倫理*0.2,迎撃ダメージ1.2倍)3ヶ月継続`);
   showMiracleResultModal(v, "戦神の奇跡", `${p.name}に戦神の加護が宿りました。`, [p]);
 }
 

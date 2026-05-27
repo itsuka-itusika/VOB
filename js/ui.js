@@ -349,6 +349,9 @@ function estimateDefendDamage(person, village) {
   if (hasTrait(person, "歴戦")) {
     damage = Math.floor(damage * 1.2);
   }
+  if (hasTrait(person, "火星の加護")) {
+    damage = Math.floor(damage * 1.2);
+  }
   return damage;
 }
 
