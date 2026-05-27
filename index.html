@@ -57,6 +57,7 @@
             <option value="save-local">ローカル保存</option>
             <option value="load-local">ローカル読込</option>
             <option value="readme">更新履歴・説明</option>
+            <option value="debug">デバッグ用</option>
           </select>
           <button type="button" onclick="runUtilityAction()">実行</button>
         </div>
@@ -357,6 +358,21 @@
   </div>
   <div class="modal-buttons">
     <button onclick="closeExchangeModal()">閉じる</button>
+  </div>
+</div>
+
+<!-- 牧神の管笛モーダル -->
+<div id="panFluteExchangeOverlay"></div>
+<div id="panFluteExchangeModal">
+  <div class="pan-flute-exchange-content">
+    <div class="exchange-title">
+      <h3>牧神の管笛</h3>
+      <p>笛の音に誘われ、魂たちは互いの体を見てざわめいている...</p>
+    </div>
+    <div id="panFluteExchangePairs" class="pan-flute-exchange-pairs"></div>
+  </div>
+  <div class="modal-buttons">
+    <button onclick="closePanFluteExchangeModal()">閉じる</button>
   </div>
 </div>
 

@@ -62,6 +62,15 @@ section {
   min-width: 80px;
   text-align: center;
 }
+.resource-box.resource-near-limit {
+  background: #fff7e6;
+  border-color: #d18a00;
+}
+.resource-box.resource-at-limit {
+  background: #ffecec;
+  border-color: #a40000;
+  color: #7c0000;
+}
 .village-scale-title {
   min-width: 128px;
   background: #f8f0d8;
@@ -325,6 +334,7 @@ th, td {
   width: 800px;
   max-width: 90%;
   max-height: 90vh;
+  box-sizing: border-box;
   padding: 20px;
   display: none;
   z-index: 999;
@@ -1239,7 +1249,8 @@ section h2 {
 }
 
 /* 交換モーダル用のスタイル */
-#exchangeOverlay {
+#exchangeOverlay,
+#panFluteExchangeOverlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -1250,7 +1261,8 @@ section h2 {
   z-index: 2001;
 }
 
-#exchangeModal {
+#exchangeModal,
+#panFluteExchangeModal {
   position: fixed;
   top: 50%;
   left: 50%;
@@ -1260,12 +1272,16 @@ section h2 {
   box-shadow: 2px 2px 8px rgba(0,0,0,0.3);
   width: 800px;
   max-width: 90%;
+  max-height: 90vh;
+  box-sizing: border-box;
   padding: 20px;
   display: none;
   z-index: 2002;
+  overflow-y: auto;
 }
 
-.exchange-content {
+.exchange-content,
+.pan-flute-exchange-content {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1318,6 +1334,78 @@ section h2 {
   border-radius: 4px;
   border: 1px solid #ddd;
   min-height: 80px;
+}
+
+.pan-flute-exchange-pairs {
+  width: 100%;
+  display: grid;
+  gap: 10px;
+}
+
+.pan-flute-pair {
+  width: 100%;
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  background: #f8f8f8;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+.pan-flute-pair-label {
+  font-weight: bold;
+  color: #6b4b1f;
+}
+
+.pan-flute-pair-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+}
+
+.pan-flute-person {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.pan-flute-portrait {
+  width: 72px;
+  height: 72px;
+  background: #eee;
+}
+
+.pan-flute-portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pan-flute-dialogue {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 7px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.pan-flute-dialogue span {
+  overflow-wrap: anywhere;
+}
+
+.pan-flute-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  color: #a83232;
+  font-weight: bold;
 }
 
 /* キャラクター情報のスタイルを調整 */
@@ -1431,6 +1519,12 @@ body.mobile-mode .resource-value {
   text-align: left;
   text-overflow: clip;
   white-space: nowrap;
+}
+body.mobile-mode .resource-box.resource-near-limit .resource-value {
+  color: #8a4b00;
+}
+body.mobile-mode .resource-box.resource-at-limit .resource-value {
+  color: #a40000;
 }
 body.mobile-mode .village-scale-title {
   min-width: 8.5em;
@@ -1809,6 +1903,7 @@ body.mobile-mode #buildingModal,
 body.mobile-mode #secretTreasureModal,
 body.mobile-mode #conversationModal,
 body.mobile-mode #exchangeModal,
+body.mobile-mode #panFluteExchangeModal,
 body.mobile-mode #raidModal,
 body.mobile-mode #villageScaleModal,
 body.mobile-mode #monthEndModal,
@@ -1877,6 +1972,27 @@ body.mobile-mode .exchange-character {
 body.mobile-mode .exchange-character .portrait-area {
   width: 96px;
   height: 96px;
+}
+body.mobile-mode .pan-flute-pair {
+  padding: 8px;
+}
+body.mobile-mode .pan-flute-pair-body {
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+body.mobile-mode .pan-flute-person {
+  grid-template-columns: 56px minmax(0, 1fr);
+}
+body.mobile-mode .pan-flute-portrait {
+  width: 56px;
+  height: 56px;
+}
+body.mobile-mode .pan-flute-dialogue {
+  font-size: 0.78rem;
+  padding: 6px;
+}
+body.mobile-mode .pan-flute-arrow {
+  min-height: 16px;
 }
 body.mobile-mode .building-resources {
   gap: 8px;

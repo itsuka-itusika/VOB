@@ -8,6 +8,7 @@ import { RandomEvents } from "./RandomEvents.js";
 import { handleBirthAndPostpartum, handlePregnancyChecks, updateChildGrowthStage } from "./reproduction.js";
 import { showFestivalModal } from "./festivalModal.js";
 import { applyForcedActionRestriction, refreshJobTable } from "./domain/jobTables.js";
+import { addStoredResource } from "./domain/resourceLimits.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
 
 const OPENING_RAID_GRACE_YEAR = 1091;
@@ -212,7 +213,7 @@ function hasWatermill(village) {
 
 function applyWatermillMonthlyFood(village) {
   if (!hasWatermill(village)) return;
-  village.food = clampValue(village.food + 10, 0, 99999);
+  addStoredResource(village, "food", 10);
   village.log("水車小屋:食料+10");
 }
 
@@ -281,12 +282,17 @@ export function endOfMonthProcess(v) {
 
   handlePregnancyChecks(v);
 
-  // 狂乱の解除処理
+  // 狂乱・酩酊の解除処理
   v.villagers.forEach(p => {
     if (p.mindTraits.includes("狂乱")) {
       p.mindTraits = p.mindTraits.filter(t => t !== "狂乱");
       syncEffectiveStats(p);
       v.log(`${p.name}の狂乱が解除された`);
+    }
+    if (p.mindTraits.includes("酩酊")) {
+      p.mindTraits = p.mindTraits.filter(t => t !== "酩酊");
+      syncEffectiveStats(p);
+      v.log(`${p.name}の酩酊が解除された`);
     }
   });
 

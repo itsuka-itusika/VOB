@@ -5,6 +5,7 @@ import { theVillage, onNextTurn } from "./main.js";
 import {
   closeExchangeModal,
   closeMiracleModal,
+  closePanFluteExchangeModal,
   onSelectMiracleChange,
   openMiracleModal,
   performMiracle
@@ -16,7 +17,7 @@ import {
   saveVillageToJsonFile,
   saveVillageToLocalStorage
 } from "./saveLoad.js";
-import { closeSecretTreasureModal, openSecretTreasureModal, sellSelectedSecretTreasure, useSelectedSecretTreasure } from "./secretTreasures.js";
+import { closeSecretTreasureModal, openSecretTreasureModal, SECRET_TREASURES, sellSelectedSecretTreasure, useSelectedSecretTreasure } from "./secretTreasures.js";
 import { updateUI } from "./ui.js";
 
 const VIEW_MODE_STORAGE_KEY = "vob.viewMode";
@@ -53,6 +54,30 @@ function loadFromLocalStorage() {
   replaceVillageState(loadedVillage, "ローカルストレージからロードしました");
 }
 
+function runDebugAction() {
+  if (window.prompt("パスワードを入力してください") !== "VOB") {
+    alert("パスワードが違います。");
+    return;
+  }
+
+  theVillage.food = 10000;
+  theVillage.materials = 10000;
+  theVillage.funds = 10000;
+  theVillage.tech = 10000;
+
+  if (!Array.isArray(theVillage.secretTreasures)) theVillage.secretTreasures = [];
+  const ownedIds = new Set(theVillage.secretTreasures.map(entry => typeof entry === "string" ? entry : entry?.id));
+  SECRET_TREASURES.forEach(secretTreasure => {
+    if (!ownedIds.has(secretTreasure.id)) {
+      theVillage.secretTreasures.push({ id: secretTreasure.id });
+      ownedIds.add(secretTreasure.id);
+    }
+  });
+
+  theVillage.log("【デバッグ】食料・資材・資金・技術を10000にし、全秘宝を入手しました");
+  updateUI(theVillage);
+}
+
 function runUtilityAction() {
   const select = document.getElementById("utilityActionSelect");
   const action = select ? select.value : "";
@@ -72,6 +97,8 @@ function runUtilityAction() {
     }
   } else if (action === "readme") {
     window.open("Readme.txt", "_blank");
+  } else if (action === "debug") {
+    runDebugAction();
   }
 
   if (select) select.value = "";
@@ -163,7 +190,8 @@ function bindGlobalHandlers() {
       const { closeConversationModal } = await import("./conversation.js");
       closeConversationModal();
     },
-    closeExchangeModal
+    closeExchangeModal,
+    closePanFluteExchangeModal
   });
 }
 

@@ -6,6 +6,7 @@ import { updateUI } from "./ui.js";  // 実行後にUIを更新する
 import { doExchange } from "./exchange.js";
 import { createRandomVisitor, createRandomVisitorOfType, determineSpeechType } from "./createVillagers.js";
 import { refreshJobTable } from "./domain/jobTables.js";
+import { addStoredResource } from "./domain/resourceLimits.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
 import { resolveDialogueTone } from "./data/dialogue/toneProfiles.js";
 import { BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
@@ -20,7 +21,8 @@ export const MIRACLES = [
   {id:"3",  name:"クピドの奇跡(80)", cost:80, desc:"2人を強制結婚(条件無視)"},
   {id:"4",  name:"宴会の奇跡(人数×15)", cost:-1, desc:"全員体力/メンタル+20,幸福+20 (資金×人数分も要)"},
   {id:"5",  name:"狂宴の奇跡(人数×30)", cost:-2, desc:"全員体力/メンタル+60,幸福+50,倫理↓,好色+15"},
-  {id:"6",  name:"癒しの奇跡(80)", cost:80, desc:"1人の負傷/疫病/疲労等回復,体力/メンタル+50"},
+  {id:"6",  name:"癒しの奇跡(80)", cost:80, desc:"1人の負傷/疫病/疲労等回復,体力+50"},
+  {id:"16", name:"酒杯の奇跡(50)", cost:50, desc:"1人の心労/抑鬱回復,メンタル+50,幸福+30,酩酊付与"},
   {id:"7",  name:"戦神の奇跡(80)", cost:80, desc:"1人に火星の加護(3ヶ月)"},
   {id:"8",  name:"竈女神の奇跡(60)", cost:60, desc:"恋人を結婚100%(いなければ30返還)"},
   {id:"9",  name:"常春の奇跡(300)", cost:300,desc:"村特性→春に固定。次の季節まで継続"},
@@ -78,7 +80,7 @@ export function onSelectMiracleChange(village) {
   div.innerHTML = `<p>${info.desc}</p>`;
 
   // 特定のIDは対象選択が必要
-  if (["3","6","7","11","12","13"].includes(mid)) {
+  if (["3","6","7","11","12","13","16"].includes(mid)) {
     if (mid==="3"||mid==="12"||mid==="13") {
       const selectOptions = mid === "12" ? { normalExchangeOnly: true } : (mid === "3" ? { villagersOnly: true } : {});
       div.appendChild(createVillagerSelect("targetA", village, selectOptions));
@@ -133,13 +135,13 @@ function refundMiracleMana(village, cost) {
 
 function getMiracleTargetCount(mid) {
   if (["3", "12", "13"].includes(mid)) return 2;
-  if (["6", "7", "11"].includes(mid)) return 1;
+  if (["6", "7", "11", "16"].includes(mid)) return 1;
   return 0;
 }
 
 function getMiracleTargetOptions(mid) {
   if (mid === "12") return { normalExchangeOnly: true };
-  if (mid === "3" || mid === "6" || mid === "7" || mid === "11") return { villagersOnly: true };
+  if (mid === "3" || mid === "6" || mid === "7" || mid === "11" || mid === "16") return { villagersOnly: true };
   return {};
 }
 
@@ -456,7 +458,7 @@ export function performMiracle(village) {
           showMiracleResultModal(village, "豊穣の奇跡", "畑と森に豊かな気配が満ちました。", village.villagers);
           break;
         case "2": // マナの奇跡
-          village.food=clampValue(village.food+80,0,99999);
+          addStoredResource(village, "food", 80);
           village.log("【マナの奇跡】食料+80");
           showMiracleResultModal(village, "マナの奇跡", "食料庫に恵みが満ちました。", village.villagers);
           break;
@@ -480,6 +482,14 @@ export function performMiracle(village) {
             return;
           }
           healMiracle(vA,village);
+          break;
+        case "16": // 酒杯(1人回復)
+          if (!vA || !village.villagers.includes(vA)) {
+            village.log("【酒杯】対象1人を選択");
+            refundMiracleMana(village, cost);
+            return;
+          }
+          gobletMiracle(vA,village);
           break;
         case "7": // 戦神(1人)
           if (!vA || !village.villagers.includes(vA)) {
@@ -577,7 +587,7 @@ function forceMarriage(a,b,v) {
 
 /** 癒し: 負傷など回復 */
 function healMiracle(p,v) {
-  let arr=["負傷","疲労","過労","飢餓","疫病","産褥","心労","抑鬱"];
+  let arr=["負傷","疲労","過労","飢餓","疫病","産褥","凍え"];
   let recoveredTraits = [];
 
   arr.forEach(trait => {
@@ -589,23 +599,41 @@ function healMiracle(p,v) {
     }
   });
 
-  arr.forEach(trait => {
+  syncEffectiveStats(p);
+  refreshJobTable(p, v);
+
+  p.hp=clampValue(p.hp+50,0,100);
+
+  let recoveryMsg = recoveredTraits.length > 0 ?
+    `${recoveredTraits.join(",")}を回復,` : "";
+  v.log(`【癒しの奇跡】${p.name}${recoveryMsg}体力+50`);
+  showMiracleResultModal(v, "癒しの奇跡", `${p.name}の傷と身体の疲れが癒されました。`, [p]);
+}
+
+/** 酒杯: 心を満たし、当月だけ酩酊を付与 */
+function gobletMiracle(p,v) {
+  const recoveredTraits = [];
+
+  ["心労","抑鬱"].forEach(trait => {
     if (p.mindTraits.includes(trait)) {
       recoveredTraits.push(trait);
       p.mindTraits = p.mindTraits.filter(t => t !== trait);
     }
   });
 
+  p.mp=clampValue(p.mp+50,0,100);
+  p.happiness=clampValue(p.happiness+30,0,100);
+  if (!p.mindTraits.includes("酩酊")) {
+    p.mindTraits.push("酩酊");
+  }
+
   syncEffectiveStats(p);
   refreshJobTable(p, v);
 
-  p.hp=clampValue(p.hp+50,0,100);
-  p.mp=clampValue(p.mp+50,0,100);
-
-  let recoveryMsg = recoveredTraits.length > 0 ? 
+  const recoveryMsg = recoveredTraits.length > 0 ?
     `${recoveredTraits.join(",")}を回復,` : "";
-  v.log(`【癒しの奇跡】${p.name}${recoveryMsg}体力/メンタル+50`);
-  showMiracleResultModal(v, "癒しの奇跡", `${p.name}の傷と疲れが癒されました。`, [p]);
+  v.log(`【酒杯の奇跡】${p.name}${recoveryMsg}メンタル+50,幸福+30,酩酊付与`);
+  showMiracleResultModal(v, "酒杯の奇跡", `${p.name}の心に甘い酔いが満ちました。`, [p]);
 }
 
 /** 戦神(戦神の加護) */
@@ -884,6 +912,94 @@ export function showMarriageMiracleModal(village, miracleName, pairs, options = 
 
 function randFrom(lines) {
   return lines[Math.floor(Math.random() * lines.length)];
+}
+
+function getBodyExchangeReactionLine(person) {
+  const raiderTypes = ["野盗", "ゴブリン", "狼", "キュクロプス", "ハーピー"];
+  let type = resolveDialogueTone(person);
+  if (person.mindTraits && person.mindTraits.includes("襲撃者")) {
+    type = raiderTypes.find(raiderType => person.name.includes(raiderType)) || type;
+  }
+  const fallbackType = person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ";
+  return randFrom(BODY_EXCHANGE_REACTION_LINES[type] || BODY_EXCHANGE_REACTION_LINES[fallbackType] || BODY_EXCHANGE_REACTION_LINES["普通Ｍ"]);
+}
+
+function createPanFluteExchangePerson(person) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "pan-flute-person";
+
+  const portraitArea = document.createElement("div");
+  portraitArea.className = "pan-flute-portrait";
+  const img = document.createElement("img");
+  try {
+    img.src = getPortraitPath(person);
+  } catch {
+    img.src = "images/portraits/default.png";
+  }
+  img.alt = `${person.name} portrait`;
+  img.onerror = () => {
+    img.src = "images/portraits/default.png";
+  };
+  portraitArea.appendChild(img);
+
+  const dialogue = document.createElement("div");
+  dialogue.className = "pan-flute-dialogue";
+  const name = document.createElement("strong");
+  name.textContent = `${person.name}:`;
+  const line = document.createElement("span");
+  line.textContent = getBodyExchangeReactionLine(person);
+  dialogue.appendChild(name);
+  dialogue.appendChild(line);
+
+  wrapper.appendChild(portraitArea);
+  wrapper.appendChild(dialogue);
+  return wrapper;
+}
+
+export function openPanFluteExchangeModal(pairs, options = {}) {
+  const overlay = document.getElementById("panFluteExchangeOverlay");
+  const modal = document.getElementById("panFluteExchangeModal");
+  const list = document.getElementById("panFluteExchangePairs");
+  if (!overlay || !modal || !list) return;
+
+  const title = modal.querySelector(".exchange-title h3");
+  const message = modal.querySelector(".exchange-title p");
+  if (title) title.textContent = options.title || "牧神の管笛";
+  if (message) message.textContent = options.message || "笛の音に誘われ、魂たちは互いの体を見てざわめいている...";
+
+  list.innerHTML = "";
+  pairs.forEach(([personA, personB], index) => {
+    const item = document.createElement("div");
+    item.className = "pan-flute-pair";
+
+    const label = document.createElement("div");
+    label.className = "pan-flute-pair-label";
+    label.textContent = `${index + 1}組目`;
+
+    const body = document.createElement("div");
+    body.className = "pan-flute-pair-body";
+    body.appendChild(createPanFluteExchangePerson(personA));
+
+    const arrow = document.createElement("div");
+    arrow.className = "pan-flute-arrow";
+    arrow.textContent = "⇄";
+    body.appendChild(arrow);
+
+    body.appendChild(createPanFluteExchangePerson(personB));
+    item.appendChild(label);
+    item.appendChild(body);
+    list.appendChild(item);
+  });
+
+  overlay.style.display = "block";
+  modal.style.display = "block";
+}
+
+export function closePanFluteExchangeModal() {
+  const overlay = document.getElementById("panFluteExchangeOverlay");
+  const modal = document.getElementById("panFluteExchangeModal");
+  if (overlay) overlay.style.display = "none";
+  if (modal) modal.style.display = "none";
 }
 
 /**

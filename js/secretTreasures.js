@@ -1,6 +1,6 @@
 import { doExchange } from "./exchange.js";
 import { refreshJobTable } from "./domain/jobTables.js";
-import { openExchangeModal, showMarriageMiracleModal, showMiracleResultModal } from "./miracles.js";
+import { openPanFluteExchangeModal, showMarriageMiracleModal, showMiracleResultModal } from "./miracles.js";
 import { startRaidEvent } from "./raidStart.js";
 import { addRelationship, removeRelationship, addSpouseRelationships } from "./relationships.js";
 import { updateChildGrowthStage } from "./reproduction.js";
@@ -40,6 +40,42 @@ function pickTwoRandom(items) {
   let secondIndex = Math.floor(Math.random() * (items.length - 1));
   if (secondIndex >= firstIndex) secondIndex += 1;
   return [items[firstIndex], items[secondIndex]];
+}
+
+function shuffled(items) {
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+function getPanFluteCandidates(village) {
+  return [
+    ...getVillagers(village),
+    ...(Array.isArray(village.visitors) ? village.visitors : []),
+    ...(Array.isArray(village.raidEnemies) ? village.raidEnemies : [])
+  ];
+}
+
+function pickPanFlutePairs(village) {
+  const outsiders = [
+    ...(Array.isArray(village.visitors) ? village.visitors : []),
+    ...(Array.isArray(village.raidEnemies) ? village.raidEnemies : [])
+  ];
+  const selected = [];
+  if (outsiders.length > 0) selected.push(randFrom(outsiders));
+
+  const remaining = getPanFluteCandidates(village).filter(person => !selected.includes(person));
+  selected.push(...shuffled(remaining).slice(0, 6 - selected.length));
+
+  const pairedTargets = shuffled(selected);
+  return [
+    [pairedTargets[0], pairedTargets[1]],
+    [pairedTargets[2], pairedTargets[3]],
+    [pairedTargets[4], pairedTargets[5]]
+  ];
 }
 
 function forceMarriage(a, b, village) {
@@ -268,18 +304,18 @@ export const SECRET_TREASURES = [
   {
     id: "pan_flute",
     name: "牧神の管笛",
-    desc: "訪問者、襲撃者がいる時に使用可能。ランダムな村人と訪問者/襲撃者を入れ替える。",
+    desc: "村人・訪問者・襲撃者から6名を選び、3組の肉体を入れ替える。",
     sellPrice: SECRET_TREASURE_SELL_PRICES.pan_flute,
-    canUse: (village) => getVillagers(village).length > 0 && [...(village.visitors || []), ...(village.raidEnemies || [])].length > 0,
-    blockedReason: "村人と、訪問者または襲撃者が必要です",
+    canUse: (village) => getPanFluteCandidates(village).length > 5,
+    blockedReason: "村人・訪問者・襲撃者の合計が6名以上必要です",
     use: (village) => {
-      const villager = randFrom(getVillagers(village));
-      const outsider = randFrom([...(village.visitors || []), ...(village.raidEnemies || [])]);
-      doExchange(villager, outsider, village, true);
-      village.log(`【秘宝】牧神の管笛により${villager.name}と${outsider.name}が入れ替わりました`);
-      openExchangeModal(villager, outsider, {
+      const pairs = pickPanFlutePairs(village);
+      pairs.forEach(([personA, personB]) => doExchange(personA, personB, village, true));
+      const pairText = pairs.map(([personA, personB]) => `${personA.name}と${personB.name}`).join("、");
+      village.log(`【秘宝】牧神の管笛により${pairText}が入れ替わりました`);
+      openPanFluteExchangeModal(pairs, {
         title: "牧神の管笛",
-        message: "笛の音に導かれ、二人の魂は互いの体を見て驚いている..."
+        message: "笛の音に導かれ、三つの入れ替わりが村を揺らしました。"
       });
     }
   },

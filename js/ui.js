@@ -27,6 +27,7 @@ import {
   getJobCostType,
 } from "./domain/jobMath.js";
 import { refreshJobTable } from "./domain/jobTables.js";
+import { getResourceStorageStatus, getResourceStorageWarningRatio } from "./domain/resourceLimits.js";
 import { isRestrictedNoJobVillager } from "./domain/rules.js";
 import { showDictionaryEntry } from "./dictionary.js";
 import { getPortraitPath, getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "./util.js";
@@ -96,6 +97,9 @@ function getWinterMonthsToPrepare(month) {
 function buildWarningMessages(village) {
   const warnings = [];
   const villagers = Array.isArray(village.villagers) ? village.villagers : [];
+  const foodStorage = getResourceStorageStatus(village, "food");
+  const materialStorage = getResourceStorageStatus(village, "materials");
+  const storageWarningRatio = getResourceStorageWarningRatio(village);
   const foodCost = getMonthlyFoodCost(village);
   const monthsOfFood = foodCost > 0 ? village.food / foodCost : Infinity;
   const winterNeed = villagers.reduce((sum, person) => sum + getVillagerWinterMaterialConsumption(person), 0) * getWinterMonthsToPrepare(village.month);
@@ -110,6 +114,30 @@ function buildWarningMessages(village) {
     warnings.push({
       level: monthsOfFood <= 1 ? "danger" : "warning",
       text: `食料が尽きそうです。このペースでは約${Math.max(0, monthsOfFood).toFixed(1)}か月で枯渇する可能性があります。`
+    });
+  }
+
+  if (foodStorage.ratio >= 1) {
+    warnings.push({
+      level: "danger",
+      text: `食料が保管上限に達しています。現在${foodStorage.current}/${foodStorage.limit}です。これ以上の余剰分は廃棄されます。`
+    });
+  } else if (foodStorage.ratio >= storageWarningRatio) {
+    warnings.push({
+      level: "warning",
+      text: `食料の保管上限が近づいています。現在${foodStorage.current}/${foodStorage.limit}です。余剰分は廃棄されます。`
+    });
+  }
+
+  if (materialStorage.ratio >= 1) {
+    warnings.push({
+      level: "danger",
+      text: `資材が保管上限に達しています。現在${materialStorage.current}/${materialStorage.limit}です。これ以上の余剰分は廃棄されます。`
+    });
+  } else if (materialStorage.ratio >= storageWarningRatio) {
+    warnings.push({
+      level: "warning",
+      text: `資材の保管上限が近づいています。現在${materialStorage.current}/${materialStorage.limit}です。余剰分は廃棄されます。`
     });
   }
 
@@ -267,6 +295,12 @@ function formatEstimate(parts) {
 
 function isMobileViewMode() {
   return document.body && document.body.classList.contains("mobile-mode");
+}
+
+function getStorageClass(status, warningRatio) {
+  if (status.current >= status.limit) return " resource-at-limit";
+  if (status.ratio >= warningRatio) return " resource-near-limit";
+  return "";
 }
 
 function compactEstimateText(text) {
@@ -714,6 +748,9 @@ export function updateUI(v) {
   const mobileScaleTitleBox = isMobileViewMode()
     ? `<div class="resource-box village-scale-title"><span class="resource-value">${getVillageScaleTitle(v.building)}</span></div>`
     : "";
+  const foodStorage = getResourceStorageStatus(v, "food");
+  const materialStorage = getResourceStorageStatus(v, "materials");
+  const storageWarningRatio = getResourceStorageWarningRatio(v);
 
   // 季節に応じた背景色を設定
   let seasonColor = "#ffffff"; // デフォルトは白
@@ -731,8 +768,8 @@ export function updateUI(v) {
   rp.innerHTML = `
     ${mobileScaleTitleBox}
     <div class="resource-box"><span class="resource-label">年/月</span><span class="resource-value">${v.year}年${v.month}月</span></div>
-    <div class="resource-box"><span class="resource-label">食料</span><span class="resource-value">${v.food}</span></div>
-    <div class="resource-box"><span class="resource-label">資材</span><span class="resource-value">${v.materials}</span></div>
+    <div class="resource-box${getStorageClass(foodStorage, storageWarningRatio)}"><span class="resource-label">食料</span><span class="resource-value">${foodStorage.current}/${foodStorage.limit}</span></div>
+    <div class="resource-box${getStorageClass(materialStorage, storageWarningRatio)}"><span class="resource-label">資材</span><span class="resource-value">${materialStorage.current}/${materialStorage.limit}</span></div>
     <div class="resource-box"><span class="resource-label">資金</span><span class="resource-value">${v.funds}</span></div>
     <div class="resource-box"><span class="resource-label">魔素</span><span class="resource-value">${v.mana}</span></div>
     <div class="resource-box"><span class="resource-label">技術</span><span class="resource-value">${v.tech}</span></div>

@@ -6,6 +6,7 @@ import { doExchange } from "./exchange.js";
 import { showRandomEventModal } from "./randomEventModal.js";
 import { matureBodyToAdultOnly, scheduleGoldenRainPregnancy } from "./reproduction.js";
 import { refreshJobTable } from "./domain/jobTables.js";
+import { addStoredResource } from "./domain/resourceLimits.js";
 import { addAcquiredStat, syncEffectiveStats } from "./domain/statLayers.js";
 import {
   getChildlikeRandomEventLine,
@@ -309,7 +310,7 @@ export class RandomEvents {
       }
       case "strangeRain": {
         let amt = randInt(10, 60);
-        v.food = clampValue(v.food + amt, 0, 99999);
+        addStoredResource(v, "food", amt);
         v.log(`空から魚が降り注いだ:食料+${amt}`);
         break;
       }

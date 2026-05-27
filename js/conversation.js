@@ -2,6 +2,7 @@ import { theVillage } from "./main.js";
 import { updateUI } from "./ui.js";
 import { getPortraitPath, isForcedHealingAction } from "./util.js";
 import { refreshJobTable } from "./domain/jobTables.js";
+import { addStoredResource } from "./domain/resourceLimits.js";
 import { ACTION_DEFEND, ACTION_TRAP, isRaidActionAssignable } from "./raidRules.js";
 import { getConversationLine } from "./dialogue/dialogueEngine.js";
 import { MERCHANT_SECRET_TREASURE_LINES } from "./data/dialogue/visitorLines.js";
@@ -628,7 +629,7 @@ function buyFromMerchant(visitor, stockKey, packs) {
   const cost = item.price * count;
   stock[item.stockKey] -= amount;
   theVillage.funds -= cost;
-  theVillage[item.stockKey] = Math.min(99999, theVillage[item.stockKey] + amount);
+  addStoredResource(theVillage, item.stockKey, amount);
   theVillage.log(`行商人から${item.label}${amount}を購入: 資金-${cost}`);
   updateUI(theVillage);
 }

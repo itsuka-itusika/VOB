@@ -29,6 +29,7 @@ import {
   rollMindCost,
 } from "./domain/jobMath.js";
 import { refreshJobTable } from "./domain/jobTables.js";
+import { addStoredResource } from "./domain/resourceLimits.js";
 import { addAcquiredStat, syncEffectiveStats } from "./domain/statLayers.js";
 import { rollSecretTreasureJobEvents, showSecretTreasureEventModals } from "./secretTreasureEvents.js";
 
@@ -418,7 +419,7 @@ function doFarm(p, v) {
     v.funds = clampValue(v.funds+amt, 0, 99999);
     resourceLabel = "資金";
   } else {
-    v.food = clampValue(v.food+amt, 0, 99999);
+    addStoredResource(v, "food", amt);
   }
 
   let logMsg = `${p.name}農作業:${resourceLabel}+${amt},体力-${tc},メンタル-${mc}`;
@@ -454,7 +455,7 @@ function doLumber(p, v) {
   p.mp=clampValue(p.mp-mc,0,100);
 
   let amt=calculateLumberYield(p, v);
-  v.materials=clampValue(v.materials+amt,0,99999);
+  addStoredResource(v, "materials", amt);
 
   let logMsg = `${p.name}伐採:資材+${amt},体力-${tc},メンタル-${mc}`;
 
@@ -512,7 +513,7 @@ function doHunt(p, v) {
     v.funds = clampValue(v.funds+amt, 0, 99999);
     v.log(`${p.name}狩猟:${result} 資金+${amt},体力-${tc},メンタル-${mc}`);
   } else {
-    v.food = clampValue(v.food+amt, 0, 99999);
+    addStoredResource(v, "food", amt);
     v.log(`${p.name}狩猟:${result} 食料+${amt},体力-${tc},メンタル-${mc}`);
   }
 
@@ -569,7 +570,7 @@ function doFish(p, v) {
     v.funds = clampValue(v.funds+amt, 0, 99999);
     v.log(`${p.name}漁:${result} 資金+${amt},体力-${tc},メンタル-${mc}`);
   } else {
-    v.food = clampValue(v.food+amt, 0, 99999);
+    addStoredResource(v, "food", amt);
     v.log(`${p.name}漁:${result} 食料+${amt},体力-${tc},メンタル-${mc}`);
   }
 
@@ -613,11 +614,11 @@ function doGather(p, v) {
   // ミダスの奇跡の効果
   if (v.villageTraits.includes("ミダス")) {
     v.funds = clampValue(v.funds+f, 0, 99999);
-    v.materials = clampValue(v.materials+mm, 0, 99999);
+    addStoredResource(v, "materials", mm);
     v.log(`${p.name}採集:資金+${f},資材+${mm},体力-${tc},メンタル-${mc}`);
   } else {
-    v.food = clampValue(v.food+f, 0, 99999);
-    v.materials = clampValue(v.materials+mm, 0, 99999);
+    addStoredResource(v, "food", f);
+    addStoredResource(v, "materials", mm);
     v.log(`${p.name}採集:食料+${f},資材+${mm},体力-${tc},メンタル-${mc}`);
   }
 
@@ -1179,7 +1180,7 @@ function doBrewing(p, v) {
   let foodGain = brewingYield.food;
   let manaGain = brewingYield.mana;
   
-  v.food = clampValue(v.food + foodGain, 0, 99999);
+  addStoredResource(v, "food", foodGain);
   v.mana = clampValue(v.mana + manaGain, 0, 99999);
 
   let logMsg = `${p.name}醸造:食料+${foodGain},魔素+${manaGain},体力-${tc},メンタル-${mc}`;

@@ -40,6 +40,7 @@ const TURN_BLOCKING_MODAL_SELECTORS = [
   "#secretTreasureModal",
   "#conversationModal",
   "#exchangeModal",
+  "#panFluteExchangeModal",
   "#raidModal",
   "#villageScaleModal",
   "[data-close-relationship-modal]",

@@ -1,4 +1,5 @@
 import { refreshJobTable } from "./domain/jobTables.js";
+import { MAX_STOREHOUSES, getResourceStorageLimit } from "./domain/resourceLimits.js";
 import { showVillageScaleMilestones } from "./villageScale.js";
 
 function ensureBuildingFlags(village) {
@@ -23,6 +24,18 @@ function isScaleAtLeast(village, threshold) {
   return (Number(village?.building) || 0) >= threshold;
 }
 
+function hasBuilt(village, buildingId) {
+  return Array.isArray(village?.buildings) && village.buildings.includes(buildingId);
+}
+
+function canBuildStorehouse(village) {
+  return !!(
+    village?.buildingFlags?.canBuildStorehouse ||
+    village?.buildingFlags?.hasBarn ||
+    hasBuilt(village, "barn")
+  );
+}
+
 /** 建築物の定義 */
 export const BUILDINGS = [
   {
@@ -38,6 +51,37 @@ export const BUILDINGS = [
       village.log(`家屋建設: 人口上限+2 (現在${village.popLimit}人), 規模+10`);
     },
     allowMultiple: true
+  },
+  {
+    id: "barn",
+    name: "納屋",
+    materials: 50,
+    funds: 0,
+    tech: 0,
+    desc: "食料と資材の所持上限+600。貯蔵庫建築を解放。規模+20",
+    effect: standardBuildingEffect({
+      scale: 20,
+      flag: "hasBarn",
+      after: (village) => {
+        ensureBuildingFlags(village).canBuildStorehouse = true;
+      },
+      log: "納屋建設完了: 食料と資材の所持上限+600、貯蔵庫建築解放、規模+20"
+    })
+  },
+  {
+    id: "storehouse",
+    name: "貯蔵庫",
+    materials: 100,
+    funds: 100,
+    tech: 50,
+    desc: "食料と資材の所持上限+3000。最大3つまで建設可能。規模+30",
+    allowMultiple: true,
+    maxCount: MAX_STOREHOUSES,
+    isUnlocked: canBuildStorehouse,
+    effect: standardBuildingEffect({
+      scale: 30,
+      log: "貯蔵庫建設完了: 食料と資材の所持上限+3000、規模+30"
+    })
   },
   {
     id: "tavern",
@@ -196,8 +240,9 @@ function getBuildingCounts(village) {
   }, {});
 }
 
-function getBuildBlockReason(building, village, isBuilt) {
+function getBuildBlockReason(building, village, { isBuilt = false, reachedLimit = false } = {}) {
   if (isBuilt) return "建設済み";
+  if (reachedLimit) return "建設上限";
   const reasons = [];
   if (village.materials < building.materials) reasons.push("資材不足");
   if (village.funds < building.funds) reasons.push("資金不足");
@@ -223,21 +268,23 @@ function createBuildingItem(building, village) {
   const div = document.createElement("div");
   div.className = "building-item";
 
-  const isBuilt = !building.allowMultiple && (village.buildings || []).includes(building.id);
-  const canBuild = !isBuilt &&
+  const builtCount = (village.buildings || []).filter(id => id === building.id).length;
+  const isBuilt = !building.allowMultiple && builtCount > 0;
+  const reachedLimit = Number.isFinite(building.maxCount) && builtCount >= building.maxCount;
+  const canBuild = !isBuilt && !reachedLimit &&
     village.materials >= building.materials &&
     village.funds >= building.funds &&
     village.tech >= building.tech;
-  const builtCount = building.allowMultiple
-    ? (village.buildings || []).filter(id => id === building.id).length
-    : 0;
-  const reasonText = getBuildBlockReason(building, village, isBuilt);
+  const countText = Number.isFinite(building.maxCount)
+    ? `${builtCount}/${building.maxCount}`
+    : builtCount;
+  const reasonText = getBuildBlockReason(building, village, { isBuilt, reachedLimit });
 
   div.innerHTML = `
     <div class="building-header">
       <h4>${building.name}</h4>
       ${isBuilt ? '<span class="built-mark">建設済</span>' : ""}
-      ${builtCount > 0 ? `<span class="built-count">建設数: ${builtCount}</span>` : ""}
+      ${(builtCount > 0 || Number.isFinite(building.maxCount)) ? `<span class="built-count">建設数: ${countText}</span>` : ""}
     </div>
     <div class="building-desc">${building.desc}</div>
     <div class="building-cost">
@@ -250,8 +297,8 @@ function createBuildingItem(building, village) {
 
   const button = document.createElement("button");
   button.className = `building-button${isBuilt ? " built" : ""}`;
-  button.textContent = isBuilt ? "建設済" : (canBuild ? "建設" : "建設不可");
-  button.disabled = isBuilt || !canBuild;
+  button.textContent = isBuilt ? "建設済" : (reachedLimit ? "上限到達" : (canBuild ? "建設" : "建設不可"));
+  button.disabled = isBuilt || reachedLimit || !canBuild;
   if (canBuild) {
     button.onclick = () => {
       if (confirm(`${building.name}を建設しますか？`)) constructBuilding(building, village);
@@ -277,6 +324,7 @@ export function openBuildingModal(village) {
       <div>資材: ${village.materials}</div>
       <div>資金: ${village.funds}</div>
       <div>技術: ${village.tech}</div>
+      <div>保管上限: ${getResourceStorageLimit(village)}</div>
     </div>
     <div class="building-list">
       <h3>建設可能な建築物</h3>
@@ -304,6 +352,7 @@ export function closeBuildingModal() {
 function constructBuilding(building, village) {
   village.materials -= building.materials;
   village.funds -= building.funds;
+  village.tech -= building.tech;
   if (!Array.isArray(village.buildings)) village.buildings = [];
   village.buildings.push(building.id);
 

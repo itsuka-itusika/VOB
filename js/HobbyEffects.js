@@ -1,4 +1,5 @@
 import { clampValue, randInt } from "./util.js";
+import { addStoredResource } from "./domain/resourceLimits.js";
 import { addAcquiredStat } from "./domain/statLayers.js";
 
 export class HobbyEffects {
@@ -285,7 +286,7 @@ export class HobbyEffects {
   static applyFishingHobby(p, v) {
     const gain = randInt(6, 14);
     p.hp = clampValue(p.hp - 5, 0, 100);
-    v.food = clampValue(v.food + gain, 0, 99999);
+    addStoredResource(v, "food", gain);
     return `(釣り:体力-5,食料+${gain}${this.maybeRaiseStat(p, "dex", 0.25)}${this.maybeRaiseStat(p, "cou", 0.15)})`;
   }
 
@@ -315,7 +316,7 @@ export class HobbyEffects {
 
   static applyGardening(p, v) {
     const gain = randInt(4, 10);
-    v.food = clampValue(v.food + gain, 0, 99999);
+    addStoredResource(v, "food", gain);
     p.happiness = clampValue(p.happiness + 6, 0, 100);
     return `(園芸:食料+${gain},幸福+6${this.maybeRaiseStat(p, "eth", 0.2)}${this.maybeRaiseStat(p, "dex", 0.15)})`;
   }
@@ -362,7 +363,7 @@ export class HobbyEffects {
   static applyHuntingHobby(p, v) {
     const gain = randInt(8, 16);
     p.hp = clampValue(p.hp - 8, 0, 100);
-    v.food = clampValue(v.food + gain, 0, 99999);
+    addStoredResource(v, "food", gain);
     return `(ハンティング:体力-8,食料+${gain}${this.maybeRaiseStat(p, "cou", 0.25)}${this.maybeRaiseStat(p, "dex", 0.15)})`;
   }
 
