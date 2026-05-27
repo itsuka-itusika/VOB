@@ -66,11 +66,14 @@ function runDebugAction() {
   theVillage.tech = 10000;
 
   if (!Array.isArray(theVillage.secretTreasures)) theVillage.secretTreasures = [];
-  const ownedIds = new Set(theVillage.secretTreasures.map(entry => typeof entry === "string" ? entry : entry?.id));
+  const ownedTreasureKeys = new Set(theVillage.secretTreasures.flatMap(entry => {
+    if (typeof entry === "string") return [entry];
+    return [entry?.id, entry?.name].filter(Boolean);
+  }));
   SECRET_TREASURES.forEach(secretTreasure => {
-    if (!ownedIds.has(secretTreasure.id)) {
+    if (!ownedTreasureKeys.has(secretTreasure.id) && !ownedTreasureKeys.has(secretTreasure.name)) {
       theVillage.secretTreasures.push({ id: secretTreasure.id });
-      ownedIds.add(secretTreasure.id);
+      ownedTreasureKeys.add(secretTreasure.id);
     }
   });
 
