@@ -157,6 +157,7 @@ function canBeMother(person, village) {
   return isHumanoid(person) &&
     person.bodySex === "女" &&
     Number(person.bodyAge) >= 16 &&
+    Number(person.bodyAge) <= 38 &&
     checkHasRelationship(person, "既婚") &&
     !person.pregnancy &&
     !hasTrait(person, "妊娠") &&

@@ -6,56 +6,67 @@ import { randInt, clampValue, getPortraitPath } from "./util.js";
  * 恋人チェック (星霜祭などで呼ばれる)
  */
 export function doLoverCheck(village) {
-  let candF = village.villagers.filter(x=>
-    x.bodySex==="女" && x.bodyAge>=16 && x.bodyAge<=30 
-    && !checkHasRelationship(x,"既婚")
-    && !checkHasRelationship(x,"恋人")
+  let candidatesA = village.villagers.filter(x=>
+    x.spiritAge >= 16
+    && isSingle(x)
   );
-  let candM = village.villagers.filter(x=>
-    x.bodySex==="男" && x.bodyAge>=16 && x.bodyAge<=39
-    && !checkHasRelationship(x,"既婚")
-    && !checkHasRelationship(x,"恋人")
-  );
-  if (candF.length===0||candM.length===0) {
-    village.log("恋人判定:未婚男女なし");
+  if (candidatesA.length===0) {
+    village.log("恋人判定:対象者なし");
     return false;
   }
-  let f = randChoice(candF);
-  let m = randChoice(candM);
 
-  let dAge = m.bodyAge - f.bodyAge;
-  if (dAge < -5 || dAge>9) {
-    village.log("年齢差大きすぎ:恋人失敗");
+  let a = randChoice(candidatesA);
+  let candidatesB = village.villagers.filter(b=>isLoverCandidate(a, b));
+  if (candidatesB.length===0) {
+    village.log(`恋人判定:${a.name}の相手候補なし`);
     return false;
   }
-  let dEth = m.eth - f.eth;
-  if (dEth<-9||dEth>9) {
-    village.log("倫理差大きすぎ:恋人失敗");
-    return false;
-  }
-  let dChr = f.chr - m.chr;
-  if (dChr<-12||dChr>12) {
-    village.log("魅力差大きすぎ:恋人失敗");
-    return false;
-  }
-  let p1=Math.min(100, m.sexdr*4);
-  let p2=Math.min(100, f.sexdr*4);
-  let sc = (p1*p2)/10000;  // 例: p1=80, p2=40 => sc= (80*40)/10000=0.32
+
+  let b = randChoice(candidatesB);
+  let sc = getLoverSuccessRate(a, b);
   if (Math.random()<=sc) {
-    addRelationship(f, `恋人:${m.name}`);
-    addRelationship(m, `恋人:${f.name}`);
-    f.happiness=clampValue(f.happiness+50,0,100);
-    m.happiness=clampValue(m.happiness+50,0,100);
-    village.log(`${f.name}と${m.name}恋人成立(成功率${(sc*100).toFixed(1)}%)`);
-    showRelationshipModal("恋人成立", `${f.name}と${m.name}が恋人になりました。`, [
-      [f, getLoverLine(f, m)],
-      [m, getLoverLine(m, f)]
+    addRelationship(a, `恋人:${b.name}`);
+    addRelationship(b, `恋人:${a.name}`);
+    a.happiness=clampValue(a.happiness+50,0,100);
+    b.happiness=clampValue(b.happiness+50,0,100);
+    village.log(`${a.name}と${b.name}恋人成立(成功率${(sc*100).toFixed(1)}%)`);
+    showRelationshipModal("恋人成立", `${a.name}と${b.name}が恋人になりました。`, [
+      [a, getLoverLine(a, b)],
+      [b, getLoverLine(b, a)]
     ]);
     return true;
   } else {
-    village.log(`${f.name}と${m.name}恋愛失敗`);
+    village.log(`${a.name}と${b.name}恋愛失敗`);
     return false;
   }
+}
+
+function isSingle(person) {
+  return !checkHasRelationship(person,"既婚") && !checkHasRelationship(person,"恋人");
+}
+
+function getOppositeSex(sex) {
+  if (sex === "男") return "女";
+  if (sex === "女") return "男";
+  return null;
+}
+
+function isLoverCandidate(a, b) {
+  if (!a || !b || a === b) return false;
+  const expectedBodySex = getOppositeSex(a.spiritSex);
+  if (!expectedBodySex) return false;
+  return isSingle(b)
+    && b.bodySex === expectedBodySex
+    && b.bodyAge >= 16
+    && b.bodyAge >= a.bodyAge - 10
+    && b.bodyAge <= a.spiritAge + 8
+    && Math.abs(a.eth - b.eth) + Math.abs(a.chr - b.chr) <= 16;
+}
+
+function getLoverSuccessRate(a, b) {
+  let pA=Math.min(100, (Number(a.sexdr) || 0)*4);
+  let pB=Math.min(100, (Number(b.sexdr) || 0)*4);
+  return clampValue((pA*pB)/10000, 0.1, 0.5);
 }
 
 /**

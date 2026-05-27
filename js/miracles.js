@@ -652,7 +652,7 @@ function warMiracle(p, v) {
 
 /** 竈女神(恋人を結婚100%) */
 function hearthMiracle(v) {
-  let c=v.villagers.filter(x=> x.spiritAge>=18 && checkHasRelationship(x,"恋人") && !checkHasRelationship(x,"既婚"));
+  let c=v.villagers.filter(x=> checkHasRelationship(x,"恋人") && !checkHasRelationship(x,"既婚"));
   if (c.length===0) {
     v.log("【竈女神の奇跡】結婚すべき恋人なし→30魔素返還");
     refundMiracleMana(v, 30);
