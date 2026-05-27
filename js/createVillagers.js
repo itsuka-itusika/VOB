@@ -3,6 +3,7 @@
 import { Villager } from "./classes.js";
 import { randInt, randChoice, randNormalInRange } from "./util.js";
 import { refreshJobTable } from "./domain/jobTables.js";
+import { applyGenerationBaseTraitBonuses, setBaseStatsFromEffective, syncEffectiveStats } from "./domain/statLayers.js";
 import {
   FEMALE_PORTRAIT_FILES,
   MALE_PORTRAIT_FILES,
@@ -296,6 +297,7 @@ export function createRandomVillager({ sex, minAge, maxAge, params = {}, ranges 
         }
       });
     }
+    setBaseStatsFromEffective(vill);
   } else {
     // 通常のランダム初期化
     initRandomParams(vill);
@@ -404,6 +406,7 @@ export function initRandomParams(v) {
     v.sexdr = randNormalInRange(3, 25);
   }
 
+  setBaseStatsFromEffective(v);
 }
 
 // 精神特性と口調タイプのマッピング
@@ -666,43 +669,16 @@ export function assignBodyMindTraits(v) {
  * 特性によるパラメーター修正
  */
 export function applyTraitParameterBonuses(v) {
-  if (v.bodyTraits.includes("聖女の輝き")) {
-    v.chr += 10; 
-    v.mag += 10;
-  }
-  if (v.bodyTraits.includes("巨躯")) {
-    v.str += 10;
-  }
-  if (v.mindTraits.includes("ワーカホリック")) {
-    v.ind += 3;
-  }
-  if (v.mindTraits.includes("ニート")) {
-    v.ind -= 2;
-  }
-  if (v.mindTraits.includes("箱入り")) {
-    v.chr += 5;
-  }
-  if (v.mindTraits.includes("内向的")) {
-    v.int += 4; 
-    v.ind += 6; 
-    v.eth += 4;
-  }
-  if (v.mindTraits.includes("本の虫")) {
-    v.int += 8;
-  }
+  applyGenerationBaseTraitBonuses(v);
 
   // 加齢
   if (v.bodyAge >= 60) {
     if (!v.bodyTraits.includes("老人")) v.bodyTraits.push("老人");
-    v.str = Math.floor(v.str * 0.5);
-    v.vit = Math.floor(v.vit * 0.5);
-    v.chr = Math.floor(v.chr * 0.5);
   } else if (v.bodyAge >= 40) {
     if (!v.bodyTraits.includes("中年")) v.bodyTraits.push("中年");
-    v.str = Math.floor(v.str * 0.75);
-    v.vit = Math.floor(v.vit * 0.75);
-    v.chr = Math.floor(v.chr * 0.75);
   }
+
+  syncEffectiveStats(v);
 }
 
 /**

@@ -1,6 +1,8 @@
 // exchange.js
 
 import { refreshJobTable } from "./domain/jobTables.js";
+import { PHYSICAL_ABILITY_STATS } from "./domain/personSchema.js";
+import { ensureStatLayers, syncEffectiveStats } from "./domain/statLayers.js";
 
 const RAID_JOBS = ["野盗", "ゴブリン", "狼", "キュクロプス", "ハーピー"];
 
@@ -27,6 +29,16 @@ function inferRaidJob(person) {
   return person?.job || "なし";
 }
 
+function pickStats(source, stats) {
+  return Object.fromEntries(stats.map(stat => [stat, source?.[stat] ?? 0]));
+}
+
+function applyStats(target, stats) {
+  Object.entries(stats || {}).forEach(([stat, value]) => {
+    target[stat] = value;
+  });
+}
+
 function normalizeRaidEnemyAssignment(person) {
   const raidJob = inferRaidJob(person);
   person.job = raidJob;
@@ -49,6 +61,8 @@ function refreshAssignmentAfterExchange(person, village) {
  * Swap body-related parameters between two characters.
  */
 export function doExchange(a, b, v, isLightning = false) {
+  ensureStatLayers(a);
+  ensureStatLayers(b);
   const exchangeParams = {
     bodySex: a.bodySex,
     bodyAge: a.bodyAge,
@@ -58,11 +72,8 @@ export function doExchange(a, b, v, isLightning = false) {
     raiderPortrait: a.raiderPortrait,
     visitorPortrait: a.visitorPortrait,
     hp: a.hp,
-    str: a.str,
-    vit: a.vit,
-    dex: a.dex,
-    mag: a.mag,
-    chr: a.chr,
+    baseStats: pickStats(a.baseStats, PHYSICAL_ABILITY_STATS),
+    acquiredStatMods: pickStats(a.acquiredStatMods, PHYSICAL_ABILITY_STATS),
     bodyTraits: [...a.bodyTraits],
     pregnancy: a.pregnancy ? JSON.parse(JSON.stringify(a.pregnancy)) : null,
     postpartumMonths: a.postpartumMonths || 0,
@@ -82,11 +93,8 @@ export function doExchange(a, b, v, isLightning = false) {
   a.raiderPortrait = b.raiderPortrait;
   a.visitorPortrait = b.visitorPortrait;
   a.hp = b.hp;
-  a.str = b.str;
-  a.vit = b.vit;
-  a.dex = b.dex;
-  a.mag = b.mag;
-  a.chr = b.chr;
+  applyStats(a.baseStats, pickStats(b.baseStats, PHYSICAL_ABILITY_STATS));
+  applyStats(a.acquiredStatMods, pickStats(b.acquiredStatMods, PHYSICAL_ABILITY_STATS));
   a.bodyTraits = [...b.bodyTraits];
   a.pregnancy = b.pregnancy ? JSON.parse(JSON.stringify(b.pregnancy)) : null;
   a.postpartumMonths = b.postpartumMonths || 0;
@@ -105,11 +113,8 @@ export function doExchange(a, b, v, isLightning = false) {
   b.raiderPortrait = exchangeParams.raiderPortrait;
   b.visitorPortrait = exchangeParams.visitorPortrait;
   b.hp = exchangeParams.hp;
-  b.str = exchangeParams.str;
-  b.vit = exchangeParams.vit;
-  b.dex = exchangeParams.dex;
-  b.mag = exchangeParams.mag;
-  b.chr = exchangeParams.chr;
+  applyStats(b.baseStats, exchangeParams.baseStats);
+  applyStats(b.acquiredStatMods, exchangeParams.acquiredStatMods);
   b.bodyTraits = [...exchangeParams.bodyTraits];
   b.pregnancy = exchangeParams.pregnancy ? JSON.parse(JSON.stringify(exchangeParams.pregnancy)) : null;
   b.postpartumMonths = exchangeParams.postpartumMonths;
@@ -120,6 +125,8 @@ export function doExchange(a, b, v, isLightning = false) {
   b.toddlerPortraitFile = exchangeParams.toddlerPortraitFile;
   b.toddlerPortraitGroup = exchangeParams.toddlerPortraitGroup;
 
+  syncEffectiveStats(a);
+  syncEffectiveStats(b);
   refreshAssignmentAfterExchange(a, v);
   refreshAssignmentAfterExchange(b, v);
 

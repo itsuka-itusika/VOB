@@ -1,6 +1,7 @@
 import { createRandomVillager } from "./createVillagers.js";
 import { RAIDER_TYPES } from "./data/raidData.js";
 import { refreshJobTable } from "./domain/jobTables.js";
+import { setBaseStat, syncEffectiveStats } from "./domain/statLayers.js";
 import { showRaidWarningModal } from "./raidWarningModal.js";
 import { randChoice, randInt } from "./util.js";
 
@@ -92,7 +93,7 @@ export function startRaidEvent(village) {
         ...raiderType.forcedBodyTraits,
         randChoice(raiderType.bodyTraits)
       ];
-      e.mag = randInt(10, Math.min(18, Math.floor(e.str) - 1));
+      setBaseStat(e, "mag", randInt(10, Math.min(18, Math.floor(e.str) - 1)));
       // 狼の趣味を設定
       e.hobby = randChoice(raiderType.hobbies);
     }
@@ -137,6 +138,7 @@ export function startRaidEvent(village) {
       e.mindTraits = e.mindTraits.filter(trait => trait !== "ニート");
     }
 
+    syncEffectiveStats(e);
     village.raidEnemies.push(e);
   }
 

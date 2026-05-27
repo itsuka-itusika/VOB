@@ -1,5 +1,5 @@
 import { Villager } from "./classes.js";
-import { randChoice, clampValue, round3, randFloat, getPortraitPath } from "./util.js";
+import { randChoice, clampValue, randFloat, getPortraitPath } from "./util.js";
 import {
   generateRandomName,
   assignBodyMindTraits,
@@ -9,6 +9,7 @@ import {
   selectToddlerPortraitByCharacter
 } from "./createVillagers.js";
 import { refreshJobTable } from "./domain/jobTables.js";
+import { getBaseStat, setBaseStat, setBaseStatsFromEffective, syncEffectiveStats } from "./domain/statLayers.js";
 import { addRelationship, checkHasRelationship, getRelationshipTargetName, normalizeRelationship } from "./relationships.js";
 import { getDialogueLine } from "./dialogue/dialogueEngine.js";
 
@@ -65,60 +66,6 @@ function removeTraits(list, traits) {
   return Array.isArray(list) ? list.filter(trait => !traits.includes(trait)) : [];
 }
 
-function divideSnapshotStats(snapshot, stats, factor) {
-  stats.forEach(stat => {
-    snapshot[stat] = round3((Number(snapshot[stat]) || 1) / factor);
-  });
-}
-
-function subtractSnapshotStat(snapshot, stat, amount) {
-  snapshot[stat] = clampValue((Number(snapshot[stat]) || 0) - amount, 0, 100);
-}
-
-function removeTemporaryInheritanceModifiers(snapshot, person) {
-  if (hasMindTrait(person, "狂乱")) {
-    divideSnapshotStats(snapshot, ["eth"], 0.2);
-    subtractSnapshotStat(snapshot, "sexdr", 15);
-  }
-  if (hasTrait(person, "火星の加護")) {
-    divideSnapshotStats(snapshot, ["str", "vit", "cou"], 1.6);
-    divideSnapshotStats(snapshot, ["int", "ind", "eth"], 0.2);
-  }
-  if (hasMindTrait(person, "ニケ")) {
-    subtractSnapshotStat(snapshot, "cou", 10);
-  }
-  if (hasTrait(person, "飢餓")) {
-    divideSnapshotStats(snapshot, ["str", "vit", "dex"], 0.5);
-  }
-  if (hasTrait(person, "凍え")) {
-    divideSnapshotStats(snapshot, ["str", "vit", "dex"], 0.8);
-  }
-  if (hasTrait(person, "疲労")) {
-    divideSnapshotStats(snapshot, ["str", "vit", "dex"], 0.8);
-  }
-  if (hasTrait(person, "過労")) {
-    divideSnapshotStats(snapshot, ["str", "vit", "dex"], 0.25);
-  }
-  if (hasTrait(person, "疫病")) {
-    divideSnapshotStats(snapshot, ["str", "vit", "dex"], 0.5);
-  }
-  if (hasTrait(person, "産褥")) {
-    divideSnapshotStats(snapshot, ["str", "vit"], 0.5);
-  }
-  if (hasMindTrait(person, "心労")) {
-    divideSnapshotStats(snapshot, ["int", "ind", "eth", "cou", "sexdr"], 0.8);
-  }
-  if (hasMindTrait(person, "抑鬱")) {
-    divideSnapshotStats(snapshot, ["int", "ind", "eth", "cou", "sexdr"], 0.25);
-  }
-  if (hasTrait(person, "老人")) {
-    divideSnapshotStats(snapshot, ["str", "vit", "chr"], 0.5);
-  }
-  if (hasTrait(person, "中年")) {
-    divideSnapshotStats(snapshot, ["str", "vit", "chr"], 0.75);
-  }
-}
-
 function isHumanoid(person) {
   return HUMANOID_RACES.has(person?.race || "人間");
 }
@@ -139,9 +86,8 @@ function snapshotParent(person) {
       : []
   };
   [...PHYSICAL_STATS, ...MENTAL_STATS].forEach(stat => {
-    snap[stat] = Number(person[stat]) || 1;
+    snap[stat] = getBaseStat(person, stat) || 1;
   });
-  removeTemporaryInheritanceModifiers(snap, person);
   return snap;
 }
 
@@ -185,44 +131,9 @@ function rollInheritedTraits(data) {
   return inherited;
 }
 
-function addBodyStatBonus(child, stat, amount) {
-  child[stat] = (Number(child[stat]) || 0) + amount;
-  ["potentialStats", "bodyPotentialStats", "mindPotentialStats"].forEach(key => {
-    if (child[key]) {
-      child[key][stat] = (Number(child[key][stat]) || 0) + amount;
-    }
-  });
-}
-
 function applyInheritedBodyTraits(child, traits) {
   traits.forEach(trait => addUnique(child.bodyTraits, trait));
-  if (traits.includes("大地の巫女")) {
-    addBodyStatBonus(child, "vit", 10);
-    addBodyStatBonus(child, "chr", 10);
-  }
-  if (traits.includes("月の巫女")) {
-    addBodyStatBonus(child, "dex", 10);
-    addBodyStatBonus(child, "chr", 10);
-  }
-  if (traits.includes("太陽の巫女")) {
-    addBodyStatBonus(child, "str", 15);
-    addBodyStatBonus(child, "chr", 5);
-  }
-  if (traits.includes("梟の巫女")) {
-    addBodyStatBonus(child, "mag", 10);
-    addBodyStatBonus(child, "chr", 10);
-  }
-  if (traits.includes("聖女の輝き")) {
-    addBodyStatBonus(child, "mag", 10);
-    addBodyStatBonus(child, "chr", 10);
-  }
-  if (traits.includes("大地の加護")) addBodyStatBonus(child, "vit", 5);
-  if (traits.includes("月の加護")) addBodyStatBonus(child, "dex", 5);
-  if (traits.includes("太陽の加護")) addBodyStatBonus(child, "str", 5);
-  if (traits.includes("梟の加護")) addBodyStatBonus(child, "mag", 5);
-  if (traits.includes(THUNDER_BLESSING_TRAIT)) {
-    PHYSICAL_STATS.forEach(stat => addBodyStatBonus(child, stat, 3));
-  }
+  syncEffectiveStats(child);
 }
 
 function hasOwnChildInVillage(village, parent) {
@@ -366,22 +277,24 @@ function applyGrowthStats(child) {
 
   if (bodyPotential && shouldApplyPhysicalGrowth) {
     PHYSICAL_STATS.forEach(stat => {
-      child[stat] = Math.max(1, Math.round(bodyPotential[stat] * getGrowthRatio(bodyAge, stat)));
+      setBaseStat(child, stat, Math.max(1, Math.round(bodyPotential[stat] * getGrowthRatio(bodyAge, stat))), { sync: false });
     });
     if (bodyAge >= 16) child.adultBodyReached = true;
   }
   if (mindPotential && shouldApplyMentalGrowth) {
     MENTAL_STATS.forEach(stat => {
-      child[stat] = Math.max(1, Math.round(mindPotential[stat] * getGrowthRatio(spiritAge, stat)));
+      setBaseStat(child, stat, Math.max(1, Math.round(mindPotential[stat] * getGrowthRatio(spiritAge, stat))), { sync: false });
     });
     if (spiritAge >= 16) child.adultMindReached = true;
   }
+  syncEffectiveStats(child);
 }
 
 function buildAdultTemplate(child, potentialStats) {
   const adult = new Villager(child.name, child.bodySex, 16);
   adult.race = child.race;
   Object.assign(adult, potentialStats);
+  setBaseStatsFromEffective(adult);
   adult.spiritAge = 16;
   adult.spiritSex = child.spiritSex;
   assignBodyMindTraits(adult);
@@ -505,6 +418,7 @@ export function updateChildGrowthStage(child, village, { announce = false } = {}
   }
 
   child.speechType = determineSpeechType(child);
+  syncEffectiveStats(child);
   setChildPortrait(child);
   refreshJobTable(child, village);
 
@@ -533,13 +447,15 @@ export function matureBodyToAdultOnly(character, village) {
     : character.potentialStats;
   if (bodyPotential) {
     PHYSICAL_STATS.forEach(stat => {
-      character[stat] = Math.max(1, Math.round(bodyPotential[stat] * getGrowthRatio(16, stat)));
+      setBaseStat(character, stat, Math.max(1, Math.round(bodyPotential[stat] * getGrowthRatio(16, stat))), { sync: false });
     });
   }
   character.adultBodyReached = true;
+  syncEffectiveStats(character);
 
   const currentBodyTraits = removeTraits(character.bodyTraits, CHILD_BODY_TRAITS);
   character.bodyTraits = [...new Set([...(character.adultBodyTraits || []), ...currentBodyTraits])];
+  syncEffectiveStats(character);
 
   if (!character.adultPortraitFile) {
     character.adultPortraitFile = selectPortraitByCharacter(character);
@@ -555,8 +471,7 @@ export function handleBirthAndPostpartum(village) {
       person.postpartumMonths -= 1;
       if (person.postpartumMonths <= 0 && hasTrait(person, "産褥")) {
         person.bodyTraits = person.bodyTraits.filter(trait => trait !== "産褥");
-        person.str = round3(person.str / 0.5);
-        person.vit = round3(person.vit / 0.5);
+        syncEffectiveStats(person);
         village.log(`${person.name}は産褥から回復しました`);
       }
     }
@@ -572,8 +487,7 @@ export function handleBirthAndPostpartum(village) {
       mother.bodyTraits = mother.bodyTraits.filter(trait => trait !== "妊娠");
       addUnique(mother.bodyTraits, "臨月");
       if (!mother.pregnancy.fullTermApplied) {
-        mother.str = round3(mother.str * 0.5);
-        mother.vit = round3(mother.vit * 0.5);
+        syncEffectiveStats(mother);
         mother.pregnancy.fullTermApplied = true;
       }
       if (!wasFullTerm) {
@@ -677,11 +591,8 @@ function giveBirth(village, mother) {
   const data = mother.pregnancy;
   if (!data) return;
 
-  if (data.fullTermApplied) {
-    mother.str = round3(mother.str / 0.5);
-    mother.vit = round3(mother.vit / 0.5);
-  }
   mother.bodyTraits = mother.bodyTraits.filter(trait => trait !== "妊娠" && trait !== "臨月");
+  syncEffectiveStats(mother);
 
   const birthParentName = mother.name;
   const childName = generateRandomName(data.childSex, {
@@ -696,6 +607,7 @@ function giveBirth(village, mother) {
   child.bodyPotentialStats = { ...data.potentialStats };
   child.mindPotentialStats = { ...data.potentialStats };
   Object.assign(child, child.potentialStats);
+  setBaseStatsFromEffective(child);
   child.bodyTraits = ["赤子"];
   child.mindTraits = ["無垢"];
   if (child.race === "ハーピー") {
@@ -731,8 +643,7 @@ function giveBirth(village, mother) {
   mother.hp = Math.floor(mother.hp * 0.25);
   addUnique(mother.bodyTraits, "産褥");
   mother.postpartumMonths = POSTPARTUM_MONTHS;
-  mother.str = round3(mother.str * 0.5);
-  mother.vit = round3(mother.vit * 0.5);
+  syncEffectiveStats(mother);
   mother.job = "なし";
   mother.action = "療養";
   mother.jobTable = ["なし"];

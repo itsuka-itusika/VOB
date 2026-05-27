@@ -8,6 +8,7 @@ import { RandomEvents } from "./RandomEvents.js";
 import { handleBirthAndPostpartum, handlePregnancyChecks, updateChildGrowthStage } from "./reproduction.js";
 import { showFestivalModal } from "./festivalModal.js";
 import { applyForcedActionRestriction, refreshJobTable } from "./domain/jobTables.js";
+import { syncEffectiveStats } from "./domain/statLayers.js";
 
 const OPENING_RAID_GRACE_YEAR = 1091;
 const OPENING_RAID_GRACE_LAST_MONTH = 6;
@@ -284,9 +285,7 @@ export function endOfMonthProcess(v) {
   v.villagers.forEach(p => {
     if (p.mindTraits.includes("狂乱")) {
       p.mindTraits = p.mindTraits.filter(t => t !== "狂乱");
-      // 倫理値と好色値を元に戻す
-      p.eth = round3(p.eth / 0.2);
-      p.sexdr = clampValue(p.sexdr - 15, 0, 100);  // 加算した15を引く
+      syncEffectiveStats(p);
       v.log(`${p.name}の狂乱が解除された`);
     }
   });
@@ -299,16 +298,9 @@ export function endOfMonthProcess(v) {
       }
       p.ares++;
       if (p.ares >= 3) {
-         // 3ヶ月経過したら、効果を終了
          p.bodyTraits = p.bodyTraits.filter(trait => trait !== "火星の加護");
-         // 効果を元に戻す（付与時の逆の計算を行う）
-         p.str = round3(p.str / 1.6);
-         p.vit = round3(p.vit / 1.6);
-         p.cou = round3(p.cou / 1.6);
-         p.int = round3(p.int / 0.2);
-         p.eth = round3(p.eth / 0.2);
-         p.ind = round3(p.ind / 0.2);
          p.ares = 0;
+         syncEffectiveStats(p);
          v.log(`【戦神の奇跡終了】${p.name}の火星の加護効果が切れました`);
       }
     }
@@ -323,8 +315,8 @@ export function endOfMonthProcess(v) {
       p.nikeMonths++;
       if (p.nikeMonths >= 1) {
         p.mindTraits = p.mindTraits.filter(trait => trait !== "ニケ");
-        p.cou = clampValue(p.cou - 10, 0, 100);
         p.nikeMonths = 0;
+        syncEffectiveStats(p);
         v.log(`【ニケ終了】${p.name}のニケ効果が切れました`);
       }
     }
@@ -332,73 +324,25 @@ export function endOfMonthProcess(v) {
 
   // 状態異常の解除処理
   v.villagers.forEach(p => {
-    // 身体特性からの状態異常解除
+    let changed = false;
     let bodyTraitsToRemove = ["飢餓", "凍え", "疲労", "過労", "病気", "疫病"];
     bodyTraitsToRemove.forEach(trait => {
       if (p.bodyTraits.includes(trait)) {
-        // 特性を解除
         p.bodyTraits = p.bodyTraits.filter(t => t !== trait);
-        
-        // ステータス回復
-        switch(trait) {
-          case "飢餓":
-            p.str = round3(p.str / 0.5);  // 50%から回復
-            p.vit = round3(p.vit / 0.5);
-            p.dex = round3(p.dex / 0.5);
-                        break;
-          case "凍え":
-            p.str = round3(p.str / 0.8);  // 80%から回復
-            p.vit = round3(p.vit / 0.8);
-            p.dex = round3(p.dex / 0.8);
-                        break;
-          case "疲労":
-            p.str = round3(p.str / 0.8);  // 80%から回復
-            p.vit = round3(p.vit / 0.8);
-            p.dex = round3(p.dex / 0.8);
-                        break;
-          case "過労":
-            p.str = round3(p.str / 0.25);  // 25%から回復
-            p.vit = round3(p.vit / 0.25);
-            p.dex = round3(p.dex / 0.25);
-                        break;
-          case "疫病":
-            p.hp = clampValue(round3(p.hp / 0.5), 0, 100);
-            p.str = round3(p.str / 0.5);
-            p.vit = round3(p.vit / 0.5);
-            p.dex = round3(p.dex / 0.5);
-                        break;
-          default:
-            
-        }
+        if (trait === "疫病") p.hp = clampValue(round3((Number(p.hp) || 0) / 0.5), 0, 100);
+        changed = true;
       }
     });
 
-    // 精神特性からの状態異常解除
     let mindTraitsToRemove = ["心労", "抑鬱"];
     mindTraitsToRemove.forEach(trait => {
       if (p.mindTraits.includes(trait)) {
-        // 特性を解除
         p.mindTraits = p.mindTraits.filter(t => t !== trait);
-        
-        // ステータス回復
-        switch(trait) {
-          case "心労":
-            p.int = round3(p.int / 0.8);  // 80%から回復
-            p.cou = round3(p.cou / 0.8);
-            p.ind = round3(p.ind / 0.8);
-            p.eth = round3(p.eth / 0.8);
-            p.sexdr = round3(p.sexdr / 0.8);
-                        break;
-          case "抑鬱":
-            p.int = round3(p.int / 0.25);  // 25%から回復
-            p.cou = round3(p.cou / 0.25);
-            p.ind = round3(p.ind / 0.25);
-            p.eth = round3(p.eth / 0.25);
-            p.sexdr = round3(p.sexdr / 0.25);
-                        break;
-        }
+        changed = true;
       }
     });
+
+    if (changed) syncEffectiveStats(p);
   });
 
   // ログ出力を元に戻す処理を削除
@@ -455,9 +399,7 @@ export function doMonthStartProcess(v) {
       }
       
       // 各種ステータスにペナルティ
-      p.str = round3(p.str * 0.5);  // 筋力を50%に
-      p.vit = round3(p.vit * 0.5);  // 耐久を50%に
-      p.dex = round3(p.dex * 0.5);  // 器用を50%に
+      syncEffectiveStats(p);
       p.hp = Math.floor(p.hp * 0.5);  // 体力を50%に
       p.mp = Math.floor(p.mp * 0.5);  // メンタルを50%に
       p.happiness = clampValue(p.happiness - 30, 0, 100);  // 幸福度-30
@@ -477,9 +419,7 @@ export function doMonthStartProcess(v) {
       }
       
       // 各種ステータスにペナルティ
-      p.str = round3(p.str * 0.8);  // 筋力を80%に
-      p.vit = round3(p.vit * 0.8);  // 耐久を80%に
-      p.dex = round3(p.dex * 0.8);  // 器用を80%に
+      syncEffectiveStats(p);
       p.hp = Math.floor(p.hp * 0.5);  // 体力を50%に
       p.mp = Math.floor(p.mp * 0.5);  // メンタルを50%に
       p.happiness = clampValue(p.happiness - 30, 0, 100);  // 幸福度-30
@@ -494,9 +434,7 @@ export function doMonthStartProcess(v) {
       if (!p.bodyTraits.includes("過労")) {
         p.bodyTraits.push("過労");
       }
-      p.str = round3(p.str * 0.25);
-      p.vit = round3(p.vit * 0.25);
-      p.dex = round3(p.dex * 0.25);
+      syncEffectiveStats(p);
       p.happiness = clampValue(p.happiness - 30, 0, 100);
       
 
@@ -506,9 +444,7 @@ export function doMonthStartProcess(v) {
       if (!p.bodyTraits.includes("疲労")) {
         p.bodyTraits.push("疲労");
       }
-      p.str = round3(p.str * 0.8);
-      p.vit = round3(p.vit * 0.8);
-      p.dex = round3(p.dex * 0.8);
+      syncEffectiveStats(p);
       v.log(`${p.name}は疲労状態になった`);
     }
     
@@ -518,11 +454,7 @@ export function doMonthStartProcess(v) {
       if (!p.mindTraits.includes("抑鬱")) {
         p.mindTraits.push("抑鬱");
       }
-      p.int = round3(p.int * 0.25);
-      p.cou = round3(p.cou * 0.25);
-      p.ind = round3(p.ind * 0.25);
-      p.eth = round3(p.eth * 0.25);
-      p.sexdr = round3(p.sexdr * 0.25);
+      syncEffectiveStats(p);
       p.happiness = clampValue(p.happiness - 30, 0, 100);
 
 
@@ -532,11 +464,7 @@ export function doMonthStartProcess(v) {
       if (!p.mindTraits.includes("心労")) {
         p.mindTraits.push("心労");
       }
-      p.int = round3(p.int * 0.8);
-      p.cou = round3(p.cou * 0.8);
-      p.ind = round3(p.ind * 0.8);
-      p.eth = round3(p.eth * 0.8);
-      p.sexdr = round3(p.sexdr * 0.8);
+      syncEffectiveStats(p);
       v.log(`${p.name}は心労状態になった`);
     }
   });
@@ -670,15 +598,11 @@ export function doAgingProcess(v) {
     if (!p.bodyTraits.includes("老人")) {
       if (p.bodyAge>=60) {
         p.bodyTraits.push("老人");
-        p.str = round3(p.str * 0.5);
-        p.vit = round3(p.vit * 0.5);
-        p.chr = round3(p.chr * 0.5);
+        syncEffectiveStats(p);
         v.log(`${p.name}は老人になった`);
       } else if (!p.bodyTraits.includes("中年") && p.bodyAge>=40) {
         p.bodyTraits.push("中年");
-        p.str = round3(p.str * 0.75);
-        p.vit = round3(p.vit * 0.75);
-        p.chr = round3(p.chr * 0.75);
+        syncEffectiveStats(p);
         v.log(`${p.name}は中年になった`);
       }
     }

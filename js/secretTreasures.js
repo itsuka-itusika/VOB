@@ -6,6 +6,7 @@ import { addRelationship, removeRelationship, addSpouseRelationships } from "./r
 import { updateChildGrowthStage } from "./reproduction.js";
 import { clampValue, round3 } from "./util.js";
 import { updateUI } from "./ui.js";
+import { addAcquiredStat, syncEffectiveStats } from "./domain/statLayers.js";
 
 const SEASON_TRAITS_TO_REMOVE = ["夏", "秋", "冬", "冷夏", "飛蝗", "厳冬", "疫病流行"];
 const BAD_BODY_TRAITS = ["負傷", "疲労", "過労", "飢餓", "凍え", "病気", "疫病", "産褥", "危篤"];
@@ -67,39 +68,8 @@ function restoreBadStatus(person, village, options = {}) {
     if (!person.bodyTraits.includes(trait)) return;
     recovered.push(trait);
     person.bodyTraits = person.bodyTraits.filter(item => item !== trait);
-    switch (trait) {
-      case "飢餓":
-        person.str = round3(person.str / 0.5);
-        person.vit = round3(person.vit / 0.5);
-        person.dex = round3(person.dex / 0.5);
-        break;
-      case "凍え":
-        person.str = round3(person.str / 0.8);
-        person.vit = round3(person.vit / 0.8);
-        person.dex = round3(person.dex / 0.8);
-        break;
-      case "疫病":
-        person.hp = clampValue(round3(person.hp / 0.5), 0, 100);
-        person.str = round3(person.str / 0.5);
-        person.vit = round3(person.vit / 0.5);
-        person.dex = round3(person.dex / 0.5);
-        break;
-      case "疲労":
-        person.str = round3(person.str / 0.8);
-        person.vit = round3(person.vit / 0.8);
-        person.dex = round3(person.dex / 0.8);
-        break;
-      case "過労":
-        person.str = round3(person.str / 0.25);
-        person.vit = round3(person.vit / 0.25);
-        person.dex = round3(person.dex / 0.25);
-        break;
-      case "産褥":
-        person.str = round3(person.str / 0.5);
-        person.vit = round3(person.vit / 0.5);
-        person.postpartumMonths = 0;
-        break;
-    }
+    if (trait === "疫病") person.hp = clampValue(round3(person.hp / 0.5), 0, 100);
+    if (trait === "産褥") person.postpartumMonths = 0;
   });
 
   BAD_MIND_TRAITS.forEach(trait => {
@@ -107,25 +77,10 @@ function restoreBadStatus(person, village, options = {}) {
     if (!person.mindTraits.includes(trait)) return;
     recovered.push(trait);
     person.mindTraits = person.mindTraits.filter(item => item !== trait);
-    switch (trait) {
-      case "心労":
-        person.int = round3(person.int / 0.8);
-        person.cou = round3(person.cou / 0.8);
-        person.ind = round3(person.ind / 0.8);
-        person.eth = round3(person.eth / 0.8);
-        person.sexdr = round3(person.sexdr / 0.8);
-        break;
-      case "抑鬱":
-        person.int = round3(person.int / 0.25);
-        person.cou = round3(person.cou / 0.25);
-        person.ind = round3(person.ind / 0.25);
-        person.eth = round3(person.eth / 0.25);
-        person.sexdr = round3(person.sexdr / 0.25);
-        break;
-    }
   });
 
   if (options.fullHp) person.hp = 100;
+  syncEffectiveStats(person);
   refreshJobTable(person, village);
   if (!person.actionTable.includes(person.action)) {
     person.action = person.actionTable.includes("休養") ? "休養" : (person.actionTable[0] || "なし");
@@ -158,9 +113,9 @@ function applyNike(village) {
     person.mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
     if (!person.mindTraits.includes("ニケ")) {
       person.mindTraits.push("ニケ");
-      person.cou = clampValue((Number(person.cou) || 0) + 10, 0, 100);
     }
     person.nikeMonths = 0;
+    syncEffectiveStats(person);
     refreshJobTable(person, village);
   });
   village.log("【秘宝】腕の無い天使像を使いました。村人全員にニケを付与しました");
@@ -259,9 +214,7 @@ export const SECRET_TREASURES = [
     sellPrice: SECRET_TREASURE_SELL_PRICES.strange_calculator,
     target: "villager",
     use: (village, target) => {
-      target.int = clampValue((Number(target.int) || 0) + 5, 0, 100);
-      if (target.mindPotentialStats) target.mindPotentialStats.int = clampValue((Number(target.mindPotentialStats.int) || 0) + 5, 0, 100);
-      if (target.potentialStats) target.potentialStats.int = clampValue((Number(target.potentialStats.int) || 0) + 5, 0, 100);
+      addAcquiredStat(target, "int", 5);
       refreshJobTable(target, village);
       village.log(`【秘宝】奇妙な計算機械を${target.name}に使いました。知力+5`);
       showSecretTreasureResult(village, "奇妙な計算機械", `${target.name}の内に新たな思考の歯車が噛み合いました。`, [target]);

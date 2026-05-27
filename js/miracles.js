@@ -1,11 +1,12 @@
 // miracles.js
 
-import { clampValue, round3, getPortraitPath } from "./util.js";
+import { clampValue, getPortraitPath } from "./util.js";
 import { addRelationship, removeRelationship, checkHasRelationship, getRelationshipTargetName, clearRelationshipsForDepartedVillager, addSpouseRelationships } from "./relationships.js";
 import { updateUI } from "./ui.js";  // 実行後にUIを更新する
 import { doExchange } from "./exchange.js";
 import { createRandomVisitor, createRandomVisitorOfType, determineSpeechType } from "./createVillagers.js";
 import { refreshJobTable } from "./domain/jobTables.js";
+import { syncEffectiveStats } from "./domain/statLayers.js";
 import { resolveDialogueTone } from "./data/dialogue/toneProfiles.js";
 import { BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
 /**
@@ -438,8 +439,7 @@ export function performMiracle(village) {
         // 狂乱特性を付与（まだ持っていない場合のみ）
         if (!p.mindTraits.includes("狂乱")) {
           p.mindTraits.push("狂乱");
-          p.eth=Math.floor(p.eth*0.2);
-          p.sexdr=clampValue(p.sexdr+15,0,100);
+          syncEffectiveStats(p);
         }
       });
       village.log(`【狂宴】全員体力/メンタル+60,幸福+50,狂乱付与(倫理*0.2,好色+15)`);
@@ -580,70 +580,24 @@ function healMiracle(p,v) {
   let arr=["負傷","疲労","過労","飢餓","疫病","産褥","心労","抑鬱"];
   let recoveredTraits = [];
 
-  // 身体特性からの状態異常回復
   arr.forEach(trait => {
     if (p.bodyTraits.includes(trait)) {
       recoveredTraits.push(trait);
       p.bodyTraits = p.bodyTraits.filter(t => t !== trait);
-      
-      // ステータス回復
-      switch(trait) {
-        case "飢餓":
-          p.str = round3(p.str / 0.5);  // 50%から回復
-          p.vit = round3(p.vit / 0.5);
-          p.dex = round3(p.dex / 0.5);
-          break;
-        case "疫病":
-          p.hp = clampValue(round3(p.hp / 0.5), 0, 100);
-          p.str = round3(p.str / 0.5);
-          p.vit = round3(p.vit / 0.5);
-          p.dex = round3(p.dex / 0.5);
-          break;
-        case "疲労":
-          p.str = round3(p.str / 0.8);  // 80%から回復
-          p.vit = round3(p.vit / 0.8);
-          p.dex = round3(p.dex / 0.8);
-          break;
-        case "過労":
-          p.str = round3(p.str / 0.25);  // 25%から回復
-          p.vit = round3(p.vit / 0.25);
-          p.dex = round3(p.dex / 0.25);
-          break;
-        case "産褥":
-          p.str = round3(p.str / 0.5);
-          p.vit = round3(p.vit / 0.5);
-          p.postpartumMonths = 0;
-          refreshJobTable(p, v);
-          break;
-      }
+      if (trait === "疫病") p.hp = clampValue(p.hp / 0.5, 0, 100);
+      if (trait === "産褥") p.postpartumMonths = 0;
     }
   });
 
-  // 精神特性からの状態異常回復
   arr.forEach(trait => {
     if (p.mindTraits.includes(trait)) {
       recoveredTraits.push(trait);
       p.mindTraits = p.mindTraits.filter(t => t !== trait);
-      
-      // ステータス回復
-      switch(trait) {
-        case "心労":
-          p.int = round3(p.int / 0.8);  // 80%から回復
-          p.cou = round3(p.cou / 0.8);
-          p.ind = round3(p.ind / 0.8);
-          p.eth = round3(p.eth / 0.8);
-          p.sexdr = round3(p.sexdr / 0.8);
-          break;
-        case "抑鬱":
-          p.int = round3(p.int / 0.25);  // 25%から回復
-          p.cou = round3(p.cou / 0.25);
-          p.ind = round3(p.ind / 0.25);
-          p.eth = round3(p.eth / 0.25);
-          p.sexdr = round3(p.sexdr / 0.25);
-          break;
-      }
     }
   });
+
+  syncEffectiveStats(p);
+  refreshJobTable(p, v);
 
   p.hp=clampValue(p.hp+50,0,100);
   p.mp=clampValue(p.mp+50,0,100);
@@ -656,17 +610,12 @@ function healMiracle(p,v) {
 
 /** 戦神(戦神の加護) */
 function warMiracle(p, v) {
-  // 戦神の奇跡の開始時に、アレス変数を初期化
   p.ares = 0;
-  v.log(`【戦神の奇跡】${p.name}に火星の加護付与(筋力・耐久・勇気が1.6倍、知力・勤勉・倫理が0.2倍)3ヶ月継続`);
-  p.bodyTraits.push("火星の加護");
-  // 筋力・耐久・勇気は1.6倍に、知力・勤勉・倫理は0.2倍に変更し、round3で丸める
-  p.str = round3(p.str * 1.6);
-  p.vit = round3(p.vit * 1.6);
-  p.cou = round3(p.cou * 1.6);
-  p.int = round3(p.int * 0.2);
-  p.eth = round3(p.eth * 0.2);
-  p.ind = round3(p.ind * 0.2);
+  if (!p.bodyTraits.includes("火星の加護")) {
+    p.bodyTraits.push("火星の加護");
+  }
+  syncEffectiveStats(p);
+  v.log(`【戦神の奇跡】${p.name}に火星の加護付与(ステータス補正なし)3ヶ月継続`);
   showMiracleResultModal(v, "戦神の奇跡", `${p.name}に戦神の加護が宿りました。`, [p]);
 }
 

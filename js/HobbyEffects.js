@@ -1,4 +1,5 @@
 import { clampValue, randInt } from "./util.js";
+import { addAcquiredStat } from "./domain/statLayers.js";
 
 export class HobbyEffects {
   static apply(p, v) {
@@ -121,7 +122,7 @@ export class HobbyEffects {
     p.hp = clampValue(p.hp-10, 0, 100);
     v.security = clampValue(v.security-10, 0, 100);
     if (Math.random() < 0.5) {
-      p.cou++;
+      addAcquiredStat(p, "cou", 1);
       return "(喧嘩:体力-10,治安-10,勇気+1)";
     }
     return "(喧嘩:体力-10,治安-10)";
@@ -130,7 +131,7 @@ export class HobbyEffects {
   static applyTraining(p, v) {
     p.hp = clampValue(p.hp-10, 0, 100);
     if (Math.random() < 0.5) {
-      p.str++;
+      addAcquiredStat(p, "str", 1);
       return "(筋トレ:体力-10,筋力+1)";
     }
     return "(筋トレ:体力-10)";
@@ -141,7 +142,7 @@ export class HobbyEffects {
       v.food -= 10;
       p.hp = clampValue(p.hp+50, 0, 100);
       if (Math.random() < 0.5) {
-        p.vit++;
+        addAcquiredStat(p, "vit", 1);
         return "(ドカ食い:食料-10,体力+50,耐久+1)";
       }
       return "(ドカ食い:食料-10,体力+50)";
@@ -170,10 +171,10 @@ export class HobbyEffects {
         msg += `,男性幸福+5,魔素+${gain}`;
       }
       if (Math.random() < 0.5) {
-        p.sexdr = clampValue(p.sexdr+1, 0, 100);
+        addAcquiredStat(p, "sexdr", 1);
       }
       if (Math.random() < 0.5) {
-        p.eth = clampValue(p.eth-1, 0, 100);
+        addAcquiredStat(p, "eth", -1);
       }
       return msg + ")";
     }
@@ -189,7 +190,7 @@ export class HobbyEffects {
       let g = Math.floor(p.mag * p.chr/40);
       v.mana = clampValue(v.mana+g, 0, 99999);
       if (Math.random() < 0.5) {
-        p.sexdr = clampValue(p.sexdr+1, 0, 100);
+        addAcquiredStat(p, "sexdr", 1);
       }
       return `(自家発電[女]:体力-20,男性幸福+3,魔素+${g})`;
     }
@@ -198,7 +199,7 @@ export class HobbyEffects {
 
   static maybeRaiseStat(p, stat, chance, amount = 1) {
     if (Math.random() < chance) {
-      p[stat] = clampValue((p[stat] || 0) + amount, 0, 100);
+      addAcquiredStat(p, stat, amount);
       return `,${this.statLabel(stat)}${amount >= 0 ? "+" : ""}${amount}`;
     }
     return "";

@@ -2,6 +2,7 @@
 import { Village, Villager } from "./classes.js";
 import { determineSpeechType, registerUsedName } from "./createVillagers.js";
 import { refreshJobTable } from "./domain/jobTables.js";
+import { hydrateStatLayersFromObject, syncEffectiveStats } from "./domain/statLayers.js";
 import { normalizeRelationships } from "./relationships.js";
 import { getInitialScaleStageIndex } from "./villageScale.js";
 
@@ -157,6 +158,7 @@ function convertVillageToObject(village) {
  * villager(Villager) → object
  */
 function convertVillagerToObject(vill) {
+  syncEffectiveStats(vill);
   return {
     name: vill.name,
     bodySex: vill.bodySex,
@@ -177,6 +179,10 @@ function convertVillagerToObject(vill) {
     eth: vill.eth,
     cou: vill.cou,
     sexdr: vill.sexdr,
+
+    baseStats: vill.baseStats ? { ...vill.baseStats } : undefined,
+    acquiredStatMods: vill.acquiredStatMods ? { ...vill.acquiredStatMods } : undefined,
+    statLayerVersion: vill.statLayerVersion,
 
     spiritAge: vill.spiritAge,
     spiritSex: vill.spiritSex,
@@ -379,6 +385,8 @@ function convertObjectToVillager(obj) {
     ? !!obj.adultMindReached
     : !!(vill.potentialStats && Number(vill.spiritAge) >= 16);
   vill.adultModalShown = !!obj.adultModalShown;
+
+  hydrateStatLayersFromObject(vill, obj);
 
   return vill;
 }

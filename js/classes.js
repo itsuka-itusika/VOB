@@ -1,5 +1,7 @@
 // classes.js
 
+import { createStatMap, STAT_LAYER_VERSION } from "./domain/statLayers.js";
+
 /**
  * VillageクラスとVillagerクラス
  * - データ構造を持つクラス
@@ -93,14 +95,18 @@ export class Villager {
     this.mp = 100;
     this.happiness = 50;
 
-    /** 肉体パラメーター */
+    this.baseStats = createStatMap(10);
+    this.acquiredStatMods = createStatMap(0);
+    this.statLayerVersion = STAT_LAYER_VERSION;
+
+    /** 肉体パラメーター（実効値キャッシュ） */
     this.str = 10;
     this.vit = 10;
     this.dex = 10;
     this.mag = 10;
     this.chr = 10;
 
-    /** 精神パラメーター */
+    /** 精神パラメーター（実効値キャッシュ） */
     this.int = 10;
     this.ind = 10;
     this.eth = 10;

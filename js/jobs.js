@@ -29,6 +29,7 @@ import {
   rollMindCost,
 } from "./domain/jobMath.js";
 import { refreshJobTable } from "./domain/jobTables.js";
+import { addAcquiredStat, syncEffectiveStats } from "./domain/statLayers.js";
 import { rollSecretTreasureJobEvents, showSecretTreasureEventModals } from "./secretTreasureEvents.js";
 
 const HEALING_RECOVERABLE_BODY_TRAITS = ["負傷", "疫病"];
@@ -36,9 +37,6 @@ const HEALING_RECOVERABLE_BODY_TRAITS = ["負傷", "疫病"];
 function restoreRecoveredBodyTraitStats(person, trait) {
   if (trait !== "疫病") return;
   person.hp = clampValue(round3((Number(person.hp) || 0) / 0.5), 0, 100);
-  person.str = round3((Number(person.str) || 0) / 0.5);
-  person.vit = round3((Number(person.vit) || 0) / 0.5);
-  person.dex = round3((Number(person.dex) || 0) / 0.5);
 }
 
 /**
@@ -389,8 +387,8 @@ function doStudy(p, v) {
   p.hp=clampValue(p.hp-tc,0,100);
   p.mp=clampValue(p.mp-mc,0,100);
 
-  if (Math.random()<0.3) p.int++;
-  if (Math.random()<0.3) p.ind++;
+  if (Math.random()<0.3) addAcquiredStat(p, "int", 1);
+  if (Math.random()<0.3) addAcquiredStat(p, "ind", 1);
   v.log(`${p.name}学業:体力-${tc},メンタル-${mc},知力/勤勉上昇`);
 }
 
@@ -400,9 +398,9 @@ function doTraining(p, v) {
   p.hp=clampValue(p.hp-tc,0,100);
   p.mp=clampValue(p.mp-mc,0,100);
 
-  if (Math.random()<0.4) p.str++;
-  if (Math.random()<0.3) p.vit++;
-  if (Math.random()<0.2) p.cou++;
+  if (Math.random()<0.4) addAcquiredStat(p, "str", 1);
+  if (Math.random()<0.3) addAcquiredStat(p, "vit", 1);
+  if (Math.random()<0.2) addAcquiredStat(p, "cou", 1);
   v.log(`${p.name}鍛錬:体力-${tc},メンタル-${mc},筋力/耐久/勇気UP可能`);
 }
 
@@ -427,11 +425,11 @@ function doFarm(p, v) {
 
   // ステータス上昇判定
   if (Math.random() < 0.05) {
-    p.vit++;
+    addAcquiredStat(p, "vit", 1);
     logMsg += ",耐久+1";
   }
   if (Math.random() < 0.05) {
-    p.ind++;
+    addAcquiredStat(p, "ind", 1);
     logMsg += ",勤勉+1";
   }
 
@@ -462,11 +460,11 @@ function doLumber(p, v) {
 
   // ステータス上昇判定
   if (Math.random() < 0.05) {
-    p.str++;
+    addAcquiredStat(p, "str", 1);
     logMsg += ",筋力+1";
   }
   if (Math.random() < 0.05) {
-    p.ind++;
+    addAcquiredStat(p, "ind", 1);
     logMsg += ",勤勉+1";
   }
 
@@ -520,11 +518,11 @@ function doHunt(p, v) {
 
   // ステータス上昇判定
   if (Math.random() < 0.05) {
-    p.str++;
+    addAcquiredStat(p, "str", 1);
     v.log(`${p.name}狩猟:${result} 筋力+1`);
   }
   if (Math.random() < 0.05) {
-    p.cou++;
+    addAcquiredStat(p, "cou", 1);
     v.log(`${p.name}狩猟:${result} 勇気+1`);
   }
 
@@ -577,11 +575,11 @@ function doFish(p, v) {
 
   // ステータス上昇判定
   if (Math.random() < 0.05) {
-    p.vit++;
+    addAcquiredStat(p, "vit", 1);
     v.log(`${p.name}漁:${result} 耐久+1`);
   }
   if (Math.random() < 0.05) {
-    p.cou++;
+    addAcquiredStat(p, "cou", 1);
     v.log(`${p.name}漁:${result} 勇気+1`);
   }
 
@@ -625,11 +623,11 @@ function doGather(p, v) {
 
   // ステータス上昇判定
   if (Math.random() < 0.05) {
-    p.int++;
+    addAcquiredStat(p, "int", 1);
     v.log(`${p.name}採集:知力+1`);
   }
   if (Math.random() < 0.05) {
-    p.dex++;
+    addAcquiredStat(p, "dex", 1);
     v.log(`${p.name}採集:器用+1`);
   }
 
@@ -653,11 +651,11 @@ function doHandiwork(p, v) {
   
   // ステータス上昇判定
   if (Math.random() < 0.05) {
-    p.dex++;
+    addAcquiredStat(p, "dex", 1);
     logMsg += ",器用+1";
   }
   if (Math.random() < 0.05) {
-    p.ind++;
+    addAcquiredStat(p, "ind", 1);
     logMsg += ",勤勉+1";
   }
 
@@ -691,11 +689,11 @@ function doResearchJob(p, v) {
   
   // ステータス上昇判定
   if (Math.random() < 0.05) {
-    p.mag++;
+    addAcquiredStat(p, "mag", 1);
     logMsg += ",魔力+1";
   }
   if (Math.random() < 0.05) {
-    p.int++;
+    addAcquiredStat(p, "int", 1);
     logMsg += ",知力+1";
   }
 
@@ -717,10 +715,10 @@ function doEducationJob(p, v) {
       let meth=Math.floor(p.eth/10); if(meth<1) meth=1;
       let mcou=Math.floor(p.cou/10); if(mcou<1) mcou=1;
 
-      if (Math.random()<0.2) { x.int += randInt(1,mi); improved++;}
-      if (Math.random()<0.2) { x.ind += randInt(1,mind2); improved++;}
-      if (Math.random()<0.2) { x.eth += randInt(1,meth); improved++;}
-      if (Math.random()<0.2) { x.cou += randInt(1,mcou); improved++;}
+      if (Math.random()<0.2) { addAcquiredStat(x, "int", randInt(1,mi)); improved++;}
+      if (Math.random()<0.2) { addAcquiredStat(x, "ind", randInt(1,mind2)); improved++;}
+      if (Math.random()<0.2) { addAcquiredStat(x, "eth", randInt(1,meth)); improved++;}
+      if (Math.random()<0.2) { addAcquiredStat(x, "cou", randInt(1,mcou)); improved++;}
     }
   });
   v.log(`${p.name}教育:子供ステ上昇${improved}回,体力-${tc},メンタル-${mc}`);
@@ -741,11 +739,11 @@ function doGuardJob(p, v) {
   
   // ステータス上昇判定
   if (Math.random() < 0.05) {
-    p.str++;
+    addAcquiredStat(p, "str", 1);
     logMsg += ",筋力+1";
   }
   if (Math.random() < 0.05) {
-    p.eth++;
+    addAcquiredStat(p, "eth", 1);
     logMsg += ",倫理+1";
   }
 
@@ -769,6 +767,7 @@ function doHealingJob(p, v) {
   if (recoveredTraits.length > 0) {
     recoveredTraits.forEach(trait => restoreRecoveredBodyTraitStats(p, trait));
     p.bodyTraits = p.bodyTraits.filter(trait => !HEALING_RECOVERABLE_BODY_TRAITS.includes(trait));
+    syncEffectiveStats(p);
     refreshJobTable(p, v);
   }
 
@@ -809,11 +808,11 @@ function doDancer(p, v) {
   
   // ステータス上昇判定
   if (Math.random() < 0.05) {
-    p.chr++;
+    addAcquiredStat(p, "chr", 1);
     logMsg += ",魅力+1";
   }
   if (Math.random() < 0.05) {
-    p.sexdr++;
+    addAcquiredStat(p, "sexdr", 1);
     logMsg += ",好色+1";
   }
 
@@ -840,11 +839,11 @@ function doPoet(p, v) {
   
   // ステータス上昇判定
   if (Math.random() < 0.05) {
-    p.chr++;
+    addAcquiredStat(p, "chr", 1);
     logMsg += ",魅力+1";
   }
   if (Math.random() < 0.05) {
-    p.int++;
+    addAcquiredStat(p, "int", 1);
     logMsg += ",知力+1";
   }
 
@@ -881,11 +880,11 @@ function doNurse(p, v) {
   
   // ステータス上昇判定
   if (Math.random() < 0.05) {
-    p.mag++;
+    addAcquiredStat(p, "mag", 1);
     logMsg += ",魔力+1";
   }
   if (Math.random() < 0.05) {
-    p.eth++;
+    addAcquiredStat(p, "eth", 1);
     logMsg += ",倫理+1";
   }
 
@@ -910,11 +909,11 @@ function doSister(p, v) {
   
   // ステータス上昇判定
   if (Math.random() < 0.05) {
-    p.chr++;
+    addAcquiredStat(p, "chr", 1);
     logMsg += ",魅力+1";
   }
   if (Math.random() < 0.05) {
-    p.eth++;
+    addAcquiredStat(p, "eth", 1);
     logMsg += ",倫理+1";
   }
 
@@ -939,11 +938,11 @@ function doPriest(p, v) {
   
   // ステータス上昇判定
   if (Math.random() < 0.05) {
-    p.chr++;
+    addAcquiredStat(p, "chr", 1);
     logMsg += ",魅力+1";
   }
   if (Math.random() < 0.05) {
-    p.eth++;
+    addAcquiredStat(p, "eth", 1);
     logMsg += ",倫理+1";
   }
 
@@ -964,11 +963,11 @@ function doTrading(p, v) {
   
   // ステータス上昇判定
   if (Math.random() < 0.05) {
-    p.chr++;
+    addAcquiredStat(p, "chr", 1);
     logMsg += ",魅力+1";
   }
   if (Math.random() < 0.05) {
-    p.int++;
+    addAcquiredStat(p, "int", 1);
     logMsg += ",知力+1";
   }
 
@@ -988,11 +987,11 @@ function doMassage(p, v) {
     
     // ステータス上昇判定
     if (Math.random() < 0.05) {
-      p.str++;
+      addAcquiredStat(p, "str", 1);
       logMsg += ",筋力+1";
     }
     if (Math.random() < 0.05) {
-      p.eth++;
+      addAcquiredStat(p, "eth", 1);
       logMsg += ",倫理+1";
     }
   } else {
@@ -1002,11 +1001,11 @@ function doMassage(p, v) {
     
     // ステータス上昇判定
     if (Math.random() < 0.05) {
-      p.chr++;
+      addAcquiredStat(p, "chr", 1);
       logMsg += ",魅力+1";
     }
     if (Math.random() < 0.05) {
-      p.sexdr++;
+      addAcquiredStat(p, "sexdr", 1);
       logMsg += ",好色+1";
     }
   }
@@ -1048,11 +1047,11 @@ function doMiko(p, v) {
   
   // ステータス上昇判定
   if (Math.random() < 0.05) {
-    p.chr++;
+    addAcquiredStat(p, "chr", 1);
     logMsg += ",魅力+1";
   }
   if (Math.random() < 0.05) {
-    p.sexdr++;
+    addAcquiredStat(p, "sexdr", 1);
     logMsg += ",好色+1";
   }
 
@@ -1081,11 +1080,11 @@ function doBunny(p, v) {
   
   // ステータス上昇判定
   if (Math.random() < 0.05) {
-    p.chr++;
+    addAcquiredStat(p, "chr", 1);
     logMsg += ",魅力+1";
   }
   if (Math.random() < 0.05) {
-    p.sexdr++;
+    addAcquiredStat(p, "sexdr", 1);
     logMsg += ",好色+1";
   }
 
@@ -1108,11 +1107,11 @@ function doAlchemy(p, v) {
   
   // ステータス上昇判定
   if (Math.random() < 0.05) {
-    p.mag++;
+    addAcquiredStat(p, "mag", 1);
     logMsg += ",魔力+1";
   }
   if (Math.random() < 0.05) {
-    p.int++;
+    addAcquiredStat(p, "int", 1);
     logMsg += ",知力+1";
   }
 
@@ -1135,11 +1134,11 @@ function doCopyBook(p, v) {
   
   // ステータス上昇判定
   if (Math.random() < 0.05) {
-    p.dex++;
+    addAcquiredStat(p, "dex", 1);
     logMsg += ",器用+1";
   }
   if (Math.random() < 0.05) {
-    p.int++;
+    addAcquiredStat(p, "int", 1);
     logMsg += ",知力+1";
   }
 
@@ -1159,11 +1158,11 @@ function doWeaving(p, v) {
   
   // ステータス上昇判定
   if (Math.random() < 0.05) {
-    p.dex++;
+    addAcquiredStat(p, "dex", 1);
     logMsg += ",器用+1";
   }
   if (Math.random() < 0.05) {
-    p.ind++;
+    addAcquiredStat(p, "ind", 1);
     logMsg += ",勤勉+1";
   }
 
@@ -1187,11 +1186,11 @@ function doBrewing(p, v) {
   
   // ステータス上昇判定
   if (Math.random() < 0.05) {
-    p.mag++;
+    addAcquiredStat(p, "mag", 1);
     logMsg += ",魔力+1";
   }
   if (Math.random() < 0.05) {
-    p.ind++;
+    addAcquiredStat(p, "ind", 1);
     logMsg += ",勤勉+1";
   }
 

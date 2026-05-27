@@ -1,5 +1,6 @@
 import { isForcedHealingAction } from "../util.js";
 import { ACTION_DEFEND, ACTION_TRAP, isRaidActionAssignable } from "../raidRules.js";
+import { syncEffectiveStats } from "./statLayers.js";
 
 export function applyForcedActionRestriction(person) {
   if (!person) return { restricted: false, changed: false, reason: "" };
@@ -53,6 +54,7 @@ export function applyForcedActionRestriction(person) {
 }
 
 export function refreshJobTable(v, village = {}) {
+  syncEffectiveStats(v);
   let sa = v.spiritAge;
   const villageTraits = Array.isArray(village.villageTraits) ? village.villageTraits : [];
   const bodyTraits = Array.isArray(v.bodyTraits) ? v.bodyTraits : [];

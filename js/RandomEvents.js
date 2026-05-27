@@ -6,6 +6,7 @@ import { doExchange } from "./exchange.js";
 import { showRandomEventModal } from "./randomEventModal.js";
 import { matureBodyToAdultOnly, scheduleGoldenRainPregnancy } from "./reproduction.js";
 import { refreshJobTable } from "./domain/jobTables.js";
+import { addAcquiredStat, syncEffectiveStats } from "./domain/statLayers.js";
 import {
   getChildlikeRandomEventLine,
   getDialogueLine,
@@ -251,22 +252,22 @@ export class RandomEvents {
     switch (c.type) {
       case "狩猟神":
         p.bodyTraits.push("月の巫女");
-        p.dex += 10; p.chr += 10;
+        syncEffectiveStats(p);
         v.log(`${p.name}は狩女神の祝福を受けた！(器用+10,魅力+10)`);
         break;
       case "太陽神":
         p.bodyTraits.push("太陽の巫女");
-        p.str += 15; p.chr += 5;
+        syncEffectiveStats(p);
         v.log(`${p.name}は太陽神の寵愛を受けた！(筋力+15,魅力+5)`);
         break;
       case "戦女神":
         p.bodyTraits.push("梟の巫女");
-        p.mag += 10; p.chr += 10;
+        syncEffectiveStats(p);
         v.log(`${p.name}は戦女神の啓示を受けた！(魔力+10,魅力+10)`);
         break;
       case "地母神":
         p.bodyTraits.push("大地の巫女");
-        p.vit += 10; p.chr += 10;
+        syncEffectiveStats(p);
         v.log(`${p.name}は地母神の慈愛を受けた！(耐久+10,魅力+10)`);
         break;
       case "goldenRain":
@@ -443,7 +444,7 @@ export class RandomEvents {
           let a = this.randChoice(candidates);
           
           a.bodyTraits.push("刺青");
-          a.chr += 1;
+          addAcquiredStat(a, "chr", 1);
           a.happiness = clampValue(a.happiness + 20, 0, 100);
 
           v.log(`刺青イベント:${a.name}は刺青を入れ、新しい自分に少し胸を張った。魅力+1,幸福+20`);
@@ -465,7 +466,7 @@ export class RandomEvents {
         if (candidates.length > 0) {
           let a = this.randChoice(candidates);
           
-          a.chr += 3;
+          addAcquiredStat(a, "chr", 3);
           a.happiness = clampValue(a.happiness + 20, 0, 100);
           a.hobby = "オシャレ";
 
@@ -487,7 +488,7 @@ export class RandomEvents {
         if (candidates.length > 0) {
           let b = this.randChoice(candidates);
           
-          b.str += 3;
+          addAcquiredStat(b, "str", 3);
           b.hobby = "筋トレ";
 
           v.log(`筋トレイベント:${b.name}は筋トレに打ち込むようになった。筋力+3,趣味:筋トレ`);
@@ -513,8 +514,8 @@ export class RandomEvents {
 
           v.mana = clampValue(v.mana + 20, 0, 99999);
           a.happiness = clampValue(a.happiness + 20, 0, 100);
-          a.chr += 2;
-          a.sexdr += 2;
+          addAcquiredStat(a, "chr", 2);
+          addAcquiredStat(a, "sexdr", 2);
           a.hobby = "自家発電";
 
           v.log(`${a.name}は自家発電にはまった。魔素+20,幸福+20,魅力+2,好色+2,趣味:自家発電`);
@@ -717,9 +718,7 @@ export class RandomEvents {
 
             person.bodyTraits.push("疫病");
             person.hp = clampValue(round3((Number(person.hp) || 0) * 0.5), 0, 100);
-            person.str = round3((Number(person.str) || 0) * 0.5);
-            person.vit = round3((Number(person.vit) || 0) * 0.5);
-            person.dex = round3((Number(person.dex) || 0) * 0.5);
+            syncEffectiveStats(person);
             refreshJobTable(person, v);
             this.addForcedSpeaker(person);
           }
