@@ -22,6 +22,8 @@ export class Village {
     this.building = 0;
     this.heresy = 0;
     this.scaleTitleStage = 0;
+    this.lastHeadmanElectionYear = null;
+    this.nextHeadmanElectionYear = null;
 
     this.villagers = [];
     this.pendingGoldenRainPregnancies = [];

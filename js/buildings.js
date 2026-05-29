@@ -201,6 +201,16 @@ export const BUILDINGS = [
     effect: standardBuildingEffect({ scale: 20, flag: "hasMarket", log: "市場建設完了: 行商の失敗率-10%、成功率+10%、規模+20" })
   },
   {
+    id: "assemblyHall",
+    name: "集会所",
+    materials: 50,
+    funds: 50,
+    tech: 50,
+    desc: "旅人の立ち寄る村で解放。7月に里長選挙を行う。",
+    isUnlocked: (village) => isScaleAtLeast(village, 120),
+    effect: standardBuildingEffect({ scale: 0, flag: "hasAssemblyHall", log: "集会所建設完了: 村人たちが集まり、里長を選ぶ場が整いました" })
+  },
+  {
     id: "publicBath",
     name: "公衆浴場",
     materials: 80,

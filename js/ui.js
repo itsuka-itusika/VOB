@@ -115,6 +115,10 @@ function buildWarningMessages(village) {
   const lowHpCount = villagers.filter(person => Number(person.hp) <= 33).length;
   const lowMpCount = villagers.filter(person => Number(person.mp) <= 33).length;
   const noActionCount = villagers.filter(isUnassignedActionVillager).length;
+  const assemblyHallBuilt = !!(
+    village.buildingFlags?.hasAssemblyHall ||
+    (Array.isArray(village.buildings) && village.buildings.includes("assemblyHall"))
+  );
 
   if (foodCost > 0 && monthsOfFood <= 3) {
     warnings.push({
@@ -184,6 +188,13 @@ function buildWarningMessages(village) {
     warnings.push({
       level: "warning",
       text: `行動が未設定の村人が${noActionCount}人います。必要なら自動割り振りを使えます。`
+    });
+  }
+
+  if ((Number(village.building) || 0) >= 120 && !assemblyHallBuilt) {
+    warnings.push({
+      level: "warning",
+      text: "旅人が足を止める規模になりました。村の声を一つに束ねる集会所を建てれば、里長を選べるようになります。"
     });
   }
 

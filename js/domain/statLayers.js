@@ -20,7 +20,8 @@ const PERMANENT_BODY_TRAIT_ADDS = Object.freeze({
 
 const PERMANENT_MIND_TRAIT_ADDS = Object.freeze({
   "ワーカホリック": { ind: 3 },
-  "ニート": { ind: -2 }
+  "ニート": { ind: -2 },
+  "里長": { ind: 5, eth: 5, cou: 5 }
 });
 
 const TEMP_BODY_TRAIT_EFFECTS = Object.freeze({

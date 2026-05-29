@@ -1,10 +1,14 @@
+import { isHeadmanElectionModalPendingOrOpen } from "./headmanElection.js";
+
 const MODAL_OVERLAY_ID = "raidWarningOverlay";
 const MODAL_ID = "raidWarningModal";
 const PRIORITY_MODAL_SELECTORS = [
+  "#actionPhaseModal",
   "#seasonChangeDialog",
   "#festivalModal",
   "#randomEventModal",
-  ".effect-result-modal"
+  ".effect-result-modal",
+  "#secretTreasureEventModal"
 ];
 
 let pendingRaidWarning = null;
@@ -19,7 +23,8 @@ export function showRaidWarningModal({ raiderType, enemyCount }) {
 }
 
 function isPriorityModalOpen() {
-  return PRIORITY_MODAL_SELECTORS.some(selector => document.querySelector(selector));
+  return isHeadmanElectionModalPendingOrOpen() ||
+    PRIORITY_MODAL_SELECTORS.some(selector => document.querySelector(selector));
 }
 
 function waitForPriorityModalsToClose() {

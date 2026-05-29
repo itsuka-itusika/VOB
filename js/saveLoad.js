@@ -129,6 +129,12 @@ function convertVillageToObject(village) {
     scaleTitleStage: Number.isInteger(village.scaleTitleStage)
       ? village.scaleTitleStage
       : getInitialScaleStageIndex(village.building),
+    lastHeadmanElectionYear: village.lastHeadmanElectionYear != null && Number.isFinite(Number(village.lastHeadmanElectionYear))
+      ? Number(village.lastHeadmanElectionYear)
+      : null,
+    nextHeadmanElectionYear: village.nextHeadmanElectionYear != null && Number.isFinite(Number(village.nextHeadmanElectionYear))
+      ? Number(village.nextHeadmanElectionYear)
+      : null,
     popLimit: village.popLimit,
     villageTraits: [...village.villageTraits],
     secretTreasures: normalizeSecretTreasures(village),
@@ -262,6 +268,12 @@ function convertObjectToVillage(dataObj) {
   v.scaleTitleStage = Number.isInteger(dataObj.scaleTitleStage)
     ? dataObj.scaleTitleStage
     : getInitialScaleStageIndex(v.building);
+  v.lastHeadmanElectionYear = dataObj.lastHeadmanElectionYear != null && Number.isFinite(Number(dataObj.lastHeadmanElectionYear))
+    ? Number(dataObj.lastHeadmanElectionYear)
+    : null;
+  v.nextHeadmanElectionYear = dataObj.nextHeadmanElectionYear != null && Number.isFinite(Number(dataObj.nextHeadmanElectionYear))
+    ? Number(dataObj.nextHeadmanElectionYear)
+    : null;
   v.popLimit = dataObj.popLimit;
   if (Array.isArray(dataObj.villageTraits)) {
     v.villageTraits = [...dataObj.villageTraits];

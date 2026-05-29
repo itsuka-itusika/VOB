@@ -7,6 +7,7 @@ import { startRaidEvent } from "./raidStart.js";
 import { RandomEvents } from "./RandomEvents.js";
 import { handleBirthAndPostpartum, handlePregnancyChecks, updateChildGrowthStage } from "./reproduction.js";
 import { showFestivalModal } from "./festivalModal.js";
+import { runHeadmanElectionIfDue } from "./headmanElection.js";
 import {
   ACTION_CRADLE,
   ACTION_HEAL,
@@ -176,6 +177,7 @@ export function runMonthStartPhase(village) {
   restoreRecoveredForcedActions(village);
   doRandomEventPre(village);
   applyMonthStartRestrictions(village);
+  runHeadmanElectionIfDue(village);
   doRaidStartCheck(village);
 }
 
