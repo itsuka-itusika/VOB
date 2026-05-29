@@ -22,7 +22,7 @@ export const VILLAGE_SCALE_STAGES = [
   {
     threshold: 180,
     title: "豊かな村",
-    description: "食料、仕事、施設が安定し、周辺の小集落より豊かに見える村です。"
+    description: "食料、行動割り当て、施設が安定し、周辺の小集落より豊かに見える村です。"
   },
   {
     threshold: 250,

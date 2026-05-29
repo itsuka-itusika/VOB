@@ -208,8 +208,9 @@ export function calculateGuardYield(person) {
   return Math.max(1, amount);
 }
 
-export function calculateTradingYield(person) {
-  return Math.round(34 * statProduct(person, "chr", "int"));
+export function calculateTradingYield(person, baseValue = RANDOM_HARVEST_EXPECTED_BASE) {
+  const base = (Number(baseValue) || 0) * statProduct(person, "chr", "int");
+  return Math.round(base * getLaborYieldMultiplier("行商", person, null));
 }
 
 export function calculateMagicCraftYield(person) {

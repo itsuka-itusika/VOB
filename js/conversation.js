@@ -1,7 +1,7 @@
 import { theVillage } from "./main.js";
 import { updateUI } from "./ui.js";
 import { getPortraitPath, isForcedHealingAction } from "./util.js";
-import { refreshJobTable } from "./domain/jobTables.js";
+import { ACTION_NONE, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { ACTION_DEFEND, ACTION_TRAP, isRaidActionAssignable } from "./raidRules.js";
 import { getConversationLine } from "./dialogue/dialogueEngine.js";
@@ -648,10 +648,10 @@ function handleRecruitmentSuccess(visitor, recruiter, successRate = 0) {
   const visitorType = visitor.name.includes("の") ? visitor.name.split("の")[0] : null;
   
   visitor.mindTraits = visitor.mindTraits.filter(t => t !== "訪問者");
-  visitor.job = "なし";
-  visitor.action = "休養";
-  visitor.jobTable = ["なし", "休養"];
-  visitor.actionTable = ["休養"];
+  setPreferredAction(visitor, ACTION_NONE);
+  visitor.action = ACTION_NONE;
+  visitor.jobTable = [];
+  visitor.actionTable = [];
   
   // 棄民の場合は強制的に老人口調に設定
   if (visitorType === "棄民" || visitor.name.includes("棄民の")) {
@@ -668,7 +668,7 @@ function handleRecruitmentSuccess(visitor, recruiter, successRate = 0) {
   theVillage.visitors = theVillage.visitors.filter(v => v !== originalVisitor);
   theVillage.villagers.push(visitor);
   
-  // 仕事テーブルを更新
+  // 行動テーブルを更新
   refreshJobTable(visitor, theVillage);
   
   theVillage.log(`${recruiter.name}の勧誘により、${visitor.name}が村人になりました。(成功率: ${Math.floor(successRate)}%)`);

@@ -9,7 +9,7 @@
    5: 体力
    6: メンタル
    7: 幸福
-   8: 仕事
+   8: 行動
    9: 筋力
    10: 耐久
    11: 器用
@@ -142,13 +142,13 @@ button {
 .mobile-spirit-toggle {
   display: none;
 }
-.job-cell-controls {
+.action-cell-controls {
   display: flex;
   align-items: center;
   gap: 4px;
   min-width: 150px;
 }
-.job-cell-controls select {
+.action-cell-controls select {
   min-width: 86px;
   flex: 1 1 auto;
 }
@@ -1842,11 +1842,11 @@ body.mobile-mode #raidEnemiesTable select {
   min-height: 20px;
   font-size: 0.5rem;
 }
-body.mobile-mode .job-cell-controls {
+body.mobile-mode .action-cell-controls {
   gap: 2px;
   min-width: 0;
 }
-body.mobile-mode .job-cell-controls select {
+body.mobile-mode .action-cell-controls select {
   min-width: 0;
 }
 body.mobile-mode .assignment-lock-toggle {

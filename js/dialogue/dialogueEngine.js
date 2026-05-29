@@ -290,7 +290,7 @@ export function collectConversationCandidates({ character, village, context = {}
     }, sharedContext);
   }
 
-  // 低勤勉の会話は、仕事への抵抗感として成立する精神年齢からだけ候補にする。
+  // 低勤勉の会話は、行動への抵抗感として成立する精神年齢からだけ候補にする。
   // 子供系口調が混入した場合は LAZY_LINES 側の通常fallbackで受ける。
   if (Number(character?.ind) <= 10 && Number(character?.spiritAge) >= 10) {
     addCandidate(candidates, character, {
@@ -300,7 +300,7 @@ export function collectConversationCandidates({ character, village, context = {}
     }, sharedContext);
   }
 
-  const jobKey = String(character?.job || "").trim();
+  const jobKey = String(character?.preferredAction || character?.job || "").trim();
   if (JOB_LINES[jobKey]) {
     addCandidate(candidates, character, {
       scene: "job",

@@ -64,7 +64,7 @@ export function handleAllVillagerJobs(village) {
 
       let roll = randInt(1, 100);
       // サボり判定
-      if (roll <= saboProb && p.action !== "休養" && p.action !== "余暇" && p.action !== "なし" && p.action !== "迎撃" && p.action !== "罠作成" && p.action !== "療養" && p.action !== "臨終") {
+      if (roll <= saboProb && p.action !== "休養" && p.action !== "余暇" && p.action !== "なし" && p.action !== "揺籃" && p.action !== "迎撃" && p.action !== "罠作成" && p.action !== "療養" && p.action !== "臨終") {
         doSabori(p, village);
       } else {
         doJobAction(p, village, secretTreasureFlags);
@@ -195,6 +195,9 @@ function doJobAction(p, v, secretTreasureFlags = null) {
     case "休養":
       doRestJob(p, v);
       break;
+    case "揺籃":
+      doCradleJob(p, v);
+      break;
     case "余暇":
       doLeisureJob(p, v);
       break;
@@ -315,6 +318,13 @@ function calcJobMindCost(job, stat, person, village) {
 // -------------------------
 // 各ジョブの具体処理
 // -------------------------
+
+function doCradleJob(p, v) {
+  p.hp = clampValue(p.hp + 30, 0, 100);
+  p.mp = clampValue(p.mp + 30, 0, 100);
+  p.happiness = clampValue(p.happiness + 30, 0, 100);
+  v.log(`${p.name}揺籃:体力+30,メンタル+30,幸福+30`);
+}
 
 function doRestJob(p, v) {
   let r = randInt(1,100);
@@ -952,15 +962,29 @@ function doPriest(p, v) {
 
 function doTrading(p, v) {
   let tc = calcJobBodyCost("行商", p, v);
-  let mc = calcJobMindCost("行商", p.ind, p, v);
+  let mc = calcJobMindCost("行商", p.int, p, v);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
-  let amt = calculateTradingYield(p);
+  const r = randInt(1, 100);
+  let x = 0;
+  let result = "";
+  if (r <= 20) {
+    x = 0;
+    result = "失敗";
+  } else if (r <= 80) {
+    x = 30;
+    result = "成功";
+  } else {
+    x = 70;
+    result = "大成功";
+  }
+
+  let amt = calculateTradingYield(p, x);
 
   v.funds = clampValue(v.funds+amt, 0, 99999);
 
-  let logMsg = `${p.name}行商:資金+${amt},体力-${tc},メンタル-${mc}`;
+  let logMsg = `${p.name}行商:${result} 資金+${amt},体力-${tc},メンタル-${mc}`;
   
   // ステータス上昇判定
   if (Math.random() < 0.05) {

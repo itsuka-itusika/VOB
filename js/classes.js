@@ -125,13 +125,15 @@ export class Villager {
     /** 人間関係(文字列格納) */
     this.relationships = [];
 
-    /** 仕事関連 */
-    this.job = "休養";
+    /** 行動割り当て関連 */
+    // preferredAction は通常時の復帰先。job は旧セーブ・旧コード互換の別名として同期する。
+    this.preferredAction = "なし";
+    this.job = "なし";
     this.jobTable = [];
     this.assignmentLocked = false;
 
-    /** 行動関連 */
-    this.action = "休養";
+    /** 今月実行する行動 */
+    this.action = "なし";
     this.actionTable = [];
 
     /** この肉体の元の持ち主 */

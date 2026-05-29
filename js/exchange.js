@@ -53,8 +53,10 @@ function refreshAssignmentAfterExchange(person, village) {
     return;
   }
 
+  // refreshJobTable が、肉体/精神の組み合わせに応じて
+  // preferredAction の妥当性と現在行動を正規化する。
+  // 特に大人肉体/赤子精神の「揺籃」固定、強制療養の「療養」固定をここで壊さない。
   refreshJobTable(person, village);
-  person.action = "なし";
 }
 
 /**

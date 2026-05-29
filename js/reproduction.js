@@ -645,9 +645,7 @@ function giveBirth(village, mother) {
   addUnique(mother.bodyTraits, "産褥");
   mother.postpartumMonths = POSTPARTUM_MONTHS;
   syncEffectiveStats(mother);
-  mother.job = "なし";
   mother.action = "療養";
-  mother.jobTable = ["なし"];
   mother.actionTable = ["療養"];
 
   if (spouse) {

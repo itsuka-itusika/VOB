@@ -7,7 +7,18 @@ import { startRaidEvent } from "./raidStart.js";
 import { RandomEvents } from "./RandomEvents.js";
 import { handleBirthAndPostpartum, handlePregnancyChecks, updateChildGrowthStage } from "./reproduction.js";
 import { showFestivalModal } from "./festivalModal.js";
-import { applyForcedActionRestriction, refreshJobTable } from "./domain/jobTables.js";
+import {
+  ACTION_CRADLE,
+  ACTION_HEAL,
+  ACTION_LAST_MOMENTS,
+  ACTION_NONE,
+  ACTION_REST,
+  ACTION_LEISURE,
+  isTemporaryAction,
+  refreshJobTable,
+  setPreferredAction,
+  applyForcedActionRestriction
+} from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
 
@@ -135,6 +146,22 @@ function applyMonthStartRestrictions(village) {
   });
 }
 
+function restoreRecoveredForcedActions(village) {
+  village.villagers.forEach(person => {
+    const previousAction = String(person.action || ACTION_NONE).trim() || ACTION_NONE;
+    if (previousAction !== ACTION_HEAL && previousAction !== ACTION_LAST_MOMENTS) return;
+
+    const restriction = applyForcedActionRestriction(person);
+    if (restriction.restricted) return;
+
+    refreshJobTable(person, village);
+    const preferred = String(person.preferredAction || person.job || ACTION_NONE).trim() || ACTION_NONE;
+    person.action = preferred !== ACTION_NONE && person.actionTable.includes(preferred)
+      ? preferred
+      : ACTION_NONE;
+  });
+}
+
 export function runMonthStartPhase(village) {
   const monthStartSeason = [3,6,9,12].includes(village.month)
     ? updateSeason(village, { showDialog: false, logChange: false })
@@ -146,6 +173,7 @@ export function runMonthStartPhase(village) {
   }
   doFixedEventPre(village);
   handleBirthAndPostpartum(village);
+  restoreRecoveredForcedActions(village);
   doRandomEventPre(village);
   applyMonthStartRestrictions(village);
   doRaidStartCheck(village);
@@ -370,7 +398,7 @@ export function endOfMonthProcess(v) {
  *  - 食料/資材0時のペナルティ
  *  - 幸福度調整
  *  - 訪問者生成
- *  - jobTable再構築
+ *  - 行動テーブル再構築
  */
 export function doMonthStartProcess(v) {
   v.log("【月初処理】");
@@ -511,88 +539,87 @@ export function doMonthStartProcess(v) {
     }
   }
 
-  // 全村人の行動テーブルを再構築
+  // 全村人の行動テーブルを再構築し、一時行動から通常の復帰先へ戻す
   v.villagers.forEach(p=>{
-    let currentAction = p.action; // 現在のactionを保存
-    
-    // 一旦空にする
+    const currentAction = String(p.action || ACTION_NONE).trim() || ACTION_NONE;
+
     p.actionTable = [];
-    p.jobTable = [];  // jobTableも初期化
-    
+    p.jobTable = [];
+
     const restriction = applyForcedActionRestriction(p);
     if (restriction.restricted) {
       v.log(`${p.name}は${restriction.reason}のため、行動を「${restriction.action}」に設定しました`);
       return;
     }
-    
+
     refreshJobTable(p, v);
 
-    // 月ごとの一時的な行動変更は翌月まで持ち越さず、基本は仕事と同じ行動へ戻す。
-    // 仕事が行動として選べない村人は、休養などの有効な行動まで「なし」に戻さない。
-    const refreshedAction = p.action;
-    if (p.actionTable.includes(p.job)) {
-      p.action = p.job;
-    } else if (p.actionTable.includes(currentAction)) {
-      p.action = currentAction;
-    } else if (p.actionTable.includes(refreshedAction)) {
-      p.action = refreshedAction;
-    } else {
-      p.action = p.actionTable.includes("休養") ? "休養" : (p.actionTable[0] || "なし");
+    const preferredAction = String(p.preferredAction || p.job || ACTION_NONE).trim() || ACTION_NONE;
+    const hasPreferredAction = preferredAction !== ACTION_NONE && p.actionTable.includes(preferredAction);
+    const isRaidAction = currentAction === "迎撃" || currentAction === "罠作成";
+    const isFixedAction = [ACTION_CRADLE, ACTION_HEAL, ACTION_LAST_MOMENTS].includes(p.action);
+
+    if (!isFixedAction && (isTemporaryAction(currentAction) || isRaidAction || !p.actionTable.includes(currentAction))) {
+      p.action = hasPreferredAction ? preferredAction : ACTION_NONE;
     }
 
-    // 勤勉度および体力・メンタルによる休養判定
+    // 勤勉度および体力・メンタルによる休養判定。
+    // 揺籃・療養・臨終などの固定行動は上書きしない。
     let needsRest = false;
     let restReason = "";
+    const canSwitchToRest = ![ACTION_CRADLE, ACTION_HEAL, ACTION_LAST_MOMENTS].includes(p.action) &&
+      (p.actionTable.includes(ACTION_REST) || p.actionTable.includes(ACTION_LEISURE));
+    const chooseRecoveryAction = () => {
+      if (p.hp <= p.mp) return p.actionTable.includes(ACTION_REST) ? ACTION_REST : ACTION_LEISURE;
+      return p.actionTable.includes(ACTION_LEISURE) ? ACTION_LEISURE : ACTION_REST;
+    };
 
-    if (p.ind >= 21) {
-      // 高勤勉の場合、体力かメンタルが33以下なら休養
-      if (p.hp <= 33 && p.mp <= 33) {
-        needsRest = true;
-        restReason = "体力とメンタルが低下";
-        p.action = p.hp <= p.mp ? "休養" : "余暇";
-      } else if (p.hp <= 33) {
-
-        needsRest = true;
-        restReason = "体力が低下";
-        p.action = "休養";
-      } else if (p.mp <= 33) {
-        needsRest = true;
-        restReason = "メンタルが低下";
-        p.action = "余暇";
-      }
-    } else if (p.ind >= 13) {
-      // 中勤勉の場合、体力かメンタルが50以下なら休養
-      if (p.hp <= 50 && p.mp <= 50) {
-        needsRest = true;
-        restReason = "体力とメンタルが低下";
-        p.action = p.hp <= p.mp ? "休養" : "余暇";
-      } else if (p.hp <= 50) {
-        needsRest = true;
-        restReason = "体力が低下";
-        p.action = "休養";
-      } else if (p.mp <= 50) {
-        needsRest = true;
-        restReason = "メンタルが低下";
-        p.action = "余暇";
-      }
-    } else {
-      // 低勤勉の場合、体力かメンタルが60以下なら休養
-      if (p.hp <= 60 && p.mp <= 60) {
-        needsRest = true;
-        restReason = "体力とメンタルが低下";
-        p.action = p.hp <= p.mp ? "休養" : "余暇";
-      } else if (p.hp <= 60) {
-        needsRest = true;
-        restReason = "体力が低下";
-        p.action = "休養";
-      } else if (p.mp <= 60) {
-        needsRest = true;
-        restReason = "メンタルが低下";
-        p.action = "余暇";
+    if (canSwitchToRest) {
+      if (p.ind >= 21) {
+        if (p.hp <= 33 && p.mp <= 33) {
+          needsRest = true;
+          restReason = "体力とメンタルが低下";
+          p.action = chooseRecoveryAction();
+        } else if (p.hp <= 33) {
+          needsRest = true;
+          restReason = "体力が低下";
+          p.action = p.actionTable.includes(ACTION_REST) ? ACTION_REST : ACTION_LEISURE;
+        } else if (p.mp <= 33) {
+          needsRest = true;
+          restReason = "メンタルが低下";
+          p.action = p.actionTable.includes(ACTION_LEISURE) ? ACTION_LEISURE : ACTION_REST;
+        }
+      } else if (p.ind >= 13) {
+        if (p.hp <= 50 && p.mp <= 50) {
+          needsRest = true;
+          restReason = "体力とメンタルが低下";
+          p.action = chooseRecoveryAction();
+        } else if (p.hp <= 50) {
+          needsRest = true;
+          restReason = "体力が低下";
+          p.action = p.actionTable.includes(ACTION_REST) ? ACTION_REST : ACTION_LEISURE;
+        } else if (p.mp <= 50) {
+          needsRest = true;
+          restReason = "メンタルが低下";
+          p.action = p.actionTable.includes(ACTION_LEISURE) ? ACTION_LEISURE : ACTION_REST;
+        }
+      } else {
+        if (p.hp <= 60 && p.mp <= 60) {
+          needsRest = true;
+          restReason = "体力とメンタルが低下";
+          p.action = chooseRecoveryAction();
+        } else if (p.hp <= 60) {
+          needsRest = true;
+          restReason = "体力が低下";
+          p.action = p.actionTable.includes(ACTION_REST) ? ACTION_REST : ACTION_LEISURE;
+        } else if (p.mp <= 60) {
+          needsRest = true;
+          restReason = "メンタルが低下";
+          p.action = p.actionTable.includes(ACTION_LEISURE) ? ACTION_LEISURE : ACTION_REST;
+        }
       }
     }
 
-    // 休養が必要な場合はログに表示
     if (needsRest) {
       v.log(`${p.name}は${restReason}のため、${p.action}します`);
     }

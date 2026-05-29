@@ -420,7 +420,7 @@ function endRaidProcess(isSuccess, isPartSuccess, village) {
     }
 
     // 襲撃終了後、その月の残り処理を実行→次月へ
-    // 村人仕事
+    // 村人行動
     handleAllVillagerJobs(village);
     doFixedEventPost(village);
     // 月末

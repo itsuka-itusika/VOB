@@ -1,7 +1,7 @@
 // saveLoad.js
 import { Village, Villager } from "./classes.js";
 import { determineSpeechType, registerUsedName } from "./createVillagers.js";
-import { refreshJobTable } from "./domain/jobTables.js";
+import { ACTION_NONE, isPreferredActionCandidate, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
 import { hydrateStatLayersFromObject, syncEffectiveStats } from "./domain/statLayers.js";
 import { normalizeRelationships } from "./relationships.js";
 import { getInitialScaleStageIndex } from "./villageScale.js";
@@ -42,6 +42,12 @@ function normalizeSecretTreasures(source) {
   if (Array.isArray(source?.secretTreasures)) return cloneArray(source.secretTreasures);
   if (Array.isArray(source?.treasures)) return cloneArray(source.treasures);
   return [];
+}
+
+function migratePreferredAction(obj) {
+  const candidates = [obj?.preferredAction, obj?.job, obj?.action];
+  const preferred = candidates.find(isPreferredActionCandidate);
+  return preferred || ACTION_NONE;
 }
 
 /**
@@ -200,6 +206,7 @@ function convertVillagerToObject(vill) {
     hobby: vill.hobby,
     relationships: [...normalizeRelationships(vill)],
 
+    preferredAction: vill.preferredAction || vill.job || "なし",
     job: vill.job,
     jobTable: [...vill.jobTable],
     assignmentLocked: !!vill.assignmentLocked,
@@ -295,7 +302,7 @@ function convertObjectToVillage(dataObj) {
   // villagers
   if (Array.isArray(dataObj.villagers)) {
     v.villagers = dataObj.villagers.map(o => convertObjectToVillager(o));
-    // 全村人の仕事テーブルを更新
+    // 全村人の行動テーブルを更新
     v.villagers.forEach(villager => {
       refreshJobTable(villager, v);
     });
@@ -351,10 +358,10 @@ function convertObjectToVillager(obj) {
   normalizeRelationships(vill);
   registerUsedName(vill.name);
 
-  vill.job = obj.job;
+  setPreferredAction(vill, migratePreferredAction(obj));
   vill.jobTable = Array.isArray(obj.jobTable) ? [...obj.jobTable] : [];
   vill.assignmentLocked = !!obj.assignmentLocked;
-  vill.action = obj.action;
+  vill.action = obj.action || ACTION_NONE;
   vill.actionTable = Array.isArray(obj.actionTable) ? [...obj.actionTable] : [];
   vill.bodyOwner = obj.bodyOwner || obj.name;
   

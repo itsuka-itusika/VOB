@@ -2,7 +2,7 @@
 
 import { Villager } from "./classes.js";
 import { randInt, randChoice, randNormalInRange } from "./util.js";
-import { refreshJobTable } from "./domain/jobTables.js";
+import { ACTION_NONE, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
 import { applyGenerationBaseTraitBonuses, setBaseStatsFromEffective, syncEffectiveStats } from "./domain/statLayers.js";
 import {
   FEMALE_PORTRAIT_FILES,
@@ -786,7 +786,10 @@ export function createRandomVisitor(existingNames = [], forcedType = null) {
     : visitorName;
   registerUsedName(visitor.name);
   
-  // 行動テーブルを訪問のみに制限
+  // 訪問者は村人化するまで訪問固定。通常時の復帰先は持たない。
+  setPreferredAction(visitor, ACTION_NONE);
+  visitor.jobTable = [];
+  visitor.action = "訪問";
   visitor.actionTable = ["訪問"];
   
   // 精神特性に訪問者を追加（1回のみ）

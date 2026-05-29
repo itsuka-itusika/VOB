@@ -7,7 +7,7 @@ import { updateUI } from "./ui.js";
 import { doFixedEventPost, endOfMonthProcess, doAgingProcess, runMonthStartPhase } from "./events.js";
 import { applyForcedActionRestriction, refreshJobTable } from "./domain/jobTables.js";
 import { handleAllVillagerJobs } from "./jobs.js";
-import { isRestrictedNoJobVillager } from "./domain/rules.js";
+import { isUnassignedActionVillager } from "./domain/rules.js";
 import { getRaidReadiness } from "./raidRules.js";
 
 // Villageインスタンスを生成
@@ -98,20 +98,7 @@ export function onNextTurn() {
 
   applyTurnStartRestrictions(theVillage);
 
-  const noJobVillagers = theVillage.villagers.filter(person => {
-    const job = String(person.job || "").trim();
-    return (job === "" || job === "なし") && !isRestrictedNoJobVillager(person);
-  });
-  if (noJobVillagers.length > 0 && typeof window !== "undefined") {
-    const names = noJobVillagers.map(person => person.name).join("、");
-    const ok = window.confirm(`仕事が未設定の村人がいます。\n${names}\nこのまま月を進めますか？`);
-    if (!ok) return;
-  }
-
-  const noActionVillagers = theVillage.villagers.filter(person => {
-    const action = String(person.action || "").trim();
-    return (action === "" || action === "なし") && !isRestrictedNoJobVillager(person);
-  });
+  const noActionVillagers = theVillage.villagers.filter(isUnassignedActionVillager);
   if (noActionVillagers.length > 0 && typeof window !== "undefined") {
     const names = noActionVillagers.map(person => person.name).join("、");
     const ok = window.confirm(`行動が未設定の村人がいます。\n${names}\nこのまま月を進めますか？`);

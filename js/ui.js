@@ -26,9 +26,17 @@ import {
   estimateMindCost,
   getJobCostType,
 } from "./domain/jobMath.js";
-import { refreshJobTable } from "./domain/jobTables.js";
+import {
+  ACTION_CRADLE,
+  ACTION_HEAL,
+  ACTION_LAST_MOMENTS,
+  ACTION_NONE,
+  isPreferredActionCandidate,
+  setPreferredAction,
+  refreshJobTable
+} from "./domain/jobTables.js";
 import { getResourceStorageStatus, getResourceStorageWarningRatio } from "./domain/resourceLimits.js";
-import { isRestrictedNoJobVillager } from "./domain/rules.js";
+import { isUnassignedActionVillager } from "./domain/rules.js";
 import { showDictionaryEntry } from "./dictionary.js";
 import { getPortraitPath, getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "./util.js";
 import { formatRelationshipsForDisplay, normalizeRelationship } from "./relationships.js";
@@ -105,10 +113,7 @@ function buildWarningMessages(village) {
   const winterNeed = villagers.reduce((sum, person) => sum + getVillagerWinterMaterialConsumption(person), 0) * getWinterMonthsToPrepare(village.month);
   const lowHpCount = villagers.filter(person => Number(person.hp) <= 33).length;
   const lowMpCount = villagers.filter(person => Number(person.mp) <= 33).length;
-  const noActionCount = villagers.filter(person => {
-    const action = String(person.action || "").trim();
-    return (action === "" || action === "なし") && !isRestrictedNoJobVillager(person);
-  }).length;
+  const noActionCount = villagers.filter(isUnassignedActionVillager).length;
 
   if (foodCost > 0 && monthsOfFood <= 3) {
     warnings.push({
@@ -211,16 +216,16 @@ function hasTrait(person, trait) {
 }
 
 const STAT_CELL_INDEXES = {
-  str: 13,
-  vit: 14,
-  dex: 15,
-  mag: 16,
-  chr: 17,
-  int: 19,
-  ind: 20,
-  eth: 21,
-  cou: 22,
-  sexdr: 23
+  str: 12,
+  vit: 13,
+  dex: 14,
+  mag: 15,
+  chr: 16,
+  int: 18,
+  ind: 19,
+  eth: 20,
+  cou: 21,
+  sexdr: 22
 };
 
 function getDebuffedStats(person) {
@@ -334,6 +339,20 @@ function resourceName(village, normalName) {
   return village.villageTraits.includes("ミダス") && normalName === "食料" ? "資金" : normalName;
 }
 
+function formatRandomHarvestReward(resource, successAmount, criticalAmount, failureAmount = 0) {
+  return `${resource}+${successAmount}（大成功+${criticalAmount},失敗+${failureAmount}）`;
+}
+
+function getRandomHarvestRewardPart(person, village, action) {
+  const resource = resourceName(village, "食料");
+  const calc = action === "漁" ? calculateFishYield : calculateHuntYield;
+  return formatRandomHarvestReward(resource, calc(person, village, 30), calc(person, village, 70), calc(person, village, 0));
+}
+
+function getRandomTradingRewardPart(person) {
+  return formatRandomHarvestReward("資金", calculateTradingYield(person, 30), calculateTradingYield(person, 70), calculateTradingYield(person, 0));
+}
+
 function estimateDefendDamage(person, village) {
   if (hasTrait(person, "非戦主義")) return 0;
 
@@ -359,7 +378,7 @@ function estimateTrapDamage(person) {
   return Math.floor(((Number(person.dex) || 0) * (Number(person.int) || 0) / 400) * 30);
 }
 
-function getTaskEstimate(person, task, village) {
+function getTaskEstimateParts(person, task, village) {
   const chr = Number(person.chr) || 0;
   const cou = Number(person.cou) || 0;
   const dex = Number(person.dex) || 0;
@@ -382,8 +401,11 @@ function getTaskEstimate(person, task, village) {
   let parts = [];
 
   // jobMath.js と共有していない表示計算は、対象選択やランダム分岐を単純化した目安用です。
-  // 実処理の成果量まで安全に共有できる仕事は、下の各 case から jobMath.js を参照します。
+  // 実処理の成果量まで安全に共有できる行動は、下の各 case から jobMath.js を参照します。
   switch (task) {
+    case "揺籃":
+      parts = ["体力+30", "メンタル+30", "幸福+30"];
+      break;
     case "休養": {
       let hp = person.mindTraits.includes("ワーカホリック") ? 30 : 54;
       let mp = person.mindTraits.includes("ワーカホリック") ? -10 : 21;
@@ -413,12 +435,10 @@ function getTaskEstimate(person, task, village) {
       parts = [`資材+${gain}`, `体力-${jobBodyCost("伐採", person, village)}`, `メンタル-${jobMindCost("伐採", "ind", person, village)}`];
       break;
     case "狩猟":
-      gain = calculateHuntYield(person, village);
-      parts = [`${resourceName(village, "食料")}+${gain}`, `体力-${jobBodyCost("狩猟", person, village)}`, `メンタル-${jobMindCost("狩猟", "ind", person, village)}`];
+      parts = [getRandomHarvestRewardPart(person, village, "狩猟"), `体力-${jobBodyCost("狩猟", person, village)}`, `メンタル-${jobMindCost("狩猟", "ind", person, village)}`];
       break;
     case "漁":
-      gain = calculateFishYield(person, village);
-      parts = [`${resourceName(village, "食料")}+${gain}`, `体力-${jobBodyCost("漁", person, village)}`, `メンタル-${jobMindCost("漁", "ind", person, village)}`];
+      parts = [getRandomHarvestRewardPart(person, village, "漁"), `体力-${jobBodyCost("漁", person, village)}`, `メンタル-${jobMindCost("漁", "ind", person, village)}`];
       break;
     case "採集": {
       const gatherYield = calculateGatherYield(person, village);
@@ -432,7 +452,7 @@ function getTaskEstimate(person, task, village) {
       parts = [`資金+${calculateMagicCraftYield(person)}`, `体力-${jobBodyCost("魔法細工", person, village)}`, `メンタル-${jobMindCost("魔法細工", "ind", person, village)}`];
       break;
     case "行商":
-      parts = [`資金+${calculateTradingYield(person)}`, `体力-${jobBodyCost("行商", person, village)}`, `メンタル-${jobMindCost("行商", "ind", person, village)}`];
+      parts = [getRandomTradingRewardPart(person), `体力-${jobBodyCost("行商", person, village)}`, `メンタル-${jobMindCost("行商", "int", person, village)}`];
       break;
     case "研究":
       gain = calculateResearchYield(person, village);
@@ -499,11 +519,71 @@ function getTaskEstimate(person, task, village) {
       break;
   }
 
-  const estimate = formatEstimate(parts);
+  return parts;
+}
+
+function getTaskRewardEstimate(person, task, village) {
+  return formatEstimate(getTaskEstimateParts(person, task, village));
+}
+
+function getTaskCostEstimate(person, task, village) {
+  return getTaskEstimateParts(person, task, village)
+    .filter(part => /^体力-\d+/.test(part) || /^メンタル-\d+/.test(part))
+    .join(", ");
+}
+
+function getTaskEstimate(person, task, village) {
+  const estimate = getTaskRewardEstimate(person, task, village);
   if (!estimate) return task;
   return isMobileViewMode()
     ? `${task}(${compactEstimateText(estimate)})`
     : `${task} (${estimate})`;
+}
+
+const ACTION_DESCRIPTIONS = {
+  "揺籃": "無垢な精神が揺籃の中で守られ、成長を待つ固定行動。",
+  "休養": "体力の回復を優先する一時行動。通常行動の復帰先は維持される。",
+  "余暇": "趣味や息抜きでメンタルを回復する一時行動。通常行動の復帰先は維持される。",
+  "療養": "負傷・病気・産褥などで行動不能のときに固定される回復行動。",
+  "臨終": "危篤状態の固定行動。通常の作業には参加できない。",
+  "遊び": "幼い精神が遊びを通じて心身を整える成長段階の行動。",
+  "学業": "知力と勤勉を活かして学び、将来の能力形成につなげる行動。",
+  "鍛錬": "筋力と耐久を鍛え、将来の労働・戦闘適性を高める行動。",
+  "農作業": "耐久と勤勉を活かして畑を耕し、村の食料を支える基礎的な生産行動。",
+  "伐採": "筋力と勤勉を活かして木材を切り出し、建築や冬支度に必要な資材を得る生産行動。",
+  "狩猟": "筋力と勇気を活かして野に出て、危険を伴いながら食料を得る行動。",
+  "漁": "耐久と勇気を活かして水辺で食料を得る行動。",
+  "採集": "器用と知力を活かして野山から食料や資材を集める柔軟な生産行動。",
+  "内職": "器用と勤勉を活かして小さな作業を行う生産系の行動。",
+  "魔法細工": "魔力と器用を活かして価値ある細工物を作る資金獲得行動。",
+  "行商": "魅力と知力を活かして外部と取引し、成功すれば資金を得る行動。狩猟・漁の資金版に近い成功判定を持つ。",
+  "研究": "知力と魔力を活かして知識を蓄積し、村の技術を高める行動。",
+  "教育": "知力・魅力・倫理を活かして次世代を導く支援行動。",
+  "警備": "筋力と倫理を活かして村を見回り、治安を支える防衛行動。",
+  "看護": "魔力と倫理を活かして負傷者や消耗した村人を支える回復行動。",
+  "あんま": "身体感覚や対人能力を活かして村人の体力回復を支える行動。",
+  "シスター": "魅力と倫理を活かして村人の心を支える信仰系の回復行動。",
+  "神官": "魅力と倫理を活かして村人の心を支える信仰系の回復行動。",
+  "踊り子": "魅力と好色を活かし、娯楽を通じて村人の幸福を高める行動。",
+  "詩人": "魅力と知力を活かし、詩や歌で村人の幸福を高める行動。",
+  "バニー": "魅力と好色を活かし、酒場で男性村人の幸福とメンタルを支える行動。",
+  "巫女": "魅力・魔力・好色を活かし、信仰と儀式を通じて魔素を得る行動。",
+  "錬金術": "魔力と知力を活かして資金や魔素を生み出す高度な生産行動。",
+  "写本": "器用と知力を活かして写本を行い、資金や技術を得る行動。",
+  "機織り": "器用と勤勉を活かして布を織り、資金を得る生産行動。",
+  "醸造": "魔力と勤勉を活かして酒を仕込み、食料と魔素を得る行動。",
+  "迎撃": "襲撃中に敵へ直接攻撃する一時行動。通常行動の復帰先は維持される。",
+  "罠作成": "襲撃中に罠を作り、敵へ事前ダメージを与える一時行動。通常行動の復帰先は維持される。"
+};
+
+function getActionDescription(action) {
+  return ACTION_DESCRIPTIONS[action] || "この行動を実行します。";
+}
+
+function getActionOptionTitle(person, action, village) {
+  const reward = getTaskRewardEstimate(person, action, village) || "なし";
+  const cost = getTaskCostEstimate(person, action, village) || "なし";
+  return `${getActionDescription(action)}\n予想獲得報酬: ${reward}\n予想体力・メンタル消費: ${cost}`;
 }
 
 const JOB_KEY_STATS = {
@@ -538,6 +618,22 @@ function getJobLabel(job, compact = false) {
   if (!JOB_KEY_STATS[job]) return job;
   const stats = compact ? compactStatText(JOB_KEY_STATS[job]) : JOB_KEY_STATS[job];
   return compact ? `${job}(${stats})` : `${job}（${stats}）`;
+}
+
+function getActionRewardLabel(person, action, village) {
+  return getTaskRewardEstimate(person, action, village) || "";
+}
+
+function getActionOptionLabel(person, action, village) {
+  const statLabel = getJobLabel(action, isMobileViewMode());
+  const reward = getActionRewardLabel(person, action, village);
+  const compactReward = reward ? compactEstimateText(reward) : "";
+  if (statLabel !== action && compactReward) {
+    return `${statLabel} ${compactReward}`;
+  }
+  if (statLabel !== action) return statLabel;
+  if (compactReward) return `${action} ${compactReward}`;
+  return action;
 }
 
 function appendTextCell(row, value, className = "") {
@@ -610,50 +706,47 @@ function appendActionCell(row, person, village, editable) {
     return;
   }
 
-  const select = document.createElement("select");
-  select.onchange = () => {
-    person.action = select.value;
-    showDictionaryEntry(select.value);
-  };
-  (person.actionTable || []).forEach(action => {
-    const option = document.createElement("option");
-    const label = getTaskEstimate(person, action, village);
-    option.value = action;
-    option.textContent = label;
-    option.title = label;
-    if (action === person.action) option.selected = true;
-    select.appendChild(option);
-  });
-  cell.appendChild(select);
-  row.appendChild(cell);
-}
+  const wrapper = document.createElement("div");
+  wrapper.className = "action-cell-controls";
 
-function appendJobCell(row, person, village, editable) {
-  const cell = document.createElement("td");
-  if (!editable) {
-    cell.textContent = person.job;
-    row.appendChild(cell);
-    return;
+  const select = document.createElement("select");
+  const currentAction = String(person.action || ACTION_NONE).trim() || ACTION_NONE;
+  const actionTable = Array.isArray(person.actionTable) ? person.actionTable : [];
+  const isFixedAction = actionTable.length === 1 && [ACTION_CRADLE, ACTION_HEAL, ACTION_LAST_MOMENTS].includes(actionTable[0]);
+  if (currentAction !== ACTION_NONE) {
+    select.title = getActionOptionTitle(person, currentAction, village);
   }
 
-  const wrapper = document.createElement("div");
-  wrapper.className = "job-cell-controls";
-
-  const select = document.createElement("select");
-  (person.jobTable || []).forEach(job => {
+  if (currentAction === ACTION_NONE && !actionTable.includes(ACTION_NONE)) {
     const option = document.createElement("option");
-    const fullLabel = getJobLabel(job);
-    option.value = job;
-    option.textContent = getJobLabel(job, isMobileViewMode());
-    option.title = fullLabel;
-    if (job === person.job) option.selected = true;
+    option.value = ACTION_NONE;
+    option.textContent = "未設定";
+    option.title = "未設定。行動を選ぶか、自動割り振りを使ってください。";
+    option.disabled = true;
+    option.selected = true;
+    select.appendChild(option);
+  }
+
+  actionTable.forEach(action => {
+    if (action === ACTION_NONE) return;
+    const option = document.createElement("option");
+    const label = getActionOptionLabel(person, action, village);
+    option.value = action;
+    option.textContent = label;
+    option.title = getActionOptionTitle(person, action, village);
+    if (action === currentAction) option.selected = true;
     select.appendChild(option);
   });
-  select.onchange = function() {
-    const newJob = this.value;
-    person.job = newJob;
-    person.action = newJob;
-    showDictionaryEntry(newJob);
+
+  select.disabled = isFixedAction;
+  select.onchange = () => {
+    const newAction = select.value;
+    if (newAction === ACTION_NONE) return;
+    person.action = newAction;
+    if (isPreferredActionCandidate(newAction)) {
+      setPreferredAction(person, newAction);
+    }
+    showDictionaryEntry(newAction);
     refreshJobTable(person, village);
     updateUI(village);
   };
@@ -661,9 +754,7 @@ function appendJobCell(row, person, village, editable) {
   const lockButton = document.createElement("button");
   lockButton.type = "button";
   lockButton.className = `assignment-lock-toggle ${person.assignmentLocked ? "is-locked" : "is-auto"}`;
-  lockButton.title = person.assignmentLocked
-    ? "自動割り振りから除外中。クリックで自動対象に戻す"
-    : "自動割り振りの対象。クリックで固定する";
+  lockButton.title = "通常行動を固定します。自動割り振りで変更されません。";
   lockButton.setAttribute("aria-label", person.assignmentLocked ? "固定中" : "自動割り振り対象");
   lockButton.setAttribute("aria-pressed", person.assignmentLocked ? "true" : "false");
   const lockIcon = document.createElement("span");
@@ -695,7 +786,7 @@ function appendStatCells(row, person) {
 }
 
 function applyPersonRowStyle(row, person) {
-  for (let i = 0; i <= 14; i++) {
+  for (let i = 0; i <= 13; i++) {
     const cell = row.cells[i];
     if (!cell) continue;
     cell.classList.add(person.bodySex === "男" ? "male-basic" : "female-basic");
@@ -721,7 +812,6 @@ function createPersonRow(person, village, { editable = false } = {}) {
   }
   appendIdentityCells(row, person);
   appendActionCell(row, person, village, editable);
-  appendJobCell(row, person, village, editable);
   appendStatCells(row, person);
   applyPersonRowStyle(row, person);
   return row;
@@ -843,7 +933,7 @@ function setupTableSort() {
   if (!table) return;
   const headers = table.querySelectorAll("thead th");
 
-  const sortableColumns = [4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23];
+  const sortableColumns = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 21, 22];
 
   sortableColumns.forEach(colIndex => {
     const header = headers[colIndex];
@@ -880,7 +970,7 @@ function sortVillagerTable(colIndex, isAsc) {
     let bVal = b.cells[colIndex]?.textContent ?? "";
 
     // 数値の場合は数値としてソート
-    if ([5,7,8,9,10,13,14,15,16,17,19,20,21,22,23].includes(colIndex)) {
+    if ([5,7,8,9,10,12,13,14,15,16,18,19,20,21,22].includes(colIndex)) {
       aVal = Number(aVal);
       bVal = Number(bVal);
     }
