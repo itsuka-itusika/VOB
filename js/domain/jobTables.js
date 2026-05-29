@@ -235,7 +235,7 @@ export function refreshJobTable(v, village = {}) {
   }
 
   if (isAdolescentStage) {
-    const preferredTable = ["遊び", "鍛錬", "農作業", "伐採", "狩猟", "漁", "採集", "内職"];
+    const preferredTable = ["遊び", "農作業", "伐採", "狩猟", "漁", "採集", "内職", "丁稚", "研究助手"];
     setTables(v, preferredTable, [ACTION_REST, ...preferredTable]);
     normalizePreferredForTable(v, preferredTable, { defaultPreferred: "遊び" });
     addRaidActionsIfAllowed(v, village);

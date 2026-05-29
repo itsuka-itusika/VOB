@@ -176,7 +176,7 @@ export const BUILDINGS = [
   {
     id: "huntingLodge",
     name: "狩猟小屋",
-    materials: 80,
+    materials: 50,
     funds: 50,
     tech: 0,
     desc: "狩猟の失敗率-10%、成功率+10%。規模+20",
@@ -185,11 +185,20 @@ export const BUILDINGS = [
   {
     id: "dock",
     name: "網干場",
-    materials: 80,
+    materials: 50,
     funds: 50,
     tech: 0,
     desc: "漁の失敗率-10%、成功率+10%。規模+20",
     effect: standardBuildingEffect({ scale: 20, flag: "hasDock", log: "網干場建設完了: 漁の失敗率-10%、成功率+10%、規模+20" })
+  },
+  {
+    id: "market",
+    name: "市場",
+    materials: 50,
+    funds: 50,
+    tech: 0,
+    desc: "行商の失敗率-10%、成功率+10%。規模+20",
+    effect: standardBuildingEffect({ scale: 20, flag: "hasMarket", log: "市場建設完了: 行商の失敗率-10%、成功率+10%、規模+20" })
   },
   {
     id: "publicBath",

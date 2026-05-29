@@ -43,8 +43,8 @@ const JOB_MATERIAL_SET = new Set([
 ]);
 const JOB_FUNDS_SET = new Set([
   "\u5185\u8077",
-  "\u9b54\u6cd5\u7d30\u5de5",
   "\u884c\u5546",
+  "\u4e01\u7a1a",
   "\u932c\u91d1\u8853",
   "\u5199\u672c",
   "\u6a5f\u7e54\u308a"
@@ -62,17 +62,14 @@ const RECOVERY_ASSIGNMENT_SET = new Set([
 ]);
 
 const JOB_WEIGHTS = {
-  "\u5b66\u696d": { int: 2, ind: 2 },
-  "\u935b\u932c": { str: 2, vit: 1.5, cou: 1 },
   "\u8fb2\u4f5c\u696d": { vit: 2, ind: 2 },
   "\u4f10\u63a1": { str: 2, ind: 2 },
   "\u72e9\u731f": { str: 2, cou: 2 },
   "\u6f01": { vit: 2, cou: 2 },
   "\u63a1\u96c6": { dex: 2, int: 2 },
   "\u5185\u8077": { dex: 2, ind: 2 },
-  "\u9b54\u6cd5\u7d30\u5de5": { dex: 2, mag: 2 },
   "\u7814\u7a76": { int: 2, mag: 2 },
-  "\u6559\u80b2": { int: 1.5, ind: 1.5, eth: 1.5, cou: 1.5 },
+  "\u7814\u7a76\u52a9\u624b": { int: 2, mag: 2 },
   "\u8b66\u5099": { str: 2, eth: 2 },
   "\u770b\u8b77": { mag: 2, eth: 2 },
   "\u8e0a\u308a\u5b50": { chr: 2, sexdr: 2 },
@@ -80,13 +77,14 @@ const JOB_WEIGHTS = {
   "\u30b7\u30b9\u30bf\u30fc": { chr: 2, eth: 2 },
   "\u795e\u5b98": { chr: 2, eth: 2 },
   "\u884c\u5546": { chr: 2, int: 2 },
+  "\u4e01\u7a1a": { chr: 2, int: 2 },
   "\u3042\u3093\u307e": { str: 1, dex: 1, chr: 1, sexdr: 1 },
   "\u5deb\u5973": { chr: 1.5, mag: 1.5, sexdr: 1.5 },
   "\u30d0\u30cb\u30fc": { chr: 2, sexdr: 2 },
   "\u932c\u91d1\u8853": { int: 2, mag: 2 },
-  "\u5199\u672c": { dex: 2, int: 2 },
+  "\u5199\u672c": { vit: 2, int: 2 },
   "\u6a5f\u7e54\u308a": { dex: 2, ind: 2 },
-  "\u91b8\u9020": { mag: 2, ind: 2 }
+  "\u91b8\u9020": { mag: 2, vit: 2, ind: 2 }
 };
 
 const JOB_BASE_SCORES = {
@@ -96,9 +94,10 @@ const JOB_BASE_SCORES = {
   "\u6f01": 14,
   "\u63a1\u96c6": 14,
   "\u5185\u8077": 8,
-  "\u9b54\u6cd5\u7d30\u5de5": 0,
   "\u7814\u7a76": -8,
+  "\u7814\u7a76\u52a9\u624b": -8,
   "\u884c\u5546": 8,
+  "\u4e01\u7a1a": 8,
   "\u932c\u91d1\u8853": 0,
   "\u5199\u672c": 8,
   "\u6a5f\u7e54\u308a": 8,
@@ -201,14 +200,14 @@ function getJobTraitMultiplier(person, job, village) {
   let mul = 1;
   const villageTraits = Array.isArray(village?.villageTraits) ? village.villageTraits : [];
   if (villageTraits.includes("豊穣") && ["農作業", "伐採", "狩猟", "漁", "採集", "醸造"].includes(job)) mul *= 2;
-  if (villageTraits.includes("秋") && ["農作業", "採集"].includes(job)) mul *= 1.5;
+  if (villageTraits.includes("秋") && ["農作業", "採集", "醸造"].includes(job)) mul *= 1.5;
   if (villageTraits.includes("冬") && job === "農作業") mul *= 0.5;
   if (villageTraits.includes("冬") && job === "狩猟") mul *= 1.2;
   if (villageTraits.includes("冷夏") && ["農作業", "伐採"].includes(job)) mul *= 0.5;
 
-  if (hasTrait(person, "緑の指") && ["農作業", "伐採", "採集"].includes(job)) mul *= 1.2;
-  if (hasTrait(person, "大地の巫女") && job === "農作業") mul *= 1.5;
-  if (hasTrait(person, "大地の加護") && job === "農作業") mul *= 1.2;
+  if (hasTrait(person, "緑の指") && ["農作業", "伐採", "採集", "醸造"].includes(job)) mul *= 1.2;
+  if (hasTrait(person, "大地の巫女") && ["農作業", "醸造"].includes(job)) mul *= 1.5;
+  if (hasTrait(person, "大地の加護") && ["農作業", "醸造"].includes(job)) mul *= 1.2;
   if (hasTrait(person, "熟練農夫") && job === "農作業") mul *= 1.3;
   if (hasTrait(person, "達人農夫") && job === "農作業") mul *= 1.5;
   if (hasTrait(person, "熟練木樵") && job === "伐採") mul *= 1.3;
@@ -225,13 +224,13 @@ function getJobTraitMultiplier(person, job, village) {
   if (hasTrait(person, "森の知恵") && job === "採集") mul *= 1.5;
   if (hasTrait(person, "海の知恵") && job === "漁") mul *= 1.5;
   if ((person.hobby === "ハンティング" || person.hobby === "狩猟") && job === "狩猟") mul *= 1.2;
-  if (hasTrait(person, "思春期") && ["農作業", "伐採", "狩猟", "漁", "採集", "内職"].includes(job)) mul *= 0.8;
+  if (hasTrait(person, "思春期") && ["農作業", "伐採", "狩猟", "漁", "採集", "内職", "丁稚", "研究助手"].includes(job)) mul *= 0.8;
   return mul;
 }
 
 function getJobWeights(person, job) {
   if (job === "\u3042\u3093\u307e") {
-    if (person.bodySex === "\u7537") return { str: 2, dex: 2 };
+    if (person.bodySex === "\u7537") return { str: 2, int: 2 };
     if (person.bodySex === "\u5973") return { chr: 2, sexdr: 2 };
   }
   return JOB_WEIGHTS[job];

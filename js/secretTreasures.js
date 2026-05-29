@@ -13,6 +13,7 @@ const BAD_BODY_TRAITS = ["負傷", "疲労", "過労", "飢餓", "凍え", "病�
 const BAD_MIND_TRAITS = ["心労", "抑鬱"];
 const SECRET_TREASURE_SELL_PRICES = {
   persephone_statue: 300,
+  abundance_horn: 300,
   armless_angel: 200,
   golden_arrow: 150,
   golden_apple: 150,
@@ -144,6 +145,13 @@ function applyEverSpring(village) {
   showSecretTreasureResult(village, "冥王妃の神像", "村に穏やかな春の気配が定着しました。", getVillagers(village));
 }
 
+function applyAbundance(village) {
+  village.villageTraits = village.villageTraits || [];
+  village.villageTraits.push("豊穣");
+  village.log("【秘宝】豊穣の角を使いました。対象生産の成果と醸造の食料獲得2倍を1ヶ月付与");
+  showSecretTreasureResult(village, "豊穣の角", "畑と森、水辺と蔵に豊かな気配が満ちました。", getVillagers(village));
+}
+
 function applyNike(village) {
   getVillagers(village).forEach(person => {
     person.mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
@@ -193,6 +201,13 @@ export const SECRET_TREASURES = [
     desc: "常春の奇跡と同じ効果。季節系の村特性を取り除き、春に固定する。",
     sellPrice: SECRET_TREASURE_SELL_PRICES.persephone_statue,
     use: applyEverSpring
+  },
+  {
+    id: "abundance_horn",
+    name: "豊穣の角",
+    desc: "豊穣の奇跡と同じ効果。今月のみ農作業・伐採・狩猟・漁・採集の成果と醸造の食料獲得を2倍にする。",
+    sellPrice: SECRET_TREASURE_SELL_PRICES.abundance_horn,
+    use: applyAbundance
   },
   {
     id: "armless_angel",

@@ -4,6 +4,7 @@ import { randInt, randFloat, clampValue, round3 } from "./util.js";
 import { HobbyEffects } from "./HobbyEffects.js";
 import {
   calculateAlchemyYield,
+  calculateApprenticeYield,
   calculateBrewingYield,
   calculateBunnySupport,
   calculateCopyBookYield,
@@ -15,12 +16,12 @@ import {
   calculateHandiworkYield,
   calculateHuntYield,
   calculateLumberYield,
-  calculateMagicCraftYield,
   calculateMassageHeal,
   calculateMikoMana,
   calculateNurseHeal,
   calculatePoetHappiness,
   calculatePriestMindHeal,
+  calculateResearchAssistantYield,
   calculateResearchYield,
   calculateTradingYield,
   calculateWeavingYield,
@@ -204,12 +205,6 @@ function doJobAction(p, v, secretTreasureFlags = null) {
     case "遊び":
       doPlayJob(p, v);
       break;
-    case "学業":
-      doStudy(p, v);
-      break;
-    case "鍛錬":
-      doTraining(p, v);
-      break;
     case "農作業":
       doFarm(p, v);
       if (secretTreasureFlags) secretTreasureFlags.field = true;
@@ -230,14 +225,14 @@ function doJobAction(p, v, secretTreasureFlags = null) {
     case "内職":
       doHandiwork(p, v);
       break;
-    case "魔法細工":
-      doMagicCraft(p, v);
+    case "丁稚":
+      doApprentice(p, v);
       break;
     case "研究":
       doResearchJob(p, v);
       break;
-    case "教育":
-      doEducationJob(p, v);
+    case "研究助手":
+      doResearchAssistantJob(p, v);
       break;
     case "警備":
       doGuardJob(p, v);
@@ -392,29 +387,6 @@ function doPlayJob(p, v) {
   v.log(`${p.name}遊び:体力-${tc},メンタル+20,幸福+15`);
 }
 
-function doStudy(p, v) {
-  let tc=calcJobBodyCost("学業", p, v);
-  let mc=calcJobMindCost("学業", p.ind, p, v);
-  p.hp=clampValue(p.hp-tc,0,100);
-  p.mp=clampValue(p.mp-mc,0,100);
-
-  if (Math.random()<0.3) addAcquiredStat(p, "int", 1);
-  if (Math.random()<0.3) addAcquiredStat(p, "ind", 1);
-  v.log(`${p.name}学業:体力-${tc},メンタル-${mc},知力/勤勉上昇`);
-}
-
-function doTraining(p, v) {
-  let tc=calcJobBodyCost("鍛錬", p, v);
-  let mc=calcJobMindCost("鍛錬", p.ind, p, v);
-  p.hp=clampValue(p.hp-tc,0,100);
-  p.mp=clampValue(p.mp-mc,0,100);
-
-  if (Math.random()<0.4) addAcquiredStat(p, "str", 1);
-  if (Math.random()<0.3) addAcquiredStat(p, "vit", 1);
-  if (Math.random()<0.2) addAcquiredStat(p, "cou", 1);
-  v.log(`${p.name}鍛錬:体力-${tc},メンタル-${mc},筋力/耐久/勇気UP可能`);
-}
-
 function doFarm(p, v) {
   let tc=calcJobBodyCost("農作業", p, v);
   let mc=calcJobMindCost("農作業", p.ind, p, v);
@@ -495,7 +467,7 @@ function doLumber(p, v) {
 
 function doHunt(p, v) {
   let tc=calcJobBodyCost("狩猟", p, v);
-  let mc=calcJobMindCost("狩猟", p.ind, p, v);
+  let mc=calcJobMindCost("狩猟", p.cou, p, v);
   p.hp=clampValue(p.hp-tc,0,100);
   p.mp=clampValue(p.mp-mc,0,100);
 
@@ -552,7 +524,7 @@ function doHunt(p, v) {
 
 function doFish(p, v) {
   let tc=calcJobBodyCost("漁", p, v);
-  let mc=calcJobMindCost("漁", p.ind, p, v);
+  let mc=calcJobMindCost("漁", p.cou, p, v);
   p.hp=clampValue(p.hp-tc,0,100);
   p.mp=clampValue(p.mp-mc,0,100);
 
@@ -673,30 +645,26 @@ function doHandiwork(p, v) {
   v.log(logMsg);
 }
 
-function doMagicCraft(p, v) {
-  let tc=calcJobBodyCost("魔法細工", p, v);
-  let mc=calcJobMindCost("魔法細工", p.ind, p, v);
-  p.hp=clampValue(p.hp-tc,0,100);
-  p.mp=clampValue(p.mp-mc,0,100);
-
-  let amt=calculateMagicCraftYield(p);
-
-  v.funds=clampValue(v.funds+amt,0,99999);
-  v.log(`${p.name}魔法細工:資金+${amt},体力-${tc},メンタル-${mc}`);
+function doResearchJob(p, v) {
+  doResearchLikeJob(p, v, "研究", calculateResearchYield);
 }
 
-function doResearchJob(p, v) {
-  let tc = calcJobBodyCost("研究", p, v);
-  let mc = calcJobMindCost("研究", p.int, p, v);
+function doResearchAssistantJob(p, v) {
+  doResearchLikeJob(p, v, "研究助手", calculateResearchAssistantYield);
+}
+
+function doResearchLikeJob(p, v, jobName, calculateYield) {
+  let tc = calcJobBodyCost(jobName, p, v);
+  let mc = calcJobMindCost(jobName, p.int, p, v);
 
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
-  let gain = calculateResearchYield(p, v);
+  let gain = calculateYield(p, v);
 
   v.tech = clampValue(v.tech+gain, 0, 99999);
 
-  let logMsg = `${p.name}研究:技術+${gain},体力-${tc},メンタル-${mc}`;
+  let logMsg = `${p.name}${jobName}:技術+${gain},体力-${tc},メンタル-${mc}`;
   
   // ステータス上昇判定
   if (Math.random() < 0.05) {
@@ -709,30 +677,6 @@ function doResearchJob(p, v) {
   }
 
   v.log(logMsg);
-}
-
-function doEducationJob(p, v) {
-  let tc=calcJobBodyCost("教育", p, v);
-  let mc=calcJobMindCost("教育", p.eth, p, v);
-
-  p.hp=clampValue(p.hp-tc,0,100);
-  p.mp=clampValue(p.mp-mc,0,100);
-
-  let improved=0;
-  v.villagers.forEach(x=>{
-    if (x.spiritAge>=10 && x.spiritAge<=15) {
-      let mi=Math.floor(p.int/10); if(mi<1) mi=1;
-      let mind2=Math.floor(p.ind/10); if(mind2<1) mind2=1;
-      let meth=Math.floor(p.eth/10); if(meth<1) meth=1;
-      let mcou=Math.floor(p.cou/10); if(mcou<1) mcou=1;
-
-      if (Math.random()<0.2) { addAcquiredStat(x, "int", randInt(1,mi)); improved++;}
-      if (Math.random()<0.2) { addAcquiredStat(x, "ind", randInt(1,mind2)); improved++;}
-      if (Math.random()<0.2) { addAcquiredStat(x, "eth", randInt(1,meth)); improved++;}
-      if (Math.random()<0.2) { addAcquiredStat(x, "cou", randInt(1,mcou)); improved++;}
-    }
-  });
-  v.log(`${p.name}教育:子供ステ上昇${improved}回,体力-${tc},メンタル-${mc}`);
 }
 
 function doGuardJob(p, v) {
@@ -961,18 +905,28 @@ function doPriest(p, v) {
 }
 
 function doTrading(p, v) {
-  let tc = calcJobBodyCost("行商", p, v);
-  let mc = calcJobMindCost("行商", p.int, p, v);
+  doTradingLike(p, v, "行商", calculateTradingYield);
+}
+
+function doApprentice(p, v) {
+  doTradingLike(p, v, "丁稚", calculateApprenticeYield);
+}
+
+function doTradingLike(p, v, jobName, calculateYield) {
+  let tc = calcJobBodyCost(jobName, p, v);
+  let mc = calcJobMindCost(jobName, p.int, p, v);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
   const r = randInt(1, 100);
   let x = 0;
   let result = "";
-  if (r <= 20) {
+  const failureThreshold = v.buildingFlags?.hasMarket ? 10 : 20;
+  const successThreshold = 80;
+  if (r <= failureThreshold) {
     x = 0;
     result = "失敗";
-  } else if (r <= 80) {
+  } else if (r <= successThreshold) {
     x = 30;
     result = "成功";
   } else {
@@ -980,11 +934,11 @@ function doTrading(p, v) {
     result = "大成功";
   }
 
-  let amt = calculateTradingYield(p, x);
+  let amt = calculateYield(p, x);
 
   v.funds = clampValue(v.funds+amt, 0, 99999);
 
-  let logMsg = `${p.name}行商:${result} 資金+${amt},体力-${tc},メンタル-${mc}`;
+  let logMsg = `${p.name}${jobName}:${result} 資金+${amt},体力-${tc},メンタル-${mc}`;
   
   // ステータス上昇判定
   if (Math.random() < 0.05) {
@@ -1006,7 +960,7 @@ function doMassage(p, v) {
   let logMsg;
 
   if (p.bodySex === "男") {
-    mc = calcJobMindCost("あんま", p.eth, p, v);
+    mc = calcJobMindCost("あんま", p.int, p, v);
     heal = calculateMassageHeal(p);
     logMsg = `${p.name}あんま:体力-${tc},メンタル-${mc}`;
     
@@ -1016,8 +970,8 @@ function doMassage(p, v) {
       logMsg += ",筋力+1";
     }
     if (Math.random() < 0.05) {
-      addAcquiredStat(p, "eth", 1);
-      logMsg += ",倫理+1";
+      addAcquiredStat(p, "int", 1);
+      logMsg += ",知力+1";
     }
   } else {
     mc = calcJobMindCost("あんま", p.sexdr, p, v);
@@ -1122,8 +1076,9 @@ function doAlchemy(p, v) {
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
-  let fundsGain = calculateAlchemyYield(p);
-  let manaGain = calculateAlchemyYield(p);
+  const alchemyYield = calculateAlchemyYield(p);
+  let fundsGain = alchemyYield.funds;
+  let manaGain = alchemyYield.mana;
   
   v.funds = clampValue(v.funds + fundsGain, 0, 99999);
   v.mana = clampValue(v.mana + manaGain, 0, 99999);
@@ -1145,7 +1100,7 @@ function doAlchemy(p, v) {
 
 function doCopyBook(p, v) {
   let tc = calcJobBodyCost("写本", p, v);
-  let mc = calcJobMindCost("写本", p.ind, p, v);
+  let mc = calcJobMindCost("写本", p.int, p, v);
   p.hp = clampValue(p.hp-tc, 0, 100);
   p.mp = clampValue(p.mp-mc, 0, 100);
 
@@ -1159,8 +1114,8 @@ function doCopyBook(p, v) {
   
   // ステータス上昇判定
   if (Math.random() < 0.05) {
-    addAcquiredStat(p, "dex", 1);
-    logMsg += ",器用+1";
+    addAcquiredStat(p, "vit", 1);
+    logMsg += ",耐久+1";
   }
   if (Math.random() < 0.05) {
     addAcquiredStat(p, "int", 1);
@@ -1203,16 +1158,25 @@ function doBrewing(p, v) {
   let brewingYield = calculateBrewingYield(p, v);
   let foodGain = brewingYield.food;
   let manaGain = brewingYield.mana;
-  
-  addStoredResource(v, "food", foodGain);
+
+  const foodResourceName = v.villageTraits.includes("ミダス") ? "資金" : "食料";
+  if (v.villageTraits.includes("ミダス")) {
+    v.funds = clampValue(v.funds + foodGain, 0, 99999);
+  } else {
+    addStoredResource(v, "food", foodGain);
+  }
   v.mana = clampValue(v.mana + manaGain, 0, 99999);
 
-  let logMsg = `${p.name}醸造:食料+${foodGain},魔素+${manaGain},体力-${tc},メンタル-${mc}`;
+  let logMsg = `${p.name}醸造:${foodResourceName}+${foodGain},魔素+${manaGain},体力-${tc},メンタル-${mc}`;
   
   // ステータス上昇判定
   if (Math.random() < 0.05) {
     addAcquiredStat(p, "mag", 1);
     logMsg += ",魔力+1";
+  }
+  if (Math.random() < 0.05) {
+    addAcquiredStat(p, "vit", 1);
+    logMsg += ",耐久+1";
   }
   if (Math.random() < 0.05) {
     addAcquiredStat(p, "ind", 1);

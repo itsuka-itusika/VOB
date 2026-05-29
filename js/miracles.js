@@ -16,7 +16,7 @@ import { BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
 export const MIRACLES = [
   {id:"12", name:"交換の奇跡(20)", cost:20, desc:"2人の肉体を交換"},
   {id:"13", name:"交換の奇跡・強(80)", cost:80, desc:"村外含む2人交換"},
-  {id:"1",  name:"豊穣の奇跡(100)", cost:100, desc:"今月のみ収穫・醸造2倍(豊穣)"},
+  {id:"1",  name:"豊穣の奇跡(100)", cost:100, desc:"今月のみ、農作業・伐採・狩猟・漁・採集の成果と醸造の食料獲得2倍"},
   {id:"2",  name:"マナの奇跡(40)",  cost:40,  desc:"食料+80"},
   {id:"3",  name:"クピドの奇跡(80)", cost:80, desc:"2人を強制結婚(条件無視)"},
   {id:"4",  name:"宴会の奇跡(人数×15)", cost:-1, desc:"全員体力/メンタル+20,幸福+20 (資金×人数分も要)"},
@@ -454,8 +454,8 @@ export function performMiracle(village) {
       switch(mid) {
         case "1": // 豊穣
           village.villageTraits.push("豊穣");
-          village.log("【豊穣の奇跡】収穫・醸造2倍1ヶ月付与");
-          showMiracleResultModal(village, "豊穣の奇跡", "畑と森に豊かな気配が満ちました。", village.villagers);
+          village.log("【豊穣の奇跡】対象生産の成果と醸造の食料獲得2倍を1ヶ月付与");
+          showMiracleResultModal(village, "豊穣の奇跡", "畑と森、水辺と蔵に豊かな気配が満ちました。", village.villagers);
           break;
         case "2": // マナの奇跡
           addStoredResource(village, "food", 80);

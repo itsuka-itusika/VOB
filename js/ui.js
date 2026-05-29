@@ -2,6 +2,7 @@
 
 import {
   calculateAlchemyYield,
+  calculateApprenticeYield,
   calculateBrewingYield,
   calculateBunnySupport,
   calculateCopyBookYield,
@@ -13,12 +14,12 @@ import {
   calculateHandiworkYield,
   calculateHuntYield,
   calculateLumberYield,
-  calculateMagicCraftYield,
   calculateMassageHeal,
   calculateMikoMana,
   calculateNurseHeal,
   calculatePoetHappiness,
   calculatePriestMindHeal,
+  calculateResearchAssistantYield,
   calculateResearchYield,
   calculateTradingYield,
   calculateWeavingYield,
@@ -346,8 +347,8 @@ function getRandomHarvestRewardPart(person, village, action) {
   return formatRandomHarvestReward(resource, calc(person, village, 30), calc(person, village, 70), calc(person, village, 0));
 }
 
-function getRandomTradingRewardPart(person) {
-  return formatRandomHarvestReward("資金", calculateTradingYield(person, 30), calculateTradingYield(person, 70), calculateTradingYield(person, 0));
+function getRandomTradingRewardPart(person, calculateYield = calculateTradingYield) {
+  return formatRandomHarvestReward("資金", calculateYield(person, 30), calculateYield(person, 70), calculateYield(person, 0));
 }
 
 function estimateDefendDamage(person, village) {
@@ -432,10 +433,10 @@ function getTaskEstimateParts(person, task, village) {
       parts = [`資材+${gain}`, `体力-${jobBodyCost("伐採", person, village)}`, `メンタル-${jobMindCost("伐採", "ind", person, village)}`];
       break;
     case "狩猟":
-      parts = [getRandomHarvestRewardPart(person, village, "狩猟"), `体力-${jobBodyCost("狩猟", person, village)}`, `メンタル-${jobMindCost("狩猟", "ind", person, village)}`];
+      parts = [getRandomHarvestRewardPart(person, village, "狩猟"), `体力-${jobBodyCost("狩猟", person, village)}`, `メンタル-${jobMindCost("狩猟", "cou", person, village)}`];
       break;
     case "漁":
-      parts = [getRandomHarvestRewardPart(person, village, "漁"), `体力-${jobBodyCost("漁", person, village)}`, `メンタル-${jobMindCost("漁", "ind", person, village)}`];
+      parts = [getRandomHarvestRewardPart(person, village, "漁"), `体力-${jobBodyCost("漁", person, village)}`, `メンタル-${jobMindCost("漁", "cou", person, village)}`];
       break;
     case "採集": {
       const gatherYield = calculateGatherYield(person, village);
@@ -445,15 +446,19 @@ function getTaskEstimateParts(person, task, village) {
     case "内職":
       parts = [`資金+${calculateHandiworkYield(person, village)}`, `体力-${jobBodyCost("内職", person, village)}`, `メンタル-${jobMindCost("内職", "ind", person, village)}`];
       break;
-    case "魔法細工":
-      parts = [`資金+${calculateMagicCraftYield(person)}`, `体力-${jobBodyCost("魔法細工", person, village)}`, `メンタル-${jobMindCost("魔法細工", "ind", person, village)}`];
-      break;
     case "行商":
       parts = [getRandomTradingRewardPart(person), `体力-${jobBodyCost("行商", person, village)}`, `メンタル-${jobMindCost("行商", "int", person, village)}`];
+      break;
+    case "丁稚":
+      parts = [getRandomTradingRewardPart(person, calculateApprenticeYield), `体力-${jobBodyCost("丁稚", person, village)}`, `メンタル-${jobMindCost("丁稚", "int", person, village)}`];
       break;
     case "研究":
       gain = calculateResearchYield(person, village);
       parts = [`技術+${gain}`, `体力-${jobBodyCost("研究", person, village)}`, `メンタル-${jobMindCost("研究", "int", person, village)}`];
+      break;
+    case "研究助手":
+      gain = calculateResearchAssistantYield(person, village);
+      parts = [`技術+${gain}`, `体力-${jobBodyCost("研究助手", person, village)}`, `メンタル-${jobMindCost("研究助手", "int", person, village)}`];
       break;
     case "警備":
       parts = [`治安+${calculateGuardYield(person)}`, `体力-${jobBodyCost("警備", person, village)}`, `メンタル-${jobMindCost("警備", "cou", person, village)}`];
@@ -464,7 +469,7 @@ function getTaskEstimateParts(person, task, village) {
       break;
     case "あんま":
       gain = calculateMassageHeal(person);
-      parts = [`体力回復+${gain}`, `体力-${jobBodyCost("あんま", person, village)}`, `メンタル-${jobMindCost("あんま", person.bodySex === "男" ? "eth" : "sexdr", person, village)}`];
+      parts = [`体力回復+${gain}`, `体力-${jobBodyCost("あんま", person, village)}`, `メンタル-${jobMindCost("あんま", person.bodySex === "男" ? "int" : "sexdr", person, village)}`];
       break;
     case "シスター":
     case "神官":
@@ -488,26 +493,20 @@ function getTaskEstimateParts(person, task, village) {
       break;
     case "錬金術":
       gain = calculateAlchemyYield(person);
-      parts = [`資金/魔素+${gain}`, `体力-${jobBodyCost("錬金術", person, village)}`, `メンタル-${jobMindCost("錬金術", "int", person, village)}`];
+      parts = [`資金+${gain.funds}`, `魔素+${gain.mana}`, `体力-${jobBodyCost("錬金術", person, village)}`, `メンタル-${jobMindCost("錬金術", "int", person, village)}`];
       break;
     case "写本":
       gain = calculateCopyBookYield(person);
-      parts = [`資金/技術+${gain}`, `体力-${jobBodyCost("写本", person, village)}`, `メンタル-${jobMindCost("写本", "ind", person, village)}`];
+      parts = [`資金/技術+${gain}`, `体力-${jobBodyCost("写本", person, village)}`, `メンタル-${jobMindCost("写本", "int", person, village)}`];
       break;
     case "機織り":
       parts = [`資金+${calculateWeavingYield(person)}`, `体力-${jobBodyCost("機織り", person, village)}`, `メンタル-${jobMindCost("機織り", "ind", person, village)}`];
       break;
     case "醸造": {
       const brewingYield = calculateBrewingYield(person, village);
-      parts = [`食料+${brewingYield.food}`, `魔素+${brewingYield.mana}`, `体力-${jobBodyCost("醸造", person, village)}`, `メンタル-${jobMindCost("醸造", "ind", person, village)}`];
+      parts = [`${resourceName(village, "食料")}+${brewingYield.food}`, `魔素+${brewingYield.mana}`, `体力-${jobBodyCost("醸造", person, village)}`, `メンタル-${jobMindCost("醸造", "ind", person, village)}`];
       break;
     }
-    case "学業":
-      parts = [`体力-${jobBodyCost("学業", person, village)}`, `メンタル-${jobMindCost("学業", "ind", person, village)}`];
-      break;
-    case "鍛錬":
-      parts = [`体力-${jobBodyCost("鍛錬", person, village)}`, `メンタル-${jobMindCost("鍛錬", "ind", person, village)}`];
-      break;
     case "迎撃":
       parts = [`想定ダメージ${estimateDefendDamage(person, village)}`];
       break;
@@ -544,18 +543,16 @@ const ACTION_DESCRIPTIONS = {
   "療養": "負傷・病気・産褥などで行動不能のときに固定される回復行動。",
   "臨終": "危篤状態の固定行動。通常の作業には参加できない。",
   "遊び": "幼い精神が遊びを通じて心身を整える成長段階の行動。",
-  "学業": "知力と勤勉を活かして学び、将来の能力形成につなげる行動。",
-  "鍛錬": "筋力と耐久を鍛え、将来の労働・戦闘適性を高める行動。",
   "農作業": "耐久と勤勉を活かして畑を耕し、村の食料を支える基礎的な生産行動。",
   "伐採": "筋力と勤勉を活かして木材を切り出し、建築や冬支度に必要な資材を得る生産行動。",
   "狩猟": "筋力と勇気を活かして野に出て、危険を伴いながら食料を得る行動。",
   "漁": "耐久と勇気を活かして水辺で食料を得る行動。",
   "採集": "器用と知力を活かして野山から食料や資材を集める柔軟な生産行動。",
   "内職": "器用と勤勉を活かして小さな作業を行う生産系の行動。",
-  "魔法細工": "魔力と器用を活かして価値ある細工物を作る資金獲得行動。",
   "行商": "魅力と知力を活かして外部と取引し、成功すれば資金を得る行動。",
+  "丁稚": "思春期の精神が商いを手伝い、成功すれば資金を得る行動。",
   "研究": "知力と魔力を活かして知識を蓄積し、村の技術を高める行動。",
-  "教育": "知力・魅力・倫理を活かして次世代を導く支援行動。",
+  "研究助手": "思春期の精神が研究を手伝い、村の技術を高める行動。",
   "警備": "筋力と倫理を活かして村を見回り、治安を支える防衛行動。",
   "看護": "魔力と倫理を活かして負傷者や消耗した村人を支える回復行動。",
   "あんま": "身体感覚や対人能力を活かして村人の体力回復を支える行動。",
@@ -566,9 +563,9 @@ const ACTION_DESCRIPTIONS = {
   "バニー": "魅力と好色を活かし、酒場で男性村人の幸福とメンタルを支える行動。",
   "巫女": "魅力・魔力・好色を活かし、信仰と儀式を通じて魔素を得る行動。",
   "錬金術": "魔力と知力を活かして資金や魔素を生み出す高度な生産行動。",
-  "写本": "器用と知力を活かして写本を行い、資金や技術を得る行動。",
+  "写本": "耐久と知力を活かして写本を行い、資金や技術を得る行動。",
   "機織り": "器用と勤勉を活かして布を織り、資金を得る生産行動。",
-  "醸造": "魔力と勤勉を活かして酒を仕込み、食料と魔素を得る行動。",
+  "醸造": "魔力・耐久・勤勉を活かして酒を仕込み、食料と魔素を得る行動。",
   "迎撃": "襲撃中に敵へ直接攻撃する一時行動。",
   "罠作成": "襲撃中に罠を作り、敵へ事前ダメージを与える一時行動。"
 };
@@ -584,17 +581,14 @@ function getActionOptionTitle(person, action, village) {
 }
 
 const JOB_KEY_STATS = {
-  "学業": "知力×勤勉",
-  "鍛錬": "筋力×耐久",
   "農作業": "耐久×勤勉",
   "伐採": "筋力×勤勉",
   "狩猟": "筋力×勇気",
   "漁": "耐久×勇気",
   "採集": "器用×知力",
   "内職": "器用×勤勉",
-  "魔法細工": "魔力×器用",
   "研究": "魔力×知力",
-  "教育": "知力×魅力×倫理",
+  "研究助手": "魔力×知力",
   "警備": "筋力×倫理",
   "看護": "魔力×倫理",
   "踊り子": "魅力×好色",
@@ -602,13 +596,14 @@ const JOB_KEY_STATS = {
   "シスター": "魅力×倫理",
   "神官": "魅力×倫理",
   "行商": "魅力×知力",
-  "あんま": "男性:筋力×倫理/女性:魅力×好色",
+  "丁稚": "魅力×知力",
+  "あんま": "男性:筋力×知力/女性:魅力×好色",
   "巫女": "魅力×魔力×好色",
   "バニー": "魅力×好色",
   "錬金術": "魔力×知力",
-  "写本": "器用×知力",
+  "写本": "耐久×知力",
   "機織り": "器用×勤勉",
-  "醸造": "魔力×勤勉"
+  "醸造": "魔力×耐久×勤勉"
 };
 
 function getJobLabel(job, compact = false) {

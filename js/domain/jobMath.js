@@ -16,17 +16,15 @@ export const WORK_COST_TYPES = {
 };
 
 export const JOB_COST_TYPES = {
-  "学業": WORK_COST_TYPES.MENTAL,
-  "鍛錬": WORK_COST_TYPES.PHYSICAL,
   "農作業": WORK_COST_TYPES.PHYSICAL,
   "伐採": WORK_COST_TYPES.PHYSICAL,
   "狩猟": WORK_COST_TYPES.PHYSICAL,
   "漁": WORK_COST_TYPES.PHYSICAL,
   "採集": WORK_COST_TYPES.BALANCED,
   "内職": WORK_COST_TYPES.MENTAL,
-  "魔法細工": WORK_COST_TYPES.MENTAL,
   "研究": WORK_COST_TYPES.MENTAL,
-  "教育": WORK_COST_TYPES.MENTAL,
+  "丁稚": WORK_COST_TYPES.BALANCED,
+  "研究助手": WORK_COST_TYPES.MENTAL,
   "警備": WORK_COST_TYPES.PHYSICAL,
   "看護": WORK_COST_TYPES.BALANCED,
   "踊り子": WORK_COST_TYPES.BALANCED,
@@ -43,12 +41,12 @@ export const JOB_COST_TYPES = {
   "醸造": WORK_COST_TYPES.BALANCED
 };
 
-const ABUNDANCE_JOBS = ["農作業", "伐採", "狩猟", "漁", "採集", "醸造"];
+const ABUNDANCE_JOBS = ["農作業", "伐採", "狩猟", "漁", "採集"];
 const AUTUMN_JOBS = ["農作業", "採集"];
 const COLD_SUMMER_JOBS = ["農作業", "伐採"];
 const GREEN_THUMB_JOBS = ["農作業", "伐採", "採集"];
 const FLYING_JOBS = ["狩猟", "採集"];
-const YOUTH_WORK_JOBS = ["農作業", "伐採", "狩猟", "漁", "採集", "内職"];
+const YOUTH_WORK_JOBS = ["農作業", "伐採", "狩猟", "漁", "採集", "内職", "丁稚", "研究助手"];
 
 function defaultRandomFloat(min, max) {
   return Math.random() * (max - min) + min;
@@ -191,13 +189,13 @@ export function calculateGatherYield(person, village, materialBase = null) {
 }
 
 export function calculateHandiworkYield(person, village) {
-  const base = 32 * statProduct(person, "dex", "ind");
+  const base = 30 * statProduct(person, "dex", "ind");
   return Math.round(base * getLaborYieldMultiplier("内職", person, village));
 }
 
-export function calculateResearchYield(person, village) {
+export function calculateResearchYield(person, village, job = "研究") {
   const libraryMultiplier = village?.buildingFlags?.hasLibrary ? 1.2 : 1;
-  return Math.round((30 * statProduct(person, "int", "mag")) * libraryMultiplier);
+  return Math.round((30 * statProduct(person, "int", "mag")) * libraryMultiplier * getLaborYieldMultiplier(job, person, village));
 }
 
 export function calculateGuardYield(person) {
@@ -209,12 +207,20 @@ export function calculateGuardYield(person) {
 }
 
 export function calculateTradingYield(person, baseValue = RANDOM_HARVEST_EXPECTED_BASE) {
-  const base = (Number(baseValue) || 0) * statProduct(person, "chr", "int");
-  return Math.round(base * getLaborYieldMultiplier("行商", person, null));
+  return calculateTradingLikeYield(person, "行商", baseValue);
 }
 
-export function calculateMagicCraftYield(person) {
-  return Math.round(38 * statProduct(person, "dex", "mag"));
+export function calculateApprenticeYield(person, baseValue = RANDOM_HARVEST_EXPECTED_BASE) {
+  return calculateTradingLikeYield(person, "丁稚", baseValue);
+}
+
+export function calculateResearchAssistantYield(person, village) {
+  return calculateResearchYield(person, village, "研究助手");
+}
+
+function calculateTradingLikeYield(person, job, baseValue) {
+  const base = (Number(baseValue) || 0) * statProduct(person, "chr", "int");
+  return Math.round(base * getLaborYieldMultiplier(job, person, null));
 }
 
 export function calculateNurseHeal(person, village) {
@@ -269,12 +275,12 @@ export function calculatePoetHappiness(person, village) {
 
 export function calculateMassageHeal(person) {
   return person?.bodySex === "男"
-    ? Math.round(30 * statProduct(person, "str", "eth"))
+    ? Math.round(30 * statProduct(person, "str", "int"))
     : Math.round(30 * statProduct(person, "chr", "sexdr"));
 }
 
 export function calculateMikoMana(person) {
-  return Math.round(18 * statTripleProduct(person, "chr", "mag", "sexdr"));
+  return Math.round(12 * statTripleProduct(person, "chr", "mag", "sexdr"));
 }
 
 export function calculateBunnySupport(person) {
@@ -282,11 +288,15 @@ export function calculateBunnySupport(person) {
 }
 
 export function calculateAlchemyYield(person) {
-  return Math.round(22 * statProduct(person, "mag", "int"));
+  const base = statProduct(person, "mag", "int");
+  return {
+    funds: Math.round(20 * base),
+    mana: Math.round(8 * base),
+  };
 }
 
 export function calculateCopyBookYield(person) {
-  return Math.round(20 * statProduct(person, "dex", "int"));
+  return Math.round(20 * statProduct(person, "vit", "int"));
 }
 
 export function calculateWeavingYield(person) {
@@ -301,9 +311,21 @@ export function calculateWeavingYield(person) {
 }
 
 export function calculateBrewingYield(person, village) {
-  const mul = getLaborYieldMultiplier("醸造", person, village);
+  const base = statTripleProduct(person, "mag", "vit", "ind");
+  const manaMul = getLaborYieldMultiplier("醸造", person, village);
+  const foodMul = getBrewingFoodYieldMultiplier(person, village);
   return {
-    food: Math.round(34 * statProduct(person, "mag", "ind") * mul),
-    mana: Math.round(8 * statProduct(person, "mag", "ind") * mul),
+    food: Math.round(20 * base * foodMul),
+    mana: Math.round(6 * base * manaMul),
   };
+}
+
+function getBrewingFoodYieldMultiplier(person, village) {
+  let mul = getLaborYieldMultiplier("醸造", person, village);
+  if (hasVillageTrait(village, "豊穣")) mul *= 2;
+  if (hasVillageTrait(village, "秋")) mul *= 1.5;
+  if (hasBodyTrait(person, "緑の指")) mul *= 1.2;
+  if (hasBodyTrait(person, "大地の巫女")) mul *= 1.5;
+  if (hasBodyTrait(person, "大地の加護")) mul *= 1.2;
+  return mul;
 }
