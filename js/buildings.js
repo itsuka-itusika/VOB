@@ -184,12 +184,12 @@ export const BUILDINGS = [
   },
   {
     id: "dock",
-    name: "船着き場",
+    name: "網干場",
     materials: 80,
     funds: 50,
     tech: 0,
     desc: "漁の失敗率-10%、成功率+10%。規模+20",
-    effect: standardBuildingEffect({ scale: 20, flag: "hasDock", log: "船着き場建設完了: 漁の失敗率-10%、成功率+10%、規模+20" })
+    effect: standardBuildingEffect({ scale: 20, flag: "hasDock", log: "網干場建設完了: 漁の失敗率-10%、成功率+10%、規模+20" })
   },
   {
     id: "publicBath",

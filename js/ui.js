@@ -310,14 +310,11 @@ function getStorageClass(status, warningRatio) {
 
 function compactEstimateText(text) {
   return text
-    .replaceAll("体力回復", "HP回復")
-    .replaceAll("体力", "HP")
-    .replaceAll("メンタル", "MP")
-    .replaceAll("幸福", "幸")
     .replaceAll("想定ダメージ", "想定")
-    .replaceAll("男性", "男")
-    .replaceAll("女性", "女")
-    .replaceAll("全員", "全")
+    .replace(/（大成功[^）]*）/g, "")
+    .replace(/(幸福|メンタル|体力)([+-]\d+)/g, "$1 $2")
+    .replaceAll("幸福", "幸")
+    .replaceAll("メンタル", "ﾒﾝﾀﾙ")
     .replaceAll(", ", ",");
 }
 
@@ -541,9 +538,9 @@ function getTaskEstimate(person, task, village) {
 }
 
 const ACTION_DESCRIPTIONS = {
-  "揺籃": "無垢な精神が揺籃の中で守られ、成長を待つ固定行動。",
-  "休養": "体力の回復を優先する一時行動。通常行動の復帰先は維持される。",
-  "余暇": "趣味や息抜きでメンタルを回復する一時行動。通常行動の復帰先は維持される。",
+  "揺籃": "無垢な精神が揺籃の中で守られ、成長を待つ行動。",
+  "休養": "体力の回復を優先する一時行動。",
+  "余暇": "趣味や息抜きでメンタルを回復する一時行動。",
   "療養": "負傷・病気・産褥などで行動不能のときに固定される回復行動。",
   "臨終": "危篤状態の固定行動。通常の作業には参加できない。",
   "遊び": "幼い精神が遊びを通じて心身を整える成長段階の行動。",
@@ -556,7 +553,7 @@ const ACTION_DESCRIPTIONS = {
   "採集": "器用と知力を活かして野山から食料や資材を集める柔軟な生産行動。",
   "内職": "器用と勤勉を活かして小さな作業を行う生産系の行動。",
   "魔法細工": "魔力と器用を活かして価値ある細工物を作る資金獲得行動。",
-  "行商": "魅力と知力を活かして外部と取引し、成功すれば資金を得る行動。狩猟・漁の資金版に近い成功判定を持つ。",
+  "行商": "魅力と知力を活かして外部と取引し、成功すれば資金を得る行動。",
   "研究": "知力と魔力を活かして知識を蓄積し、村の技術を高める行動。",
   "教育": "知力・魅力・倫理を活かして次世代を導く支援行動。",
   "警備": "筋力と倫理を活かして村を見回り、治安を支える防衛行動。",
@@ -572,8 +569,8 @@ const ACTION_DESCRIPTIONS = {
   "写本": "器用と知力を活かして写本を行い、資金や技術を得る行動。",
   "機織り": "器用と勤勉を活かして布を織り、資金を得る生産行動。",
   "醸造": "魔力と勤勉を活かして酒を仕込み、食料と魔素を得る行動。",
-  "迎撃": "襲撃中に敵へ直接攻撃する一時行動。通常行動の復帰先は維持される。",
-  "罠作成": "襲撃中に罠を作り、敵へ事前ダメージを与える一時行動。通常行動の復帰先は維持される。"
+  "迎撃": "襲撃中に敵へ直接攻撃する一時行動。",
+  "罠作成": "襲撃中に罠を作り、敵へ事前ダメージを与える一時行動。"
 };
 
 function getActionDescription(action) {
@@ -596,7 +593,7 @@ const JOB_KEY_STATS = {
   "採集": "器用×知力",
   "内職": "器用×勤勉",
   "魔法細工": "魔力×器用",
-  "研究": "知力×魔力",
+  "研究": "魔力×知力",
   "教育": "知力×魅力×倫理",
   "警備": "筋力×倫理",
   "看護": "魔力×倫理",
@@ -625,7 +622,7 @@ function getActionRewardLabel(person, action, village) {
 }
 
 function getActionOptionLabel(person, action, village) {
-  const statLabel = getJobLabel(action, isMobileViewMode());
+  const statLabel = getJobLabel(action, true);
   const reward = getActionRewardLabel(person, action, village);
   const compactReward = reward ? compactEstimateText(reward) : "";
   if (statLabel !== action && compactReward) {
@@ -700,8 +697,10 @@ function appendIdentityCells(row, person) {
 
 function appendActionCell(row, person, village, editable) {
   const cell = document.createElement("td");
+  cell.classList.add("action-cell");
   if (!editable) {
     cell.textContent = person.action;
+    cell.title = person.action || "";
     row.appendChild(cell);
     return;
   }

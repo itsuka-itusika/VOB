@@ -146,11 +146,25 @@ button {
   display: flex;
   align-items: center;
   gap: 4px;
-  min-width: 150px;
+  width: 226px;
+  max-width: 226px;
+  min-width: 0;
+  margin-left: auto;
+  margin-right: 2px;
 }
 .action-cell-controls select {
-  min-width: 86px;
-  flex: 1 1 auto;
+  min-width: 0;
+  flex: 1 1 0;
+}
+#villagersTable td.action-cell,
+#visitorsTable td.action-cell,
+#raidEnemiesTable td.action-cell {
+  width: 230px;
+  max-width: 230px;
+  padding-left: 3px;
+  padding-right: 1px;
+  text-align: center;
+  white-space: nowrap;
 }
 .assignment-lock-toggle {
   flex: 0 0 auto;
@@ -557,103 +571,52 @@ table.show-spirit-columns .spirit-column {
   transform: scale(1.34);
   transform-origin: center 28%;
 }
-#villagersTable td:nth-child(11) {
-  background: inherit;
-}
-#visitorsTable td:nth-child(11),
-#raidEnemiesTable td:nth-child(11) {
-  background: inherit;
-}
+#villagersTable td:nth-child(11),
 #villagersTable td:nth-child(12),
+#visitorsTable td:nth-child(11),
+#visitorsTable td:nth-child(12),
+#raidEnemiesTable td:nth-child(11),
+#raidEnemiesTable td:nth-child(12) {
+  background: inherit;
+}
 #villagersTable td:nth-child(13),
 #villagersTable td:nth-child(14),
 #villagersTable td:nth-child(15),
 #villagersTable td:nth-child(16),
 #villagersTable td:nth-child(17),
-#visitorsTable td:nth-child(12),
+#villagersTable td:nth-child(18),
 #visitorsTable td:nth-child(13),
 #visitorsTable td:nth-child(14),
 #visitorsTable td:nth-child(15),
 #visitorsTable td:nth-child(16),
 #visitorsTable td:nth-child(17),
-#raidEnemiesTable td:nth-child(12),
+#visitorsTable td:nth-child(18),
 #raidEnemiesTable td:nth-child(13),
 #raidEnemiesTable td:nth-child(14),
 #raidEnemiesTable td:nth-child(15),
 #raidEnemiesTable td:nth-child(16),
-#raidEnemiesTable td:nth-child(17) {
-  background: #faf2d3;
-}
-#villagersTable td:nth-child(18),
-#villagersTable td:nth-child(19),
-#villagersTable td:nth-child(20),
-#villagersTable td:nth-child(21),
-#villagersTable td:nth-child(22),
-#villagersTable td:nth-child(23),
-#visitorsTable td:nth-child(18),
-#visitorsTable td:nth-child(19),
-#visitorsTable td:nth-child(20),
-#visitorsTable td:nth-child(21),
-#visitorsTable td:nth-child(22),
-#visitorsTable td:nth-child(23),
-#raidEnemiesTable td:nth-child(18),
-#raidEnemiesTable td:nth-child(19),
-#raidEnemiesTable td:nth-child(20),
-#raidEnemiesTable td:nth-child(21),
-#raidEnemiesTable td:nth-child(22),
-#raidEnemiesTable td:nth-child(23) {
-  background: #e2f9d8;
-}
-
-#villagersTable td:nth-child(11),
-#villagersTable td:nth-child(12),
-#villagersTable td:nth-child(13),
-#visitorsTable td:nth-child(11),
-#visitorsTable td:nth-child(12),
-#visitorsTable td:nth-child(13),
-#raidEnemiesTable td:nth-child(11),
-#raidEnemiesTable td:nth-child(12),
-#raidEnemiesTable td:nth-child(13) {
-  background: inherit;
-}
-#villagersTable td:nth-child(14),
-#villagersTable td:nth-child(15),
-#villagersTable td:nth-child(16),
-#villagersTable td:nth-child(17),
-#villagersTable td:nth-child(18),
-#villagersTable td:nth-child(19),
-#visitorsTable td:nth-child(14),
-#visitorsTable td:nth-child(15),
-#visitorsTable td:nth-child(16),
-#visitorsTable td:nth-child(17),
-#visitorsTable td:nth-child(18),
-#visitorsTable td:nth-child(19),
-#raidEnemiesTable td:nth-child(14),
-#raidEnemiesTable td:nth-child(15),
-#raidEnemiesTable td:nth-child(16),
 #raidEnemiesTable td:nth-child(17),
-#raidEnemiesTable td:nth-child(18),
-#raidEnemiesTable td:nth-child(19) {
+#raidEnemiesTable td:nth-child(18) {
   background: #faf2d3;
 }
+#villagersTable td:nth-child(19),
 #villagersTable td:nth-child(20),
 #villagersTable td:nth-child(21),
 #villagersTable td:nth-child(22),
 #villagersTable td:nth-child(23),
 #villagersTable td:nth-child(24),
-#villagersTable td:nth-child(25),
+#visitorsTable td:nth-child(19),
 #visitorsTable td:nth-child(20),
 #visitorsTable td:nth-child(21),
 #visitorsTable td:nth-child(22),
 #visitorsTable td:nth-child(23),
 #visitorsTable td:nth-child(24),
-#visitorsTable td:nth-child(25),
+#raidEnemiesTable td:nth-child(19),
 #raidEnemiesTable td:nth-child(20),
 #raidEnemiesTable td:nth-child(21),
 #raidEnemiesTable td:nth-child(22),
 #raidEnemiesTable td:nth-child(23),
-#raidEnemiesTable td:nth-child(24),
-#raidEnemiesTable td:nth-child(25) {
+#raidEnemiesTable td:nth-child(24) {
   background: #e2f9d8;
 }
 
@@ -1674,12 +1637,12 @@ body.mobile-mode #raidEnemiesTable td {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-body.mobile-mode #villagersTable td:nth-child(19),
-body.mobile-mode #villagersTable td:nth-child(25),
-body.mobile-mode #visitorsTable td:nth-child(19),
-body.mobile-mode #visitorsTable td:nth-child(25),
-body.mobile-mode #raidEnemiesTable td:nth-child(19),
-body.mobile-mode #raidEnemiesTable td:nth-child(25) {
+body.mobile-mode #villagersTable td:nth-child(18),
+body.mobile-mode #villagersTable td:nth-child(24),
+body.mobile-mode #visitorsTable td:nth-child(18),
+body.mobile-mode #visitorsTable td:nth-child(24),
+body.mobile-mode #raidEnemiesTable td:nth-child(18),
+body.mobile-mode #raidEnemiesTable td:nth-child(24) {
   overflow: visible;
   text-overflow: clip;
   white-space: normal;
@@ -1773,44 +1736,38 @@ body.mobile-mode #raidEnemiesTable td:nth-child(11) {
 }
 body.mobile-mode #villagersTable th:nth-child(12),
 body.mobile-mode #villagersTable td:nth-child(12),
-body.mobile-mode #villagersTable th:nth-child(13),
-body.mobile-mode #villagersTable td:nth-child(13),
 body.mobile-mode #visitorsTable th:nth-child(12),
 body.mobile-mode #visitorsTable td:nth-child(12),
-body.mobile-mode #visitorsTable th:nth-child(13),
-body.mobile-mode #visitorsTable td:nth-child(13),
 body.mobile-mode #raidEnemiesTable th:nth-child(12),
-body.mobile-mode #raidEnemiesTable td:nth-child(12),
-body.mobile-mode #raidEnemiesTable th:nth-child(13),
-body.mobile-mode #raidEnemiesTable td:nth-child(13) {
-  width: 9.7%;
+body.mobile-mode #raidEnemiesTable td:nth-child(12) {
+  width: 8.8%;
 }
-body.mobile-mode #villagersTable th:nth-child(n+14):nth-child(-n+18),
-body.mobile-mode #villagersTable td:nth-child(n+14):nth-child(-n+18),
-body.mobile-mode #villagersTable th:nth-child(n+20):nth-child(-n+24),
-body.mobile-mode #villagersTable td:nth-child(n+20):nth-child(-n+24),
-body.mobile-mode #visitorsTable th:nth-child(n+14):nth-child(-n+18),
-body.mobile-mode #visitorsTable td:nth-child(n+14):nth-child(-n+18),
-body.mobile-mode #visitorsTable th:nth-child(n+20):nth-child(-n+24),
-body.mobile-mode #visitorsTable td:nth-child(n+20):nth-child(-n+24),
-body.mobile-mode #raidEnemiesTable th:nth-child(n+14):nth-child(-n+18),
-body.mobile-mode #raidEnemiesTable td:nth-child(n+14):nth-child(-n+18),
-body.mobile-mode #raidEnemiesTable th:nth-child(n+20):nth-child(-n+24),
-body.mobile-mode #raidEnemiesTable td:nth-child(n+20):nth-child(-n+24) {
+body.mobile-mode #villagersTable th:nth-child(n+13):nth-child(-n+17),
+body.mobile-mode #villagersTable td:nth-child(n+13):nth-child(-n+17),
+body.mobile-mode #villagersTable th:nth-child(n+19):nth-child(-n+23),
+body.mobile-mode #villagersTable td:nth-child(n+19):nth-child(-n+23),
+body.mobile-mode #visitorsTable th:nth-child(n+13):nth-child(-n+17),
+body.mobile-mode #visitorsTable td:nth-child(n+13):nth-child(-n+17),
+body.mobile-mode #visitorsTable th:nth-child(n+19):nth-child(-n+23),
+body.mobile-mode #visitorsTable td:nth-child(n+19):nth-child(-n+23),
+body.mobile-mode #raidEnemiesTable th:nth-child(n+13):nth-child(-n+17),
+body.mobile-mode #raidEnemiesTable td:nth-child(n+13):nth-child(-n+17),
+body.mobile-mode #raidEnemiesTable th:nth-child(n+19):nth-child(-n+23),
+body.mobile-mode #raidEnemiesTable td:nth-child(n+19):nth-child(-n+23) {
   width: 2.2%;
 }
-body.mobile-mode #villagersTable th:nth-child(19),
-body.mobile-mode #villagersTable td:nth-child(19),
-body.mobile-mode #villagersTable th:nth-child(25),
-body.mobile-mode #villagersTable td:nth-child(25),
-body.mobile-mode #visitorsTable th:nth-child(19),
-body.mobile-mode #visitorsTable td:nth-child(19),
-body.mobile-mode #visitorsTable th:nth-child(25),
-body.mobile-mode #visitorsTable td:nth-child(25),
-body.mobile-mode #raidEnemiesTable th:nth-child(19),
-body.mobile-mode #raidEnemiesTable td:nth-child(19),
-body.mobile-mode #raidEnemiesTable th:nth-child(25),
-body.mobile-mode #raidEnemiesTable td:nth-child(25) {
+body.mobile-mode #villagersTable th:nth-child(18),
+body.mobile-mode #villagersTable td:nth-child(18),
+body.mobile-mode #villagersTable th:nth-child(24),
+body.mobile-mode #villagersTable td:nth-child(24),
+body.mobile-mode #visitorsTable th:nth-child(18),
+body.mobile-mode #visitorsTable td:nth-child(18),
+body.mobile-mode #visitorsTable th:nth-child(24),
+body.mobile-mode #visitorsTable td:nth-child(24),
+body.mobile-mode #raidEnemiesTable th:nth-child(18),
+body.mobile-mode #raidEnemiesTable td:nth-child(18),
+body.mobile-mode #raidEnemiesTable th:nth-child(24),
+body.mobile-mode #raidEnemiesTable td:nth-child(24) {
   width: 4.5%;
 }
 body.mobile-mode #villagersTable th:nth-child(26),
@@ -1821,13 +1778,13 @@ body.mobile-mode #raidEnemiesTable th:nth-child(26),
 body.mobile-mode #raidEnemiesTable td:nth-child(26) {
   width: 3.6%;
 }
-body.mobile-mode #villagersTable th:nth-child(27),
-body.mobile-mode #villagersTable td:nth-child(27),
-body.mobile-mode #visitorsTable th:nth-child(27),
-body.mobile-mode #visitorsTable td:nth-child(27),
-body.mobile-mode #raidEnemiesTable th:nth-child(27),
-body.mobile-mode #raidEnemiesTable td:nth-child(27) {
-  width: 2.5%;
+body.mobile-mode #villagersTable th:nth-child(25),
+body.mobile-mode #villagersTable td:nth-child(25),
+body.mobile-mode #visitorsTable th:nth-child(25),
+body.mobile-mode #visitorsTable td:nth-child(25),
+body.mobile-mode #raidEnemiesTable th:nth-child(25),
+body.mobile-mode #raidEnemiesTable td:nth-child(25) {
+  width: 3.4%;
 }
 body.mobile-mode select,
 body.mobile-mode input,
@@ -1844,6 +1801,8 @@ body.mobile-mode #raidEnemiesTable select {
 }
 body.mobile-mode .action-cell-controls {
   gap: 2px;
+  width: 100%;
+  max-width: none;
   min-width: 0;
 }
 body.mobile-mode .action-cell-controls select {
