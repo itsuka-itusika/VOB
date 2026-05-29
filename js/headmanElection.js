@@ -5,6 +5,7 @@ const HEADMAN_TRAIT = "里長";
 const ELECTION_MONTH = 7;
 const ELECTION_INTERVAL_YEARS = 3;
 const ASSEMBLY_HALL_ID = "assemblyHall";
+const ELECTION_IMAGE = "../images/events/headman-election.png";
 const RANKED_STATS = ["cou", "eth", "ind", "str", "int"];
 const MODAL_OVERLAY_ID = "headmanElectionOverlay";
 const MODAL_ID = "headmanElectionModal";
@@ -268,28 +269,44 @@ function showElectionModalWhenReady() {
     left: 50%;
     transform: translate(-50%, -50%);
     box-sizing: border-box;
-    width: min(560px, 92vw);
+    width: min(720px, 92vw);
+    min-height: min(360px, 84vh);
     max-height: 84vh;
     overflow-y: auto;
-    color: #2d2418;
-    background: #fffaf0;
-    border: 2px solid #8b6f3d;
+    color: #fffaf0;
+    border: 1px solid rgba(255, 240, 190, 0.58);
     border-radius: 8px;
     box-shadow: 0 20px 48px rgba(0, 0, 0, 0.38);
-    padding: 20px;
+    background-image:
+      linear-gradient(90deg, rgba(18, 12, 7, 0.92), rgba(18, 12, 7, 0.76) 52%, rgba(18, 12, 7, 0.48)),
+      url("${new URL(ELECTION_IMAGE, import.meta.url).href}");
+    background-size: cover;
+    background-position: center;
     z-index: 2001;
+  `;
+
+  const content = document.createElement("div");
+  content.style.cssText = `
+    box-sizing: border-box;
+    min-height: min(360px, 84vh);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 14px;
+    padding: clamp(22px, 5vw, 42px);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.78);
   `;
 
   const title = document.createElement("h2");
   title.textContent = "里長選挙";
-  title.style.cssText = "margin:0 0 12px 0;color:#6f5222;font-size:1.55rem;letter-spacing:0;";
+  title.style.cssText = "margin:0;color:#ffe3a1;font-size:clamp(2rem, 7vw, 3.35rem);line-height:1;letter-spacing:0;";
 
   const body = document.createElement("p");
   body.textContent = message;
-  body.style.cssText = "margin:0 0 16px 0;line-height:1.7;white-space:pre-line;";
+  body.style.cssText = "max-width:38rem;margin:0;line-height:1.7;white-space:pre-line;font-size:clamp(0.98rem, 2.6vw, 1.12rem);";
 
   const buttons = document.createElement("div");
-  buttons.style.cssText = "display:flex;justify-content:flex-end;";
+  buttons.style.cssText = "display:flex;justify-content:flex-end;margin-top:4px;";
 
   const closeButton = document.createElement("button");
   closeButton.type = "button";
@@ -297,9 +314,9 @@ function showElectionModalWhenReady() {
   closeButton.style.cssText = `
     min-width: 88px;
     padding: 8px 16px;
-    color: #2d2418;
-    background: #f0d894;
-    border: 1px solid #b9964e;
+    color: #2d2112;
+    background: #ffe3a1;
+    border: 1px solid rgba(255, 255, 255, 0.55);
     border-radius: 6px;
     font-weight: bold;
     cursor: pointer;
@@ -307,9 +324,10 @@ function showElectionModalWhenReady() {
   closeButton.onclick = closeHeadmanElectionModal;
 
   buttons.appendChild(closeButton);
-  modal.appendChild(title);
-  modal.appendChild(body);
-  modal.appendChild(buttons);
+  content.appendChild(title);
+  content.appendChild(body);
+  content.appendChild(buttons);
+  modal.appendChild(content);
 
   overlay.onclick = closeHeadmanElectionModal;
   document.body.appendChild(overlay);

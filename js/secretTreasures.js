@@ -22,7 +22,7 @@ const SECRET_TREASURE_SELL_PRICES = {
   serpent_staff: 500,
   chronos_elixir: 500,
   old_priest_statue: 100,
-  pan_flute: 100,
+  pan_flute: 300,
   golden_mask: 300,
   blue_stone_tablet: 150
 };
