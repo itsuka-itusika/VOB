@@ -10,6 +10,7 @@ import {
 } from "./createVillagers.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { getBaseStat, setBaseStat, setBaseStatsFromEffective, syncEffectiveStats } from "./domain/statLayers.js";
+import { recordAdulthoodHistory, recordBirthHistory, recordPregnancyHistory } from "./history.js";
 import { addRelationship, checkHasRelationship, getRelationshipTargetName, normalizeRelationship } from "./relationships.js";
 import { getDialogueLine } from "./dialogue/dialogueEngine.js";
 
@@ -432,6 +433,7 @@ export function updateChildGrowthStage(child, village, { announce = false } = {}
       village.log(`${child.name}は成人しました`);
     }
     if (child.spiritAge === 16 && !child.adultModalShown) {
+      recordAdulthoodHistory(village, child);
       child.adultModalShown = true;
       showAdultModal(village, child);
     }
@@ -584,6 +586,10 @@ function startPregnancy(village, mother, father, options = {}) {
     fullTermApplied: false
   };
   addUnique(mother.bodyTraits, "妊娠");
+  recordPregnancyHistory(village, mother, father, {
+    geneticFatherUnknown: !!options.geneticFatherUnknown,
+    source: options.geneticFatherUnknown ? "黄金の雨" : "妊娠"
+  });
   village.log(`${mother.name}が妊娠しました`);
   showPregnancyModal(village, mother, father);
 }
@@ -655,6 +661,10 @@ function giveBirth(village, mother) {
   mother.pregnancy = null;
   village.popLimit = (Number(village.popLimit) || 0) + 1;
   village.villagers.push(child);
+  recordBirthHistory(village, mother, child, {
+    spouse,
+    geneticFatherUnknown: !!data.geneticFatherUnknown
+  });
   village.log(`${mother.name}が${child.name}を出産しました。人口上限+1`);
   showBirthModal(village, mother, spouse, child);
 }

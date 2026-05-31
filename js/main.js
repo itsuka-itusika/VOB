@@ -7,12 +7,14 @@ import { updateUI } from "./ui.js";
 import { doFixedEventPost, endOfMonthProcess, doAgingProcess, runMonthStartPhase } from "./events.js";
 import { applyForcedActionRestriction, refreshJobTable } from "./domain/jobTables.js";
 import { handleAllVillagerJobs } from "./jobs.js";
+import { recordGameStartHistory } from "./history.js";
 import { isUnassignedActionVillager } from "./domain/rules.js";
 import { getRaidReadiness } from "./raidRules.js";
 
 // Villageインスタンスを生成
 export const theVillage = new Village();
 theVillage.villagers = createInitialVillagers();
+recordGameStartHistory(theVillage);
 updateUI(theVillage);
 
 function applyTurnStartRestrictions(village) {
@@ -38,6 +40,8 @@ const TURN_BLOCKING_MODAL_SELECTORS = [
   "#miracleModal",
   "#buildingModal",
   "#secretTreasureModal",
+  "#historyModal",
+  "#personalHistoryModal",
   "#conversationModal",
   "#exchangeModal",
   "#panFluteExchangeModal",

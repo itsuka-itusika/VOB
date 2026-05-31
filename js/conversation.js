@@ -5,6 +5,7 @@ import { ACTION_NONE, refreshJobTable, setPreferredAction } from "./domain/jobTa
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { ACTION_DEFEND, ACTION_TRAP, isRaidActionAssignable } from "./raidRules.js";
 import { getConversationLine } from "./dialogue/dialogueEngine.js";
+import { recordVillagerJoinHistory } from "./history.js";
 import { MERCHANT_SECRET_TREASURE_LINES } from "./data/dialogue/visitorLines.js";
 import {
   buyMerchantSecretTreasure,
@@ -485,7 +486,7 @@ function openSeductionModal(visitor) {
     
     // 誘惑判定
     if (Math.random() * 100 < successRate) {
-      handleRecruitmentSuccess(visitor, seducer, successRate);
+      handleRecruitmentSuccess(visitor, seducer, successRate, "誘惑");
     } else {
       // 失敗
       visitor.mindTraits.push("勧誘失敗");
@@ -642,7 +643,7 @@ function closeMerchantTradeModal() {
 }
 
 // 勧誘成功時の処理を修正
-function handleRecruitmentSuccess(visitor, recruiter, successRate = 0) {
+function handleRecruitmentSuccess(visitor, recruiter, successRate = 0, source = "勧誘") {
   const originalVisitor = visitor;
   // 訪問者のタイプを取得（名前から抽出）
   const visitorType = visitor.name.includes("の") ? visitor.name.split("の")[0] : null;
@@ -667,12 +668,13 @@ function handleRecruitmentSuccess(visitor, recruiter, successRate = 0) {
   // 訪問者リストから削除し、村人リストに追加
   theVillage.visitors = theVillage.visitors.filter(v => v !== originalVisitor);
   theVillage.villagers.push(visitor);
+  recordVillagerJoinHistory(theVillage, visitor, { recruiter, source });
   
   // 行動テーブルを更新
   refreshJobTable(visitor, theVillage);
   
-  theVillage.log(`${recruiter.name}の勧誘により、${visitor.name}が村人になりました。(成功率: ${Math.floor(successRate)}%)`);
-  alert(`勧誘成功！${visitor.name}が村人になりました。`);
+  theVillage.log(`${recruiter.name}の${source}により、${visitor.name}が村人になりました。(成功率: ${Math.floor(successRate)}%)`);
+  alert(`${source}成功！${visitor.name}が村人になりました。`);
   
   // モーダルを閉じる
   closeConversationModal();

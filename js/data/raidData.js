@@ -199,3 +199,136 @@ export const RAIDER_TYPES = [
   }
 
 ];
+
+const DEFAULT_RAID_DEFENSE = {
+  surviveTurns: 3,
+  defeatAll: true
+};
+
+const DEFAULT_RAID_SUCCESS_REWARDS = {
+  completeHappiness: 20,
+  partialHappiness: 10
+};
+
+const DEFAULT_RAID_FAILURE_PENALTY = {
+  foodRate: 0.2,
+  materialsRate: 0.2,
+  fundsRate: 0.2,
+  security: 10,
+  villagerHpRange: [5, 15],
+  villagerHappiness: 30
+};
+
+const RAIDER_TYPE_BY_TYPE = new Map(RAIDER_TYPES.map(raiderType => [raiderType.type, raiderType]));
+
+function cloneRaidRules(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function createExistingRaiderRaid(id, raiderTypeName) {
+  const raiderType = RAIDER_TYPE_BY_TYPE.get(raiderTypeName);
+  if (!raiderType) {
+    throw new Error(`Unknown raider type: ${raiderTypeName}`);
+  }
+
+  return {
+    id,
+    name: `${raiderTypeName}の襲撃`,
+    warningName: raiderTypeName,
+    weight: raiderType.weight,
+    avoidance: null,
+    defense: cloneRaidRules(DEFAULT_RAID_DEFENSE),
+    enemyGroups: [
+      {
+        raiderType: raiderTypeName,
+        minCount: raiderType.minCount,
+        maxCount: raiderType.maxCount
+      }
+    ],
+    successRewards: cloneRaidRules(DEFAULT_RAID_SUCCESS_REWARDS),
+    failurePenalty: cloneRaidRules(DEFAULT_RAID_FAILURE_PENALTY)
+  };
+}
+
+export const FALLBACK_RAID_RULES = {
+  id: "fallback",
+  name: "襲撃",
+  warningName: "襲撃者",
+  avoidance: null,
+  defense: cloneRaidRules(DEFAULT_RAID_DEFENSE),
+  successRewards: cloneRaidRules(DEFAULT_RAID_SUCCESS_REWARDS),
+  failurePenalty: cloneRaidRules(DEFAULT_RAID_FAILURE_PENALTY)
+};
+
+export const RAID_MODULES = [
+  createExistingRaiderRaid("bandit", "野盗"),
+  createExistingRaiderRaid("goblin", "ゴブリン"),
+  createExistingRaiderRaid("wolf", "狼"),
+  createExistingRaiderRaid("cyclops", "キュクロプス"),
+  createExistingRaiderRaid("harpy", "ハーピー")
+];
+
+const RAID_MODULE_BY_ID = new Map(RAID_MODULES.map(raid => [raid.id, raid]));
+
+export const RAID_SCALE_TABLES = [
+  {
+    id: "early-frontier",
+    scaleStageIndexes: [0, 1],
+    entries: [
+      { raidId: "goblin" },
+      { raidId: "wolf" },
+      { raidId: "bandit" },
+      { raidId: "harpy" }
+    ]
+  },
+  {
+    id: "border-travel",
+    scaleStageIndexes: [2, 3],
+    entries: [
+      { raidId: "harpy" },
+      { raidId: "cyclops" },
+      { raidId: "bandit" },
+      { raidId: "goblin" },
+      { raidId: "wolf" }
+    ]
+  },
+  {
+    id: "developed",
+    minScaleStageIndex: 4,
+    entries: [
+      { raidId: "harpy" },
+      { raidId: "cyclops" },
+      { raidId: "bandit" },
+      { raidId: "goblin" },
+      { raidId: "wolf" }
+    ]
+  }
+];
+
+export function getRaiderTypeByType(type) {
+  return RAIDER_TYPE_BY_TYPE.get(type) || null;
+}
+
+export function getRaidModuleById(id) {
+  return RAID_MODULE_BY_ID.get(id) || null;
+}
+
+export function getRaidRulesById(id) {
+  const raid = getRaidModuleById(id) || FALLBACK_RAID_RULES;
+  return {
+    ...FALLBACK_RAID_RULES,
+    ...raid,
+    defense: {
+      ...FALLBACK_RAID_RULES.defense,
+      ...(raid.defense || {})
+    },
+    successRewards: {
+      ...FALLBACK_RAID_RULES.successRewards,
+      ...(raid.successRewards || {})
+    },
+    failurePenalty: {
+      ...FALLBACK_RAID_RULES.failurePenalty,
+      ...(raid.failurePenalty || {})
+    }
+  };
+}

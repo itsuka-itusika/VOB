@@ -1,5 +1,6 @@
 import { doExchange } from "./exchange.js";
 import { refreshJobTable } from "./domain/jobTables.js";
+import { recordMarriageHistory } from "./history.js";
 import { openPanFluteExchangeModal, showMarriageMiracleModal, showMiracleResultModal } from "./miracles.js";
 import { startRaidEvent } from "./raidStart.js";
 import { addRelationship, removeRelationship, addSpouseRelationships } from "./relationships.js";
@@ -85,6 +86,7 @@ function forceMarriage(a, b, village) {
   addRelationship(a, "既婚");
   addRelationship(b, "既婚");
   addSpouseRelationships(a, b);
+  recordMarriageHistory(village, a, b, { source: "秘宝" });
   a.happiness = clampValue(a.happiness + 50, 0, 100);
   b.happiness = clampValue(b.happiness + 50, 0, 100);
   village.log(`【秘宝】黄金の矢により${a.name}と${b.name}が結ばれました`);
@@ -325,7 +327,7 @@ export const SECRET_TREASURES = [
     blockedReason: "村人・訪問者・襲撃者の合計が6名以上必要です",
     use: (village) => {
       const pairs = pickPanFlutePairs(village);
-      pairs.forEach(([personA, personB]) => doExchange(personA, personB, village, true));
+      pairs.forEach(([personA, personB]) => doExchange(personA, personB, village, true, "秘宝"));
       const pairText = pairs.map(([personA, personB]) => `${personA.name}と${personB.name}`).join("、");
       village.log(`【秘宝】牧神の管笛により${pairText}が入れ替わりました`);
       openPanFluteExchangeModal(pairs, {

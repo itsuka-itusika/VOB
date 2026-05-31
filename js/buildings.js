@@ -206,9 +206,9 @@ export const BUILDINGS = [
     materials: 50,
     funds: 50,
     tech: 50,
-    desc: "旅人の立ち寄る村で解放。7月に里長選挙を行う。",
+    desc: "旅人の立ち寄る村で解放。7月に里長選挙を行う。規模+20",
     isUnlocked: (village) => isScaleAtLeast(village, 120),
-    effect: standardBuildingEffect({ scale: 0, flag: "hasAssemblyHall", log: "集会所建設完了: 村人たちが集まり、里長を選ぶ場が整いました" })
+    effect: standardBuildingEffect({ scale: 20, flag: "hasAssemblyHall", log: "集会所建設完了: 村人たちが集まり、里長を選ぶ場が整いました、規模+20" })
   },
   {
     id: "publicBath",

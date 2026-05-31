@@ -1,11 +1,12 @@
 import { getPermanentStat, syncEffectiveStats } from "./domain/statLayers.js";
+import { recordHeadmanElectionHistory } from "./history.js";
 import { parseRelationship, normalizeRelationships } from "./relationships.js";
 
 const HEADMAN_TRAIT = "里長";
 const ELECTION_MONTH = 7;
 const ELECTION_INTERVAL_YEARS = 3;
 const ASSEMBLY_HALL_ID = "assemblyHall";
-const ELECTION_IMAGE = "../images/events/headman-election.png";
+const ELECTION_IMAGE = "../images/events/headman-election.jpg";
 const RANKED_STATS = ["cou", "eth", "ind", "str", "int"];
 const MODAL_OVERLAY_ID = "headmanElectionOverlay";
 const MODAL_ID = "headmanElectionModal";
@@ -350,12 +351,14 @@ function runElection(village) {
     if (currentHeadman) {
       appointHeadman(village, currentHeadman);
       markElectionResolved(village);
+      recordHeadmanElectionHistory(village, currentHeadman, { result: "continued" });
       showElectionResult(village, [
         "集会所に村人たちが集まり、里長選挙が行われた。",
         `新たに立つ者はなく、現里長${currentHeadman.name}が引き続き里長を務めることになった。`
       ].join("\n"));
     } else {
       markElectionFailed(village);
+      recordHeadmanElectionHistory(village, null, { result: "failed" });
       showElectionResult(village, [
         "集会所に村人たちが集まったが、里長に立つ者はいなかった。",
         "選挙は不成立となり、里長不在のまま来年の七月に改めて選ぶことになった。"
@@ -368,6 +371,7 @@ function runElection(village) {
     const winner = candidates[0];
     appointHeadman(village, winner);
     markElectionResolved(village);
+    recordHeadmanElectionHistory(village, winner, { result: "uncontested" });
     showElectionResult(village, [
       "集会所に村人たちが集まり、里長選挙が行われた。",
       `候補者は${winner.name}のみで、無投票により新たな里長に選ばれた。`
@@ -393,6 +397,10 @@ function runElection(village) {
   markElectionResolved(village);
 
   const counts = formatVoteCounts(candidates, voteCounts);
+  recordHeadmanElectionHistory(village, winner, {
+    result: topCandidates.length > 1 ? "lottery" : "elected",
+    counts
+  });
   if (topCandidates.length > 1) {
     showElectionResult(village, [
       "集会所に村人たちが集まり、里長選挙が行われた。",

@@ -2,35 +2,35 @@ const FESTIVAL_DATA = {
   newYear: {
     title: "新年祭",
     month: "1月",
-    image: "../images/festivals/new-year.png",
+    image: "../images/festivals/new-year.jpg",
     flavor: "雪明かりの広場に火を入れ、村は新しい一年の無事を祈る。",
     effect: "全村人の体力+20、メンタル+20、幸福度+20から30。"
   },
   resurrection: {
     title: "復活祭",
     month: "3月",
-    image: "../images/festivals/resurrection.png",
+    image: "../images/festivals/resurrection.jpg",
     flavor: "芽吹きの祭壇に祈りを捧げ、眠っていた生命力を呼び戻す。",
     effect: "全村人の体力+20、メンタル+20。"
   },
   summerSolstice: {
     title: "夏至祭",
     month: "6月",
-    image: "../images/festivals/summer-solstice.png",
+    image: "../images/festivals/summer-solstice.jpg",
     flavor: "もっとも長い陽の下、花飾りと篝火が村の縁を結び直す。",
     effect: "全村人の体力+20、メンタル+20。結婚判定が発生。"
   },
   harvest: {
     title: "収穫祭",
     month: "10月",
-    image: "../images/festivals/harvest.png",
+    image: "../images/festivals/harvest.jpg",
     flavor: "実りを分け合い、働いた身体に温かな食事と休息を与える。",
     effect: "全村人の体力+30、メンタル+10。"
   },
   stars: {
     title: "星霜祭",
     month: "12月",
-    image: "../images/festivals/stars.png",
+    image: "../images/festivals/stars.jpg",
     flavor: "冬の星々を見上げ、過ぎた歳月とまだ見ぬ縁に祈りを捧げる。",
     effect: "恋人判定が発生。"
   }

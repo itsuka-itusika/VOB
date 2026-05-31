@@ -1,6 +1,7 @@
 // raid.js
 
 import { randInt, randChoice, clampValue, shuffleArray } from "./util.js";
+import { getRaidRulesById } from "./data/raidData.js";
 import { endOfMonthProcess, doFixedEventPost, doAgingProcess, runMonthStartPhase } from "./events.js";
 import { handleAllVillagerJobs } from "./jobs.js";
 import { canPerformRaidAction } from "./raidRules.js";
@@ -18,6 +19,20 @@ function setRaidStepButtonState(disabled, text = "") {
   if (!button) return;
   button.disabled = disabled;
   if (text) button.textContent = text;
+}
+
+function getActiveRaidRules(village) {
+  return getRaidRulesById(village?.currentRaid?.id);
+}
+
+function getRaidSurviveTurns(village) {
+  const value = Number(getActiveRaidRules(village).defense?.surviveTurns);
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : null;
+}
+
+function hasSurvivedRaidTurns(village) {
+  const surviveTurns = getRaidSurviveTurns(village);
+  return surviveTurns != null && village.raidTurnCount > surviveTurns;
 }
 
 /**
@@ -139,7 +154,7 @@ export function setupCombatPhase(village) {
     finalizeRaid(false, "迎撃部隊なし(行動不能)", village);
     return;
   }
-  if (village.raidTurnCount>3) {
+  if (hasSurvivedRaidTurns(village)) {
     finalizeRaidPartSuccess(village);
     return;
   }
@@ -297,7 +312,7 @@ function finalizeCombatTurn(village) {
   }
 
   village.raidTurnCount++;
-  if (village.raidTurnCount>3) {
+  if (hasSurvivedRaidTurns(village)) {
     finalizeRaidPartSuccess(village);
   } else {
     setupCombatPhase(village);
@@ -335,7 +350,8 @@ function finalizeRaid(isSuccess, reason, village) {
 
 /** 3ターン粘って撤退(部分成功) */
 function finalizeRaidPartSuccess(village) {
-  village.log("【襲撃結果】3ターン粘って敵撤退→部分的成功");
+  const surviveTurns = getRaidSurviveTurns(village) || 3;
+  village.log(`【襲撃結果】${surviveTurns}ターン粘って敵撤退→部分的成功`);
   let rlog=document.getElementById("raidLogArea");
   rlog.innerHTML+=`<br>→ 襲撃結果: 敵撤退(部分成功)<br>モーダルを閉じます...`;
 
@@ -371,38 +387,59 @@ function endRaidProcess(isSuccess, isPartSuccess, village) {
       raidSection.style.display = "none";
     }
 
+    const raidRules = getActiveRaidRules(village);
     if (isSuccess) {
-      if (isPartSuccess) {
-        // 部分成功
+      const happinessGain = Number(isPartSuccess
+        ? raidRules.successRewards?.partialHappiness
+        : raidRules.successRewards?.completeHappiness) || 0;
+      if (happinessGain !== 0) {
         village.villagers.forEach(p=>{
-          p.happiness=clampValue(p.happiness+10,0,100);
+          p.happiness=clampValue(p.happiness+happinessGain,0,100);
         });
-        village.log("防衛成功(部分):村人幸福+10");
-      } else {
-        // 完全成功
-        village.villagers.forEach(p=>{
-          p.happiness=clampValue(p.happiness+20,0,100);
-        });
-        village.log("防衛成功(敵全滅):村人幸福+20");
       }
+      village.log(isPartSuccess
+        ? `防衛成功(部分):村人幸福+${happinessGain}`
+        : `防衛成功(敵全滅):村人幸福+${happinessGain}`);
     } else {
-      // 失敗
-      let fLoss=Math.floor(village.food*0.2);
-      let mLoss=Math.floor(village.materials*0.2);
-      let fundLoss=Math.floor(village.funds*0.2);
+      const penalty = raidRules.failurePenalty || {};
+      const fLoss=Math.floor(village.food*(Number(penalty.foodRate) || 0));
+      const mLoss=Math.floor(village.materials*(Number(penalty.materialsRate) || 0));
+      const fundLoss=Math.floor(village.funds*(Number(penalty.fundsRate) || 0));
+      const securityLoss=Number(penalty.security) || 0;
+      const happinessLoss=Number(penalty.villagerHappiness) || 0;
+      const hpRange=Array.isArray(penalty.villagerHpRange) ? penalty.villagerHpRange : null;
+      const hpMinRaw=hpRange ? Number(hpRange[0]) || 0 : 0;
+      const hpMaxRaw=hpRange ? Number(hpRange[1]) || hpMinRaw : 0;
+      const hpMin=Math.min(hpMinRaw, hpMaxRaw);
+      const hpMax=Math.max(hpMinRaw, hpMaxRaw);
+
       village.food=clampValue(village.food - fLoss,0,99999);
       village.materials=clampValue(village.materials - mLoss,0,99999);
       village.funds=clampValue(village.funds - fundLoss,0,99999);
-      village.security=clampValue(village.security-10,0,100);
+      village.security=clampValue(village.security-securityLoss,0,100);
 
       village.villagers.forEach(p=>{
-        p.hp=clampValue(p.hp - randInt(5,15),0,100);
-        p.happiness=clampValue(p.happiness-30,0,100);
+        if (hpMax > 0) {
+          p.hp=clampValue(p.hp - randInt(hpMin, hpMax),0,100);
+        }
+        if (happinessLoss !== 0) {
+          p.happiness=clampValue(p.happiness-happinessLoss,0,100);
+        }
       });
-      village.log(`迎撃失敗:食料-${fLoss},資材-${mLoss},資金-${fundLoss},治安-10,村人HP-5~15,幸福-30`);
+
+      const penaltyLog = [
+        `食料-${fLoss}`,
+        `資材-${mLoss}`,
+        `資金-${fundLoss}`,
+        `治安-${securityLoss}`,
+        hpMax > 0 ? `村人HP-${hpMin}~${hpMax}` : "",
+        `幸福-${happinessLoss}`
+      ].filter(Boolean).join(",");
+      village.log(`迎撃失敗:${penaltyLog}`);
     }
 
     village.isRaidProcessDone=true;
+    village.currentRaid = null;
 
     // nextTurnButton の表示を戻す
     let btn=document.getElementById("nextTurnButton");

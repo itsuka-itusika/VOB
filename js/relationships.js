@@ -1,11 +1,12 @@
 // relationships.js
 
 import { randInt, clampValue, getPortraitPath } from "./util.js";
+import { recordLoverHistory, recordMarriageHistory } from "./history.js";
 
 /**
  * 恋人チェック (星霜祭などで呼ばれる)
  */
-export function doLoverCheck(village) {
+export function doLoverCheck(village, options = {}) {
   let candidatesA = village.villagers.filter(x=>
     x.spiritAge >= 16
     && isSingle(x)
@@ -29,6 +30,7 @@ export function doLoverCheck(village) {
     addRelationship(b, `恋人:${a.name}`);
     a.happiness=clampValue(a.happiness+50,0,100);
     b.happiness=clampValue(b.happiness+50,0,100);
+    recordLoverHistory(village, a, b, { source: options.source || "縁結び" });
     village.log(`${a.name}と${b.name}恋人成立(成功率${(sc*100).toFixed(1)}%)`);
     showRelationshipModal("恋人成立", `${a.name}と${b.name}が恋人になりました。`, [
       [a, getLoverLine(a, b)],
@@ -102,6 +104,7 @@ export function doMarriageCheck(village) {
     b.happiness=clampValue(b.happiness+50,0,100);
 
     addSpouseRelationships(a, b);
+    recordMarriageHistory(village, a, b, { source: "夏至祭" });
 
     village.log(`${a.name}と${b.name}結婚成功`);
     showRelationshipModal("結婚", `${a.name}と${b.name}が結婚しました。`, [

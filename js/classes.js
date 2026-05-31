@@ -32,12 +32,14 @@ export class Village {
     this.secretTreasures = [];
 
     this.logs = [];
+    this.historyEvents = [];
     this.gameOver = false;
     this.hasDonePreEvent = false;
     this.hasDonePostEvent = false;
 
     // 襲撃イベント用フラグ/データ
     this.raidEnemies = [];
+    this.currentRaid = null;
     this.isRaidProcessDone = false;
     this.isRaidFinalizing = false;
     this.raidTurnCount = 0;

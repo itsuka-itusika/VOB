@@ -5,6 +5,7 @@ import { doLoverCheck, doMarriageCheck, clearRelationshipsForDepartedVillager } 
 import { createRandomVillager, createRandomVisitor } from "./createVillagers.js";
 import { startRaidEvent } from "./raidStart.js";
 import { RandomEvents } from "./RandomEvents.js";
+import { recordCriticalHistory, recordVillagerDeathHistory } from "./history.js";
 import { handleBirthAndPostpartum, handlePregnancyChecks, updateChildGrowthStage } from "./reproduction.js";
 import { showFestivalModal } from "./festivalModal.js";
 import { runHeadmanElectionIfDue } from "./headmanElection.js";
@@ -111,7 +112,7 @@ function harvestFestival(v) {
 function starsFestival(v) {
   showFestivalModal("stars");
   v.log("【星霜祭】恋人判定");
-  doLoverCheck(v);
+  doLoverCheck(v, { source: "星霜祭" });
 }
 
 // -------------------------
@@ -300,6 +301,7 @@ export function endOfMonthProcess(v) {
   deadPeople.forEach(p => {
     let index = v.villagers.indexOf(p);
     if (index !== -1) {
+      recordVillagerDeathHistory(v, p, { reason: "老衰" });
       clearRelationshipsForDepartedVillager(v, p);
       v.villagers.splice(index, 1);
       v.log(`${p.name}は老衰により死亡した...`);
@@ -416,6 +418,7 @@ export function doMonthStartProcess(v) {
     if (p.bodyTraits.includes("老人") && !p.bodyTraits.includes("危篤")) {
       if (Math.random() < 0.05) {  // 5%の確率
         p.bodyTraits.push("危篤");
+        recordCriticalHistory(v, p, { reason: "老衰" });
         v.log(`${p.name}は老衰により危篤状態になった...`);
       }
     }
@@ -681,7 +684,7 @@ function showSeasonChangeDialog(season) {
   if (typeof document === "undefined") return;
   const seasonData = {
     "春": {
-      image: "../images/seasons/spring.png",
+      image: "../images/seasons/spring.jpg",
       message: "暖かな風が吹き、新しい命が芽吹く季節となりました。",
       accent: "#ffd6e7",
       tips: [
@@ -690,7 +693,7 @@ function showSeasonChangeDialog(season) {
       ]
     },
     "夏": {
-      image: "../images/seasons/summer.png",
+      image: "../images/seasons/summer.jpg",
       message: "太陽が高く昇り、生命力溢れる季節となりました。",
       accent: "#ffe39a",
       tips: [
@@ -699,7 +702,7 @@ function showSeasonChangeDialog(season) {
       ]
     },
     "秋": {
-      image: "../images/seasons/autumn.png",
+      image: "../images/seasons/autumn.jpg",
       message: "実りの秋を迎え、収穫の季節となりました。",
       accent: "#ffd08a",
       tips: [
@@ -708,7 +711,7 @@ function showSeasonChangeDialog(season) {
       ]
     },
     "冬": {
-      image: "../images/seasons/winter.png",
+      image: "../images/seasons/winter.jpg",
       message: "寒さが厳しくなり、静かな季節となりました。",
       accent: "#d5e8ff",
       tips: [

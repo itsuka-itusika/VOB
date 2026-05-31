@@ -8,6 +8,7 @@ import { createRandomVisitor, createRandomVisitorOfType, determineSpeechType } f
 import { refreshJobTable } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
+import { recordMarriageHistory, recordVillagerLeaveHistory } from "./history.js";
 import { resolveDialogueTone } from "./data/dialogue/toneProfiles.js";
 import { BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
 /**
@@ -580,6 +581,7 @@ function forceMarriage(a,b,v) {
   b.happiness=clampValue(b.happiness+50,0,100);
 
   addSpouseRelationships(a, b);
+  recordMarriageHistory(v, a, b, { source: "クピドの奇跡" });
 
   v.log(`【クピドの奇跡】${a.name}と${b.name}強制結婚`);
   showMarriageMiracleModal(v, "クピドの奇跡", [[a, b]]);
@@ -673,6 +675,7 @@ function hearthMiracle(v) {
           b.happiness=clampValue(b.happiness+50,0,100);
 
           addSpouseRelationships(a, b);
+          recordMarriageHistory(v, a, b, { source: "竈女神の奇跡" });
 
           v.log(`【竈女神の奇跡】${a.name}と${b.name}結婚100%`);
           done.push(a,b);
@@ -718,6 +721,7 @@ function marketMiracle(v) {
 function departureMiracle(p,v) {
   let bonus = p.happiness;
   v.mana=clampValue(v.mana+bonus,0,99999);
+  recordVillagerLeaveHistory(v, p, { source: "出立の奇跡" });
   v.log(`【出立の奇跡】${p.name}離脱,魔素+${bonus}`);
   let idx=v.villagers.indexOf(p);
   if (idx>=0) {

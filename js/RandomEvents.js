@@ -8,6 +8,7 @@ import { matureBodyToAdultOnly, scheduleGoldenRainPregnancy } from "./reproducti
 import { refreshJobTable } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { addAcquiredStat, syncEffectiveStats } from "./domain/statLayers.js";
+import { recordMythicEventHistory } from "./history.js";
 import {
   getChildlikeRandomEventLine,
   getDialogueLine,
@@ -283,6 +284,7 @@ export class RandomEvents {
         break;
       }
     }
+    recordMythicEventHistory(v, c.type, p, { subject: EVENT_SUBJECTS[c.type] });
     return c.type;
   }
 
@@ -402,7 +404,7 @@ export class RandomEvents {
         break;
       }
       case "lover": {
-        if (!doLoverCheck(v)) {
+        if (!doLoverCheck(v, { source: "ランダムイベント" })) {
           return null;
         }
         break;

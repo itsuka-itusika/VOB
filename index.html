@@ -48,6 +48,7 @@
           <button onclick="openMiracleModal()" data-mobile-label="奇跡">奇跡の行使</button>
           <button onclick="openBuildingModal()" data-mobile-label="建築">建築</button>
           <button onclick="openSecretTreasureModal()" data-mobile-label="秘宝">秘宝</button>
+          <button class="pc-history-button" onclick="openHistoryModal()" data-mobile-label="村史">村史</button>
         </div>
         <div class="utility-actions">
           <select id="utilityActionSelect" aria-label="保存・読込操作">
@@ -65,9 +66,12 @@
           <button type="button" id="pcModeButton" class="view-mode-button is-active" onclick="setViewMode('pc')" aria-pressed="true">PC</button>
           <button type="button" id="mobileModeButton" class="view-mode-button" onclick="setViewMode('mobile')" aria-pressed="false">スマホ仮</button>
         </div>
-        <label class="mobile-spirit-toggle">
-          <input type="checkbox" id="mobileSpiritColumnsToggle" onchange="toggleSpiritColumns(this.checked)">精神情報表示
-        </label>
+        <div class="mobile-history-spirit-actions">
+          <label class="mobile-spirit-toggle">
+            <input type="checkbox" id="mobileSpiritColumnsToggle" onchange="toggleSpiritColumns(this.checked)">精神
+          </label>
+          <button type="button" class="mobile-history-button" onclick="openHistoryModal()">村史</button>
+        </div>
       </div>
       <div class="message-window" id="messageWindow">
         <div class="message-empty">警告はありません</div>
@@ -106,7 +110,7 @@
           <th>好色</th>      <!--22-->
           <th>精神特性</th>  <!--23-->
           <th>趣味</th>      <!--24-->
-          <th>詳細</th>      <!--25-->
+          <th>記録</th>      <!--25-->
         </tr>
       </thead>
       <tbody>
@@ -146,7 +150,7 @@
           <th>好色</th>      <!--22-->
           <th>精神特性</th>  <!--23-->
           <th>趣味</th>      <!--24-->
-          <th>詳細</th>      <!--25-->
+          <th>記録</th>      <!--25-->
         </tr>
       </thead>
       <tbody>
@@ -183,7 +187,7 @@
           <th>好色</th>      <!--22-->
           <th>精神特性</th>  <!--23-->
           <th>趣味</th>      <!--24-->
-          <th>詳細</th>      <!--25-->
+          <th>記録</th>      <!--25-->
         </tr>
       </thead>
       <tbody>
@@ -305,6 +309,26 @@
     <button onclick="useSelectedSecretTreasure()">使う</button>
     <button onclick="sellSelectedSecretTreasure()">売却する</button>
     <button onclick="closeSecretTreasureModal()">閉じる</button>
+  </div>
+</div>
+
+<!-- モーダル: 村史 -->
+<div id="historyOverlay"></div>
+<div id="historyModal">
+  <div class="modal-header">村史</div>
+  <div id="historyContent" class="modal-content"></div>
+  <div class="modal-buttons">
+    <button onclick="closeHistoryModal()">閉じる</button>
+  </div>
+</div>
+
+<!-- モーダル: 個人記録 -->
+<div id="personalHistoryOverlay"></div>
+<div id="personalHistoryModal">
+  <div class="modal-header" id="personalHistoryTitle">個人記録</div>
+  <div id="personalHistoryContent" class="modal-content"></div>
+  <div class="modal-buttons">
+    <button onclick="closePersonalHistoryModal()">閉じる</button>
   </div>
 </div>
 

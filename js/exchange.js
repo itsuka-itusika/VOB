@@ -3,6 +3,7 @@
 import { refreshJobTable } from "./domain/jobTables.js";
 import { PHYSICAL_ABILITY_STATS } from "./domain/personSchema.js";
 import { ensureStatLayers, syncEffectiveStats } from "./domain/statLayers.js";
+import { recordBodyExchangeHistory } from "./history.js";
 
 const RAID_JOBS = ["野盗", "ゴブリン", "狼", "キュクロプス", "ハーピー"];
 
@@ -62,7 +63,7 @@ function refreshAssignmentAfterExchange(person, village) {
 /**
  * Swap body-related parameters between two characters.
  */
-export function doExchange(a, b, v, isLightning = false) {
+export function doExchange(a, b, v, isLightning = false, historySource = null) {
   ensureStatLayers(a);
   ensureStatLayers(b);
   const exchangeParams = {
@@ -135,4 +136,5 @@ export function doExchange(a, b, v, isLightning = false) {
   if (!isLightning) {
     v.log(`【交換の奇跡】${a.name}と${b.name}の肉体を交換しました`);
   }
+  recordBodyExchangeHistory(v, a, b, { source: historySource || (isLightning ? "落雷" : "奇跡") });
 }

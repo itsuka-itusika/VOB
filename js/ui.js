@@ -40,6 +40,7 @@ import { getResourceStorageStatus, getResourceStorageWarningRatio } from "./doma
 import { isUnassignedActionVillager } from "./domain/rules.js";
 import { showDictionaryEntry } from "./dictionary.js";
 import { getPortraitPath, getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "./util.js";
+import { openPersonalHistoryModal } from "./history.js";
 import { formatRelationshipsForDisplay, normalizeRelationship } from "./relationships.js";
 import { applyVillageScaleArtClass, getVillageScaleTitle } from "./villageScale.js";
 
@@ -73,19 +74,6 @@ function setDictionaryTerms(cell, terms) {
     if (index > 0) cell.appendChild(document.createTextNode(","));
     appendDictionaryTerm(cell, term);
   });
-}
-
-function renderFoldableDetails(person) {
-  const relationships = formatRelationshipsForDisplay(person);
-  const relationshipLine = relationships === "なし" ? "" : `<div>${relationships}</div>`;
-  return `
-    <details>
-      <summary>詳細</summary>
-      <div>精神性別: ${person.spiritSex}</div>
-      <div>精神年齢: ${person.spiritAge}</div>
-      ${relationshipLine}
-    </details>
-  `;
 }
 
 function getMonthlyFoodCost(village) {
@@ -777,17 +765,30 @@ function appendActionCell(row, person, village, editable) {
   row.appendChild(cell);
 }
 
-function appendStatCells(row, person) {
+function appendPersonalHistoryCell(row, person, village) {
+  const cell = document.createElement("td");
+  cell.classList.add("foldable-info");
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "person-history-button";
+  button.textContent = "記録";
+  button.title = `${person.name}の記録を見る`;
+  button.onclick = () => openPersonalHistoryModal(village, person, {
+    relationships: formatRelationshipsForDisplay(person)
+  });
+
+  cell.appendChild(button);
+  row.appendChild(cell);
+}
+
+function appendStatCells(row, person, village) {
   ["str", "vit", "dex", "mag", "chr"].forEach(stat => appendNumberCell(row, person[stat]));
   appendDictionaryCell(row, person.bodyTraits);
   ["int", "ind", "eth", "cou", "sexdr"].forEach(stat => appendNumberCell(row, person[stat]));
   appendDictionaryCell(row, person.mindTraits);
   appendDictionaryCell(row, [person.hobby]);
-
-  const detailsCell = document.createElement("td");
-  detailsCell.classList.add("foldable-info");
-  detailsCell.innerHTML = renderFoldableDetails(person);
-  row.appendChild(detailsCell);
+  appendPersonalHistoryCell(row, person, village);
 }
 
 function applyPersonRowStyle(row, person) {
@@ -817,7 +818,7 @@ function createPersonRow(person, village, { editable = false } = {}) {
   }
   appendIdentityCells(row, person);
   appendActionCell(row, person, village, editable);
-  appendStatCells(row, person);
+  appendStatCells(row, person, village);
   applyPersonRowStyle(row, person);
   return row;
 }

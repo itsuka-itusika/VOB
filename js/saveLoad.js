@@ -3,6 +3,7 @@ import { Village, Villager } from "./classes.js";
 import { determineSpeechType, registerUsedName } from "./createVillagers.js";
 import { ACTION_NONE, isPreferredActionCandidate, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
 import { hydrateStatLayersFromObject, syncEffectiveStats } from "./domain/statLayers.js";
+import { createArchiveGapHistoryEvent, normalizeHistoryEvents } from "./history.js";
 import { normalizeRelationships } from "./relationships.js";
 import { getInitialScaleStageIndex } from "./villageScale.js";
 
@@ -139,6 +140,7 @@ function convertVillageToObject(village) {
     villageTraits: [...village.villageTraits],
     secretTreasures: normalizeSecretTreasures(village),
     logs: [...village.logs],
+    historyEvents: normalizeHistoryEvents(village.historyEvents),
     gameOver: village.gameOver,
     hasDonePreEvent: village.hasDonePreEvent,
     hasDonePostEvent: village.hasDonePostEvent,
@@ -152,6 +154,7 @@ function convertVillageToObject(village) {
     isRaidProcessDone: village.isRaidProcessDone,
     raidTurnCount: village.raidTurnCount,
     currentActionIndex: village.currentActionIndex,
+    currentRaid: cloneNullableObject(village.currentRaid),
     // raidEnemies (Villager互換配列)
     raidEnemies: village.raidEnemies.map(vill => convertVillagerToObject(vill)),
 
@@ -280,6 +283,11 @@ function convertObjectToVillage(dataObj) {
   }
   v.secretTreasures = normalizeSecretTreasures(dataObj);
   v.logs = Array.isArray(dataObj.logs) ? [...dataObj.logs] : [];
+  if (hasOwn(dataObj, "historyEvents")) {
+    v.historyEvents = normalizeHistoryEvents(dataObj.historyEvents);
+  } else {
+    v.historyEvents = [createArchiveGapHistoryEvent(v.year, v.month)];
+  }
   v.gameOver = !!dataObj.gameOver;
   v.hasDonePreEvent = !!dataObj.hasDonePreEvent;
   v.hasDonePostEvent = !!dataObj.hasDonePostEvent;
@@ -307,6 +315,7 @@ function convertObjectToVillage(dataObj) {
   v.isRaidProcessDone = !!dataObj.isRaidProcessDone;
   v.raidTurnCount = dataObj.raidTurnCount ?? 0;
   v.currentActionIndex = dataObj.currentActionIndex ?? 0;
+  v.currentRaid = cloneNullableObject(dataObj.currentRaid);
   if (Array.isArray(dataObj.raidEnemies)) {
     v.raidEnemies = dataObj.raidEnemies.map(o => convertObjectToVillager(o));
   }
