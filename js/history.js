@@ -13,6 +13,8 @@ export const HISTORY_EVENT_TYPES = Object.freeze({
   BODY_EXCHANGE: "bodyExchange",
   MYTHIC_EVENT: "mythicEvent",
   LOVER: "lover",
+  SOCIAL_RELATION: "socialRelation",
+  HOBBY_AWAKENING: "hobbyAwakening",
   PREGNANCY: "pregnancy",
   ADULTHOOD: "adulthood",
   CRITICAL: "critical"
@@ -31,6 +33,8 @@ const HISTORY_TYPE_LABELS = Object.freeze({
   [HISTORY_EVENT_TYPES.BODY_EXCHANGE]: "肉体交換",
   [HISTORY_EVENT_TYPES.MYTHIC_EVENT]: "怪異",
   [HISTORY_EVENT_TYPES.LOVER]: "恋人",
+  [HISTORY_EVENT_TYPES.SOCIAL_RELATION]: "交友",
+  [HISTORY_EVENT_TYPES.HOBBY_AWAKENING]: "趣味",
   [HISTORY_EVENT_TYPES.PREGNANCY]: "妊娠",
   [HISTORY_EVENT_TYPES.ADULTHOOD]: "成人",
   [HISTORY_EVENT_TYPES.CRITICAL]: "危篤"
@@ -202,9 +206,9 @@ export function recordHeadmanElectionHistory(village, winner, options = {}) {
 export function recordVillagerJoinHistory(village, person, options = {}) {
   if (!person) return;
   const recruiterName = options.recruiter?.name || "";
-  const source = options.source || "勧誘";
+  const source = normalizeJoinSource(options.source);
   const text = recruiterName
-    ? `${recruiterName}に誘われ、${person.name}が村に加わった。`
+    ? `${recruiterName}に${source}され、${person.name}が村に加わった。`
     : `${person.name}が村に加わった。`;
   addHistoryEvent(village, {
     type: HISTORY_EVENT_TYPES.VILLAGER_JOIN,
@@ -264,6 +268,36 @@ export function recordLoverHistory(village, personA, personB, options = {}) {
     importance: "minor",
     scope: HISTORY_SCOPES.PERSON,
     tags: ["恋人", source]
+  });
+}
+
+export function recordSocialRelationHistory(village, personA, personB, relation, options = {}) {
+  if (!personA || !personB || !relation) return;
+  const hobby = options.hobby || "";
+  const source = options.source || "ランダムイベント";
+  const relationText = relation === "趣味仲間" && hobby ? `${hobby}の趣味仲間` : relation;
+  addHistoryEvent(village, {
+    type: HISTORY_EVENT_TYPES.SOCIAL_RELATION,
+    title: `${personA.name}と${personB.name}、${relationText}となる`,
+    text: `${personA.name}と${personB.name}が${relationText}になった。`,
+    people: [personA, personB],
+    importance: "minor",
+    scope: HISTORY_SCOPES.PERSON,
+    tags: ["交友", relation, hobby, source].filter(Boolean)
+  });
+}
+
+export function recordHobbyAwakeningHistory(village, person, hobby, options = {}) {
+  if (!person || !hobby) return;
+  const source = options.source || "ランダムイベント";
+  addHistoryEvent(village, {
+    type: HISTORY_EVENT_TYPES.HOBBY_AWAKENING,
+    title: `${person.name}、${hobby}に目覚める`,
+    text: `${person.name}が${hobby}の趣味に目覚めた。`,
+    people: [person],
+    importance: "minor",
+    scope: HISTORY_SCOPES.PERSON,
+    tags: ["趣味", hobby, source]
   });
 }
 
@@ -394,6 +428,10 @@ function getEventSource(event) {
   return event.tags.find((tag, index) => index > 0 && tag) || "";
 }
 
+function normalizeJoinSource(source) {
+  return source === "誘惑" ? "誘惑" : "勧誘";
+}
+
 function getBodyExchangeVillageText(event) {
   const [personA, personB] = event.people;
   const source = getEventSource(event);
@@ -439,10 +477,12 @@ function getVillageHistoryText(event) {
       return event.title.includes("続ける")
         ? `${personA}が里長を続けることになった。`
         : `${personA}が里長に選ばれた。`;
-    case HISTORY_EVENT_TYPES.VILLAGER_JOIN:
-      if (personA && personB) return `${personB}に誘われ、${personA}が村に加わった。`;
+    case HISTORY_EVENT_TYPES.VILLAGER_JOIN: {
+      const source = normalizeJoinSource(getEventSource(event));
+      if (personA && personB) return `${personB}の${source}で、${personA}が村に加わった。`;
       if (personA) return `${personA}が村に加わった。`;
       break;
+    }
     case HISTORY_EVENT_TYPES.VILLAGER_LEAVE:
       if (personA) return `${personA}が村を去った。`;
       break;
@@ -491,6 +531,20 @@ function getPersonalHistoryText(event, personName) {
       return otherName ? `${otherName}と夫婦となった。` : cleanRecordText(event.text);
     case HISTORY_EVENT_TYPES.LOVER:
       return otherName ? `${otherName}と恋人になった。` : cleanRecordText(event.text);
+    case HISTORY_EVENT_TYPES.SOCIAL_RELATION: {
+      const relation = event.tags[1] || "関係";
+      const hobby = event.tags[2] || "";
+      if (relation === "趣味仲間") {
+        return otherName
+          ? `${otherName}と${hobby ? `${hobby}の` : ""}趣味仲間になった。`
+          : cleanRecordText(event.text);
+      }
+      return otherName ? `${otherName}と${relation}になった。` : cleanRecordText(event.text);
+    }
+    case HISTORY_EVENT_TYPES.HOBBY_AWAKENING: {
+      const hobby = event.tags[1] || "";
+      return hobby ? `${hobby}の趣味に目覚めた。` : cleanRecordText(event.text);
+    }
     case HISTORY_EVENT_TYPES.PREGNANCY: {
       const motherName = event.people[0] || personName;
       if (motherName !== personName) return `${motherName}が子を身ごもった。`;
@@ -503,11 +557,13 @@ function getPersonalHistoryText(event, personName) {
       if (motherName === personName && childName) return `${childName}を産んだ。`;
       return cleanRecordText(event.text);
     }
-    case HISTORY_EVENT_TYPES.VILLAGER_JOIN:
+    case HISTORY_EVENT_TYPES.VILLAGER_JOIN: {
+      const source = normalizeJoinSource(getEventSource(event));
       if (event.people[0] === personName) {
-        return otherName ? `${otherName}に誘われ村に加わった。` : "村に加わった。";
+        return otherName ? `${otherName}に${source}され村に加わった。` : "村に加わった。";
       }
-      return event.people[0] ? `${event.people[0]}を誘い、村に迎えた。` : cleanRecordText(event.text);
+      return event.people[0] ? `${event.people[0]}を${source}し、村に迎えた。` : cleanRecordText(event.text);
+    }
     case HISTORY_EVENT_TYPES.VILLAGER_LEAVE:
       return "村を去った。";
     case HISTORY_EVENT_TYPES.VILLAGER_DEATH:
