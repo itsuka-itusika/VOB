@@ -940,6 +940,41 @@ section h2 {
   padding: 12px 0;
   line-height: 1.8;
 }
+.personal-history-titles {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #d8c9a8;
+  color: #2f2618;
+}
+.personal-history-titles h3 {
+  margin: 0 0 10px;
+  color: #6d5528;
+  font-size: 1rem;
+}
+.personal-history-title-list {
+  display: grid;
+  gap: 8px;
+}
+.personal-history-title-item {
+  display: grid;
+  grid-template-columns: 9em minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+  padding: 8px 0;
+  border-bottom: 1px solid #eadfca;
+}
+.personal-history-title-item:last-child {
+  border-bottom: 0;
+}
+.personal-history-title-item strong {
+  color: #3e2f17;
+  white-space: nowrap;
+}
+.personal-history-title-item span {
+  color: #73654b;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
 .secret-treasure-select-label,
 .secret-treasure-target-label {
   display: grid;
@@ -2118,6 +2153,10 @@ body.mobile-mode .history-record-line {
   grid-template-columns: 5.8em minmax(0, 1fr);
   gap: 7px;
   line-height: 1.65;
+}
+body.mobile-mode .personal-history-title-item {
+  grid-template-columns: 1fr;
+  gap: 3px;
 }
 body.mobile-mode #miracleModal,
 body.mobile-mode #buildingModal,

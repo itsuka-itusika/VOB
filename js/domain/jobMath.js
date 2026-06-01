@@ -124,6 +124,7 @@ export function getLaborYieldMultiplier(job, person = null, village = null) {
   let mul = 1;
   if (hasVillageTrait(village, "豊穣") && ABUNDANCE_JOBS.includes(job)) mul *= 2;
   if (hasVillageTrait(village, "秋") && AUTUMN_JOBS.includes(job)) mul *= 1.5;
+  if (hasVillageTrait(village, "夏") && job === "漁") mul *= 1.2;
   if (hasVillageTrait(village, "冬") && job === "農作業") mul *= 0.5;
   if (hasVillageTrait(village, "冬") && job === "狩猟") mul *= 1.2;
   if (hasVillageTrait(village, "冷夏") && COLD_SUMMER_JOBS.includes(job)) mul *= 0.5;

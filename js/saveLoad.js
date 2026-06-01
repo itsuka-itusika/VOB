@@ -2,9 +2,10 @@
 import { Village, Villager } from "./classes.js";
 import { determineSpeechType, registerUsedName } from "./createVillagers.js";
 import { ACTION_NONE, isPreferredActionCandidate, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
-import { hydrateStatLayersFromObject, syncEffectiveStats } from "./domain/statLayers.js";
+import { getPermanentStat, hydrateStatLayersFromObject, syncEffectiveStats } from "./domain/statLayers.js";
 import { createArchiveGapHistoryEvent, normalizeHistoryEvents } from "./history.js";
 import { normalizeRelationships } from "./relationships.js";
+import { ensureTitleState, evaluateTitles } from "./titles.js";
 import { getInitialScaleStageIndex } from "./villageScale.js";
 
 function normalizeBodyTraitName(trait) {
@@ -214,6 +215,9 @@ function convertVillagerToObject(vill) {
     mindTraits,
     hobby: vill.hobby,
     relationships: [...normalizeRelationships(vill)],
+    socialAttemptedThisMonth: !!vill.socialAttemptedThisMonth,
+    titleIds: Array.isArray(vill.titleIds) ? [...vill.titleIds] : [],
+    titleStats: vill.titleStats ? { ...vill.titleStats } : {},
 
     preferredAction: vill.preferredAction || vill.job || "なし",
     job: vill.job,
@@ -377,6 +381,10 @@ function convertObjectToVillager(obj) {
   }
   vill.relationships = Array.isArray(obj.relationships) ? [...obj.relationships] : [];
   normalizeRelationships(vill);
+  vill.socialAttemptedThisMonth = !!obj.socialAttemptedThisMonth;
+  vill.titleIds = Array.isArray(obj.titleIds) ? [...obj.titleIds] : [];
+  vill.titleStats = obj.titleStats && typeof obj.titleStats === "object" ? { ...obj.titleStats } : {};
+  ensureTitleState(vill);
   registerUsedName(vill.name);
 
   setPreferredAction(vill, migratePreferredAction(obj));
@@ -431,6 +439,7 @@ function convertObjectToVillager(obj) {
     vill.mindTraits.push("火星の加護");
     syncEffectiveStats(vill);
   }
+  evaluateTitles(vill, { getPermanentStat });
 
   return vill;
 }

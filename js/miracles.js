@@ -694,7 +694,10 @@ function hearthMiracle(v) {
 
 /** 旅人の奇跡(1名来訪) */
 function travelerMiracle(v) {
-  let newV = createRandomVisitor();
+  let newV = createRandomVisitor([
+    ...v.villagers.map(person => person.name),
+    ...v.visitors.map(person => person.name)
+  ], null, v);
   v.visitors.push(newV);
   v.log(`【旅人の奇跡】${newV.name}が来訪(訪問者)`);
   showMiracleResultModal(v, "旅人の奇跡", `${newV.name}が村を訪れました。`, [newV]);

@@ -11,8 +11,9 @@ import { getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from
 import {
   ACTION_DEFEND,
   ACTION_TRAP,
+  canDefendInRaid,
+  canMakeTrapInRaid,
   canPerformRaidAction,
-  isRaidActionAssignable,
   isRaidActive
 } from "./raidRules.js";
 
@@ -21,7 +22,6 @@ const JOB_REST = ACTION_REST;
 const JOB_LEISURE = ACTION_LEISURE;
 const JOB_HEAL = "\u7642\u990a";
 const JOB_LAST_MOMENTS = "\u81e8\u7d42";
-const TRAIT_CRITICAL = "\u5371\u7be4";
 const TRAIT_PACIFIST = "\u975e\u6226\u4e3b\u7fa9";
 const JOB_FOOD_SET = new Set([
   "\u8fb2\u4f5c\u696d",
@@ -201,6 +201,7 @@ function getJobTraitMultiplier(person, job, village) {
   const villageTraits = Array.isArray(village?.villageTraits) ? village.villageTraits : [];
   if (villageTraits.includes("豊穣") && ["農作業", "伐採", "狩猟", "漁", "採集", "醸造"].includes(job)) mul *= 2;
   if (villageTraits.includes("秋") && ["農作業", "採集", "醸造"].includes(job)) mul *= 1.5;
+  if (villageTraits.includes("夏") && job === "漁") mul *= 1.2;
   if (villageTraits.includes("冬") && job === "農作業") mul *= 0.5;
   if (villageTraits.includes("冬") && job === "狩猟") mul *= 1.2;
   if (villageTraits.includes("冷夏") && ["農作業", "伐採"].includes(job)) mul *= 0.5;
@@ -416,18 +417,18 @@ function getRaidAssignmentProfile(person, village) {
     ? currentPreferred
     : (person.preferredAction || JOB_NONE);
   const fallbackAction = chooseRaidFallbackAction(person, keptPreferred, currentAction);
-  const bodyTraits = Array.isArray(person.bodyTraits) ? person.bodyTraits : [];
-  const assignable = isRaidActionAssignable(person);
+  const canDefendByRule = canDefendInRaid(person);
+  const canTrapByRule = canMakeTrapInRaid(person);
 
   const defenderDamage = getExpectedDefenderDamage(person);
   const trapDamage = getExpectedTrapDamage(person);
-  const canDefend = assignable && canUseAction(person, ACTION_DEFEND) && isSafeDefender(person) && defenderDamage >= 8;
-  const canTrap = assignable && canUseAction(person, ACTION_TRAP) && isSafeTrapMaker(person) && trapDamage >= 6;
+  const canDefend = canDefendByRule && canUseAction(person, ACTION_DEFEND) && isSafeDefender(person) && defenderDamage >= 8;
+  const canTrap = canTrapByRule && canUseAction(person, ACTION_TRAP) && isSafeTrapMaker(person) && trapDamage >= 6;
 
   return {
     person,
     fallback: { preferredAction: keptPreferred, action: fallbackAction },
-    forcedNormal: bodyTraits.includes(TRAIT_CRITICAL) || !assignable,
+    forcedNormal: !canDefendByRule && !canTrapByRule,
     canDefend,
     canTrap,
     defenderScore: canDefend ? getDefenderScore(person) : -Infinity,

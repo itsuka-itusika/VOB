@@ -4,6 +4,7 @@ import { Villager } from "./classes.js";
 import { randInt, randChoice, randNormalInRange } from "./util.js";
 import { ACTION_NONE, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
 import { applyGenerationBaseTraitBonuses, setBaseStatsFromEffective, syncEffectiveStats } from "./domain/statLayers.js";
+import { getVillageScaleStage } from "./villageScale.js";
 import {
   FEMALE_PORTRAIT_FILES,
   MALE_PORTRAIT_FILES,
@@ -19,6 +20,46 @@ export { MALE_PORTRAIT_FILES, TODDLER_PORTRAIT_FILES } from "./data/villagerData
  */
 const INITIAL_MALE_COUNT = 3;   // 初期男性の人数
 const INITIAL_FEMALE_COUNT = 3; // 初期女性の人数
+
+const VISITOR_TABLES_BY_SCALE = [
+  {
+    maxStageIndex: 1,
+    entries: [
+      { type: "流民", weight: 25 },
+      { type: "旅人", weight: 30 },
+      { type: "巡礼者", weight: 15 },
+      { type: "行商人", weight: 15 },
+      { type: "棄民", weight: 15 }
+    ]
+  },
+  {
+    maxStageIndex: 4,
+    // 将来的にレア訪問者 weight 5 を追加予定。現時点では未実装のため、合計95で抽選する。
+    entries: [
+      { type: "流民", weight: 15 },
+      { type: "旅人", weight: 16 },
+      { type: "棄民", weight: 10 },
+      { type: "巡礼者", weight: 15 },
+      { type: "行商人", weight: 15 },
+      { type: "冒険者", weight: 12 },
+      { type: "学者", weight: 12 }
+    ]
+  },
+  {
+    maxStageIndex: Infinity,
+    // 将来的にレア訪問者5、お忍び5、遍歴騎士5を追加予定。未実装のため現行タイプだけで抽選する。
+    entries: [
+      { type: "流民", weight: 10 },
+      { type: "旅人", weight: 10 },
+      { type: "棄民", weight: 10 },
+      { type: "観光客", weight: 10 },
+      { type: "巡礼者", weight: 15 },
+      { type: "行商人", weight: 15 },
+      { type: "冒険者", weight: 15 },
+      { type: "学者", weight: 15 }
+    ]
+  }
+];
 
 // 使用済みの名前を追跡する Set を追加
 const usedNames = new Set();
@@ -743,26 +784,41 @@ export function assignHobby(v) {
 /**
  * 重み付き抽選で訪問者タイプを選択
  */
-function selectVisitorType() {
-  const totalWeight = VISITOR_TYPES.reduce((sum, type) => sum + type.weight, 0);
+function resolveVisitorTable(village = null) {
+  const table = village
+    ? VISITOR_TABLES_BY_SCALE.find(entry => getVillageScaleStage(village.building).index <= entry.maxStageIndex)
+    : VISITOR_TABLES_BY_SCALE[0];
+  if (!table) return VISITOR_TYPES;
+
+  return table.entries
+    .map(entry => {
+      const visitorType = VISITOR_TYPES.find(type => type.type === entry.type);
+      return visitorType ? { ...visitorType, weight: entry.weight } : null;
+    })
+    .filter(Boolean);
+}
+
+function selectVisitorType(village = null) {
+  const visitorTable = resolveVisitorTable(village);
+  const totalWeight = visitorTable.reduce((sum, type) => sum + type.weight, 0);
   let random = Math.random() * totalWeight;
   
-  for (const visitorType of VISITOR_TYPES) {
+  for (const visitorType of visitorTable) {
     random -= visitorType.weight;
     if (random <= 0) {
       return visitorType;
     }
   }
-  return VISITOR_TYPES[0]; // フォールバック
+  return visitorTable[0] || VISITOR_TYPES[0]; // フォールバック
 }
 
 /**
  * 訪問者を生成する関数
  */
-export function createRandomVisitor(existingNames = [], forcedType = null) {
+export function createRandomVisitor(existingNames = [], forcedType = null, village = null) {
   const visitorType = forcedType
-    ? (VISITOR_TYPES.find(type => type.type === forcedType) || selectVisitorType())
-    : selectVisitorType();
+    ? (VISITOR_TYPES.find(type => type.type === forcedType) || selectVisitorType(village))
+    : selectVisitorType(village);
   
   // 性別を明示的に設定（visitorTypeに指定がなければランダム）
   const bodySex = visitorType.forcedSex || (Math.random() < 0.5 ? "男" : "女");

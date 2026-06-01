@@ -8,6 +8,8 @@ import { canPerformRaidAction } from "./raidRules.js";
 import { updateUI } from "./ui.js";
 
 const RAID_CLOSE_DELAY_MS = 500;
+const RAID_PHASE_TRAP = "trap";
+const RAID_PHASE_COMBAT = "combat";
 
 function getRaidStepButton() {
   return document.getElementById("raidStepButton") ||
@@ -64,7 +66,7 @@ export function openRaidModal(village) {
     village.raidActionQueue=[ {type:"AUTO_FAIL"} ];
     village.currentActionIndex=0;
   } else {
-    village.raidTurnCount=1;
+    village.raidTurnCount=0;
     createTrapActionQueue(village);
   }
 }
@@ -76,6 +78,7 @@ function createTrapActionQueue(village) {
   let trapMakers = village.villagers.filter(p=>p.action==="罠作成" && p.hp>0 && canPerformRaidAction(p, "罠作成"));
   trapMakers = shuffleArray(trapMakers);
 
+  village.raidPhase = RAID_PHASE_TRAP;
   village.raidActionQueue=[];
   trapMakers.forEach(p=>{
     village.raidActionQueue.push({
@@ -96,6 +99,10 @@ export function proceedRaidAction(village) {
   let action = village.raidActionQueue[village.currentActionIndex];
 
   if (!action) {
+    if (village.raidPhase === RAID_PHASE_TRAP) {
+      setupCombatPhase(village);
+      return;
+    }
     finalizeCombatTurn(village);
     return;
   }
@@ -142,6 +149,11 @@ function doOneTrapAction(action, village) {
 /** 罠作成後 -> 迎撃フェーズ(3ターン) */
 export function setupCombatPhase(village) {
   const logDiv=document.getElementById("raidLogArea");
+
+  village.raidPhase = RAID_PHASE_COMBAT;
+  if (!Number.isFinite(Number(village.raidTurnCount)) || village.raidTurnCount < 1) {
+    village.raidTurnCount = 1;
+  }
 
   let defenders = village.villagers.filter(p=> p.action==="迎撃" && p.hp>0 && canPerformRaidAction(p, "迎撃"));
   let enemies   = village.raidEnemies.filter(e=> e.hp>0);
@@ -321,15 +333,23 @@ function finalizeCombatTurn(village) {
 
 /** 全員の行動終了時に敵 or 迎撃側が全滅したかどうか確認 */
 function checkCombatEndOfActions(village) {
-  let defenders = village.villagers.filter(p=> p.action==="迎撃" && p.hp>0 && canPerformRaidAction(p, "迎撃"));
   let enemies   = village.raidEnemies.filter(e=> e.hp>0);
 
-  if (defenders.length===0) {
-    finalizeRaid(false, "迎撃部隊全滅", village);
-    return;
-  }
   if (enemies.length===0) {
     finalizeRaid(true, "敵全滅", village);
+    return;
+  }
+  if (village.raidPhase === RAID_PHASE_TRAP) {
+    if (village.currentActionIndex < village.raidActionQueue.length) {
+      return;
+    }
+    setupCombatPhase(village);
+    return;
+  }
+
+  let defenders = village.villagers.filter(p=> p.action==="迎撃" && p.hp>0 && canPerformRaidAction(p, "迎撃"));
+  if (defenders.length===0) {
+    finalizeRaid(false, "迎撃部隊全滅", village);
     return;
   }
 
@@ -365,6 +385,7 @@ function endRaidProcess(isSuccess, isPartSuccess, village) {
   village.isRaidFinalizing = true;
   village.isRaidProcessDone = true;
   village.raidActionQueue = [];
+  village.raidPhase = "";
   village.currentActionIndex = 0;
   setRaidStepButtonState(true, "終了処理中...");
   const nextTurnButton = document.getElementById("nextTurnButton");

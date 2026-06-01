@@ -27,6 +27,30 @@ import { syncEffectiveStats } from "./domain/statLayers.js";
 const OPENING_RAID_GRACE_YEAR = 1091;
 const OPENING_RAID_GRACE_LAST_MONTH = 6;
 
+function resetMonthlySocialAttemptFlags(village) {
+  (village.villagers || []).forEach(person => {
+    person.socialAttemptedThisMonth = false;
+  });
+}
+
+function applySecurityBaselineDecay(village) {
+  const villagers = Array.isArray(village.villagers) ? village.villagers : [];
+  const averageEthics = villagers.length > 0
+    ? villagers.reduce((sum, person) => sum + (Number(person.eth) || 0), 0) / villagers.length
+    : 0;
+  const baselineSecurity = round3(averageEthics * 3 + 5);
+  const currentSecurity = Number(village.security) || 0;
+  if (currentSecurity <= baselineSecurity) return;
+
+  const securityLoss = round3((currentSecurity - baselineSecurity) / 5);
+  const nextSecurity = clampValue(round3(currentSecurity - securityLoss), 0, 100);
+  const actualLoss = round3(currentSecurity - nextSecurity);
+  if (actualLoss <= 0) return;
+
+  village.security = nextSecurity;
+  village.log(`治安自然低下: 基礎値${baselineSecurity}を上回ったため治安-${actualLoss}`);
+}
+
 /**
  * 固定イベント(前半) - 新年祭など
  */
@@ -292,6 +316,8 @@ export function endOfMonthProcess(v) {
   if (totalF>0) v.log(`食料-${totalF}`);
   if (totalMat>0) v.log(`資材-${totalMat}`);
 
+  applySecurityBaselineDecay(v);
+
   let removeList=["豊穣","訪問者","襲撃者","ミダス"];
   // "襲撃中" はここでは消さない(raid.js 内で完了時に消す)
   v.villageTraits = v.villageTraits.filter(tr=> !removeList.includes(tr));
@@ -406,6 +432,7 @@ export function endOfMonthProcess(v) {
  */
 export function doMonthStartProcess(v) {
   v.log("【月初処理】");
+  resetMonthlySocialAttemptFlags(v);
 
   // 治安30以下で荒廃状態に
   if (v.security <= 30 && !v.villageTraits.includes("荒廃")) {
@@ -538,7 +565,7 @@ export function doMonthStartProcess(v) {
       let visitor = createRandomVisitor([
         ...v.villagers.map(person => person.name),
         ...v.visitors.map(person => person.name)
-      ]);
+      ], null, v);
       v.visitors.push(visitor);
       v.log(`訪問者 ${visitor.name} が村を訪れました`);
     }
@@ -697,6 +724,7 @@ function showSeasonChangeDialog(season) {
       message: "太陽が高く昇り、生命力溢れる季節となりました。",
       accent: "#ffe39a",
       tips: [
+        "漁の成果が1.2倍になります。",
         "月末の夏至祭では体力・メンタルが回復し、結婚判定があります。",
         "ランダムイベントの猛暑や冷夏には注意してください。"
       ]

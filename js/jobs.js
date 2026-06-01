@@ -31,8 +31,9 @@ import {
 } from "./domain/jobMath.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
-import { addAcquiredStat, syncEffectiveStats } from "./domain/statLayers.js";
+import { addAcquiredStat, getPermanentStat, syncEffectiveStats } from "./domain/statLayers.js";
 import { rollSecretTreasureJobEvents, showSecretTreasureEventModals } from "./secretTreasureEvents.js";
+import { incrementTitleCounter, TITLE_COUNTER_KEYS } from "./titles.js";
 
 const HEALING_RECOVERABLE_BODY_TRAITS = ["負傷", "疫病"];
 
@@ -498,6 +499,9 @@ function doHunt(p, v) {
     addStoredResource(v, "food", amt);
     v.log(`${p.name}狩猟:${result} 食料+${amt},体力-${tc},メンタル-${mc}`);
   }
+  if (result === "大成功") {
+    incrementTitleCounter(p, TITLE_COUNTER_KEYS.HUNT_CRITICAL, 1, { getPermanentStat });
+  }
 
   // ステータス上昇判定
   if (Math.random() < 0.05) {
@@ -554,6 +558,9 @@ function doFish(p, v) {
   } else {
     addStoredResource(v, "food", amt);
     v.log(`${p.name}漁:${result} 食料+${amt},体力-${tc},メンタル-${mc}`);
+  }
+  if (result === "大成功") {
+    incrementTitleCounter(p, TITLE_COUNTER_KEYS.FISH_CRITICAL, 1, { getPermanentStat });
   }
 
   // ステータス上昇判定
@@ -921,7 +928,8 @@ function doTradingLike(p, v, jobName, calculateYield) {
   const r = randInt(1, 100);
   let x = 0;
   let result = "";
-  const failureThreshold = v.buildingFlags?.hasMarket ? 10 : 20;
+  const receivesMarketBonus = jobName === "行商" || jobName === "丁稚";
+  const failureThreshold = receivesMarketBonus && v.buildingFlags?.hasMarket ? 10 : 20;
   const successThreshold = 80;
   if (r <= failureThreshold) {
     x = 0;
@@ -948,6 +956,9 @@ function doTradingLike(p, v, jobName, calculateYield) {
   if (Math.random() < 0.05) {
     addAcquiredStat(p, "int", 1);
     logMsg += ",知力+1";
+  }
+  if (jobName === "行商" && result === "大成功") {
+    incrementTitleCounter(p, TITLE_COUNTER_KEYS.TRADING_CRITICAL, 1, { getPermanentStat });
   }
 
   v.log(logMsg);

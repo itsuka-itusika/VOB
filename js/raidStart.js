@@ -6,7 +6,7 @@ import {
   RAID_SCALE_TABLES
 } from "./data/raidData.js";
 import { refreshJobTable } from "./domain/jobTables.js";
-import { setBaseStat, syncEffectiveStats } from "./domain/statLayers.js";
+import { syncEffectiveStats } from "./domain/statLayers.js";
 import { showRaidWarningModal } from "./raidWarningModal.js";
 import { randChoice, randInt } from "./util.js";
 import { getVillageScaleStage } from "./villageScale.js";
@@ -35,6 +35,10 @@ function hasValidEnemyGroup(raidDefinition) {
 
 function getAdjustedRaidWeight(village, tableEntry, raidDefinition) {
   const baseWeight = Number(tableEntry.weight ?? raidDefinition.weight) || 0;
+  if (tableEntry.disableScaleWeightBonus || raidDefinition.disableScaleWeightBonus) {
+    return baseWeight;
+  }
+
   const population = Array.isArray(village.villagers) ? village.villagers.length : 0;
   const scale = Number(village.building) || 0;
 
@@ -87,6 +91,7 @@ function createRaidState(raidDefinition) {
 }
 
 function createRaidEnemy(village, raiderType, existingNames) {
+  const displayType = raiderType.displayType || raiderType.type;
   let e = createRandomVillager({
     sex: raiderType.forcedSex || (Math.random() < 0.5 ? "男" : "女"),
     minAge: raiderType.ageRange.min,
@@ -101,6 +106,13 @@ function createRaidEnemy(village, raiderType, existingNames) {
 
   // 襲撃者の特性とダイアログを設定
   e.mindTraits.push("襲撃者");
+  if (Array.isArray(raiderType.mindTraits)) {
+    raiderType.mindTraits.forEach(trait => {
+      if (!e.mindTraits.includes(trait)) {
+        e.mindTraits.push(trait);
+      }
+    });
+  }
   e.raiderDialogues = raiderType.dialogues || [];
 
   // 顔グラフィックの設定（直接portraitFileを設定）
@@ -115,12 +127,11 @@ function createRaidEnemy(village, raiderType, existingNames) {
   }
 
   // 狼の場合は肉体特性を上書き
-  if (raiderType.type === "狼") {
+  if (displayType === "狼") {
     e.bodyTraits = [
       ...raiderType.forcedBodyTraits,
       randChoice(raiderType.bodyTraits)
     ];
-    setBaseStat(e, "mag", randInt(10, Math.min(18, Math.floor(e.str) - 1)));
     // 狼の趣味を設定
     e.hobby = randChoice(raiderType.hobbies);
   }
@@ -158,7 +169,7 @@ function createRaidEnemy(village, raiderType, existingNames) {
   e.actionTable = ["襲撃"];
   e.job = raiderType.params.job;
   e.action = "襲撃";
-  e.name = `${raiderType.type}の${e.name}`;
+  e.name = `${displayType}の${e.name}`;
 
   // ニート特性は不要なので削除
   if (e.mindTraits.includes("ニート")) {
@@ -218,6 +229,7 @@ export function startRaidEvent(village) {
   village.raidTurnCount = 0;
   village.currentActionIndex = 0;
   village.raidActionQueue = [];
+  village.raidPhase = "";
   village.villagers.forEach(person => refreshJobTable(person, village));
 
   // 襲撃者の数に応じてメッセージを変更

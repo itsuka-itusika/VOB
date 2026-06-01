@@ -1,6 +1,7 @@
 import { getPermanentStat, syncEffectiveStats } from "./domain/statLayers.js";
-import { recordHeadmanElectionHistory } from "./history.js";
+import { HISTORY_EVENT_TYPES, recordHeadmanElectionHistory } from "./history.js";
 import { parseRelationship, normalizeRelationships } from "./relationships.js";
+import { grantTitle, incrementTitleCounter, TITLE_COUNTER_KEYS } from "./titles.js";
 
 const HEADMAN_TRAIT = "里長";
 const ELECTION_MONTH = 7;
@@ -180,6 +181,23 @@ function appointHeadman(village, headman) {
   (village.villagers || []).forEach(syncEffectiveStats);
 }
 
+function hasRecordedHeadman(village) {
+  return Array.isArray(village?.historyEvents) && village.historyEvents.some(event => {
+    return event?.type === HISTORY_EVENT_TYPES.HEADMAN_ELECTION &&
+      Array.isArray(event.people) &&
+      event.people.length > 0;
+  });
+}
+
+function recordHeadmanTitleProgress(village, headman) {
+  if (!headman) return;
+  const isFirstHeadman = !hasRecordedHeadman(village);
+  incrementTitleCounter(headman, TITLE_COUNTER_KEYS.HEADMAN_TERMS, 1, { getPermanentStat });
+  if (isFirstHeadman) {
+    grantTitle(headman, "firstHeadman");
+  }
+}
+
 function markElectionResolved(village) {
   village.lastHeadmanElectionYear = Number(village.year) || 0;
   village.nextHeadmanElectionYear = village.lastHeadmanElectionYear + ELECTION_INTERVAL_YEARS;
@@ -351,6 +369,7 @@ function runElection(village) {
     if (currentHeadman) {
       appointHeadman(village, currentHeadman);
       markElectionResolved(village);
+      recordHeadmanTitleProgress(village, currentHeadman);
       recordHeadmanElectionHistory(village, currentHeadman, { result: "continued" });
       showElectionResult(village, [
         "集会所に村人たちが集まり、里長選挙が行われた。",
@@ -371,6 +390,7 @@ function runElection(village) {
     const winner = candidates[0];
     appointHeadman(village, winner);
     markElectionResolved(village);
+    recordHeadmanTitleProgress(village, winner);
     recordHeadmanElectionHistory(village, winner, { result: "uncontested" });
     showElectionResult(village, [
       "集会所に村人たちが集まり、里長選挙が行われた。",
@@ -395,6 +415,7 @@ function runElection(village) {
   const winner = pickRandom(topCandidates);
   appointHeadman(village, winner);
   markElectionResolved(village);
+  recordHeadmanTitleProgress(village, winner);
 
   const counts = formatVoteCounts(candidates, voteCounts);
   recordHeadmanElectionHistory(village, winner, {
