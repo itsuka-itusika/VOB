@@ -44,6 +44,7 @@ export class Village {
     this.isRaidFinalizing = false;
     this.raidTurnCount = 0;
     this.raidActionQueue = [];
+    this.raidPhase = "";
     this.currentActionIndex = 0;
 
     // 訪問者配列を追加
@@ -128,6 +129,9 @@ export class Villager {
 
     /** 人間関係(文字列格納) */
     this.relationships = [];
+    this.socialAttemptedThisMonth = false;
+    this.titleIds = [];
+    this.titleStats = {};
 
     /** 行動割り当て関連 */
     // preferredAction は通常時の復帰先。job は旧セーブ・旧コード互換の別名として同期する。

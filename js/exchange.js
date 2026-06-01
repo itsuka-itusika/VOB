@@ -2,8 +2,9 @@
 
 import { refreshJobTable } from "./domain/jobTables.js";
 import { PHYSICAL_ABILITY_STATS } from "./domain/personSchema.js";
-import { ensureStatLayers, syncEffectiveStats } from "./domain/statLayers.js";
+import { ensureStatLayers, getPermanentStat, syncEffectiveStats } from "./domain/statLayers.js";
 import { recordBodyExchangeHistory } from "./history.js";
+import { evaluateTitles } from "./titles.js";
 
 const RAID_JOBS = ["野盗", "ゴブリン", "狼", "キュクロプス", "ハーピー"];
 
@@ -130,6 +131,8 @@ export function doExchange(a, b, v, isLightning = false, historySource = null) {
 
   syncEffectiveStats(a);
   syncEffectiveStats(b);
+  evaluateTitles(a, { getPermanentStat });
+  evaluateTitles(b, { getPermanentStat });
   refreshAssignmentAfterExchange(a, v);
   refreshAssignmentAfterExchange(b, v);
 

@@ -1,5 +1,5 @@
 import { isForcedHealingAction } from "../util.js";
-import { ACTION_DEFEND, ACTION_TRAP, isRaidActionAssignable } from "../raidRules.js";
+import { ACTION_DEFEND, ACTION_TRAP, canDefendInRaid, canMakeTrapInRaid } from "../raidRules.js";
 import { syncEffectiveStats } from "./statLayers.js";
 
 export const ACTION_NONE = "なし";
@@ -21,6 +21,15 @@ const NON_PREFERRED_ACTIONS = new Set([
   ACTION_TRAP,
   "訪問",
   "襲撃"
+]);
+const INFANT_BODY_ALLOWED_ACTIONS = new Set([
+  ACTION_REST,
+  ACTION_LEISURE,
+  "遊び",
+  "採集",
+  "内職",
+  "研究",
+  "研究助手"
 ]);
 
 function traitList(person, key) {
@@ -76,11 +85,23 @@ function setTables(person, preferredTable, actionTable) {
   person.actionTable = [...actionTable];
 }
 
+function applyInfantBodyActionFilter(person) {
+  if (!hasInfantBody(person)) return;
+  person.jobTable = person.jobTable.filter(action => INFANT_BODY_ALLOWED_ACTIONS.has(action));
+  person.actionTable = person.actionTable.filter(action => INFANT_BODY_ALLOWED_ACTIONS.has(action));
+}
+
 function addRaidActionsIfAllowed(person, village) {
   const villageTraits = Array.isArray(village?.villageTraits) ? village.villageTraits : [];
-  if (!villageTraits.includes("襲撃中") || !isRaidActionAssignable(person)) return;
+  if (!villageTraits.includes("襲撃中")) return;
+
+  const raidActions = [];
+  if (canDefendInRaid(person)) raidActions.push(ACTION_DEFEND);
+  if (canMakeTrapInRaid(person)) raidActions.push(ACTION_TRAP);
+  if (raidActions.length === 0) return;
+
   person.actionTable = person.actionTable.filter(action => action !== ACTION_DEFEND && action !== ACTION_TRAP);
-  person.actionTable.unshift(ACTION_DEFEND, ACTION_TRAP);
+  person.actionTable.unshift(...raidActions);
 }
 
 function normalizePreferredForTable(person, preferredTable, { defaultPreferred = ACTION_NONE } = {}) {
@@ -206,22 +227,13 @@ export function refreshJobTable(v, village = {}) {
   const sa = Number(v.spiritAge) || 0;
   const mindTraits = traitList(v, "mindTraits");
   const infantMind = hasInfantMind(v);
-  const infantBody = hasInfantBody(v);
-  const isBabyBodyWithNonBabyMind = infantBody && !infantMind;
   const isToddlerStage = !infantMind && (mindTraits.includes("萌芽") || sa <= 9);
   const isAdolescentStage = !infantMind && !isToddlerStage && (mindTraits.includes("思春期") || sa <= 15);
 
   if (infantMind) {
     setTables(v, [ACTION_CRADLE], [ACTION_CRADLE]);
     setPreferredAction(v, ACTION_CRADLE);
-    v.action = ACTION_CRADLE;
-    return;
-  }
-
-  if (isBabyBodyWithNonBabyMind) {
-    const preferredTable = ["採集", "内職", "研究"];
-    setTables(v, preferredTable, [ACTION_REST, ACTION_LEISURE, ...preferredTable]);
-    normalizePreferredForTable(v, preferredTable);
+    addRaidActionsIfAllowed(v, village);
     normalizeCurrentAction(v);
     return;
   }
@@ -229,7 +241,9 @@ export function refreshJobTable(v, village = {}) {
   if (isToddlerStage) {
     const preferredTable = ["遊び"];
     setTables(v, preferredTable, [ACTION_REST, "遊び"]);
-    normalizePreferredForTable(v, preferredTable, { defaultPreferred: "遊び" });
+    applyInfantBodyActionFilter(v);
+    normalizePreferredForTable(v, v.jobTable, { defaultPreferred: "遊び" });
+    addRaidActionsIfAllowed(v, village);
     normalizeCurrentAction(v);
     return;
   }
@@ -237,7 +251,8 @@ export function refreshJobTable(v, village = {}) {
   if (isAdolescentStage) {
     const preferredTable = ["遊び", "農作業", "伐採", "狩猟", "漁", "採集", "内職", "丁稚", "研究助手"];
     setTables(v, preferredTable, [ACTION_REST, ...preferredTable]);
-    normalizePreferredForTable(v, preferredTable, { defaultPreferred: "遊び" });
+    applyInfantBodyActionFilter(v);
+    normalizePreferredForTable(v, v.jobTable, { defaultPreferred: "遊び" });
     addRaidActionsIfAllowed(v, village);
     normalizeCurrentAction(v);
     return;
@@ -245,7 +260,8 @@ export function refreshJobTable(v, village = {}) {
 
   const preferredTable = buildAdultPersistentActions(v, village);
   setTables(v, preferredTable, [ACTION_REST, ACTION_LEISURE, ...preferredTable]);
-  normalizePreferredForTable(v, preferredTable);
+  applyInfantBodyActionFilter(v);
+  normalizePreferredForTable(v, v.jobTable);
   addRaidActionsIfAllowed(v, village);
   normalizeCurrentAction(v);
 }

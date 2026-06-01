@@ -18,17 +18,17 @@ export const RAIDER_TYPES = [
       "BAN16.png", "BAN17.png", "BAN18.png", "BAN19.png", "BAN20.png", "BAN20.png"
     ],
     ranges: {
-      hp: [80, 100],
-      str: [15, 25],
-      vit: [8, 30],
+      hp: [50, 70],
+      str: [15, 21],
+      vit: [8, 25],
       dex: [10, 20],
-      mag: [5, 15],
-      chr: [3, 19],
-      int: [5, 18],
-      ind: [3, 16],
+      mag: [5, 12],
+      chr: [3, 15],
+      int: [5, 16],
+      ind: [3, 12],
       eth: [1, 9],
-      cou: [12, 25],
-      sexdr: [10, 20]
+      cou: [13, 20],
+      sexdr: [15, 25]
     },
     dialogues: [
       "金と食料を出せば命だけは助けてやる！",
@@ -37,6 +37,46 @@ export const RAIDER_TYPES = [
       "女も寄越せ！さもなくば皆殺しだ！",
       "ここの村長を出せ！交渉したい事がある。",
       "俺たちは飢えているんだ。食料を分けてくれないか？断れば襲撃するぞ！"
+    ]
+  },
+  {
+    type: "傭兵団",
+    weight: 18,
+    minCount: 3,
+    maxCount: 4,
+    race: "人間",
+    forcedSex: "男",
+    ageRange: { min: 18, max: 45 },
+    params: {
+      job: "傭兵団",
+      action: "襲撃"
+    },
+    portraits: [
+      "BAN1.png", "BAN2.png", "BAN3.png", "BAN4.png", "BAN5.png",
+      "BAN6.png", "BAN7.png", "BAN8.png", "BAN9.png", "BAN10.png",
+      "BAN11.png", "BAN12.png", "BAN13.png", "BAN14.png", "BAN15.png",
+      "BAN16.png", "BAN17.png", "BAN18.png", "BAN19.png", "BAN20.png", "BAN20.png"
+    ],
+    ranges: {
+      hp: [65, 85],
+      str: [18, 24],
+      vit: [14, 28],
+      dex: [12, 22],
+      mag: [5, 13],
+      chr: [5, 16],
+      int: [8, 18],
+      ind: [8, 18],
+      eth: [2, 10],
+      cou: [16, 23],
+      sexdr: [10, 22]
+    },
+    dialogues: [
+      "俺たちは傭兵団だ。だが、契約相手はこの村じゃない。",
+      "野盗と同じと思うなよ。少しは手際を見せてやる。",
+      "金も食料も、抵抗する力も、まとめていただく。",
+      "命が惜しければ道を開けろ。仕事は手早く済ませる。",
+      "村の備蓄を押さえろ。散るな、固まって動け！",
+      "雇い主の名は言えん。まあ、襲われる側には関係ないな。"
     ]
   },
   {
@@ -57,11 +97,11 @@ export const RAIDER_TYPES = [
     ],
     ranges: {
       hp: [30, 50],
-      str: [10, 18],
+      str: [12, 18],
       vit: [5, 15],
       dex: [18, 25],
-      mag: [5, 15],
-      chr: [3, 12],
+      mag: [5, 11],
+      chr: [3, 10],
       int: [5, 12],
       ind: [5, 12],
       eth: [1, 5],
@@ -89,14 +129,14 @@ export const RAIDER_TYPES = [
       action: "襲撃"
     },
     ranges: {
-      hp: [40, 60],
-      str: [20, 30],
-      vit: [5, 15],
+      hp: [30, 50],
+      str: [15, 20],
+      vit: [8, 16],
       dex: [3, 8],
-      mag: [10, 18],
-      chr: [3, 12],
+      mag: [10, 15],
+      chr: [12, 16],
       int: [1, 5],
-      ind: [1, 5],
+      ind: [5, 15],
       eth: [5, 15],
       cou: [20, 25],
       sexdr: [10, 20]
@@ -111,6 +151,48 @@ export const RAIDER_TYPES = [
       "フンフン...（村の匂いを嗅いでいる）",
       "ハァハァ...（獲物を前に興奮している）",
       "ウォォォン！（襲撃の合図を出している）"
+    ],
+    portraits: [
+      "WOLF1.png", "WOLF2.png", "WOLF3.png", "WOLF4.png", "WOLF5.png",
+      "WOLF6.png"
+    ],
+  },
+  {
+    type: "餓狼",
+    displayType: "狼",
+    weight: 0,
+    minCount: 3,
+    maxCount: 4,
+    race: "狼",
+    ageRange: { min: 3, max: 8 },
+    params: {
+      job: "狼",
+      action: "襲撃"
+    },
+    ranges: {
+      hp: [30, 50],
+      str: [15, 20],
+      vit: [8, 16],
+      dex: [3, 8],
+      mag: [10, 15],
+      chr: [12, 16],
+      int: [1, 5],
+      ind: [5, 15],
+      eth: [5, 15],
+      cou: [27, 34],
+      sexdr: [10, 20]
+    },
+    bodyTraits: ["筋肉質", "毛艶がいい", "精悍", "痩せぎす", "細身", "強面"],
+    forcedBodyTraits: ["モフモフ"],
+    mindTraits: ["餓狼"],
+    hobbies: ["散歩", "狩り", "毛づくろい", "繁殖", "子育て", "喧嘩", "日光浴"],
+    dialogues: [
+      "グルルル...（飢えた群れが村へにじり寄る）",
+      "ウゥゥ...ガウッ！（強い飢えと殺気を放っている）",
+      "キャンキャン...（群れの仲間を呼んでいるようだ）",
+      "フンフン...（獲物の匂いを逃さない）",
+      "ハァハァ...（獲物を前に興奮している）",
+      "ウォォォン！（飢えた群れが一斉に吠える）"
     ],
     portraits: [
       "WOLF1.png", "WOLF2.png", "WOLF3.png", "WOLF4.png", "WOLF5.png",
@@ -168,13 +250,13 @@ export const RAIDER_TYPES = [
       action: "襲撃"
     },
     portraits: [
-      "HARPY1.png", "HARPY2.png", "HARPY3.png", "HARPY4.png", 
+      "HARPY1.png", "HARPY2.png", "HARPY3.png", "HARPY4.png",
       "HARPY5.png", "HARPY6.png", "HARPY7.png", "HARPY8.png",
       "HARPY9.png", "HARPY10.png", "HARPY11.png", "HARPY12.png"
-      
+
     ],
     ranges: {
-      hp: [70, 90],
+      hp: [50, 70],
       str: [16, 22],
       vit: [8, 18],
       dex: [1, 5],
@@ -183,7 +265,7 @@ export const RAIDER_TYPES = [
       int: [5, 12],
       ind: [5, 12],
       eth: [5, 12],
-      cou: [15, 22],
+      cou: [16, 22],
       sexdr: [10, 20]
     },
     forcedBodyTraits: ["飛行", "澄んだ声"],
@@ -195,6 +277,50 @@ export const RAIDER_TYPES = [
       "空から襲えば逃げ場なんてないのよ！",
       "秘宝は全部私のもの！さあ、出しなさい！",
       "美しいものが大好き！あなたの持っているキラキラしたものを全部頂戴！"
+    ]
+  },
+  {
+    type: "ハーピーの長",
+    displayType: "ハーピー",
+    weight: 0,
+    minCount: 1,
+    maxCount: 1,
+    race: "ハーピー",
+    forcedSex: "女",
+    ageRange: { min: 25, max: 30 },
+    params: {
+      job: "ハーピー",
+      action: "襲撃"
+    },
+    portraits: [
+      "HARPY1.png", "HARPY2.png", "HARPY3.png", "HARPY4.png",
+      "HARPY5.png", "HARPY6.png", "HARPY7.png", "HARPY8.png",
+      "HARPY9.png", "HARPY10.png", "HARPY11.png", "HARPY12.png"
+
+    ],
+    ranges: {
+      hp: [70, 90],
+      str: [18, 24],
+      vit: [12, 22],
+      dex: [2, 7],
+      mag: [20, 26],
+      chr: [20, 28],
+      int: [10, 18],
+      ind: [8, 15],
+      eth: [5, 12],
+      cou: [20, 26],
+      sexdr: [10, 20]
+    },
+    forcedBodyTraits: ["飛行", "澄んだ声"],
+    mindTraits: ["首長"],
+    hobbies: ["遠乗り", "狩り", "羽づくろい", "繁殖", "子育て", "喧嘩", "日光浴", "歌唱"],
+    dialogues: [
+      "キャハハ！いいわ、みんなでこの村をさらってしまいましょう！",
+      "空を見なさい。逃げ道なんて最初からないのよ。",
+      "下の子たち、好きにお取り。光るものも食料も全部よ！",
+      "私の声に合わせなさい。ばらばらに飛んじゃだめ。",
+      "この村の一番きれいなものを、私の巣へ運びなさい！",
+      "さあ、群れの力を見せてあげるわ！"
     ]
   }
 
@@ -250,6 +376,21 @@ function createExistingRaiderRaid(id, raiderTypeName) {
   };
 }
 
+function createCompositeRaiderRaid({ id, name, warningName, weight, enemyGroups, disableScaleWeightBonus = false }) {
+  return {
+    id,
+    name,
+    warningName,
+    weight,
+    disableScaleWeightBonus,
+    avoidance: null,
+    defense: cloneRaidRules(DEFAULT_RAID_DEFENSE),
+    enemyGroups,
+    successRewards: cloneRaidRules(DEFAULT_RAID_SUCCESS_REWARDS),
+    failurePenalty: cloneRaidRules(DEFAULT_RAID_FAILURE_PENALTY)
+  };
+}
+
 export const FALLBACK_RAID_RULES = {
   id: "fallback",
   name: "襲撃",
@@ -262,10 +403,41 @@ export const FALLBACK_RAID_RULES = {
 
 export const RAID_MODULES = [
   createExistingRaiderRaid("bandit", "野盗"),
+  createExistingRaiderRaid("mercenary-band", "傭兵団"),
   createExistingRaiderRaid("goblin", "ゴブリン"),
   createExistingRaiderRaid("wolf", "狼"),
   createExistingRaiderRaid("cyclops", "キュクロプス"),
-  createExistingRaiderRaid("harpy", "ハーピー")
+  createExistingRaiderRaid("harpy", "ハーピー"),
+  createCompositeRaiderRaid({
+    id: "harpy-swarm",
+    name: "ハーピーの大群",
+    warningName: "ハーピーの大群",
+    weight: 14,
+    disableScaleWeightBonus: true,
+    enemyGroups: [
+      { raiderType: "ハーピー", minCount: 3, maxCount: 4 },
+      { raiderType: "ハーピーの長", minCount: 1, maxCount: 1 }
+    ]
+  }),
+  createCompositeRaiderRaid({
+    id: "starving-wolves",
+    name: "餓狼の群れ",
+    warningName: "餓狼の群れ",
+    weight: 18,
+    enemyGroups: [
+      { raiderType: "餓狼", minCount: 3, maxCount: 4 }
+    ]
+  }),
+  createCompositeRaiderRaid({
+    id: "cyclops-band",
+    name: "キュクロプス団",
+    warningName: "キュクロプス団",
+    weight: 6,
+    disableScaleWeightBonus: true,
+    enemyGroups: [
+      { raiderType: "キュクロプス", minCount: 2, maxCount: 3 }
+    ]
+  })
 ];
 
 const RAID_MODULE_BY_ID = new Map(RAID_MODULES.map(raid => [raid.id, raid]));
@@ -275,32 +447,47 @@ export const RAID_SCALE_TABLES = [
     id: "early-frontier",
     scaleStageIndexes: [0, 1],
     entries: [
-      { raidId: "goblin" },
-      { raidId: "wolf" },
-      { raidId: "bandit" },
-      { raidId: "harpy" }
+      { raidId: "goblin", weight: 30 },
+      { raidId: "wolf", weight: 28 },
+      { raidId: "bandit", weight: 30 },
+      { raidId: "harpy", weight: 6 }
     ]
   },
   {
     id: "border-travel",
     scaleStageIndexes: [2, 3],
     entries: [
-      { raidId: "harpy" },
-      { raidId: "cyclops" },
-      { raidId: "bandit" },
-      { raidId: "goblin" },
-      { raidId: "wolf" }
+      { raidId: "bandit", weight: 18 },
+      { raidId: "wolf", weight: 14 },
+      { raidId: "goblin", weight: 22 },
+      { raidId: "harpy", weight: 14 },
+      { raidId: "cyclops", weight: 8 },
+      { raidId: "mercenary-band", weight: 16 }
     ]
   },
   {
-    id: "developed",
-    minScaleStageIndex: 4,
+    id: "rich-village",
+    scaleStageIndexes: [4],
     entries: [
-      { raidId: "harpy" },
-      { raidId: "cyclops" },
-      { raidId: "bandit" },
-      { raidId: "goblin" },
-      { raidId: "wolf" }
+      { raidId: "mercenary-band", weight: 24 },
+      { raidId: "harpy", weight: 16 },
+      { raidId: "cyclops", weight: 10 },
+      { raidId: "harpy-swarm", weight: 14 },
+      { raidId: "starving-wolves", weight: 18 },
+      { raidId: "goblin", weight: 8 }
+    ]
+  },
+  {
+    id: "prosperous",
+    minScaleStageIndex: 5,
+    entries: [
+      { raidId: "mercenary-band", weight: 22 },
+      { raidId: "harpy-swarm", weight: 22 },
+      { raidId: "starving-wolves", weight: 18 },
+      { raidId: "cyclops", weight: 10 },
+      { raidId: "cyclops-band", weight: 6 },
+      { raidId: "harpy", weight: 6 },
+      { raidId: "goblin", weight: 6 }
     ]
   }
 ];

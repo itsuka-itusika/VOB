@@ -151,7 +151,7 @@ function buildWarningMessages(village) {
       level: "danger",
       text: "治安が危険域です。荒廃や襲撃リスクに注意してください。"
     });
-  } else if (village.security <= 45) {
+  } else if (village.security < 40) {
     warnings.push({
       level: "warning",
       text: "治安が低下しています。警備や治安回復を検討してください。"

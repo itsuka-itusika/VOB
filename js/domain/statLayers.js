@@ -1,5 +1,6 @@
 import { clampValue, round3 } from "../util.js";
 import { ABILITY_STATS, PHYSICAL_ABILITY_STATS } from "./personSchema.js";
+import { evaluateTitles } from "../titles.js";
 
 export const STAT_LAYER_VERSION = 1;
 
@@ -192,6 +193,7 @@ export function addAcquiredStat(person, stat, amount) {
   ensureStatLayers(person);
   person.acquiredStatMods[stat] = round3(person.acquiredStatMods[stat] + numberOr(amount, 0));
   syncEffectiveStats(person);
+  evaluateTitles(person, { getPermanentStat });
 }
 
 export function getBaseStat(person, stat) {

@@ -3,10 +3,12 @@ import { updateUI } from "./ui.js";
 import { getPortraitPath, isForcedHealingAction } from "./util.js";
 import { ACTION_NONE, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
-import { ACTION_DEFEND, ACTION_TRAP, isRaidActionAssignable } from "./raidRules.js";
+import { getPermanentStat } from "./domain/statLayers.js";
+import { ACTION_DEFEND, ACTION_TRAP, canPerformRaidAction } from "./raidRules.js";
 import { getConversationLine } from "./dialogue/dialogueEngine.js";
 import { recordVillagerJoinHistory } from "./history.js";
 import { MERCHANT_SECRET_TREASURE_LINES } from "./data/dialogue/visitorLines.js";
+import { incrementTitleCounter, TITLE_COUNTER_KEYS } from "./titles.js";
 import {
   buyMerchantSecretTreasure,
   MERCHANT_SECRET_TREASURE_CHANCE,
@@ -169,10 +171,9 @@ export function openConversationModal(character) {
         openMerchantTradeModal(character);
       });
     }
-  } else if (isUnderRaid && isVillageMember && isRaidActionAssignable(character)) {
-    const actionTable = Array.isArray(character.actionTable) ? character.actionTable : [];
-    const canDefend = actionTable.includes(ACTION_DEFEND);
-    const canMakeTrap = actionTable.includes(ACTION_TRAP);
+  } else if (isUnderRaid && isVillageMember) {
+    const canDefend = canPerformRaidAction(character, ACTION_DEFEND);
+    const canMakeTrap = canPerformRaidAction(character, ACTION_TRAP);
     const buttons = [];
     if (canDefend) {
       buttons.push(`<button id="assignDefender" class="${character.action === ACTION_DEFEND ? 'active-action' : ''}">迎撃任命</button>`);
@@ -226,7 +227,12 @@ function changeCharacterAction(character, newAction) {
     return;
   }
 
-  if ((newAction === ACTION_DEFEND || newAction === ACTION_TRAP) && !isRaidActionAssignable(character)) {
+  if (newAction === ACTION_DEFEND && !canPerformRaidAction(character, ACTION_DEFEND)) {
+    console.error(`Action ${newAction} is not available for this character`);
+    return;
+  }
+
+  if (newAction === ACTION_TRAP && !canPerformRaidAction(character, ACTION_TRAP)) {
     console.error(`Action ${newAction} is not available for this character`);
     return;
   }
@@ -276,6 +282,20 @@ function getRecruitmentCoefficient(visitor) {
   return 0.4; // デフォルト値
 }
 
+function hasUsedVisitorSocialAttempt(person) {
+  return !!person?.socialAttemptedThisMonth;
+}
+
+function markVisitorSocialAttempt(person) {
+  if (person) {
+    person.socialAttemptedThisMonth = true;
+  }
+}
+
+function getVisitorSocialCandidates() {
+  return theVillage.villagers.filter(person => !hasUsedVisitorSocialAttempt(person));
+}
+
 function calculateRecruitmentSuccessRate(visitor, recruiter) {
   const coefficient = getRecruitmentCoefficient(visitor);
   return Math.min(100, Math.max(0,
@@ -300,13 +320,16 @@ function calculateSeductionSuccessRate(visitor, seducer) {
   const check = canAttemptSeduction(visitor, seducer);
   if (!check.ok) return 0;
   const coefficient = getRecruitmentCoefficient(visitor);
+  const targetLustMultiplier = Math.max(0, ((Number(visitor.sexdr) || 0) - 10) / 10);
   return Math.min(100, Math.max(0,
-    coefficient * (seducer.chr / 20) * (seducer.sexdr / 20) * 100
+    coefficient * (seducer.chr / 20) * (seducer.sexdr / 20) * targetLustMultiplier * 100
   ));
 }
 
 // 勧誘モーダルを開く
 function openRecruitmentModal(visitor) {
+  const candidates = getVisitorSocialCandidates();
+  const hasCandidates = candidates.length > 0;
   const overlay = document.createElement("div");
   overlay.id = "recruitmentOverlay";
   overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:3000;";
@@ -319,15 +342,15 @@ function openRecruitmentModal(visitor) {
     <h3 style="margin-top:0;">勧誘する村人を選択</h3>
     <p style="margin-bottom:15px;">${visitor.name}を勧誘します。</p>
     <select id="recruiterSelect" style="width:100%;padding:5px;margin-bottom:15px;">
-      <option value="">勧誘する村人を選択してください</option>
-      ${theVillage.villagers.map(v => `
+      <option value="">${hasCandidates ? "勧誘する村人を選択してください" : "今月、勧誘・誘惑できる村人はいません"}</option>
+      ${candidates.map(v => `
         <option value="${v.name}">${v.name} (魅力:${Math.floor(v.chr)} 知力:${Math.floor(v.int)} 成功率:${Math.floor(calculateRecruitmentSuccessRate(visitor, v))}%)</option>
       `).join('')}
     </select>
     <div id="recruitmentSuccessRate" style="margin:-5px 0 15px 0;color:#555;">成功率: -</div>
     <div style="display:flex;justify-content:flex-end;gap:10px;">
       <button id="cancelRecruitment" style="padding:5px 15px;">キャンセル</button>
-      <button id="doRecruitment" style="padding:5px 15px;">勧誘する</button>
+      <button id="doRecruitment" style="padding:5px 15px;" ${hasCandidates ? "" : "disabled"}>勧誘する</button>
     </div>
   `;
   
@@ -350,6 +373,13 @@ function openRecruitmentModal(visitor) {
       alert("勧誘する村人を選択してください。");
       return;
     }
+
+    const recruiter = theVillage.villagers.find(v => v.name === recruiterName);
+    if (!recruiter) return;
+    if (hasUsedVisitorSocialAttempt(recruiter)) {
+      alert(`${recruiter.name}は今月すでに勧誘または誘惑を試みています。`);
+      return;
+    }
     
     // 人口上限チェックを追加
     if (theVillage.villagers.length >= theVillage.popLimit) {
@@ -357,9 +387,7 @@ function openRecruitmentModal(visitor) {
       theVillage.log(`勧誘失敗: 人口上限(${theVillage.popLimit}人)に達しています`);
       return;
     }
-    
-    const recruiter = theVillage.villagers.find(v => v.name === recruiterName);
-    if (!recruiter) return;
+    markVisitorSocialAttempt(recruiter);
     
     const successRate = calculateRecruitmentSuccessRate(visitor, recruiter);
     
@@ -404,6 +432,8 @@ function closeRecruitmentModal() {
 
 // 誘惑モーダルを開く
 function openSeductionModal(visitor) {
+  const candidates = getVisitorSocialCandidates();
+  const hasCandidates = candidates.length > 0;
   const overlay = document.createElement("div");
   overlay.id = "seductionOverlay";
   overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:3000;";
@@ -416,8 +446,8 @@ function openSeductionModal(visitor) {
     <h3 style="margin-top:0;">誘惑する村人を選択</h3>
     <p style="margin-bottom:15px;">${visitor.name}を誘惑します。</p>
     <select id="seducerSelect" style="width:100%;padding:5px;margin-bottom:15px;">
-      <option value="">誘惑する村人を選択してください</option>
-      ${theVillage.villagers.map(v => {
+      <option value="">${hasCandidates ? "誘惑する村人を選択してください" : "今月、勧誘・誘惑できる村人はいません"}</option>
+      ${candidates.map(v => {
         const check = canAttemptSeduction(visitor, v);
         const rate = Math.floor(calculateSeductionSuccessRate(visitor, v));
         const rateText = check.ok ? `成功率:${rate}%` : `不可:${check.reason}`;
@@ -427,7 +457,7 @@ function openSeductionModal(visitor) {
     <div id="seductionSuccessRate" style="margin:-5px 0 15px 0;color:#555;">成功率: -</div>
     <div style="display:flex;justify-content:flex-end;gap:10px;">
       <button id="cancelSeduction" style="padding:5px 15px;">キャンセル</button>
-      <button id="doSeduction" style="padding:5px 15px;">誘惑する</button>
+      <button id="doSeduction" style="padding:5px 15px;" ${hasCandidates ? "" : "disabled"}>誘惑する</button>
     </div>
   `;
   
@@ -455,6 +485,13 @@ function openSeductionModal(visitor) {
       alert("誘惑する村人を選択してください。");
       return;
     }
+
+    const seducer = theVillage.villagers.find(v => v.name === seducerName);
+    if (!seducer) return;
+    if (hasUsedVisitorSocialAttempt(seducer)) {
+      alert(`${seducer.name}は今月すでに勧誘または誘惑を試みています。`);
+      return;
+    }
     
     // 人口上限チェックを追加
     if (theVillage.villagers.length >= theVillage.popLimit) {
@@ -462,9 +499,7 @@ function openSeductionModal(visitor) {
       theVillage.log(`誘惑失敗: 人口上限(${theVillage.popLimit}人)に達しています`);
       return;
     }
-    
-    const seducer = theVillage.villagers.find(v => v.name === seducerName);
-    if (!seducer) return;
+    markVisitorSocialAttempt(seducer);
     
     // 条件チェック
     // 1. 訪問者の精神性別と誘惑者の肉体性別が異なるか
@@ -473,12 +508,18 @@ function openSeductionModal(visitor) {
     if (!seductionCheck.ok && seductionCheck.reason === "対象外性別") {
       alert("誘惑は、誘惑者の肉体性別が、訪問者の精神性別にとって異性である場合に実行できます。誘惑者自身の精神性別ではなく、現在の肉体性別が参照されます。");
       theVillage.log(`${seducer.name}の誘惑は失敗しました。(理由: 対象外性別)`);
+      closeSeductionModal();
+      closeConversationModal();
+      updateUI(theVillage);
       return;
     }
     
     if (!seductionCheck.ok && seductionCheck.reason === "好色不足") {
       alert("誘惑者の好色が足りません。誘惑できません。");
       theVillage.log(`${seducer.name}の誘惑は失敗しました。(理由: 誘惑者の好色不足)`);
+      closeSeductionModal();
+      closeConversationModal();
+      updateUI(theVillage);
       return;
     }
     
@@ -668,6 +709,12 @@ function handleRecruitmentSuccess(visitor, recruiter, successRate = 0, source = 
   // 訪問者リストから削除し、村人リストに追加
   theVillage.visitors = theVillage.visitors.filter(v => v !== originalVisitor);
   theVillage.villagers.push(visitor);
+  incrementTitleCounter(
+    recruiter,
+    source === "誘惑" ? TITLE_COUNTER_KEYS.SEDUCTION_SUCCESS : TITLE_COUNTER_KEYS.RECRUITMENT_SUCCESS,
+    1,
+    { getPermanentStat }
+  );
   recordVillagerJoinHistory(theVillage, visitor, { recruiter, source });
   
   // 行動テーブルを更新

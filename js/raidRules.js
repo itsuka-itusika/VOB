@@ -4,33 +4,47 @@ export const ACTION_DEFEND = "迎撃";
 export const ACTION_TRAP = "罠作成";
 export const TRAIT_UNDER_RAID = "襲撃中";
 
-const RAID_UNABLE_BODY_TRAITS = ["赤子", "子供", "少年", "少女"];
-const RAID_UNABLE_MIND_TRAITS = ["無垢", "萌芽", "思春期"];
+const RAID_COMMON_UNABLE_BODY_TRAITS = ["赤子", "危篤"];
+const RAID_COMMON_UNABLE_MIND_TRAITS = ["無垢", "萌芽", "襲撃者", "訪問者"];
+const RAID_DEFEND_UNABLE_MIND_TRAITS = [...RAID_COMMON_UNABLE_MIND_TRAITS, "思春期"];
 
 function traitList(person, key) {
   return Array.isArray(person?.[key]) ? person[key] : [];
 }
 
-export function hasRaidBlockingTrait(person) {
+function hasAnyTrait(traits, unableTraits) {
+  return unableTraits.some(trait => traits.includes(trait));
+}
+
+function hasCommonRaidBlockingCondition(person) {
+  if (!person || isForcedHealingAction(person) || (Number(person.hp) || 0) <= 0) {
+    return true;
+  }
+
   const bodyTraits = traitList(person, "bodyTraits");
   const mindTraits = traitList(person, "mindTraits");
 
-  return RAID_UNABLE_BODY_TRAITS.some(trait => bodyTraits.includes(trait)) ||
-    RAID_UNABLE_MIND_TRAITS.some(trait => mindTraits.includes(trait)) ||
-    (Number(person?.spiritAge) || 0) <= 15 ||
-    mindTraits.includes("襲撃者") ||
-    mindTraits.includes("訪問者");
+  return hasAnyTrait(bodyTraits, RAID_COMMON_UNABLE_BODY_TRAITS) ||
+    hasAnyTrait(mindTraits, RAID_COMMON_UNABLE_MIND_TRAITS);
 }
 
-export function isRaidActionAssignable(person) {
-  if (!person || isForcedHealingAction(person) || hasRaidBlockingTrait(person)) {
-    return false;
-  }
-  return (Number(person.hp) || 0) > 0;
+export function canDefendInRaid(person) {
+  if (hasCommonRaidBlockingCondition(person)) return false;
+  return !hasAnyTrait(traitList(person, "mindTraits"), RAID_DEFEND_UNABLE_MIND_TRAITS);
+}
+
+export function canMakeTrapInRaid(person) {
+  return !hasCommonRaidBlockingCondition(person);
 }
 
 export function canPerformRaidAction(person, action) {
-  return isRaidActionAssignable(person) &&
+  const canPerformByRole = action === ACTION_DEFEND
+    ? canDefendInRaid(person)
+    : action === ACTION_TRAP
+      ? canMakeTrapInRaid(person)
+      : false;
+
+  return canPerformByRole &&
     Array.isArray(person.actionTable) &&
     person.actionTable.includes(action);
 }

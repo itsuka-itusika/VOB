@@ -1,4 +1,5 @@
 import { getPortraitPath } from "./util.js";
+import { getPersonTitles } from "./titles.js";
 
 export const HISTORY_EVENT_TYPES = Object.freeze({
   ARCHIVE_GAP: "archiveGap",
@@ -682,6 +683,23 @@ function renderPersonalHistorySummary(person) {
   `;
 }
 
+function renderPersonalTitleSection(person) {
+  const titles = getPersonTitles(person);
+  return `
+    <section class="personal-history-titles">
+      <h3>称号</h3>
+      ${titles.length > 0
+        ? `<div class="personal-history-title-list">${titles.map(title => `
+          <div class="personal-history-title-item">
+            <strong>${escapeHtml(title.name)}</strong>
+            <span>${escapeHtml(title.description)}</span>
+          </div>
+        `).join("")}</div>`
+        : `<div class="history-empty">称号なし</div>`}
+    </section>
+  `;
+}
+
 export function openPersonalHistoryModal(village, person, options = {}) {
   const overlay = document.getElementById("personalHistoryOverlay");
   const modal = document.getElementById("personalHistoryModal");
@@ -701,6 +719,7 @@ export function openPersonalHistoryModal(village, person, options = {}) {
     ${events.length > 0
       ? `<div class="history-list">${events.map(event => renderHistoryEntry(event, { personName: person.name })).join("")}</div>`
       : `<div class="history-empty">この人物の歩みは、まだ村の帳面には記されていない。</div>`}
+    ${renderPersonalTitleSection(person)}
   `;
 
   overlay.style.display = "block";
