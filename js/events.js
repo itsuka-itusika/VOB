@@ -39,13 +39,15 @@ function applySecurityBaselineDecay(village) {
     ? villagers.reduce((sum, person) => sum + (Number(person.eth) || 0), 0) / villagers.length
     : 0;
   const baselineSecurity = round3(averageEthics * 3 + 5);
-  const currentSecurity = Number(village.security) || 0;
+  const currentSecurity = Math.round(Number(village.security) || 0);
   if (currentSecurity <= baselineSecurity) return;
 
-  const securityLoss = round3((currentSecurity - baselineSecurity) / 5);
-  const nextSecurity = clampValue(round3(currentSecurity - securityLoss), 0, 100);
-  const actualLoss = round3(currentSecurity - nextSecurity);
-  if (actualLoss <= 0) return;
+  const rawSecurityLoss = (currentSecurity - baselineSecurity) / 5;
+  if (rawSecurityLoss < 1) return;
+
+  const securityLoss = Math.round(rawSecurityLoss);
+  const nextSecurity = clampValue(currentSecurity - securityLoss, 0, 100);
+  const actualLoss = currentSecurity - nextSecurity;
 
   village.security = nextSecurity;
   village.log(`治安自然低下: 基礎値${baselineSecurity}を上回ったため治安-${actualLoss}`);
