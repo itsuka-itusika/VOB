@@ -2,6 +2,7 @@
 
 import { randInt, clampValue, getPortraitPath } from "./util.js";
 import { recordLoverHistory, recordMarriageHistory } from "./history.js";
+import { runAfterFestivalModals } from "./festivalModal.js";
 
 /**
  * 恋人チェック (星霜祭などで呼ばれる)
@@ -276,6 +277,10 @@ function getMarriageLine(person, partner) {
 }
 
 function showRelationshipModal(title, message, entries) {
+  runAfterFestivalModals(() => showRelationshipModalNow(title, message, entries));
+}
+
+function showRelationshipModalNow(title, message, entries) {
   if (typeof document === "undefined") return;
   const overlay = document.createElement("div");
   overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;";

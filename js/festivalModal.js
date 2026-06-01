@@ -37,6 +37,7 @@ const FESTIVAL_DATA = {
 };
 
 const queue = [];
+const afterFestivalQueue = [];
 let isShowing = false;
 
 export function showFestivalModal(festivalKey) {
@@ -47,10 +48,26 @@ export function showFestivalModal(festivalKey) {
   if (!isShowing) showNextFestivalModal();
 }
 
+export function runAfterFestivalModals(callback) {
+  if (typeof callback !== "function") return;
+  if (!isShowing && queue.length === 0) {
+    callback();
+    return;
+  }
+  afterFestivalQueue.push(callback);
+}
+
+function flushAfterFestivalQueue() {
+  if (isShowing || queue.length > 0) return;
+  const callbacks = afterFestivalQueue.splice(0);
+  callbacks.forEach(callback => callback());
+}
+
 function showNextFestivalModal() {
   const data = queue.shift();
   if (!data) {
     isShowing = false;
+    flushAfterFestivalQueue();
     return;
   }
   isShowing = true;
@@ -176,4 +193,5 @@ function closeFestivalModal() {
   if (modal) modal.remove();
   isShowing = false;
   showNextFestivalModal();
+  flushAfterFestivalQueue();
 }
