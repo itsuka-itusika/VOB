@@ -648,6 +648,11 @@ function formatRelationshipCategory(person, category) {
   return labels.length > 0 ? [...new Set(labels)].join("、") : "なし";
 }
 
+function formatPersonalTitleSummary(person) {
+  const titles = getPersonTitles(person);
+  return titles.length > 0 ? titles.map(title => title.name).join("、") : "なし";
+}
+
 function renderPersonalHistorySummary(person) {
   const profileFields = [
     { label: "名前", value: person.name || "不明", className: "is-name" },
@@ -660,6 +665,10 @@ function renderPersonalHistorySummary(person) {
     { label: "家族関係", value: formatRelationshipCategory(person, "family") },
     { label: "人間関係", value: formatRelationshipCategory(person, "social") }
   ];
+  const detailFields = [
+    ...relationshipFields,
+    { label: "称号", value: formatPersonalTitleSummary(person) }
+  ];
   return `
     <section class="personal-history-summary">
       <div class="personal-history-portrait-frame">
@@ -671,31 +680,14 @@ function renderPersonalHistorySummary(person) {
             ${profileFields.map(field => `<span class="personal-history-profile-label ${escapeHtml(field.className)}">${escapeHtml(field.label)}</span>`).join("")}
             ${profileFields.map(field => `<strong class="personal-history-profile-value ${escapeHtml(field.className)}">${escapeHtml(field.value)}</strong>`).join("")}
           </div>
-          ${relationshipFields.map(field => `
-            <div class="personal-history-profile-field is-relation">
+          ${detailFields.map(field => `
+            <div class="personal-history-profile-field is-detail">
               <span>${escapeHtml(field.label)}</span>
               <strong>${escapeHtml(field.value)}</strong>
             </div>
           `).join("")}
         </div>
       </div>
-    </section>
-  `;
-}
-
-function renderPersonalTitleSection(person) {
-  const titles = getPersonTitles(person);
-  return `
-    <section class="personal-history-titles">
-      <h3>称号</h3>
-      ${titles.length > 0
-        ? `<div class="personal-history-title-list">${titles.map(title => `
-          <div class="personal-history-title-item">
-            <strong>${escapeHtml(title.name)}</strong>
-            <span>${escapeHtml(title.description)}</span>
-          </div>
-        `).join("")}</div>`
-        : `<div class="history-empty">称号なし</div>`}
     </section>
   `;
 }
@@ -719,7 +711,6 @@ export function openPersonalHistoryModal(village, person, options = {}) {
     ${events.length > 0
       ? `<div class="history-list">${events.map(event => renderHistoryEntry(event, { personName: person.name })).join("")}</div>`
       : `<div class="history-empty">この人物の歩みは、まだ村の帳面には記されていない。</div>`}
-    ${renderPersonalTitleSection(person)}
   `;
 
   overlay.style.display = "block";
