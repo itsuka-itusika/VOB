@@ -251,11 +251,6 @@ function doOneCombatAction(action, village) {
       logDiv.innerHTML+=`<br>【迎撃】${actor.name}は歴戦の経験で強力な攻撃！`;
     }
 
-    if (hasTrait(actor, "火星の加護")) {
-      dmg = Math.floor(dmg * 1.2);
-      logDiv.innerHTML+=`<br>【迎撃】${actor.name}は火星の加護で攻撃の勢いを増した！`;
-    }
-    
     if (hasTrait(actor, "非戦主義")) {
       dmg = 0;
       logDiv.innerHTML+=`<br>【迎撃】${actor.name}は非戦主義のため攻撃を拒否！`;

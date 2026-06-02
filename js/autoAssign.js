@@ -221,10 +221,10 @@ function getJobTraitMultiplier(person, job, village) {
   if (hasTrait(person, "月の巫女") && job === "狩猟") mul *= 1.5;
   if (hasTrait(person, "月の加護") && job === "狩猟") mul *= 1.2;
   if (hasTrait(person, "夜目") && ["警備", "狩猟"].includes(job)) mul *= 1.2;
-  if (hasTrait(person, "水中呼吸") && job === "漁") mul *= 1.5;
-  if (hasTrait(person, "森の知恵") && job === "採集") mul *= 1.5;
-  if (hasTrait(person, "海の知恵") && job === "漁") mul *= 1.5;
-  if ((person.hobby === "ハンティング" || person.hobby === "狩猟") && job === "狩猟") mul *= 1.2;
+  if (hasTrait(person, "水中呼吸") && job === "漁") mul *= 2;
+  if (hasTrait(person, "森の知恵") && job === "採集") mul *= 1.2;
+  if (hasTrait(person, "海の知恵") && job === "漁") mul *= 1.2;
+  if ((person.hobby === "ハンティング" || person.hobby === "狩猟") && job === "狩猟") mul *= 1.1;
   if (hasTrait(person, "思春期") && ["農作業", "伐採", "狩猟", "漁", "採集", "内職", "丁稚", "研究助手"].includes(job)) mul *= 0.8;
   return mul;
 }
@@ -361,14 +361,12 @@ function chooseRaidFallbackAction(person, currentPreferred, currentAction) {
 
 function getExpectedDefenderDamage(person) {
   const mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
-  const bodyTraits = Array.isArray(person.bodyTraits) ? person.bodyTraits : [];
   if (mindTraits.includes(TRAIT_PACIFIST)) return 0;
 
   const physical = ((Number(person.str) || 0) * (Number(person.cou) || 0) / 400) * 50;
   const magical = ((Number(person.mag) || 0) * (Number(person.cou) || 0) / 400) * 25;
   let traitMultiplier = 1;
   if (mindTraits.includes("歴戦")) traitMultiplier *= 1.2;
-  if (mindTraits.includes("火星の加護") || bodyTraits.includes("火星の加護")) traitMultiplier *= 1.2;
   return Math.max(physical, magical) * traitMultiplier;
 }
 

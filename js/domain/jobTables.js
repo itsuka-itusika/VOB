@@ -26,6 +26,7 @@ const INFANT_BODY_ALLOWED_ACTIONS = new Set([
   ACTION_REST,
   ACTION_LEISURE,
   "遊び",
+  "お手伝い",
   "採集",
   "内職",
   "研究",
@@ -239,8 +240,8 @@ export function refreshJobTable(v, village = {}) {
   }
 
   if (isToddlerStage) {
-    const preferredTable = ["遊び"];
-    setTables(v, preferredTable, [ACTION_REST, "遊び"]);
+    const preferredTable = ["遊び", "お手伝い"];
+    setTables(v, preferredTable, [ACTION_REST, "遊び", "お手伝い"]);
     applyInfantBodyActionFilter(v);
     normalizePreferredForTable(v, v.jobTable, { defaultPreferred: "遊び" });
     addRaidActionsIfAllowed(v, village);

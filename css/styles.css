@@ -1403,6 +1403,75 @@ section h2 {
   background-color: #45a049;
 }
 
+#raidWarningOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 2100;
+}
+
+#raidWarningModal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  border: 2px solid #aaa;
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+  width: 600px;
+  max-width: 90%;
+  max-height: 90vh;
+  box-sizing: border-box;
+  padding: 20px;
+  overflow-y: auto;
+  z-index: 2101;
+}
+
+#raidWarningModal h2 {
+  margin: 0 0 12px;
+  color: #9d2b22;
+  font-size: 1.2rem;
+  letter-spacing: 0;
+}
+
+#raidWarningModal .raid-warning-text p {
+  margin: 0 0 12px;
+  line-height: 1.6;
+}
+
+#raidWarningModal .raid-warning-detail {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #ddd;
+  color: #555;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+#raidWarningModal .modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+#raidWarningModal .modal-buttons button {
+  min-width: 104px;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  background-color: #f0f0f0;
+  cursor: pointer;
+}
+
+#raidWarningModal .modal-buttons button:hover:not(:disabled) {
+  background-color: #e0e0e0;
+}
+
+#raidWarningModal .modal-buttons button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 /* 交換モーダル用のスタイル */
 #exchangeOverlay,
 #panFluteExchangeOverlay {
@@ -2128,6 +2197,7 @@ body.mobile-mode #secretTreasureModal,
 body.mobile-mode #historyModal,
 body.mobile-mode #personalHistoryModal,
 body.mobile-mode #conversationModal,
+body.mobile-mode #raidWarningModal,
 body.mobile-mode #exchangeModal,
 body.mobile-mode #panFluteExchangeModal,
 body.mobile-mode #raidModal,

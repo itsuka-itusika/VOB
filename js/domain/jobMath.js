@@ -84,10 +84,14 @@ export function getBodyCostMultiplier(person, village) {
 }
 
 export function getMindCostMultiplier(person, village) {
+  let mul = 1;
   if (hasMindTrait(person, COLD_SENSITIVE_TRAIT) && hasVillageTrait(village, WINTER_TRAIT)) {
-    return SEASONAL_COST_MULTIPLIER;
+    mul *= SEASONAL_COST_MULTIPLIER;
   }
-  return 1;
+  if (hasMindTrait(person, WORKAHOLIC_TRAIT)) {
+    mul *= 0.5;
+  }
+  return mul;
 }
 
 export function estimateBodyCost(base, vit, person = null, village = null) {
@@ -96,9 +100,6 @@ export function estimateBodyCost(base, vit, person = null, village = null) {
 }
 
 export function estimateMindCost(base, statValue, person = null, village = null) {
-  if (hasMindTrait(person, WORKAHOLIC_TRAIT)) {
-    return 0;
-  }
   const cost = statCostBase(base, statValue) * getMindCostMultiplier(person, village);
   return Math.round(cost);
 }
@@ -109,9 +110,6 @@ export function rollBodyCost(base, vit, person = null, village = null, randomFlo
 }
 
 export function rollMindCost(base, statValue, person = null, village = null, randomFloat = defaultRandomFloat) {
-  if (hasMindTrait(person, WORKAHOLIC_TRAIT)) {
-    return 0;
-  }
   const cost = statCostBase(base, statValue) * getMindCostMultiplier(person, village);
   return Math.round(cost * randomFloat(0.9, 1.1));
 }
@@ -143,10 +141,10 @@ export function getLaborYieldMultiplier(job, person = null, village = null) {
   if (hasBodyTrait(person, "月の加護") && job === "狩猟") mul *= 1.2;
   if (hasBodyTrait(person, "夜目") && job === "狩猟") mul *= 1.2;
   if (hasBodyTrait(person, "大地の加護") && job === "農作業") mul *= 1.2;
-  if (hasBodyTrait(person, "水中呼吸") && job === "漁") mul *= 1.5;
-  if (hasMindTrait(person, "森の知恵") && job === "採集") mul *= 1.5;
-  if (hasMindTrait(person, "海の知恵") && job === "漁") mul *= 1.5;
-  if ((person?.hobby === "ハンティング" || person?.hobby === "狩猟") && job === "狩猟") mul *= 1.2;
+  if (hasBodyTrait(person, "水中呼吸") && job === "漁") mul *= 2;
+  if (hasMindTrait(person, "森の知恵") && job === "採集") mul *= 1.2;
+  if (hasMindTrait(person, "海の知恵") && job === "漁") mul *= 1.2;
+  if ((person?.hobby === "ハンティング" || person?.hobby === "狩猟") && job === "狩猟") mul *= 1.1;
   if (hasMindTrait(person, MID_TEEN_TRAIT) && YOUTH_WORK_JOBS.includes(job)) mul *= 0.8;
   return mul;
 }

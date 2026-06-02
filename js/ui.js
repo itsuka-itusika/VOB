@@ -39,6 +39,7 @@ import {
 import { getResourceStorageStatus, getResourceStorageWarningRatio } from "./domain/resourceLimits.js";
 import { isUnassignedActionVillager } from "./domain/rules.js";
 import { showDictionaryEntry } from "./dictionary.js";
+import { combinedDictionaryData } from "./data/dictionaryData.js";
 import { getPortraitPath, getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "./util.js";
 import { openPersonalHistoryModal } from "./history.js";
 import { formatRelationshipsForDisplay, normalizeRelationship } from "./relationships.js";
@@ -51,7 +52,57 @@ function openConversationFor(person) {
   });
 }
 
-function appendDictionaryTerm(parent, term) {
+const STAT_EFFECT_TOOLTIP_EXCEPTIONS = new Set(["本の虫", "巨躯", "箱入り", "内向的"]);
+const STAT_EFFECT_NAMES = ["筋力", "耐久", "器用", "魔力", "魅力", "知力", "勤勉", "倫理", "勇気", "好色"];
+const DYNAMIC_STAT_EFFECT_NAMES = ["幸福", "体力", "メンタル"];
+
+function getDictionaryEntryForTooltip(label, category) {
+  if (category === "hobby") {
+    return combinedDictionaryData[`趣味:${label}`] || combinedDictionaryData[label] || null;
+  }
+  return combinedDictionaryData[label] || null;
+}
+
+function extractStatEffectParts(details) {
+  return details
+    .flatMap(detail => String(detail || "")
+      .replace(/^ステータス補正:\s*/, "")
+      .replace(/^影響:\s*/, "")
+      .split(/[。、,]/))
+    .map(part => DYNAMIC_STAT_EFFECT_NAMES.reduce((text, stat) => text
+      .replaceAll(`${stat}・`, "")
+      .replaceAll(`・${stat}`, "")
+      .replaceAll(stat, ""), part.trim().replace(/^付与時に/, ""))
+      .replace(/^・|・$/g, "")
+      .trim())
+    .filter(part => {
+      if (!part || part.includes("直接補正なし") || part.includes("補正なし")) return false;
+      if (!STAT_EFFECT_NAMES.some(stat => part.includes(stat))) return false;
+      return /[+\-]\d|\*\d|×\d|\d+(?:\.\d+)?倍|低下|上昇/.test(part);
+    });
+}
+
+function getTermTooltip(label, category) {
+  const entry = getDictionaryEntryForTooltip(label, category);
+  if (!entry) return `${label}の辞書を表示`;
+
+  const lines = [entry.description].filter(Boolean);
+  const details = Array.isArray(entry.details) ? entry.details : [];
+  if (category === "trait" && !STAT_EFFECT_TOOLTIP_EXCEPTIONS.has(label)) {
+    const statEffects = [...new Set(extractStatEffectParts(details))];
+    if (statEffects.length > 0) {
+      lines.push(`ステータス: ${statEffects.join("、")}`);
+    }
+  } else if (category === "hobby") {
+    const hobbyEffect = details
+      .map(detail => String(detail || ""))
+      .find(detail => detail.startsWith("趣味効果:"));
+    if (hobbyEffect) lines.push(hobbyEffect);
+  }
+  return lines.join("\n");
+}
+
+function appendDictionaryTerm(parent, term, options = {}) {
   const label = String(term || "").trim();
   if (!label) return;
 
@@ -59,20 +110,20 @@ function appendDictionaryTerm(parent, term) {
   span.className = "dictionary-term";
   span.tabIndex = 0;
   span.textContent = label;
-  span.title = `${label}の辞書を表示`;
+  span.title = getTermTooltip(label, options.category);
   span.onmouseenter = () => showDictionaryEntry(label);
   span.onfocus = () => showDictionaryEntry(label);
   parent.appendChild(span);
 }
 
-function setDictionaryTerms(cell, terms) {
+function setDictionaryTerms(cell, terms, options = {}) {
   cell.textContent = "";
   const list = Array.isArray(terms) ? terms.filter(Boolean) : [];
   if (list.length === 0) return;
 
   list.forEach((term, index) => {
     if (index > 0) cell.appendChild(document.createTextNode(","));
-    appendDictionaryTerm(cell, term);
+    appendDictionaryTerm(cell, term, options);
   });
 }
 
@@ -365,9 +416,6 @@ function estimateDefendDamage(person, village) {
   if (hasTrait(person, "歴戦")) {
     damage = Math.floor(damage * 1.2);
   }
-  if (hasTrait(person, "火星の加護")) {
-    damage = Math.floor(damage * 1.2);
-  }
   return damage;
 }
 
@@ -419,6 +467,9 @@ function getTaskEstimateParts(person, task, village) {
     }
     case "遊び":
       parts = [`体力-${bodyCost(5, person, village)}`, "メンタル+20", "幸福+15"];
+      break;
+    case "お手伝い":
+      parts = ["食料+3〜6", "資材+3〜6", `体力-${bodyCost(10, person, village)}`];
       break;
     case "療養":
       parts = [`体力+${Math.floor(20 * (hasTrait(person, "老人") ? 0.6 : hasTrait(person, "中年") ? 0.8 : 1))}`, `メンタル+${Math.floor(20 * (hasTrait(person, "老人") ? 0.6 : hasTrait(person, "中年") ? 0.8 : 1))}`];
@@ -542,29 +593,30 @@ const ACTION_DESCRIPTIONS = {
   "療養": "負傷・病気・産褥などで行動不能のときに固定される回復行動。",
   "臨終": "危篤状態の固定行動。通常の作業には参加できない。",
   "遊び": "幼い精神が遊びを通じて心身を整える成長段階の行動。",
-  "農作業": "耐久と勤勉を活かして畑を耕し、村の食料を支える基礎的な生産行動。",
-  "伐採": "筋力と勤勉を活かして木材を切り出し、建築や冬支度に必要な資材を得る生産行動。",
-  "狩猟": "筋力と勇気を活かして野に出て、危険を伴いながら食料を得る行動。",
-  "漁": "耐久と勇気を活かして水辺で食料を得る行動。",
-  "採集": "器用と知力を活かして野山から食料や資材を集める柔軟な生産行動。",
-  "内職": "器用と勤勉を活かして小さな作業を行う生産系の行動。",
-  "行商": "魅力と知力を活かして外部と取引し、成功すれば資金を得る行動。",
+  "お手伝い": "幼い精神が村の作業を少し手伝い、食料と資材を得る行動。",
+  "農作業": "畑を耕し、村の食料を支える基礎的な生産行動。",
+  "伐採": "木材を切り出し、建築や冬支度に必要な資材を得る生産行動。",
+  "狩猟": "野に出て、危険を伴いながら食料を得る行動。",
+  "漁": "水辺で食料を得る行動。",
+  "採集": "野山から食料や資材を集める柔軟な生産行動。",
+  "内職": "小さな手仕事で資金を得る生産系の行動。",
+  "行商": "外部と取引し、成功すれば資金を得る行動。",
   "丁稚": "思春期の精神が商いを手伝い、成功すれば資金を得る行動。",
-  "研究": "知力と魔力を活かして知識を蓄積し、村の技術を高める行動。",
+  "研究": "知識を蓄積し、村の技術を高める行動。",
   "研究助手": "思春期の精神が研究を手伝い、村の技術を高める行動。",
-  "警備": "筋力と倫理を活かして村を見回り、治安を支える防衛行動。",
-  "看護": "魔力と倫理を活かして負傷者や消耗した村人を支える回復行動。",
+  "警備": "村を見回り、治安を支える防衛行動。",
+  "看護": "負傷者や消耗した村人を支える回復行動。",
   "あんま": "身体感覚や対人能力を活かして村人の体力回復を支える行動。",
-  "シスター": "魅力と倫理を活かして村人の心を支える信仰系の回復行動。",
-  "神官": "魅力と倫理を活かして村人の心を支える信仰系の回復行動。",
-  "踊り子": "魅力と好色を活かし、娯楽を通じて村人の幸福を高める行動。",
-  "詩人": "魅力と知力を活かし、詩や歌で村人の幸福を高める行動。",
-  "バニー": "魅力と好色を活かし、酒場で男性村人の幸福とメンタルを支える行動。",
-  "巫女": "魅力・魔力・好色を活かし、信仰と儀式を通じて魔素を得る行動。",
-  "錬金術": "魔力と知力を活かして資金や魔素を生み出す高度な生産行動。",
-  "写本": "耐久と知力を活かして写本を行い、資金や技術を得る行動。",
-  "機織り": "器用と勤勉を活かして布を織り、資金を得る生産行動。",
-  "醸造": "魔力・耐久・勤勉を活かして酒を仕込み、食料と魔素を得る行動。",
+  "シスター": "村人の心を支える信仰系の回復行動。",
+  "神官": "村人の心を支える信仰系の回復行動。",
+  "踊り子": "娯楽を通じて村人の幸福を高める行動。",
+  "詩人": "詩や歌で村人の幸福を高める行動。",
+  "バニー": "酒場で男性村人の幸福とメンタルを支える行動。",
+  "巫女": "信仰と儀式を通じて魔素を得る行動。",
+  "錬金術": "資金や魔素を生み出す高度な生産行動。",
+  "写本": "写本を行い、資金や技術を得る行動。",
+  "機織り": "布を織り、資金を得る生産行動。",
+  "醸造": "酒を仕込み、食料と魔素を得る行動。",
   "迎撃": "襲撃中に敵へ直接攻撃する一時行動。",
   "罠作成": "襲撃中に罠を作り、敵へ事前ダメージを与える一時行動。"
 };
@@ -576,7 +628,12 @@ function getActionDescription(action) {
 function getActionOptionTitle(person, action, village) {
   const reward = getTaskRewardEstimate(person, action, village) || "なし";
   const cost = getTaskCostEstimate(person, action, village) || "なし";
-  return `${getActionDescription(action)}\n予想獲得報酬: ${reward}\n予想体力・メンタル消費: ${cost}`;
+  const stats = JOB_KEY_STATS[action];
+  const lines = [getActionDescription(action)];
+  if (stats) lines.push(`判定能力:${stats}`);
+  lines.push(`予想獲得報酬: ${reward}`);
+  lines.push(`予想体力・メンタル消費: ${cost}`);
+  return lines.join("\n");
 }
 
 const JOB_KEY_STATS = {
@@ -659,9 +716,9 @@ function appendPortraitCell(row, person) {
   row.appendChild(cell);
 }
 
-function appendDictionaryCell(row, terms) {
+function appendDictionaryCell(row, terms, options = {}) {
   const cell = document.createElement("td");
-  setDictionaryTerms(cell, terms);
+  setDictionaryTerms(cell, terms, options);
   row.appendChild(cell);
 }
 
@@ -784,10 +841,10 @@ function appendPersonalHistoryCell(row, person, village) {
 
 function appendStatCells(row, person, village) {
   ["str", "vit", "dex", "mag", "chr"].forEach(stat => appendNumberCell(row, person[stat]));
-  appendDictionaryCell(row, person.bodyTraits);
+  appendDictionaryCell(row, person.bodyTraits, { category: "trait" });
   ["int", "ind", "eth", "cou", "sexdr"].forEach(stat => appendNumberCell(row, person[stat]));
-  appendDictionaryCell(row, person.mindTraits);
-  appendDictionaryCell(row, [person.hobby]);
+  appendDictionaryCell(row, person.mindTraits, { category: "trait" });
+  appendDictionaryCell(row, [person.hobby], { category: "hobby" });
   appendPersonalHistoryCell(row, person, village);
 }
 

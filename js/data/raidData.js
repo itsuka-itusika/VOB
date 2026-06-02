@@ -282,6 +282,7 @@ export const RAIDER_TYPES = [
   {
     type: "ハーピーの長",
     displayType: "ハーピー",
+    role: "leader",
     weight: 0,
     minCount: 1,
     maxCount: 1,
@@ -351,7 +352,7 @@ function cloneRaidRules(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-function createExistingRaiderRaid(id, raiderTypeName) {
+function createExistingRaiderRaid(id, raiderTypeName, overrides = {}) {
   const raiderType = RAIDER_TYPE_BY_TYPE.get(raiderTypeName);
   if (!raiderType) {
     throw new Error(`Unknown raider type: ${raiderTypeName}`);
@@ -362,7 +363,9 @@ function createExistingRaiderRaid(id, raiderTypeName) {
     name: `${raiderTypeName}の襲撃`,
     warningName: raiderTypeName,
     weight: raiderType.weight,
-    avoidance: null,
+    avoidance: overrides.avoidance || null,
+    representative: overrides.representative || null,
+    introDialogues: overrides.introDialogues || [],
     defense: cloneRaidRules(DEFAULT_RAID_DEFENSE),
     enemyGroups: [
       {
@@ -376,14 +379,26 @@ function createExistingRaiderRaid(id, raiderTypeName) {
   };
 }
 
-function createCompositeRaiderRaid({ id, name, warningName, weight, enemyGroups, disableScaleWeightBonus = false }) {
+function createCompositeRaiderRaid({
+  id,
+  name,
+  warningName,
+  weight,
+  enemyGroups,
+  disableScaleWeightBonus = false,
+  avoidance = null,
+  representative = null,
+  introDialogues = []
+}) {
   return {
     id,
     name,
     warningName,
     weight,
     disableScaleWeightBonus,
-    avoidance: null,
+    avoidance,
+    representative,
+    introDialogues,
     defense: cloneRaidRules(DEFAULT_RAID_DEFENSE),
     enemyGroups,
     successRewards: cloneRaidRules(DEFAULT_RAID_SUCCESS_REWARDS),
@@ -403,7 +418,20 @@ export const FALLBACK_RAID_RULES = {
 
 export const RAID_MODULES = [
   createExistingRaiderRaid("bandit", "野盗"),
-  createExistingRaiderRaid("mercenary-band", "傭兵団"),
+  createExistingRaiderRaid("mercenary-band", "傭兵団", {
+    avoidance: {
+      type: "resourcePayment",
+      resource: "funds",
+      label: "金を払う",
+      rate: 0.4,
+      minAmount: 200
+    },
+    introDialogues: [
+      "この村を焼く契約は受けている。だが、今すぐ金を出すなら見逃してやる。",
+      "命まで買いたいなら、相応の金を積め。足りなければ仕事に移るだけだ。",
+      "金で済ませるか、刃で払うか。選ぶ時間は長くないぞ。"
+    ]
+  }),
   createExistingRaiderRaid("goblin", "ゴブリン"),
   createExistingRaiderRaid("wolf", "狼"),
   createExistingRaiderRaid("cyclops", "キュクロプス"),
@@ -414,6 +442,7 @@ export const RAID_MODULES = [
     warningName: "ハーピーの大群",
     weight: 14,
     disableScaleWeightBonus: true,
+    representative: { raiderType: "ハーピーの長", role: "leader" },
     enemyGroups: [
       { raiderType: "ハーピー", minCount: 3, maxCount: 4 },
       { raiderType: "ハーピーの長", minCount: 1, maxCount: 1 }
@@ -518,4 +547,51 @@ export function getRaidRulesById(id) {
       ...(raid.failurePenalty || {})
     }
   };
+}
+
+function matchesRepresentativeSelector(enemy, selector) {
+  if (!enemy || !selector || typeof selector !== "object") return false;
+
+  let hasCondition = false;
+  const exactFields = [
+    ["raiderType", enemy.raiderType],
+    ["role", enemy.raiderRole],
+    ["job", enemy.job],
+    ["race", enemy.race]
+  ];
+
+  for (const [field, value] of exactFields) {
+    if (!selector[field]) continue;
+    hasCondition = true;
+    if (value !== selector[field]) return false;
+  }
+
+  if (selector.mindTrait) {
+    hasCondition = true;
+    if (!Array.isArray(enemy.mindTraits) || !enemy.mindTraits.includes(selector.mindTrait)) return false;
+  }
+
+  if (selector.bodyTrait) {
+    hasCondition = true;
+    if (!Array.isArray(enemy.bodyTraits) || !enemy.bodyTraits.includes(selector.bodyTrait)) return false;
+  }
+
+  return hasCondition;
+}
+
+export function getRaidRepresentative(raidDefinition, raidEnemies) {
+  const enemies = Array.isArray(raidEnemies) ? raidEnemies : [];
+  if (enemies.length === 0) return null;
+
+  const representative = raidDefinition?.representative;
+  const selectors = Array.isArray(representative)
+    ? representative
+    : (representative ? [representative] : []);
+
+  for (const selector of selectors) {
+    const match = enemies.find(enemy => matchesRepresentativeSelector(enemy, selector));
+    if (match) return match;
+  }
+
+  return enemies[0];
 }

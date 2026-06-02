@@ -2,14 +2,25 @@ import { createRandomVillager } from "./createVillagers.js";
 import {
   getRaiderTypeByType,
   getRaidModuleById,
+  getRaidRepresentative,
   RAID_MODULES,
   RAID_SCALE_TABLES
 } from "./data/raidData.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
 import { showRaidWarningModal } from "./raidWarningModal.js";
+import { updateUI } from "./ui.js";
 import { randChoice, randInt } from "./util.js";
 import { getVillageScaleStage } from "./villageScale.js";
+
+const AVOIDANCE_RESOURCE_LABELS = {
+  food: "食料",
+  materials: "資材",
+  funds: "資金",
+  mana: "魔素",
+  fame: "名声",
+  tech: "技術"
+};
 
 function getRaidTableForVillage(village) {
   const stageIndex = getVillageScaleStage(village.building).index;
@@ -169,6 +180,8 @@ function createRaidEnemy(village, raiderType, existingNames) {
   e.actionTable = ["襲撃"];
   e.job = raiderType.params.job;
   e.action = "襲撃";
+  e.raiderType = raiderType.type;
+  e.raiderRole = raiderType.role || "";
   e.name = `${displayType}の${e.name}`;
 
   // ニート特性は不要なので削除
@@ -178,6 +191,95 @@ function createRaidEnemy(village, raiderType, existingNames) {
 
   syncEffectiveStats(e);
   return e;
+}
+
+function calculateAvoidanceAmount(village, avoidance) {
+  const resource = avoidance?.resource;
+  if (!resource) return 0;
+
+  const currentAmount = Number(village[resource]) || 0;
+  const rateAmount = Math.ceil(currentAmount * (Number(avoidance.rate) || 0));
+  const minAmount = Math.floor(Number(avoidance.minAmount) || 0);
+  return Math.max(minAmount, rateAmount);
+}
+
+function createAvoidanceOption(village, avoidance) {
+  if (!avoidance || avoidance.type !== "resourcePayment" || !avoidance.resource) return null;
+
+  const resource = avoidance.resource;
+  const resourceLabel = AVOIDANCE_RESOURCE_LABELS[resource] || resource;
+  const currentAmount = Math.floor(Number(village[resource]) || 0);
+  const amount = calculateAvoidanceAmount(village, avoidance);
+  const disabled = currentAmount < amount;
+
+  return {
+    label: avoidance.label || `${resourceLabel}を払う`,
+    detail: `要求額: ${resourceLabel}${amount}（所持 ${currentAmount}）`,
+    disabled,
+    disabledReason: disabled ? `${resourceLabel}が不足しています` : "",
+    amount,
+    resource,
+    resourceLabel
+  };
+}
+
+function resetRaidUiAfterAvoidance() {
+  if (typeof document === "undefined") return;
+
+  const raidSection = document.getElementById("raidEnemiesSection");
+  if (raidSection) raidSection.style.display = "none";
+
+  const nextBtn = document.getElementById("nextTurnButton");
+  if (nextBtn) {
+    nextBtn.textContent = "次の月へ";
+    nextBtn.disabled = false;
+  }
+
+  const autoAssignBtn = document.getElementById("autoAssignButton");
+  if (autoAssignBtn) {
+    autoAssignBtn.textContent = "自動割り振り";
+  }
+
+  const raidAssignBtn = document.getElementById("raidAssignButton");
+  if (raidAssignBtn) {
+    raidAssignBtn.style.display = "none";
+  }
+}
+
+function endRaidByAvoidance(village, raidDefinition, option) {
+  village.isRaidProcessDone = true;
+  village.isRaidFinalizing = false;
+  village.raidTurnCount = 0;
+  village.currentActionIndex = 0;
+  village.raidActionQueue = [];
+  village.raidPhase = "";
+  village.currentRaid = null;
+  village.raidEnemies = [];
+
+  const raidTraitIndex = village.villageTraits.indexOf("襲撃中");
+  if (raidTraitIndex >= 0) {
+    village.villageTraits.splice(raidTraitIndex, 1);
+  }
+
+  village.villagers.forEach(person => refreshJobTable(person, village));
+  village.log(`${raidDefinition.name}: ${option.resourceLabel}${option.amount}を支払い、襲撃者は去っていった。`);
+
+  resetRaidUiAfterAvoidance();
+  updateUI(village);
+}
+
+function executeRaidAvoidance(village, raidDefinition) {
+  const avoidance = raidDefinition.avoidance;
+  const option = createAvoidanceOption(village, avoidance);
+  if (!option || option.disabled) {
+    if (option?.disabledReason) village.log(`${raidDefinition.name}: ${option.disabledReason}`);
+    return false;
+  }
+
+  const currentAmount = Number(village[option.resource]) || 0;
+  village[option.resource] = Math.max(0, currentAmount - option.amount);
+  endRaidByAvoidance(village, raidDefinition, option);
+  return true;
 }
 
 /**
@@ -254,9 +356,14 @@ export function startRaidEvent(village) {
     }
   }
 
+  const representative = getRaidRepresentative(raidDefinition, village.raidEnemies);
   showRaidWarningModal({
-    raiderType: raidDefinition.warningName || raidDefinition.name,
-    enemyCount
+    raidName: raidDefinition.warningName || raidDefinition.name,
+    representative,
+    introDialogues: raidDefinition.introDialogues,
+    enemyCount,
+    avoidanceOption: createAvoidanceOption(village, raidDefinition.avoidance),
+    onAvoidance: () => executeRaidAvoidance(village, raidDefinition)
   });
 
   if (typeof document !== "undefined") {

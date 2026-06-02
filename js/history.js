@@ -648,9 +648,12 @@ function formatRelationshipCategory(person, category) {
   return labels.length > 0 ? [...new Set(labels)].join("、") : "なし";
 }
 
-function formatPersonalTitleSummary(person) {
+function renderPersonalTitleSummary(person) {
   const titles = getPersonTitles(person);
-  return titles.length > 0 ? titles.map(title => title.name).join("、") : "なし";
+  if (titles.length === 0) return "なし";
+  return titles.map(title => (
+    `<span class="dictionary-term" title="${escapeHtml(title.description || "")}">${escapeHtml(title.name)}</span>`
+  )).join("、");
 }
 
 function renderPersonalHistorySummary(person) {
@@ -667,7 +670,7 @@ function renderPersonalHistorySummary(person) {
   ];
   const detailFields = [
     ...relationshipFields,
-    { label: "称号", value: formatPersonalTitleSummary(person) }
+    { label: "称号", valueHtml: renderPersonalTitleSummary(person) }
   ];
   return `
     <section class="personal-history-summary">
@@ -683,7 +686,7 @@ function renderPersonalHistorySummary(person) {
           ${detailFields.map(field => `
             <div class="personal-history-profile-field is-detail">
               <span>${escapeHtml(field.label)}</span>
-              <strong>${escapeHtml(field.value)}</strong>
+              <strong>${field.valueHtml ?? escapeHtml(field.value)}</strong>
             </div>
           `).join("")}
         </div>

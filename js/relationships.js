@@ -45,7 +45,9 @@ export function doLoverCheck(village, options = {}) {
 }
 
 function isSingle(person) {
-  return !checkHasRelationship(person,"既婚") && !checkHasRelationship(person,"恋人");
+  return !checkHasRelationship(person,"既婚") &&
+    !checkHasRelationship(person,"恋人") &&
+    !hasRelationshipPrefix(person, SPOUSE_RELATION_PREFIXES);
 }
 
 function getOppositeSex(sex) {
@@ -59,6 +61,7 @@ function isLoverCandidate(a, b) {
   const expectedBodySex = getOppositeSex(a.spiritSex);
   if (!expectedBodySex) return false;
   return isSingle(b)
+    && !hasLoverBlockingRelationship(a, b)
     && b.bodySex === expectedBodySex
     && b.bodyAge >= 16
     && b.bodyAge >= a.bodyAge - 10
@@ -123,6 +126,13 @@ export function doMarriageCheck(village) {
 const FRIEND_RELATION_PREFIXES = new Set(["恋人", "親友", "天敵"]);
 const FAMILY_RELATION_PREFIXES = new Set(["夫", "妻", "母", "父", "子"]);
 const GENETIC_RELATION_PREFIXES = new Set(["遺伝母", "遺伝父"]);
+const SPOUSE_RELATION_PREFIXES = new Set(["夫", "妻"]);
+const PARENT_CHILD_RELATION_PREFIXES = new Set(["母", "父", "子"]);
+const LOVER_BLOCKING_RELATION_PREFIXES = new Set([
+  ...SPOUSE_RELATION_PREFIXES,
+  ...PARENT_CHILD_RELATION_PREFIXES,
+  "天敵"
+]);
 
 function getRelationshipCategory(prefix) {
   if (FRIEND_RELATION_PREFIXES.has(prefix) || String(prefix).endsWith("仲間")) return "交友関係";
@@ -170,6 +180,35 @@ export function normalizeRelationships(person) {
   const source = Array.isArray(person.relationships) ? person.relationships : [];
   person.relationships = [...new Set(source.map(normalizeRelationship).filter(Boolean))];
   return person.relationships;
+}
+
+function getParsedRelationships(person) {
+  return normalizeRelationships(person)
+    .map(parseRelationship)
+    .filter(Boolean);
+}
+
+function hasRelationshipPrefix(person, prefixes) {
+  return getParsedRelationships(person).some(parsed => prefixes.has(parsed.prefix));
+}
+
+function hasRelationshipTo(person, targetName, prefixes) {
+  return getParsedRelationships(person).some(parsed =>
+    parsed.target === targetName && prefixes.has(parsed.prefix)
+  );
+}
+
+function hasLoverBlockingRelationship(a, b) {
+  return hasRelationshipTo(a, b.name, LOVER_BLOCKING_RELATION_PREFIXES) ||
+    hasRelationshipTo(b, a.name, LOVER_BLOCKING_RELATION_PREFIXES);
+}
+
+export function hasNonEnemyRelationship(person) {
+  return getParsedRelationships(person).some(parsed => {
+    if (parsed.prefix === "天敵") return false;
+    if (parsed.flag === "既婚") return true;
+    return Boolean(parsed.raw);
+  });
 }
 
 export function formatRelationshipsForDisplay(person) {

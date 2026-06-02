@@ -1,7 +1,7 @@
 // RandomEvents.js
 
 import { randInt, clampValue, round3 } from "./util.js";
-import { doLoverCheck, addRelationship as addCategorizedRelationship, normalizeRelationship } from "./relationships.js";
+import { doLoverCheck, addRelationship as addCategorizedRelationship, hasNonEnemyRelationship, normalizeRelationship } from "./relationships.js";
 import { doExchange } from "./exchange.js";
 import { showRandomEventModal } from "./randomEventModal.js";
 import { matureBodyToAdultOnly, scheduleGoldenRainPregnancy } from "./reproduction.js";
@@ -673,7 +673,8 @@ export class RandomEvents {
         let candidates = v.villagers.filter(x => 
           x.spiritSex === "男" &&
           x.spiritAge >= 12 &&
-          x.eth <= 12
+          x.eth <= 12 &&
+          !hasNonEnemyRelationship(x)
         );
 
         const pairs = [];
@@ -726,30 +727,21 @@ export class RandomEvents {
           Array.isArray(x.bodyTraits) && !x.bodyTraits.includes("疫病")
         );
 
-        if (candidates.length >= 2) {
-          const pool = [...candidates];
-          const count = Math.min(randInt(2, 3), pool.length);
-          const infected = [];
+        if (candidates.length > 0) {
+          const person = this.randChoice(candidates);
 
-          for (let i = 0; i < count; i++) {
-            const index = randInt(0, pool.length - 1);
-            const person = pool.splice(index, 1)[0];
-            infected.push(person);
-
-            person.bodyTraits.push("疫病");
-            person.hp = clampValue(round3((Number(person.hp) || 0) * 0.5), 0, 100);
-            syncEffectiveStats(person);
-            refreshJobTable(person, v);
-            this.addForcedSpeaker(person);
-          }
+          person.bodyTraits.push("疫病");
+          person.hp = clampValue(round3((Number(person.hp) || 0) * 0.5), 0, 100);
+          syncEffectiveStats(person);
+          refreshJobTable(person, v);
+          this.addForcedSpeaker(person);
 
           const villageTraits = Array.isArray(v.villageTraits) ? v.villageTraits : (v.villageTraits = []);
           if (!villageTraits.includes("疫病流行")) {
             villageTraits.push("疫病流行");
           }
 
-          const names = infected.map(person => person.name).join("、");
-          v.log(`疫病の流行:${names}が疫病に倒れた。体力・筋力・耐久・器用0.5倍`);
+          v.log(`疫病の流行:${person.name}が疫病に倒れた。体力・筋力・耐久・器用0.5倍`);
         } else {
           return null;
         }
