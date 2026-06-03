@@ -25,20 +25,20 @@ const VISITOR_TABLES_BY_SCALE = [
   {
     maxStageIndex: 1,
     entries: [
-      { type: "流民", weight: 25 },
+      { type: "流民", weight: 35 },
       { type: "旅人", weight: 30 },
       { type: "巡礼者", weight: 15 },
       { type: "行商人", weight: 15 },
-      { type: "棄民", weight: 15 }
+      { type: "棄民", weight: 5 }
     ]
   },
   {
     maxStageIndex: 4,
     // 将来的にレア訪問者 weight 5 を追加予定。現時点では未実装のため、合計95で抽選する。
     entries: [
-      { type: "流民", weight: 15 },
+      { type: "流民", weight: 20 },
       { type: "旅人", weight: 16 },
-      { type: "棄民", weight: 10 },
+      { type: "棄民", weight: 5 },
       { type: "巡礼者", weight: 15 },
       { type: "行商人", weight: 15 },
       { type: "冒険者", weight: 12 },
@@ -49,9 +49,9 @@ const VISITOR_TABLES_BY_SCALE = [
     maxStageIndex: Infinity,
     // 将来的にレア訪問者5、お忍び5、遍歴騎士5を追加予定。未実装のため現行タイプだけで抽選する。
     entries: [
-      { type: "流民", weight: 10 },
+      { type: "流民", weight: 15 },
       { type: "旅人", weight: 10 },
-      { type: "棄民", weight: 10 },
+      { type: "棄民", weight: 5 },
       { type: "観光客", weight: 10 },
       { type: "巡礼者", weight: 15 },
       { type: "行商人", weight: 15 },
