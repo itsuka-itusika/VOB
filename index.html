@@ -42,12 +42,13 @@
       <div class="action-buttons">
         <!-- 保存/読込/説明メニュー -->
         <button id="autoAssignButton" onclick="onAutoAssignJobs()" data-mobile-label="自動">自動割り振り</button>
-        <button id="raidAssignButton" onclick="onAutoAssignRaidActions()" style="display:none;" data-mobile-label="迎撃割当">迎撃割り振り</button>
+        <button id="raidAssignButton" onclick="onAutoAssignRaidActions()" style="display:none;" data-mobile-label="防衛割当">防衛割り振り</button>
         <button id="nextTurnButton" onclick="onNextTurn()">次の月へ</button>
         <div class="special-action-buttons">
           <button onclick="openMiracleModal()" data-mobile-label="奇跡">奇跡の行使</button>
           <button onclick="openBuildingModal()" data-mobile-label="建築">建築</button>
           <button onclick="openSecretTreasureModal()" data-mobile-label="秘宝">秘宝</button>
+          <button class="pc-history-button" onclick="openHistoryModal()" data-mobile-label="村史">村史</button>
         </div>
         <div class="utility-actions">
           <select id="utilityActionSelect" aria-label="保存・読込操作">
@@ -65,9 +66,12 @@
           <button type="button" id="pcModeButton" class="view-mode-button is-active" onclick="setViewMode('pc')" aria-pressed="true">PC</button>
           <button type="button" id="mobileModeButton" class="view-mode-button" onclick="setViewMode('mobile')" aria-pressed="false">スマホ仮</button>
         </div>
-        <label class="mobile-spirit-toggle">
-          <input type="checkbox" id="mobileSpiritColumnsToggle" onchange="toggleSpiritColumns(this.checked)">精神情報表示
-        </label>
+        <div class="mobile-history-spirit-actions">
+          <label class="mobile-spirit-toggle">
+            <input type="checkbox" id="mobileSpiritColumnsToggle" onchange="toggleSpiritColumns(this.checked)">精神
+          </label>
+          <button type="button" class="mobile-history-button" onclick="openHistoryModal()">村史</button>
+        </div>
       </div>
       <div class="message-window" id="messageWindow">
         <div class="message-empty">警告はありません</div>
@@ -106,7 +110,7 @@
           <th>好色</th>      <!--22-->
           <th>精神特性</th>  <!--23-->
           <th>趣味</th>      <!--24-->
-          <th>詳細</th>      <!--25-->
+          <th>記録</th>      <!--25-->
         </tr>
       </thead>
       <tbody>
@@ -146,7 +150,7 @@
           <th>好色</th>      <!--22-->
           <th>精神特性</th>  <!--23-->
           <th>趣味</th>      <!--24-->
-          <th>詳細</th>      <!--25-->
+          <th>記録</th>      <!--25-->
         </tr>
       </thead>
       <tbody>
@@ -183,7 +187,7 @@
           <th>好色</th>      <!--22-->
           <th>精神特性</th>  <!--23-->
           <th>趣味</th>      <!--24-->
-          <th>詳細</th>      <!--25-->
+          <th>記録</th>      <!--25-->
         </tr>
       </thead>
       <tbody>
@@ -225,21 +229,20 @@
 <!-- モーダル: 迎撃フェーズ(襲撃イベント) -->
 <div id="raidOverlay"></div>
 <div id="raidModal">
-  <h2>襲撃発生中！ 迎撃フェーズ</h2>
+  <h2>襲撃発生中！ 防衛フェーズ</h2>
   <div class="raid-buttons">
     <button id="raidStepButton" onclick="proceedRaidAction()">次のステップ</button>
   </div>
   <div class="raid-section">
-    <h3>罠作成部隊</h3>
+    <h3>後衛（罠作成）</h3>
     <table id="defenderTable">
       <thead>
         <tr>
           <th>名前</th>
           <th>体力</th>
           <th>行動</th>
-          <th>筋力</th>
-          <th>耐久</th>
-          <th>魔力</th>
+          <th>器用</th>
+          <th>知力</th>
           <th>勇気</th>
         </tr>
       </thead>
@@ -247,12 +250,30 @@
     </table>
   </div>
   <div class="raid-section">
-    <h3>迎撃部隊</h3>
+    <h3>中衛（射撃）</h3>
+    <table id="shootersTable">
+      <thead>
+        <tr>
+          <th>名前</th>
+          <th>体力</th>
+          <th>行動</th>
+          <th>筋力</th>
+          <th>耐久</th>
+          <th>器用</th>
+          <th>勇気</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="raid-section">
+    <h3>前衛（迎撃・籠城）</h3>
     <table id="raidersTable">
       <thead>
         <tr>
           <th>名前</th>
           <th>体力</th>
+          <th>行動</th>
           <th>筋力</th>
           <th>耐久</th>
           <th>魔力</th>
@@ -270,6 +291,7 @@
           <th>名前</th>
           <th>体力</th>
           <th>行動</th>
+          <th>位置</th>
           <th>筋力</th>
           <th>耐久</th>
           <th>魔力</th>
@@ -305,6 +327,26 @@
     <button onclick="useSelectedSecretTreasure()">使う</button>
     <button onclick="sellSelectedSecretTreasure()">売却する</button>
     <button onclick="closeSecretTreasureModal()">閉じる</button>
+  </div>
+</div>
+
+<!-- モーダル: 村史 -->
+<div id="historyOverlay"></div>
+<div id="historyModal">
+  <div class="modal-header">村史</div>
+  <div id="historyContent" class="modal-content"></div>
+  <div class="modal-buttons">
+    <button onclick="closeHistoryModal()">閉じる</button>
+  </div>
+</div>
+
+<!-- モーダル: 個人記録 -->
+<div id="personalHistoryOverlay"></div>
+<div id="personalHistoryModal">
+  <div class="modal-header" id="personalHistoryTitle">個人記録</div>
+  <div id="personalHistoryContent" class="modal-content"></div>
+  <div class="modal-buttons">
+    <button onclick="closePersonalHistoryModal()">閉じる</button>
   </div>
 </div>
 

@@ -2,8 +2,10 @@
 import { Village, Villager } from "./classes.js";
 import { determineSpeechType, registerUsedName } from "./createVillagers.js";
 import { ACTION_NONE, isPreferredActionCandidate, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
-import { hydrateStatLayersFromObject, syncEffectiveStats } from "./domain/statLayers.js";
+import { getPermanentStat, hydrateStatLayersFromObject, syncEffectiveStats } from "./domain/statLayers.js";
+import { createArchiveGapHistoryEvent, normalizeHistoryEvents } from "./history.js";
 import { normalizeRelationships } from "./relationships.js";
+import { ensureTitleState, evaluateTitles } from "./titles.js";
 import { getInitialScaleStageIndex } from "./villageScale.js";
 
 function normalizeBodyTraitName(trait) {
@@ -17,6 +19,10 @@ function normalizeBodyTraitList(traits) {
 
 function cloneNullableObject(value) {
   return value == null ? null : { ...value };
+}
+
+function cloneNullableDeepObject(value) {
+  return value == null ? null : JSON.parse(JSON.stringify(value));
 }
 
 function hasOwn(obj, key) {
@@ -139,6 +145,7 @@ function convertVillageToObject(village) {
     villageTraits: [...village.villageTraits],
     secretTreasures: normalizeSecretTreasures(village),
     logs: [...village.logs],
+    historyEvents: normalizeHistoryEvents(village.historyEvents),
     gameOver: village.gameOver,
     hasDonePreEvent: village.hasDonePreEvent,
     hasDonePostEvent: village.hasDonePostEvent,
@@ -152,6 +159,10 @@ function convertVillageToObject(village) {
     isRaidProcessDone: village.isRaidProcessDone,
     raidTurnCount: village.raidTurnCount,
     currentActionIndex: village.currentActionIndex,
+    currentRaid: cloneNullableObject(village.currentRaid),
+    monthsSinceRaid: normalizeFiniteNumber(village.monthsSinceRaid, 0),
+    raidCooldown: normalizeFiniteNumber(village.raidCooldown, 0),
+    pendingRaid: cloneNullableDeepObject(village.pendingRaid),
     // raidEnemies (Villager互換配列)
     raidEnemies: village.raidEnemies.map(vill => convertVillagerToObject(vill)),
 
@@ -211,6 +222,9 @@ function convertVillagerToObject(vill) {
     mindTraits,
     hobby: vill.hobby,
     relationships: [...normalizeRelationships(vill)],
+    socialAttemptedThisMonth: !!vill.socialAttemptedThisMonth,
+    titleIds: Array.isArray(vill.titleIds) ? [...vill.titleIds] : [],
+    titleStats: vill.titleStats ? { ...vill.titleStats } : {},
 
     preferredAction: vill.preferredAction || vill.job || "なし",
     job: vill.job,
@@ -228,6 +242,8 @@ function convertVillagerToObject(vill) {
     postpartumMonths: vill.postpartumMonths || 0,
     ares: normalizeFiniteNumber(vill.ares, 0),
     nikeMonths: normalizeFiniteNumber(vill.nikeMonths, 0),
+    portraitMonths: normalizeFiniteNumber(vill.portraitMonths, 0),
+    portraitEthLoss: normalizeFiniteNumber(vill.portraitEthLoss, 0),
     potentialStats: vill.potentialStats ? { ...vill.potentialStats } : null,
     bodyPotentialStats: vill.bodyPotentialStats ? { ...vill.bodyPotentialStats } : null,
     mindPotentialStats: vill.mindPotentialStats ? { ...vill.mindPotentialStats } : null,
@@ -239,6 +255,10 @@ function convertVillagerToObject(vill) {
     toddlerPortraitFile: vill.toddlerPortraitFile || "",
     toddlerPortraitGroup: vill.toddlerPortraitGroup || "",
     childMindTrait: vill.childMindTrait || "",
+    ...(vill.raiderType ? { raiderType: vill.raiderType } : {}),
+    ...(vill.raiderRole ? { raiderRole: vill.raiderRole } : {}),
+    ...(vill.raidPosition ? { raidPosition: vill.raidPosition } : {}),
+    ...(vill.raidTargeting ? { raidTargeting: vill.raidTargeting } : {}),
     adultBodyReached: vill.adultBodyReached !== undefined
       ? !!vill.adultBodyReached
       : !!(vill.potentialStats && Number(vill.bodyAge) >= 16),
@@ -280,6 +300,11 @@ function convertObjectToVillage(dataObj) {
   }
   v.secretTreasures = normalizeSecretTreasures(dataObj);
   v.logs = Array.isArray(dataObj.logs) ? [...dataObj.logs] : [];
+  if (hasOwn(dataObj, "historyEvents")) {
+    v.historyEvents = normalizeHistoryEvents(dataObj.historyEvents);
+  } else {
+    v.historyEvents = [createArchiveGapHistoryEvent(v.year, v.month)];
+  }
   v.gameOver = !!dataObj.gameOver;
   v.hasDonePreEvent = !!dataObj.hasDonePreEvent;
   v.hasDonePostEvent = !!dataObj.hasDonePostEvent;
@@ -307,6 +332,10 @@ function convertObjectToVillage(dataObj) {
   v.isRaidProcessDone = !!dataObj.isRaidProcessDone;
   v.raidTurnCount = dataObj.raidTurnCount ?? 0;
   v.currentActionIndex = dataObj.currentActionIndex ?? 0;
+  v.currentRaid = cloneNullableObject(dataObj.currentRaid);
+  v.monthsSinceRaid = Math.max(0, Math.floor(normalizeFiniteNumber(dataObj.monthsSinceRaid, 0)));
+  v.raidCooldown = Math.max(0, Math.floor(normalizeFiniteNumber(dataObj.raidCooldown, 0)));
+  v.pendingRaid = cloneNullableDeepObject(dataObj.pendingRaid);
   if (Array.isArray(dataObj.raidEnemies)) {
     v.raidEnemies = dataObj.raidEnemies.map(o => convertObjectToVillager(o));
   }
@@ -368,6 +397,10 @@ function convertObjectToVillager(obj) {
   }
   vill.relationships = Array.isArray(obj.relationships) ? [...obj.relationships] : [];
   normalizeRelationships(vill);
+  vill.socialAttemptedThisMonth = !!obj.socialAttemptedThisMonth;
+  vill.titleIds = Array.isArray(obj.titleIds) ? [...obj.titleIds] : [];
+  vill.titleStats = obj.titleStats && typeof obj.titleStats === "object" ? { ...obj.titleStats } : {};
+  ensureTitleState(vill);
   registerUsedName(vill.name);
 
   setPreferredAction(vill, migratePreferredAction(obj));
@@ -392,6 +425,8 @@ function convertObjectToVillager(obj) {
   vill.postpartumMonths = obj.postpartumMonths || 0;
   vill.ares = normalizeFiniteNumber(obj.ares, 0);
   vill.nikeMonths = normalizeFiniteNumber(obj.nikeMonths, 0);
+  vill.portraitMonths = normalizeFiniteNumber(obj.portraitMonths, 0);
+  vill.portraitEthLoss = normalizeFiniteNumber(obj.portraitEthLoss, 0);
   vill.potentialStats = obj.potentialStats ? { ...obj.potentialStats } : null;
   vill.bodyPotentialStats = hasOwn(obj, "bodyPotentialStats")
     ? cloneNullableObject(obj.bodyPotentialStats)
@@ -401,6 +436,18 @@ function convertObjectToVillager(obj) {
     : cloneNullableObject(obj.potentialStats);
   if (Array.isArray(obj.raiderDialogues)) {
     vill.raiderDialogues = [...obj.raiderDialogues];
+  }
+  if (obj.raiderType) {
+    vill.raiderType = obj.raiderType;
+  }
+  if (obj.raiderRole) {
+    vill.raiderRole = obj.raiderRole;
+  }
+  if (obj.raidPosition) {
+    vill.raidPosition = obj.raidPosition;
+  }
+  if (obj.raidTargeting) {
+    vill.raidTargeting = obj.raidTargeting;
   }
   vill.adultBodyTraits = normalizeBodyTraitList(obj.adultBodyTraits);
   vill.adultMindTraits = Array.isArray(obj.adultMindTraits) ? [...obj.adultMindTraits] : [];
@@ -422,6 +469,7 @@ function convertObjectToVillager(obj) {
     vill.mindTraits.push("火星の加護");
     syncEffectiveStats(vill);
   }
+  evaluateTitles(vill, { getPermanentStat });
 
   return vill;
 }

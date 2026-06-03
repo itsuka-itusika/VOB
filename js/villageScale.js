@@ -1,3 +1,5 @@
+import { recordScaleTitleHistory } from "./history.js";
+
 export const VILLAGE_SCALE_STAGES = [
   {
     threshold: 0,
@@ -148,6 +150,7 @@ export function showVillageScaleMilestones(village) {
 
   reachedStages.forEach(stage => {
     village.log(`【村の発展】村は「${stage.title}」と呼ばれる規模になった`);
+    recordScaleTitleHistory(village, stage);
     milestoneQueue.push({ stage, scale: normalizeScale(village.building) });
   });
 

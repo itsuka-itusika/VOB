@@ -1,6 +1,7 @@
 import { autoAssignJobs, autoAssignRaidActions } from "./autoAssign.js";
 import { openBuildingModal, closeBuildingModal } from "./buildings.js";
 import "./dictionary.js";
+import { closeHistoryModal, closePersonalHistoryModal, openHistoryModal } from "./history.js";
 import { theVillage, onNextTurn } from "./main.js";
 import {
   closeExchangeModal,
@@ -177,6 +178,9 @@ function bindGlobalHandlers() {
     closeBuildingModal,
     openSecretTreasureModal: () => openSecretTreasureModal(theVillage),
     closeSecretTreasureModal,
+    openHistoryModal: () => openHistoryModal(theVillage),
+    closeHistoryModal,
+    closePersonalHistoryModal,
     useSelectedSecretTreasure: () => useSelectedSecretTreasure(theVillage),
     sellSelectedSecretTreasure: () => sellSelectedSecretTreasure(theVillage),
     onAutoAssignJobs: () => {

@@ -1,4 +1,6 @@
 import { isHeadmanElectionModalPendingOrOpen } from "./headmanElection.js";
+import { getConversationLine } from "./dialogue/dialogueEngine.js";
+import { getPortraitPath } from "./util.js";
 
 const MODAL_OVERLAY_ID = "raidWarningOverlay";
 const MODAL_ID = "raidWarningModal";
@@ -14,10 +16,24 @@ const PRIORITY_MODAL_SELECTORS = [
 let pendingRaidWarning = null;
 let priorityModalObserver = null;
 
-export function showRaidWarningModal({ raiderType, enemyCount }) {
+export function showRaidWarningModal({
+  raidName,
+  representative,
+  introDialogues = [],
+  enemyCount,
+  avoidanceOption = null,
+  onAvoidance = null
+}) {
   if (typeof document === "undefined") return;
 
-  pendingRaidWarning = { raiderType, enemyCount };
+  pendingRaidWarning = {
+    raidName,
+    representative,
+    introDialogues,
+    enemyCount,
+    avoidanceOption,
+    onAvoidance
+  };
   closeRaidWarningModal();
   showRaidWarningWhenReady();
 }
@@ -54,104 +70,110 @@ function showRaidWarningWhenReady() {
   }
 
   stopWaitingForPriorityModals();
-  const { raiderType, enemyCount } = pendingRaidWarning;
+  const {
+    raidName,
+    representative,
+    introDialogues,
+    enemyCount,
+    avoidanceOption,
+    onAvoidance
+  } = pendingRaidWarning;
   pendingRaidWarning = null;
 
   const isSingleEnemy = enemyCount === 1;
-  const message = isSingleEnemy
-    ? `${raiderType}が村に近づいています。迎撃してください！`
-    : `${raiderType}の集団が村に近づいています。迎撃してください！`;
   const countText = isSingleEnemy ? "1体" : `${enemyCount}体`;
+  const speakerName = getRepresentativeDisplayName(representative, raidName);
+  const line = getRaidWarningLine({ representative, introDialogues, raidName });
 
   const overlay = document.createElement("div");
   overlay.id = MODAL_OVERLAY_ID;
-  overlay.style.cssText = `
-    position: fixed;
-    inset: 0;
-    background: rgba(20, 5, 5, 0.56);
-    z-index: 2100;
-  `;
 
   const modal = document.createElement("div");
   modal.id = MODAL_ID;
   modal.setAttribute("role", "dialog");
   modal.setAttribute("aria-modal", "true");
   modal.setAttribute("aria-labelledby", "raidWarningTitle");
-  modal.style.cssText = `
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    box-sizing: border-box;
-    width: min(520px, 92vw);
-    max-height: 84vh;
-    overflow-y: auto;
-    color: #2b1612;
-    background: #fff8f1;
-    border: 2px solid #9d2b22;
-    border-radius: 8px;
-    box-shadow: 0 20px 46px rgba(0, 0, 0, 0.38);
-    padding: 20px;
-    z-index: 2101;
-  `;
 
   const title = document.createElement("h2");
   title.id = "raidWarningTitle";
   title.textContent = "襲撃発生";
-  title.style.cssText = `
-    margin: 0 0 12px 0;
-    color: #9d2b22;
-    font-size: 1.55rem;
-    letter-spacing: 0;
-  `;
 
-  const body = document.createElement("p");
-  body.textContent = message;
-  body.style.cssText = `
-    margin: 0 0 14px 0;
-    line-height: 1.65;
-    font-size: 1rem;
-  `;
+  const content = document.createElement("div");
+  content.className = "conversation-content";
+
+  const portraitArea = document.createElement("div");
+  portraitArea.className = "portrait-area";
+  const portrait = document.createElement("img");
+  portrait.src = representative ? getPortraitPath(representative) : "images/portraits/default.png";
+  portrait.alt = "";
+  portrait.onerror = () => {
+    portrait.src = "images/portraits/default.png";
+  };
+  portraitArea.appendChild(portrait);
+
+  const dialogueArea = document.createElement("div");
+  dialogueArea.className = "dialogue-area";
+
+  const characterInfo = document.createElement("div");
+  characterInfo.className = "character-info";
+  characterInfo.textContent = representative
+    ? `${speakerName}｜${raidName}`
+    : `${raidName || "襲撃者"}｜${countText}`;
+
+  const text = document.createElement("div");
+  text.className = "raid-warning-text";
+  const lineElement = document.createElement("p");
+  lineElement.textContent = line;
+  text.appendChild(lineElement);
 
   const detail = document.createElement("div");
-  detail.style.cssText = `
-    margin: 0 0 18px 0;
-    padding: 10px 12px;
-    background: #ffe8dc;
-    border: 1px solid #efb5a5;
-    border-radius: 6px;
-    line-height: 1.55;
-  `;
-  detail.innerHTML = `<strong>襲撃者</strong><br>${raiderType} / ${countText}`;
+  detail.className = "raid-warning-detail";
+  detail.textContent = `${raidName || "襲撃"} / ${countText}`;
+  if (avoidanceOption?.detail) {
+    const avoidanceDetail = document.createElement("div");
+    avoidanceDetail.textContent = avoidanceOption.detail;
+    detail.appendChild(avoidanceDetail);
+  }
+
+  dialogueArea.appendChild(characterInfo);
+  dialogueArea.appendChild(text);
+  dialogueArea.appendChild(detail);
+  content.appendChild(portraitArea);
+  content.appendChild(dialogueArea);
 
   const buttons = document.createElement("div");
-  buttons.style.cssText = "display:flex;justify-content:flex-end;";
+  buttons.className = "modal-buttons";
 
-  const closeButton = document.createElement("button");
-  closeButton.type = "button";
-  closeButton.textContent = "迎撃準備へ";
-  closeButton.style.cssText = `
-    min-width: 112px;
-    padding: 8px 16px;
-    color: #fff;
-    background: #9d2b22;
-    border: 1px solid #7f1f18;
-    border-radius: 6px;
-    font-weight: bold;
-    cursor: pointer;
-  `;
-  closeButton.onclick = closeRaidWarningModal;
+  if (avoidanceOption) {
+    const avoidanceButton = document.createElement("button");
+    avoidanceButton.type = "button";
+    avoidanceButton.textContent = avoidanceOption.label;
+    avoidanceButton.disabled = !!avoidanceOption.disabled;
+    if (avoidanceOption.disabledReason) {
+      avoidanceButton.title = avoidanceOption.disabledReason;
+    }
+    avoidanceButton.onclick = () => {
+      if (typeof onAvoidance === "function" && onAvoidance()) {
+        closeRaidWarningModal();
+      }
+    };
+    buttons.appendChild(avoidanceButton);
+  }
 
-  buttons.appendChild(closeButton);
+  const interceptButton = document.createElement("button");
+  interceptButton.type = "button";
+  interceptButton.textContent = "防衛する";
+  interceptButton.onclick = closeRaidWarningModal;
+
   modal.appendChild(title);
-  modal.appendChild(body);
-  modal.appendChild(detail);
+  modal.appendChild(content);
   modal.appendChild(buttons);
+  buttons.appendChild(interceptButton);
 
-  overlay.onclick = closeRaidWarningModal;
   document.body.appendChild(overlay);
   document.body.appendChild(modal);
-  closeButton.focus();
+  const focusTarget = buttons.querySelector("button:not(:disabled)") || interceptButton;
+  focusTarget.focus();
 }
 
 export function closeRaidWarningModal() {
@@ -159,4 +181,25 @@ export function closeRaidWarningModal() {
   const modal = document.getElementById(MODAL_ID);
   if (overlay) overlay.remove();
   if (modal) modal.remove();
+}
+
+function getRaidWarningLine({ representative, introDialogues, raidName }) {
+  if (Array.isArray(introDialogues) && introDialogues.length > 0) {
+    return introDialogues[Math.floor(Math.random() * introDialogues.length)];
+  }
+
+  if (representative) {
+    return getConversationLine({ character: representative, village: null }) || "...";
+  }
+
+  return `${raidName || "襲撃者"}が村に近づいています。`;
+}
+
+function getRepresentativeDisplayName(representative, fallbackName) {
+  const name = representative?.name || fallbackName || "襲撃者";
+  const raiderType = String(representative?.raiderType || "").trim();
+  if (!raiderType || name === raiderType || name.startsWith(`${raiderType}の`)) {
+    return name;
+  }
+  return `${raiderType}（${name}）`;
 }

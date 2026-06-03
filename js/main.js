@@ -7,12 +7,14 @@ import { updateUI } from "./ui.js";
 import { doFixedEventPost, endOfMonthProcess, doAgingProcess, runMonthStartPhase } from "./events.js";
 import { applyForcedActionRestriction, refreshJobTable } from "./domain/jobTables.js";
 import { handleAllVillagerJobs } from "./jobs.js";
+import { recordGameStartHistory } from "./history.js";
 import { isUnassignedActionVillager } from "./domain/rules.js";
 import { getRaidReadiness } from "./raidRules.js";
 
 // Villageインスタンスを生成
 export const theVillage = new Village();
 theVillage.villagers = createInitialVillagers();
+recordGameStartHistory(theVillage);
 updateUI(theVillage);
 
 function applyTurnStartRestrictions(village) {
@@ -38,6 +40,8 @@ const TURN_BLOCKING_MODAL_SELECTORS = [
   "#miracleModal",
   "#buildingModal",
   "#secretTreasureModal",
+  "#historyModal",
+  "#personalHistoryModal",
   "#conversationModal",
   "#exchangeModal",
   "#panFluteExchangeModal",
@@ -85,10 +89,10 @@ export function onNextTurn() {
   if (theVillage.villageTraits.includes("襲撃中") && !theVillage.isRaidProcessDone) {
     theVillage.villagers.forEach(person => refreshJobTable(person, theVillage));
     const raidReadiness = getRaidReadiness(theVillage);
-    if (raidReadiness.defenders.length === 0 && typeof window !== "undefined") {
+    if (raidReadiness.combatants.length === 0 && typeof window !== "undefined") {
       const message = raidReadiness.trapMakers.length > 0
-        ? `迎撃に出る村人がいません。\n罠作成だけでは敵を倒しきれない場合、防衛失敗になります。\nこのまま迎撃を開始しますか？`
-        : `迎撃に出る村人がいません。\nこのまま開始すると防衛失敗になります。\nこのまま迎撃を開始しますか？`;
+        ? `戦闘に残る村人がいません。\n罠作成だけでは敵を倒しきれない場合、防衛失敗になります。\nこのまま防衛を開始しますか？`
+        : `戦闘に残る村人がいません。\nこのまま開始すると防衛失敗になります。\nこのまま防衛を開始しますか？`;
       if (!window.confirm(message)) return;
     }
     import("./raid.js").then(m=>{

@@ -1,11 +1,13 @@
 import { getPermanentStat, syncEffectiveStats } from "./domain/statLayers.js";
+import { HISTORY_EVENT_TYPES, recordHeadmanElectionHistory } from "./history.js";
 import { parseRelationship, normalizeRelationships } from "./relationships.js";
+import { grantTitle, incrementTitleCounter, TITLE_COUNTER_KEYS } from "./titles.js";
 
 const HEADMAN_TRAIT = "里長";
 const ELECTION_MONTH = 7;
 const ELECTION_INTERVAL_YEARS = 3;
 const ASSEMBLY_HALL_ID = "assemblyHall";
-const ELECTION_IMAGE = "../images/events/headman-election.png";
+const ELECTION_IMAGE = "../images/events/headman-election.jpg";
 const RANKED_STATS = ["cou", "eth", "ind", "str", "int"];
 const MODAL_OVERLAY_ID = "headmanElectionOverlay";
 const MODAL_ID = "headmanElectionModal";
@@ -179,6 +181,23 @@ function appointHeadman(village, headman) {
   (village.villagers || []).forEach(syncEffectiveStats);
 }
 
+function hasRecordedHeadman(village) {
+  return Array.isArray(village?.historyEvents) && village.historyEvents.some(event => {
+    return event?.type === HISTORY_EVENT_TYPES.HEADMAN_ELECTION &&
+      Array.isArray(event.people) &&
+      event.people.length > 0;
+  });
+}
+
+function recordHeadmanTitleProgress(village, headman) {
+  if (!headman) return;
+  const isFirstHeadman = !hasRecordedHeadman(village);
+  incrementTitleCounter(headman, TITLE_COUNTER_KEYS.HEADMAN_TERMS, 1, { getPermanentStat });
+  if (isFirstHeadman) {
+    grantTitle(headman, "firstHeadman");
+  }
+}
+
 function markElectionResolved(village) {
   village.lastHeadmanElectionYear = Number(village.year) || 0;
   village.nextHeadmanElectionYear = village.lastHeadmanElectionYear + ELECTION_INTERVAL_YEARS;
@@ -350,12 +369,15 @@ function runElection(village) {
     if (currentHeadman) {
       appointHeadman(village, currentHeadman);
       markElectionResolved(village);
+      recordHeadmanTitleProgress(village, currentHeadman);
+      recordHeadmanElectionHistory(village, currentHeadman, { result: "continued" });
       showElectionResult(village, [
         "集会所に村人たちが集まり、里長選挙が行われた。",
         `新たに立つ者はなく、現里長${currentHeadman.name}が引き続き里長を務めることになった。`
       ].join("\n"));
     } else {
       markElectionFailed(village);
+      recordHeadmanElectionHistory(village, null, { result: "failed" });
       showElectionResult(village, [
         "集会所に村人たちが集まったが、里長に立つ者はいなかった。",
         "選挙は不成立となり、里長不在のまま来年の七月に改めて選ぶことになった。"
@@ -368,6 +390,8 @@ function runElection(village) {
     const winner = candidates[0];
     appointHeadman(village, winner);
     markElectionResolved(village);
+    recordHeadmanTitleProgress(village, winner);
+    recordHeadmanElectionHistory(village, winner, { result: "uncontested" });
     showElectionResult(village, [
       "集会所に村人たちが集まり、里長選挙が行われた。",
       `候補者は${winner.name}のみで、無投票により新たな里長に選ばれた。`
@@ -391,8 +415,13 @@ function runElection(village) {
   const winner = pickRandom(topCandidates);
   appointHeadman(village, winner);
   markElectionResolved(village);
+  recordHeadmanTitleProgress(village, winner);
 
   const counts = formatVoteCounts(candidates, voteCounts);
+  recordHeadmanElectionHistory(village, winner, {
+    result: topCandidates.length > 1 ? "lottery" : "elected",
+    counts
+  });
   if (topCandidates.length > 1) {
     showElectionResult(village, [
       "集会所に村人たちが集まり、里長選挙が行われた。",

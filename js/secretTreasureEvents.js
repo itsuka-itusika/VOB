@@ -9,19 +9,19 @@ const EVENT_DEFINITIONS = {
     title: "土の底の秘宝",
     logPrefix: "畑から奇妙な物が出てきた",
     message: "畑の土を起こしていると、泥にまみれた奇妙な品が姿を現しました。村に伝わるどの道具とも違う、かすかな魔素を帯びた秘宝です。",
-    imagePath: "images/events/secret-treasure-field.png"
+    imagePath: "images/events/secret-treasure-field.jpg"
   },
   fishing: {
     title: "網にかかった秘宝",
     logPrefix: "網に奇妙な物がかかった",
     message: "引き上げた網の中に、魚でも流木でもない奇妙な品が絡まっていました。水を払うと淡い光がこぼれ、秘宝として村に納められました。",
-    imagePath: "images/events/secret-treasure-fishing.png"
+    imagePath: "images/events/secret-treasure-fishing.jpg"
   },
   merchant: {
     title: "行商人の秘蔵品",
     logPrefix: "行商人から秘宝を買い取った",
     message: "行商人が荷の奥から、布に包まれた奇妙な品を取り出しました。旅先で手に入れた由来の知れない秘宝だといいます。",
-    imagePath: "images/events/secret-treasure-field.png"
+    imagePath: "images/events/secret-treasure-field.jpg"
   }
 };
 

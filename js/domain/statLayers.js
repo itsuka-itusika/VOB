@@ -1,5 +1,6 @@
 import { clampValue, round3 } from "../util.js";
 import { ABILITY_STATS, PHYSICAL_ABILITY_STATS } from "./personSchema.js";
+import { evaluateTitles } from "../titles.js";
 
 export const STAT_LAYER_VERSION = 1;
 
@@ -19,7 +20,6 @@ const PERMANENT_BODY_TRAIT_ADDS = Object.freeze({
 });
 
 const PERMANENT_MIND_TRAIT_ADDS = Object.freeze({
-  "ワーカホリック": { ind: 3 },
   "ニート": { ind: -2 },
   "里長": { ind: 3, eth: 3, cou: 3 }
 });
@@ -39,7 +39,7 @@ const TEMP_MIND_TRAIT_EFFECTS = Object.freeze({
   "抑鬱": { mul: { int: 0.25, ind: 0.25, eth: 0.25, cou: 0.25, sexdr: 0.25 } },
   "狂乱": { mul: { eth: 0.2 }, add: { sexdr: 15 } },
   "酩酊": { mul: { ind: 0.2, eth: 0.2 }, add: { sexdr: 10 } },
-  "火星の加護": { mul: { int: 0.2, ind: 0.2, eth: 0.2 }, add: { cou: 15 } },
+  "火星の加護": { mul: { mag: 0.2, int: 0.2, ind: 0.2, eth: 0.2 }, add: { str: 7, vit: 7, cou: 7 } },
   "ニケ": { add: { cou: 10 } }
 });
 
@@ -47,6 +47,13 @@ const LEGACY_TEMP_BODY_TRAIT_EFFECTS = Object.freeze({
   ...TEMP_BODY_TRAIT_EFFECTS,
   "火星の加護": { mul: { str: 1.6, vit: 1.6, cou: 1.6, int: 0.2, ind: 0.2, eth: 0.2 } }
 });
+
+function getPortraitEffect(person) {
+  const mindTraits = Array.isArray(person?.mindTraits) ? person.mindTraits : [];
+  if (!mindTraits.includes("肖像")) return null;
+  const ethLoss = clampValue(round3(numberOr(person.portraitEthLoss, 0)), 0, 100);
+  return ethLoss > 0 ? { add: { eth: -ethLoss, chr: ethLoss } } : null;
+}
 
 export function createStatMap(initialValue = 0) {
   return Object.fromEntries(ABILITY_STATS.map(stat => [stat, initialValue]));
@@ -98,6 +105,7 @@ function getTemporaryEffect(person, { includeLegacyAres = false } = {}) {
 
   bodyTraits.forEach(trait => applyEffect(bodyEffects[trait]));
   mindTraits.forEach(trait => applyEffect(TEMP_MIND_TRAIT_EFFECTS[trait]));
+  applyEffect(getPortraitEffect(person));
   return { mul, add };
 }
 
@@ -192,6 +200,7 @@ export function addAcquiredStat(person, stat, amount) {
   ensureStatLayers(person);
   person.acquiredStatMods[stat] = round3(person.acquiredStatMods[stat] + numberOr(amount, 0));
   syncEffectiveStats(person);
+  evaluateTitles(person, { getPermanentStat });
 }
 
 export function getBaseStat(person, stat) {

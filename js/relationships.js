@@ -1,11 +1,13 @@
 // relationships.js
 
 import { randInt, clampValue, getPortraitPath } from "./util.js";
+import { recordLoverHistory, recordMarriageHistory } from "./history.js";
+import { runAfterFestivalModals } from "./festivalModal.js";
 
 /**
  * 恋人チェック (星霜祭などで呼ばれる)
  */
-export function doLoverCheck(village) {
+export function doLoverCheck(village, options = {}) {
   let candidatesA = village.villagers.filter(x=>
     x.spiritAge >= 16
     && isSingle(x)
@@ -29,6 +31,7 @@ export function doLoverCheck(village) {
     addRelationship(b, `恋人:${a.name}`);
     a.happiness=clampValue(a.happiness+50,0,100);
     b.happiness=clampValue(b.happiness+50,0,100);
+    recordLoverHistory(village, a, b, { source: options.source || "縁結び" });
     village.log(`${a.name}と${b.name}恋人成立(成功率${(sc*100).toFixed(1)}%)`);
     showRelationshipModal("恋人成立", `${a.name}と${b.name}が恋人になりました。`, [
       [a, getLoverLine(a, b)],
@@ -42,7 +45,9 @@ export function doLoverCheck(village) {
 }
 
 function isSingle(person) {
-  return !checkHasRelationship(person,"既婚") && !checkHasRelationship(person,"恋人");
+  return !checkHasRelationship(person,"既婚") &&
+    !checkHasRelationship(person,"恋人") &&
+    !hasRelationshipPrefix(person, SPOUSE_RELATION_PREFIXES);
 }
 
 function getOppositeSex(sex) {
@@ -56,6 +61,7 @@ function isLoverCandidate(a, b) {
   const expectedBodySex = getOppositeSex(a.spiritSex);
   if (!expectedBodySex) return false;
   return isSingle(b)
+    && !hasLoverBlockingRelationship(a, b)
     && b.bodySex === expectedBodySex
     && b.bodyAge >= 16
     && b.bodyAge >= a.bodyAge - 10
@@ -102,6 +108,7 @@ export function doMarriageCheck(village) {
     b.happiness=clampValue(b.happiness+50,0,100);
 
     addSpouseRelationships(a, b);
+    recordMarriageHistory(village, a, b, { source: "夏至祭" });
 
     village.log(`${a.name}と${b.name}結婚成功`);
     showRelationshipModal("結婚", `${a.name}と${b.name}が結婚しました。`, [
@@ -119,6 +126,13 @@ export function doMarriageCheck(village) {
 const FRIEND_RELATION_PREFIXES = new Set(["恋人", "親友", "天敵"]);
 const FAMILY_RELATION_PREFIXES = new Set(["夫", "妻", "母", "父", "子"]);
 const GENETIC_RELATION_PREFIXES = new Set(["遺伝母", "遺伝父"]);
+const SPOUSE_RELATION_PREFIXES = new Set(["夫", "妻"]);
+const PARENT_CHILD_RELATION_PREFIXES = new Set(["母", "父", "子"]);
+const LOVER_BLOCKING_RELATION_PREFIXES = new Set([
+  ...SPOUSE_RELATION_PREFIXES,
+  ...PARENT_CHILD_RELATION_PREFIXES,
+  "天敵"
+]);
 
 function getRelationshipCategory(prefix) {
   if (FRIEND_RELATION_PREFIXES.has(prefix) || String(prefix).endsWith("仲間")) return "交友関係";
@@ -166,6 +180,35 @@ export function normalizeRelationships(person) {
   const source = Array.isArray(person.relationships) ? person.relationships : [];
   person.relationships = [...new Set(source.map(normalizeRelationship).filter(Boolean))];
   return person.relationships;
+}
+
+function getParsedRelationships(person) {
+  return normalizeRelationships(person)
+    .map(parseRelationship)
+    .filter(Boolean);
+}
+
+function hasRelationshipPrefix(person, prefixes) {
+  return getParsedRelationships(person).some(parsed => prefixes.has(parsed.prefix));
+}
+
+function hasRelationshipTo(person, targetName, prefixes) {
+  return getParsedRelationships(person).some(parsed =>
+    parsed.target === targetName && prefixes.has(parsed.prefix)
+  );
+}
+
+function hasLoverBlockingRelationship(a, b) {
+  return hasRelationshipTo(a, b.name, LOVER_BLOCKING_RELATION_PREFIXES) ||
+    hasRelationshipTo(b, a.name, LOVER_BLOCKING_RELATION_PREFIXES);
+}
+
+export function hasNonEnemyRelationship(person) {
+  return getParsedRelationships(person).some(parsed => {
+    if (parsed.prefix === "天敵") return false;
+    if (parsed.flag === "既婚") return true;
+    return Boolean(parsed.raw);
+  });
 }
 
 export function formatRelationshipsForDisplay(person) {
@@ -273,6 +316,10 @@ function getMarriageLine(person, partner) {
 }
 
 function showRelationshipModal(title, message, entries) {
+  runAfterFestivalModals(() => showRelationshipModalNow(title, message, entries));
+}
+
+function showRelationshipModalNow(title, message, entries) {
   if (typeof document === "undefined") return;
   const overlay = document.createElement("div");
   overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;";

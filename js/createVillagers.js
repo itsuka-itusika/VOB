@@ -4,6 +4,7 @@ import { Villager } from "./classes.js";
 import { randInt, randChoice, randNormalInRange } from "./util.js";
 import { ACTION_NONE, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
 import { applyGenerationBaseTraitBonuses, setBaseStatsFromEffective, syncEffectiveStats } from "./domain/statLayers.js";
+import { getVillageScaleStage } from "./villageScale.js";
 import {
   FEMALE_PORTRAIT_FILES,
   MALE_PORTRAIT_FILES,
@@ -19,6 +20,46 @@ export { MALE_PORTRAIT_FILES, TODDLER_PORTRAIT_FILES } from "./data/villagerData
  */
 const INITIAL_MALE_COUNT = 3;   // 初期男性の人数
 const INITIAL_FEMALE_COUNT = 3; // 初期女性の人数
+
+const VISITOR_TABLES_BY_SCALE = [
+  {
+    maxStageIndex: 1,
+    entries: [
+      { type: "流民", weight: 35 },
+      { type: "旅人", weight: 30 },
+      { type: "巡礼者", weight: 15 },
+      { type: "行商人", weight: 15 },
+      { type: "棄民", weight: 5 }
+    ]
+  },
+  {
+    maxStageIndex: 4,
+    // 将来的にレア訪問者 weight 5 を追加予定。現時点では未実装のため、合計95で抽選する。
+    entries: [
+      { type: "流民", weight: 20 },
+      { type: "旅人", weight: 16 },
+      { type: "棄民", weight: 5 },
+      { type: "巡礼者", weight: 15 },
+      { type: "行商人", weight: 15 },
+      { type: "冒険者", weight: 12 },
+      { type: "学者", weight: 12 }
+    ]
+  },
+  {
+    maxStageIndex: Infinity,
+    // 将来的にレア訪問者5、お忍び5、遍歴騎士5を追加予定。未実装のため現行タイプだけで抽選する。
+    entries: [
+      { type: "流民", weight: 15 },
+      { type: "旅人", weight: 10 },
+      { type: "棄民", weight: 5 },
+      { type: "観光客", weight: 10 },
+      { type: "巡礼者", weight: 15 },
+      { type: "行商人", weight: 15 },
+      { type: "冒険者", weight: 15 },
+      { type: "学者", weight: 15 }
+    ]
+  }
+];
 
 // 使用済みの名前を追跡する Set を追加
 const usedNames = new Set();
@@ -388,15 +429,15 @@ export function initRandomParams(v) {
     if (me < 5) me = 5;
     v.eth = randNormalInRange(5, me);
     v.cou = randNormalInRange(8, 30);
-    v.sexdr = randNormalInRange(8, 35);
+    v.sexdr = randNormalInRange(8, 30);
   } else {
     v.vit = randNormalInRange(5, 25);
     let mx = Math.min(25, v.vit * 1.5);
     if (mx < 5) mx = 5;
     v.str = randNormalInRange(5, Math.floor(mx));
     v.dex = randNormalInRange(5, 25);
-    v.mag = randNormalInRange(14, 30);
-    v.chr = randNormalInRange(14, 30);
+    v.mag = randNormalInRange(15, 27);
+    v.chr = randNormalInRange(15, 27);
     v.int = randNormalInRange(5, 25);
     v.ind = randNormalInRange(5, 25);
     let me = Math.min(30, Math.floor(v.ind * 1.8));
@@ -475,7 +516,7 @@ export function assignBodyMindTraits(v) {
     { name: "薄倖", condition: (v) => v.bodySex === "女" && v.vit <= 11 && v.chr >= 20 },
     { name: "健康的", condition: (v) => v.bodySex === "女" && v.vit >= 16 && v.chr >= 16  && v.chr <= 22 },
     { name: "神秘的", condition: (v) => v.bodySex === "女" && v.mag >= 20 && v.chr >= 23 && v.sexdr <= 17 },
-    { name: "絶世の美女", condition: (v) => v.bodySex === "女" && v.chr >= 28 },
+    { name: "絶世の美女", condition: (v) => v.bodySex === "女" && v.chr >= 27 },
     { name: "ミステリアス", condition: (v) => v.mag >= 20 && v.chr >= 21 && v.chr <= 27},
     { name: "クール", condition: (v) => v.sexdr <= 10 && v.chr >= 20},
     { name: "あやしげ", condition: (v) => v.bodySex === "男" && v.mag >= 22 && v.chr <= 15 },
@@ -547,12 +588,12 @@ export function assignBodyMindTraits(v) {
     { name: "優等生", condition: (v) => v.int >= 18 && v.ind >= 18 && v.eth >= 18 },
     { name: "策士", condition: (v) => v.int >= 20 && v.cou >= 20 },
     { name: "神経質", condition: (v) => v.vit <= 14 && v.chr <= 12 },
-    { name: "女好き", condition: (v) => v.bodySex === "男" && v.sexdr >= 25 },
+    { name: "女好き", condition: (v) => v.bodySex === "男" && v.sexdr >= 24 },
     { name: "チャラい", condition: (v) => v.bodySex === "男" && v.sexdr >= 18 && v.chr >=18 },
     { name: "情熱的", condition: (v) => v.sexdr >= 19 && v.cou >= 19},
     { name: "男嫌い", condition: (v) => v.bodySex === "女" && v.sexdr <= 7 },
     { name: "夢見がち", condition: (v) => v.bodySex === "女" && v.sexdr >= 18 && v.int <= 15 },
-    { name: "好奇心旺盛", condition: (v) => v.int >= 18 && v.sexdr >= 20 && v.dex >= 18 },
+    { name: "好奇心旺盛", condition: (v) => v.int >= 17 && v.sexdr >= 17 && v.dex >= 17 },
     { name: "冒険好き", condition: (v) => v.int >= 18 && v.cou >= 20 },
     { name: "陰キャ", condition: (v) => v.chr <= 17 && v.cou <= 15 && v.str <= 16 },
     { name: "計算高い", condition: (v) => v.int >= 22 && v.eth <= 14 },
@@ -582,7 +623,7 @@ export function assignBodyMindTraits(v) {
     { name: "草食系", condition: (v) => v.bodySex === "男" && v.sexdr <= 12 },
     { name: "スケベ", condition: (v) => v.bodySex === "男" && v.int <= 18 && v.eth <= 16 && v.sexdr >= 20 },
     { name: "遊び人", condition: (v) => v.bodySex === "男" && v.chr >= 18 && v.eth <= 12 && v.sexdr >= 20 },
-    { name: "むっつり", condition: (v) => v.eth >= 20 && v.sexdr >= 22 },
+    { name: "むっつり", condition: (v) => v.eth >= 20 && v.sexdr >= 20 },
     { name: "勇敢", condition: (v) => v.str >= 20 && v.cou >= 22 },
     { name: "勇猛果敢", condition: (v) => v.cou >= 28 },
     { name: "豪傑", condition: (v) => v.str >= 24 && v.cou >= 24 },
@@ -743,26 +784,41 @@ export function assignHobby(v) {
 /**
  * 重み付き抽選で訪問者タイプを選択
  */
-function selectVisitorType() {
-  const totalWeight = VISITOR_TYPES.reduce((sum, type) => sum + type.weight, 0);
+function resolveVisitorTable(village = null) {
+  const table = village
+    ? VISITOR_TABLES_BY_SCALE.find(entry => getVillageScaleStage(village.building).index <= entry.maxStageIndex)
+    : VISITOR_TABLES_BY_SCALE[0];
+  if (!table) return VISITOR_TYPES;
+
+  return table.entries
+    .map(entry => {
+      const visitorType = VISITOR_TYPES.find(type => type.type === entry.type);
+      return visitorType ? { ...visitorType, weight: entry.weight } : null;
+    })
+    .filter(Boolean);
+}
+
+function selectVisitorType(village = null) {
+  const visitorTable = resolveVisitorTable(village);
+  const totalWeight = visitorTable.reduce((sum, type) => sum + type.weight, 0);
   let random = Math.random() * totalWeight;
   
-  for (const visitorType of VISITOR_TYPES) {
+  for (const visitorType of visitorTable) {
     random -= visitorType.weight;
     if (random <= 0) {
       return visitorType;
     }
   }
-  return VISITOR_TYPES[0]; // フォールバック
+  return visitorTable[0] || VISITOR_TYPES[0]; // フォールバック
 }
 
 /**
  * 訪問者を生成する関数
  */
-export function createRandomVisitor(existingNames = [], forcedType = null) {
+export function createRandomVisitor(existingNames = [], forcedType = null, village = null) {
   const visitorType = forcedType
-    ? (VISITOR_TYPES.find(type => type.type === forcedType) || selectVisitorType())
-    : selectVisitorType();
+    ? (VISITOR_TYPES.find(type => type.type === forcedType) || selectVisitorType(village))
+    : selectVisitorType(village);
   
   // 性別を明示的に設定（visitorTypeに指定がなければランダム）
   const bodySex = visitorType.forcedSex || (Math.random() < 0.5 ? "男" : "女");

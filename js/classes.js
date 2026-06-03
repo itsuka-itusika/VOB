@@ -32,16 +32,22 @@ export class Village {
     this.secretTreasures = [];
 
     this.logs = [];
+    this.historyEvents = [];
     this.gameOver = false;
     this.hasDonePreEvent = false;
     this.hasDonePostEvent = false;
 
     // 襲撃イベント用フラグ/データ
     this.raidEnemies = [];
+    this.currentRaid = null;
+    this.monthsSinceRaid = 0;
+    this.raidCooldown = 0;
+    this.pendingRaid = null;
     this.isRaidProcessDone = false;
     this.isRaidFinalizing = false;
     this.raidTurnCount = 0;
     this.raidActionQueue = [];
+    this.raidPhase = "";
     this.currentActionIndex = 0;
 
     // 訪問者配列を追加
@@ -126,6 +132,9 @@ export class Villager {
 
     /** 人間関係(文字列格納) */
     this.relationships = [];
+    this.socialAttemptedThisMonth = false;
+    this.titleIds = [];
+    this.titleStats = {};
 
     /** 行動割り当て関連 */
     // preferredAction は通常時の復帰先。job は旧セーブ・旧コード互換の別名として同期する。
@@ -144,6 +153,9 @@ export class Villager {
     this.ares = 0;
     // ニケ効果期間管理用
     this.nikeMonths = 0;
+    // 肖像効果期間・倫理低下量管理用
+    this.portraitMonths = 0;
+    this.portraitEthLoss = 0;
 
     /** 顔グラフィックのファイル名 */
     this.portraitFile = "default.png";

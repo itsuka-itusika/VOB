@@ -8,6 +8,7 @@ import { createRandomVisitor, createRandomVisitorOfType, determineSpeechType } f
 import { refreshJobTable } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
+import { recordMarriageHistory, recordVillagerLeaveHistory } from "./history.js";
 import { resolveDialogueTone } from "./data/dialogue/toneProfiles.js";
 import { BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
 /**
@@ -23,7 +24,7 @@ export const MIRACLES = [
   {id:"5",  name:"狂宴の奇跡(人数×30)", cost:-2, desc:"全員体力/メンタル+60,幸福+50,倫理↓,好色+15"},
   {id:"6",  name:"癒しの奇跡(80)", cost:80, desc:"1人の負傷/疫病/疲労等回復,体力+50"},
   {id:"16", name:"酒杯の奇跡(50)", cost:50, desc:"1人の心労/抑鬱回復,メンタル+50,幸福+30,酩酊付与"},
-  {id:"7",  name:"戦神の奇跡(80)", cost:80, desc:"1人に火星の加護(3ヶ月,勇気+15,知力/勤勉/倫理低下)"},
+  {id:"7",  name:"戦神の奇跡(80)", cost:80, desc:"1人に火星の加護(3ヶ月,筋力/耐久/勇気+7,魔力/知力/勤勉/倫理*0.2)"},
   {id:"8",  name:"竈女神の奇跡(60)", cost:60, desc:"恋人を結婚100%(いなければ30返還)"},
   {id:"9",  name:"常春の奇跡(300)", cost:300,desc:"村特性→春に固定。次の季節まで継続"},
   {id:"10", name:"旅人の奇跡(60)", cost:60, desc:"ランダム来訪者(訪問者付与)"},
@@ -580,6 +581,7 @@ function forceMarriage(a,b,v) {
   b.happiness=clampValue(b.happiness+50,0,100);
 
   addSpouseRelationships(a, b);
+  recordMarriageHistory(v, a, b, { source: "クピドの奇跡" });
 
   v.log(`【クピドの奇跡】${a.name}と${b.name}強制結婚`);
   showMarriageMiracleModal(v, "クピドの奇跡", [[a, b]]);
@@ -646,7 +648,7 @@ function warMiracle(p, v) {
   }
   syncEffectiveStats(p);
   refreshJobTable(p, v);
-  v.log(`【戦神の奇跡】${p.name}に火星の加護付与(勇気+15,知力/勤勉/倫理*0.2,迎撃ダメージ1.2倍)3ヶ月継続`);
+  v.log(`【戦神の奇跡】${p.name}に火星の加護付与(筋力+7,耐久+7,勇気+7,魔力/知力/勤勉/倫理*0.2)3ヶ月継続`);
   showMiracleResultModal(v, "戦神の奇跡", `${p.name}に戦神の加護が宿りました。`, [p]);
 }
 
@@ -673,6 +675,7 @@ function hearthMiracle(v) {
           b.happiness=clampValue(b.happiness+50,0,100);
 
           addSpouseRelationships(a, b);
+          recordMarriageHistory(v, a, b, { source: "竈女神の奇跡" });
 
           v.log(`【竈女神の奇跡】${a.name}と${b.name}結婚100%`);
           done.push(a,b);
@@ -691,7 +694,10 @@ function hearthMiracle(v) {
 
 /** 旅人の奇跡(1名来訪) */
 function travelerMiracle(v) {
-  let newV = createRandomVisitor();
+  let newV = createRandomVisitor([
+    ...v.villagers.map(person => person.name),
+    ...v.visitors.map(person => person.name)
+  ], null, v);
   v.visitors.push(newV);
   v.log(`【旅人の奇跡】${newV.name}が来訪(訪問者)`);
   showMiracleResultModal(v, "旅人の奇跡", `${newV.name}が村を訪れました。`, [newV]);
@@ -718,6 +724,7 @@ function marketMiracle(v) {
 function departureMiracle(p,v) {
   let bonus = p.happiness;
   v.mana=clampValue(v.mana+bonus,0,99999);
+  recordVillagerLeaveHistory(v, p, { source: "出立の奇跡" });
   v.log(`【出立の奇跡】${p.name}離脱,魔素+${bonus}`);
   let idx=v.villagers.indexOf(p);
   if (idx>=0) {

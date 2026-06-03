@@ -1,13 +1,14 @@
 // RandomEvents.js
 
 import { randInt, clampValue, round3 } from "./util.js";
-import { doLoverCheck, addRelationship as addCategorizedRelationship } from "./relationships.js";
+import { doLoverCheck, addRelationship as addCategorizedRelationship, hasNonEnemyRelationship, normalizeRelationship, parseRelationship } from "./relationships.js";
 import { doExchange } from "./exchange.js";
 import { showRandomEventModal } from "./randomEventModal.js";
 import { matureBodyToAdultOnly, scheduleGoldenRainPregnancy } from "./reproduction.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { addAcquiredStat, syncEffectiveStats } from "./domain/statLayers.js";
+import { recordHobbyAwakeningHistory, recordMythicEventHistory, recordSocialRelationHistory } from "./history.js";
 import {
   getChildlikeRandomEventLine,
   getDialogueLine,
@@ -32,6 +33,7 @@ const VILLAGER_STATE_KEYS = [
   "bodyTraits", "mindTraits", "relationships", "hobby",
   "bodySex", "bodyAge", "bodyOwner", "race", "portraitFile"
 ];
+const YURI_BLOCKING_RELATION_PREFIXES = ["天敵", "母", "父", "子", "夫", "妻", "恋人"];
 
 function snapshotVillager(person) {
   return JSON.stringify(Object.fromEntries(VILLAGER_STATE_KEYS.map(key => [key, person[key]])));
@@ -283,6 +285,7 @@ export class RandomEvents {
         break;
       }
     }
+    recordMythicEventHistory(v, c.type, p, { subject: EVENT_SUBJECTS[c.type] });
     return c.type;
   }
 
@@ -368,7 +371,7 @@ export class RandomEvents {
             if (a.hobby !== b.hobby) return;
             const relA = `${a.hobby}仲間:${b.name}`;
             const relB = `${b.hobby}仲間:${a.name}`;
-            if (a.relationships.includes(relA) && b.relationships.includes(relB)) return;
+            if (this.hasPairRelationship(a, b, ["天敵", `${a.hobby}仲間`])) return;
             pairs.push({ a, b, hobby: a.hobby, relA, relB });
           });
         });
@@ -379,6 +382,7 @@ export class RandomEvents {
           pair.b.happiness = clampValue(pair.b.happiness + 10, 0, 100);
           this.addRelationship(pair.a, pair.relA);
           this.addRelationship(pair.b, pair.relB);
+          recordSocialRelationHistory(v, pair.a, pair.b, "趣味仲間", { hobby: pair.hobby });
           v.log(`趣味仲間:${pair.a.name}と${pair.b.name}は${pair.hobby}の話で盛り上がった。幸福+10、${pair.hobby}の余暇メンタル回復1.5倍`);
         } else {
           return null;
@@ -387,14 +391,20 @@ export class RandomEvents {
       }
       case "menFriendship": {
         let men = v.villagers.filter(x => x.spiritSex === "男" && x.bodyAge >= 16);
-        if (men.length >= 2) {
-          let m1 = this.randChoice(men);
-          let m2 = this.randChoice(men.filter(x => x !== m1));
+        const pairs = [];
+        men.forEach((a, index) => {
+          men.slice(index + 1).forEach(b => {
+            if (!this.hasPairRelationship(a, b, ["天敵", "親友"])) pairs.push([a, b]);
+          });
+        });
+        if (pairs.length > 0) {
+          let [m1, m2] = this.randChoice(pairs);
           let incc = randInt(10, 15);
           m1.happiness = clampValue(m1.happiness + incc, 0, 100);
           m2.happiness = clampValue(m2.happiness + incc, 0, 100);
           this.addRelationship(m1, `親友:${m2.name}`);
           this.addRelationship(m2, `親友:${m1.name}`);
+          recordSocialRelationHistory(v, m1, m2, "親友");
           v.log(`男の友情:${m1.name}と${m2.name}は夜通し語り合い、友情を深めた。幸福+${incc}`);
         } else {
           return null;
@@ -402,7 +412,7 @@ export class RandomEvents {
         break;
       }
       case "lover": {
-        if (!doLoverCheck(v)) {
+        if (!doLoverCheck(v, { source: "ランダムイベント" })) {
           return null;
         }
         break;
@@ -417,8 +427,18 @@ export class RandomEvents {
         );
 
         if (candidates.length >= 2) {
-          let a = this.randChoice(candidates);
-          let b = this.randChoice(candidates.filter(x => x !== a));
+          const pairs = [];
+          candidates.forEach((a, index) => {
+            candidates.slice(index + 1).forEach(b => {
+              if (!this.hasPairRelationship(a, b, YURI_BLOCKING_RELATION_PREFIXES)) pairs.push([a, b]);
+            });
+          });
+
+          if (pairs.length === 0) {
+            return null;
+          }
+
+          let [a, b] = this.randChoice(pairs);
 
           a.happiness = clampValue(a.happiness + 50, 0, 100);
           b.happiness = clampValue(b.happiness + 50, 0, 100);
@@ -438,7 +458,7 @@ export class RandomEvents {
           x.bodyAge >= 12 &&
           x.spiritAge >= 16 &&
           x.eth <= 12 &&
-          !x.bodyTraits.includes("刺青")
+          !this.hasBodyTrait(x, "刺青")
         );
 
         if (candidates.length > 0) {
@@ -461,7 +481,7 @@ export class RandomEvents {
           x.bodyAge >= 12 && x.bodyAge <= 30 &&
           x.spiritAge >= 16 &&
           x.sexdr >= 20 &&
-          x.hobby !== "オシャレ"
+          !this.hasHobby(x, "オシャレ")
         );
 
         if (candidates.length > 0) {
@@ -470,6 +490,7 @@ export class RandomEvents {
           addAcquiredStat(a, "chr", 3);
           a.happiness = clampValue(a.happiness + 20, 0, 100);
           a.hobby = "オシャレ";
+          recordHobbyAwakeningHistory(v, a, "オシャレ");
 
           v.log(`ファッションイベント:${a.name}は鏡の前で衣装を試し、気分が上がった。魅力+3,幸福+20,趣味:${a.hobby}`);
         } else {
@@ -483,7 +504,7 @@ export class RandomEvents {
           x.bodySex === "男" &&
           x.spiritAge >= 16 &&
           x.str >= 20 &&
-          x.hobby !== "筋トレ"
+          !this.hasHobby(x, "筋トレ")
         );
 
         if (candidates.length > 0) {
@@ -491,6 +512,7 @@ export class RandomEvents {
           
           addAcquiredStat(b, "str", 3);
           b.hobby = "筋トレ";
+          recordHobbyAwakeningHistory(v, b, "筋トレ");
 
           v.log(`筋トレイベント:${b.name}は筋トレに打ち込むようになった。筋力+3,趣味:筋トレ`);
         } else {
@@ -507,7 +529,7 @@ export class RandomEvents {
           x.bodyAge <= 30 &&
           x.chr >= 16 &&
           x.sexdr >= 20 &&
-          x.hobby !== "自家発電"
+          !this.hasHobby(x, "自家発電")
         );
 
         if (candidates.length > 0) {
@@ -518,6 +540,7 @@ export class RandomEvents {
           addAcquiredStat(a, "chr", 2);
           addAcquiredStat(a, "sexdr", 2);
           a.hobby = "自家発電";
+          recordHobbyAwakeningHistory(v, a, "自家発電");
 
           v.log(`${a.name}は自家発電にはまった。魔素+20,幸福+20,魅力+2,好色+2,趣味:自家発電`);
         } else {
@@ -661,12 +684,19 @@ export class RandomEvents {
         let candidates = v.villagers.filter(x => 
           x.spiritSex === "男" &&
           x.spiritAge >= 12 &&
-          x.eth <= 12
+          x.eth <= 12 &&
+          !hasNonEnemyRelationship(x)
         );
 
-        if (candidates.length >= 2) {
-          let a = this.randChoice(candidates);
-          let b = this.randChoice(candidates.filter(x => x !== a));
+        const pairs = [];
+        candidates.forEach((a, index) => {
+          candidates.slice(index + 1).forEach(b => {
+            if (!this.hasMutualRelationship(a, b, "天敵")) pairs.push([a, b]);
+          });
+        });
+
+        if (pairs.length > 0) {
+          let [a, b] = this.randChoice(pairs);
 
           a.hp = clampValue(a.hp - 20, 0, 100);
           b.hp = clampValue(b.hp - 20, 0, 100);
@@ -675,6 +705,7 @@ export class RandomEvents {
 
           this.addRelationship(a, `天敵:${b.name}`);
           this.addRelationship(b, `天敵:${a.name}`);
+          recordSocialRelationHistory(v, a, b, "天敵");
 
           v.log(`喧嘩イベント:${a.name}と${b.name}は殴り合いの大喧嘩をした！ 体力-20,治安-12`);
         } else {
@@ -707,30 +738,21 @@ export class RandomEvents {
           Array.isArray(x.bodyTraits) && !x.bodyTraits.includes("疫病")
         );
 
-        if (candidates.length >= 2) {
-          const pool = [...candidates];
-          const count = Math.min(randInt(2, 3), pool.length);
-          const infected = [];
+        if (candidates.length > 0) {
+          const person = this.randChoice(candidates);
 
-          for (let i = 0; i < count; i++) {
-            const index = randInt(0, pool.length - 1);
-            const person = pool.splice(index, 1)[0];
-            infected.push(person);
-
-            person.bodyTraits.push("疫病");
-            person.hp = clampValue(round3((Number(person.hp) || 0) * 0.5), 0, 100);
-            syncEffectiveStats(person);
-            refreshJobTable(person, v);
-            this.addForcedSpeaker(person);
-          }
+          person.bodyTraits.push("疫病");
+          person.hp = clampValue(round3((Number(person.hp) || 0) * 0.5), 0, 100);
+          syncEffectiveStats(person);
+          refreshJobTable(person, v);
+          this.addForcedSpeaker(person);
 
           const villageTraits = Array.isArray(v.villageTraits) ? v.villageTraits : (v.villageTraits = []);
           if (!villageTraits.includes("疫病流行")) {
             villageTraits.push("疫病流行");
           }
 
-          const names = infected.map(person => person.name).join("、");
-          v.log(`疫病の流行:${names}が疫病に倒れた。体力・筋力・耐久・器用0.5倍`);
+          v.log(`疫病の流行:${person.name}が疫病に倒れた。体力・筋力・耐久・器用0.5倍`);
         } else {
           return null;
         }
@@ -746,6 +768,38 @@ export class RandomEvents {
   static randChoice(arr) {
     if (!arr || arr.length === 0) return null;
     return arr[Math.floor(Math.random() * arr.length)];
+  }
+
+  static hasRelationship(person, rel) {
+    if (!person || !Array.isArray(person.relationships)) return false;
+    const normalized = normalizeRelationship(rel);
+    return person.relationships.some(existing => normalizeRelationship(existing) === normalized);
+  }
+
+  static hasMutualRelationship(a, b, prefix) {
+    return this.hasRelationship(a, `${prefix}:${b.name}`) &&
+      this.hasRelationship(b, `${prefix}:${a.name}`);
+  }
+
+  static hasRelationshipTo(person, target, prefixes) {
+    if (!person || !target?.name || !Array.isArray(person.relationships)) return false;
+    return person.relationships.some(existing => {
+      const parsed = parseRelationship(normalizeRelationship(existing));
+      return parsed?.target === target.name && prefixes.includes(parsed.prefix);
+    });
+  }
+
+  static hasPairRelationship(a, b, prefixes) {
+    return this.hasRelationshipTo(a, b, prefixes) ||
+      this.hasRelationshipTo(b, a, prefixes);
+  }
+
+  static hasHobby(person, hobby) {
+    return String(person?.hobby || "") === hobby;
+  }
+
+  static hasBodyTrait(person, trait) {
+    return Array.isArray(person?.bodyTraits) && person.bodyTraits.includes(trait);
   }
 
   /**

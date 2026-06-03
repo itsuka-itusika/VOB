@@ -142,6 +142,9 @@ button {
 .mobile-spirit-toggle {
   display: none;
 }
+.mobile-history-spirit-actions {
+  display: none;
+}
 .action-cell-controls {
   display: flex;
   align-items: center;
@@ -306,7 +309,7 @@ th, td {
 .log-area {
   height: 400px;
   overflow-y: auto;
-  --village-scale-image: url("../images/village-scale-01-unnamed-hamlet.png");
+  --village-scale-image: url("../images/village-scale-01-unnamed-hamlet.jpg");
   background:
     linear-gradient(rgba(255,255,255,0.86), rgba(255,255,255,0.91)),
     var(--village-scale-image) center / cover no-repeat #fff;
@@ -395,7 +398,7 @@ select {
   z-index: 998;
 }
 #villageScaleModal {
-  --village-scale-image: url("../images/village-scale-01-unnamed-hamlet.png");
+  --village-scale-image: url("../images/village-scale-01-unnamed-hamlet.jpg");
   position: fixed;
   top: 50%;
   left: 50%;
@@ -414,31 +417,31 @@ select {
 }
 body.scale-stage-0 .log-area,
 #villageScaleModal.scale-stage-0 {
-  --village-scale-image: url("../images/village-scale-01-unnamed-hamlet.png");
+  --village-scale-image: url("../images/village-scale-01-unnamed-hamlet.jpg");
 }
 body.scale-stage-1 .log-area,
 #villageScaleModal.scale-stage-1 {
-  --village-scale-image: url("../images/village-scale-02-small-frontier-village.png");
+  --village-scale-image: url("../images/village-scale-02-small-frontier-village.jpg");
 }
 body.scale-stage-2 .log-area,
 #villageScaleModal.scale-stage-2 {
-  --village-scale-image: url("../images/village-scale-03-border-village.png");
+  --village-scale-image: url("../images/village-scale-03-border-village.jpg");
 }
 body.scale-stage-3 .log-area,
 #villageScaleModal.scale-stage-3 {
-  --village-scale-image: url("../images/village-scale-04-traveler-stop.png");
+  --village-scale-image: url("../images/village-scale-04-traveler-stop.jpg");
 }
 body.scale-stage-4 .log-area,
 #villageScaleModal.scale-stage-4 {
-  --village-scale-image: url("../images/village-scale-05-rich-village.png");
+  --village-scale-image: url("../images/village-scale-05-rich-village.jpg");
 }
 body.scale-stage-5 .log-area,
 #villageScaleModal.scale-stage-5 {
-  --village-scale-image: url("../images/village-scale-06-prosperous-rural-village.png");
+  --village-scale-image: url("../images/village-scale-06-prosperous-rural-village.jpg");
 }
 body.scale-stage-6 .log-area,
 #villageScaleModal.scale-stage-6 {
-  --village-scale-image: url("../images/village-scale-07-autonomous-settlement.png");
+  --village-scale-image: url("../images/village-scale-07-autonomous-settlement.jpg");
 }
 .village-scale-modal-body {
   padding: 34px 38px 28px;
@@ -634,11 +637,24 @@ table.show-spirit-columns .spirit-column {
 }
 
 .foldable-info {
-  text-align: left;
+  text-align: center;
 }
-.foldable-info summary {
+
+.person-history-button {
+  min-width: 0;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: #6d5b34;
   cursor: pointer;
-  font-weight: bold;
+  font: inherit;
+  font-size: 0.82rem;
+}
+.person-history-button:hover,
+.person-history-button:focus {
+  background: #f4ead0;
+  color: #3d2b13;
 }
 
 /* ---------------------
@@ -720,9 +736,11 @@ section h2 {
   margin-top: 5px; /* ボタン群の上に少し余白を追加 (任意) */
 }
 
-/* モーダル: 建築・秘宝 */
+/* モーダル: 建築・秘宝・村史・個人記録 */
 #buildingOverlay,
-#secretTreasureOverlay {
+#secretTreasureOverlay,
+#historyOverlay,
+#personalHistoryOverlay {
   position: fixed;
   top:0; left:0;
   width:100%; height:100%;
@@ -731,7 +749,9 @@ section h2 {
   z-index:998;
 }
 #buildingModal,
-#secretTreasureModal {
+#secretTreasureModal,
+#historyModal,
+#personalHistoryModal {
   position: fixed;
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
@@ -747,8 +767,180 @@ section h2 {
   overflow-y: auto;
 }
 #buildingContent,
-#secretTreasureContent {
+#secretTreasureContent,
+#historyContent,
+#personalHistoryContent {
   margin-top: 5px;
+}
+#historyModal,
+#personalHistoryModal {
+  background: #f7f0e3;
+  border: 1px solid #9b875d;
+  box-shadow: 0 18px 48px rgba(28, 20, 10, 0.38);
+  color: #2f2618;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", "Times New Roman", serif;
+}
+#historyModal .modal-header,
+#personalHistoryModal .modal-header {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 3px double #bba575;
+  color: #2f2618;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+  font-size: 1.22rem;
+  font-weight: bold;
+}
+#historyContent,
+#personalHistoryContent {
+  padding: 18px 22px;
+  background:
+    linear-gradient(90deg, rgba(122, 94, 45, 0.06) 0, rgba(122, 94, 45, 0) 18px),
+    #fbf6ea;
+  border: 1px solid #e0d1ad;
+}
+.personal-history-summary {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  margin: 0 0 16px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #2f2618;
+  font-family: "Yu Gothic", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+}
+.personal-history-portrait-frame {
+  width: 96px;
+  aspect-ratio: 1;
+  background: #e8dfcb;
+  border: 1px solid #bda978;
+  overflow: hidden;
+}
+.personal-history-portrait-frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.personal-history-profile {
+  min-width: 0;
+}
+.personal-history-profile-name {
+  margin-bottom: 8px;
+  font-weight: bold;
+  font-size: 1.05rem;
+}
+.personal-history-profile-grid {
+  display: grid;
+  gap: 0;
+  overflow-x: auto;
+}
+.personal-history-profile-table {
+  display: grid;
+  grid-template-columns: 6em max-content max-content max-content max-content;
+  justify-content: start;
+  gap: 3px 10px;
+  align-items: baseline;
+  width: max-content;
+  padding-bottom: 7px;
+  border-bottom: 1px solid #d9ccb0;
+}
+.personal-history-profile-label {
+  color: #6d5b34;
+  font-size: 0.76rem;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.personal-history-profile-value {
+  min-width: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  white-space: nowrap;
+}
+.personal-history-profile-label.is-body,
+.personal-history-profile-label.is-spirit,
+.personal-history-profile-label.is-hobby,
+.personal-history-profile-value.is-body,
+.personal-history-profile-value.is-spirit,
+.personal-history-profile-value.is-hobby {
+  margin-left: 10px;
+}
+.personal-history-profile-field {
+  min-width: 0;
+}
+.personal-history-profile-field.is-detail {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 6em minmax(0, 1fr);
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid #d9ccb0;
+}
+.personal-history-profile-field span {
+  display: block;
+  color: #6d5b34;
+  font-size: 0.76rem;
+  line-height: 1.25;
+}
+.personal-history-profile-field strong {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+.personal-history-profile-field.is-detail span,
+.personal-history-profile-field.is-detail strong {
+  line-height: 1.55;
+}
+.personal-history-note {
+  margin: 0 0 14px;
+  padding: 8px 0;
+  border-top: 1px solid #e3d7bd;
+  border-bottom: 1px solid #e3d7bd;
+  color: #73654b;
+  font-size: 0.92rem;
+}
+.history-list {
+  display: grid;
+  gap: 0;
+}
+.history-entry {
+  background: transparent;
+  border-bottom: 1px solid #e5d8b8;
+  padding: 11px 0 12px;
+}
+.history-entry:first-child {
+  padding-top: 0;
+}
+.history-entry:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.history-record-line {
+  display: grid;
+  grid-template-columns: 7.5em minmax(0, 1fr);
+  gap: 12px;
+  align-items: baseline;
+  margin: 0;
+  line-height: 1.8;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", "Times New Roman", serif;
+  font-size: 1.02rem;
+}
+.history-date {
+  color: #7a633b;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+  white-space: nowrap;
+}
+.history-record-text {
+  color: #2f2618;
+  overflow-wrap: anywhere;
+}
+.history-empty {
+  color: #73654b;
+  padding: 12px 0;
+  line-height: 1.8;
 }
 .secret-treasure-select-label,
 .secret-treasure-target-label {
@@ -1211,6 +1403,75 @@ section h2 {
   background-color: #45a049;
 }
 
+#raidWarningOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 2100;
+}
+
+#raidWarningModal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  border: 2px solid #aaa;
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+  width: 600px;
+  max-width: 90%;
+  max-height: 90vh;
+  box-sizing: border-box;
+  padding: 20px;
+  overflow-y: auto;
+  z-index: 2101;
+}
+
+#raidWarningModal h2 {
+  margin: 0 0 12px;
+  color: #9d2b22;
+  font-size: 1.2rem;
+  letter-spacing: 0;
+}
+
+#raidWarningModal .raid-warning-text p {
+  margin: 0 0 12px;
+  line-height: 1.6;
+}
+
+#raidWarningModal .raid-warning-detail {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #ddd;
+  color: #555;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+#raidWarningModal .modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+#raidWarningModal .modal-buttons button {
+  min-width: 104px;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  background-color: #f0f0f0;
+  cursor: pointer;
+}
+
+#raidWarningModal .modal-buttons button:hover:not(:disabled) {
+  background-color: #e0e0e0;
+}
+
+#raidWarningModal .modal-buttons button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 /* 交換モーダル用のスタイル */
 #exchangeOverlay,
 #panFluteExchangeOverlay {
@@ -1552,6 +1813,9 @@ body.mobile-mode .special-action-buttons {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
 }
+body.mobile-mode .pc-history-button {
+  display: none;
+}
 body.mobile-mode .utility-actions {
   display: grid;
   order: 1;
@@ -1577,10 +1841,16 @@ body.mobile-mode .utility-actions button {
   font-size: 0.75rem;
   line-height: 1.15;
 }
-body.mobile-mode .mobile-spirit-toggle {
+body.mobile-mode .mobile-history-spirit-actions {
   order: 1;
   grid-row: 1;
   grid-column: 4 / span 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px;
+}
+body.mobile-mode .mobile-spirit-toggle,
+body.mobile-mode .mobile-history-button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1591,14 +1861,19 @@ body.mobile-mode .mobile-spirit-toggle {
   background: #eee;
   box-sizing: border-box;
   font-size: 0.72rem;
+  line-height: 1.1;
   cursor: pointer;
   user-select: none;
+}
+body.mobile-mode .mobile-history-button {
+  margin: 0;
+  color: #111;
 }
 body.mobile-mode .mobile-spirit-toggle input {
   width: 14px;
   height: 14px;
   min-height: 0;
-  margin: 0 3px 0 0;
+  margin: 0 2px 0 0;
 }
 body.mobile-mode .message-window {
   flex: 0 0 auto;
@@ -1857,10 +2132,72 @@ body.mobile-mode .dictionary-content {
   padding: 5px 6px;
   font-size: 0.72rem;
 }
+body.mobile-mode .person-history-button {
+  width: 100%;
+  min-width: 0;
+  padding: 1px;
+  font-size: 0.62rem;
+  line-height: 1.2;
+}
+body.mobile-mode .personal-history-summary {
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 8px;
+  padding: 0;
+}
+body.mobile-mode .personal-history-portrait-frame {
+  width: 64px;
+}
+body.mobile-mode .personal-history-profile-name {
+  margin-bottom: 5px;
+  font-size: 0.9rem;
+}
+body.mobile-mode .personal-history-profile-grid {
+  gap: 5px;
+}
+body.mobile-mode .personal-history-profile-table {
+  grid-template-columns: 3.2em max-content max-content max-content max-content;
+  gap: 2px;
+  padding-bottom: 5px;
+}
+body.mobile-mode .personal-history-profile-field.is-detail {
+  grid-column: 1 / -1;
+  grid-template-columns: 3.2em minmax(0, 1fr);
+  gap: 6px;
+  padding: 5px 0;
+}
+body.mobile-mode .personal-history-profile-label {
+  font-size: 0.58rem;
+}
+body.mobile-mode .personal-history-profile-value {
+  font-size: 0.6rem;
+  line-height: 1.3;
+}
+body.mobile-mode .personal-history-profile-label.is-body,
+body.mobile-mode .personal-history-profile-label.is-spirit,
+body.mobile-mode .personal-history-profile-label.is-hobby,
+body.mobile-mode .personal-history-profile-value.is-body,
+body.mobile-mode .personal-history-profile-value.is-spirit,
+body.mobile-mode .personal-history-profile-value.is-hobby {
+  margin-left: 0;
+}
+body.mobile-mode .personal-history-profile-field span {
+  font-size: 0.68rem;
+}
+body.mobile-mode .personal-history-profile-field strong {
+  font-size: 0.75rem;
+}
+body.mobile-mode .history-record-line {
+  grid-template-columns: 5.8em minmax(0, 1fr);
+  gap: 7px;
+  line-height: 1.65;
+}
 body.mobile-mode #miracleModal,
 body.mobile-mode #buildingModal,
 body.mobile-mode #secretTreasureModal,
+body.mobile-mode #historyModal,
+body.mobile-mode #personalHistoryModal,
 body.mobile-mode #conversationModal,
+body.mobile-mode #raidWarningModal,
 body.mobile-mode #exchangeModal,
 body.mobile-mode #panFluteExchangeModal,
 body.mobile-mode #raidModal,
@@ -1891,6 +2228,12 @@ body.mobile-mode .modal-buttons {
   padding: 6px 8px;
   background: #fff;
   border-top: 1px solid #ddd;
+}
+body.mobile-mode #historyModal .modal-buttons,
+body.mobile-mode #personalHistoryModal .modal-buttons {
+  background: #f7f0e3;
+  border-top: 1px solid #d2bd8b;
+  box-shadow: 0 -8px 0 #f7f0e3;
 }
 body.mobile-mode .modal-buttons button,
 body.mobile-mode #actionButtons button,

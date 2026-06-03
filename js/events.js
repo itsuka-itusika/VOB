@@ -3,8 +3,9 @@
 import { randInt, clampValue, round3, getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "./util.js";
 import { doLoverCheck, doMarriageCheck, clearRelationshipsForDepartedVillager } from "./relationships.js";
 import { createRandomVillager, createRandomVisitor } from "./createVillagers.js";
-import { startRaidEvent } from "./raidStart.js";
+import { processRaidScheduleAtMonthStart } from "./raidSchedule.js";
 import { RandomEvents } from "./RandomEvents.js";
+import { recordCriticalHistory, recordVillagerDeathHistory } from "./history.js";
 import { handleBirthAndPostpartum, handlePregnancyChecks, updateChildGrowthStage } from "./reproduction.js";
 import { showFestivalModal } from "./festivalModal.js";
 import { runHeadmanElectionIfDue } from "./headmanElection.js";
@@ -25,6 +26,32 @@ import { syncEffectiveStats } from "./domain/statLayers.js";
 
 const OPENING_RAID_GRACE_YEAR = 1091;
 const OPENING_RAID_GRACE_LAST_MONTH = 6;
+
+function resetMonthlySocialAttemptFlags(village) {
+  (village.villagers || []).forEach(person => {
+    person.socialAttemptedThisMonth = false;
+  });
+}
+
+function applySecurityBaselineDecay(village) {
+  const villagers = Array.isArray(village.villagers) ? village.villagers : [];
+  const averageEthics = villagers.length > 0
+    ? villagers.reduce((sum, person) => sum + (Number(person.eth) || 0), 0) / villagers.length
+    : 0;
+  const baselineSecurity = round3(averageEthics * 3 + 5);
+  const currentSecurity = Math.round(Number(village.security) || 0);
+  if (currentSecurity <= baselineSecurity) return;
+
+  const rawSecurityLoss = (currentSecurity - baselineSecurity) / 5;
+  if (rawSecurityLoss < 1) return;
+
+  const securityLoss = Math.round(rawSecurityLoss);
+  const nextSecurity = clampValue(currentSecurity - securityLoss, 0, 100);
+  const actualLoss = currentSecurity - nextSecurity;
+
+  village.security = nextSecurity;
+  village.log(`治安自然低下: 基礎値${baselineSecurity}を上回ったため治安-${actualLoss}`);
+}
 
 /**
  * 固定イベント(前半) - 新年祭など
@@ -111,7 +138,7 @@ function harvestFestival(v) {
 function starsFestival(v) {
   showFestivalModal("stars");
   v.log("【星霜祭】恋人判定");
-  doLoverCheck(v);
+  doLoverCheck(v, { source: "星霜祭" });
 }
 
 // -------------------------
@@ -125,12 +152,9 @@ export function doRandomEventPost(village) {
 }
 
 export function doRaidStartCheck(village) {
-  if (isOpeningRaidGraceActive(village)) return;
-
-  const raidProb = village.villageTraits.includes("荒廃") ? 0.4 : 0.2;
-  if (Math.random() < raidProb) {
-    startRaidEvent(village);
-  }
+  processRaidScheduleAtMonthStart(village, {
+    suspendReservation: isOpeningRaidGraceActive(village)
+  });
 }
 
 function isOpeningRaidGraceActive(village) {
@@ -291,6 +315,8 @@ export function endOfMonthProcess(v) {
   if (totalF>0) v.log(`食料-${totalF}`);
   if (totalMat>0) v.log(`資材-${totalMat}`);
 
+  applySecurityBaselineDecay(v);
+
   let removeList=["豊穣","訪問者","襲撃者","ミダス"];
   // "襲撃中" はここでは消さない(raid.js 内で完了時に消す)
   v.villageTraits = v.villageTraits.filter(tr=> !removeList.includes(tr));
@@ -300,6 +326,7 @@ export function endOfMonthProcess(v) {
   deadPeople.forEach(p => {
     let index = v.villagers.indexOf(p);
     if (index !== -1) {
+      recordVillagerDeathHistory(v, p, { reason: "老衰" });
       clearRelationshipsForDepartedVillager(v, p);
       v.villagers.splice(index, 1);
       v.log(`${p.name}は老衰により死亡した...`);
@@ -364,6 +391,24 @@ export function endOfMonthProcess(v) {
     }
   });
 
+  // 肖像の効果期間更新 (1ヶ月経過した場合、効果を終了)
+  v.villagers.forEach(p => {
+    if (p.mindTraits.includes("肖像")) {
+      if (typeof p.portraitMonths !== "number") {
+        p.portraitMonths = 0;
+      }
+      p.portraitMonths++;
+      if (p.portraitMonths >= 1) {
+        p.mindTraits = p.mindTraits.filter(trait => trait !== "肖像");
+        p.portraitMonths = 0;
+        p.portraitEthLoss = 0;
+        syncEffectiveStats(p);
+        refreshJobTable(p, v);
+        v.log(`【肖像終了】${p.name}の肖像効果が切れました`);
+      }
+    }
+  });
+
   // 状態異常の解除処理
   v.villagers.forEach(p => {
     let changed = false;
@@ -404,6 +449,7 @@ export function endOfMonthProcess(v) {
  */
 export function doMonthStartProcess(v) {
   v.log("【月初処理】");
+  resetMonthlySocialAttemptFlags(v);
 
   // 治安30以下で荒廃状態に
   if (v.security <= 30 && !v.villageTraits.includes("荒廃")) {
@@ -416,6 +462,7 @@ export function doMonthStartProcess(v) {
     if (p.bodyTraits.includes("老人") && !p.bodyTraits.includes("危篤")) {
       if (Math.random() < 0.05) {  // 5%の確率
         p.bodyTraits.push("危篤");
+        recordCriticalHistory(v, p, { reason: "老衰" });
         v.log(`${p.name}は老衰により危篤状態になった...`);
       }
     }
@@ -535,7 +582,7 @@ export function doMonthStartProcess(v) {
       let visitor = createRandomVisitor([
         ...v.villagers.map(person => person.name),
         ...v.visitors.map(person => person.name)
-      ]);
+      ], null, v);
       v.visitors.push(visitor);
       v.log(`訪問者 ${visitor.name} が村を訪れました`);
     }
@@ -558,7 +605,7 @@ export function doMonthStartProcess(v) {
 
     const preferredAction = String(p.preferredAction || p.job || ACTION_NONE).trim() || ACTION_NONE;
     const hasPreferredAction = preferredAction !== ACTION_NONE && p.actionTable.includes(preferredAction);
-    const isRaidAction = currentAction === "迎撃" || currentAction === "罠作成";
+    const isRaidAction = currentAction === "迎撃" || currentAction === "籠城" || currentAction === "射撃" || currentAction === "罠作成";
     const isFixedAction = [ACTION_CRADLE, ACTION_HEAL, ACTION_LAST_MOMENTS].includes(p.action);
 
     if (!isFixedAction && (isTemporaryAction(currentAction) || isRaidAction || !p.actionTable.includes(currentAction))) {
@@ -681,7 +728,7 @@ function showSeasonChangeDialog(season) {
   if (typeof document === "undefined") return;
   const seasonData = {
     "春": {
-      image: "../images/seasons/spring.png",
+      image: "../images/seasons/spring.jpg",
       message: "暖かな風が吹き、新しい命が芽吹く季節となりました。",
       accent: "#ffd6e7",
       tips: [
@@ -690,16 +737,17 @@ function showSeasonChangeDialog(season) {
       ]
     },
     "夏": {
-      image: "../images/seasons/summer.png",
+      image: "../images/seasons/summer.jpg",
       message: "太陽が高く昇り、生命力溢れる季節となりました。",
       accent: "#ffe39a",
       tips: [
+        "漁の成果が1.2倍になります。",
         "月末の夏至祭では体力・メンタルが回復し、結婚判定があります。",
         "ランダムイベントの猛暑や冷夏には注意してください。"
       ]
     },
     "秋": {
-      image: "../images/seasons/autumn.png",
+      image: "../images/seasons/autumn.jpg",
       message: "実りの秋を迎え、収穫の季節となりました。",
       accent: "#ffd08a",
       tips: [
@@ -708,7 +756,7 @@ function showSeasonChangeDialog(season) {
       ]
     },
     "冬": {
-      image: "../images/seasons/winter.png",
+      image: "../images/seasons/winter.jpg",
       message: "寒さが厳しくなり、静かな季節となりました。",
       accent: "#d5e8ff",
       tips: [
