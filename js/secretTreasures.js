@@ -24,6 +24,7 @@ const SECRET_TREASURE_SELL_PRICES = {
   chronos_elixir: 500,
   old_priest_statue: 100,
   pan_flute: 300,
+  grotesque_portrait: 500,
   golden_mask: 300,
   blue_stone_tablet: 150
 };
@@ -168,6 +169,24 @@ function applyNike(village) {
   showSecretTreasureResult(village, "腕の無い天使像", "村人たちに勝利を呼ぶ気配が宿りました。", getVillagers(village));
 }
 
+function canUsePortraitOn(person) {
+  return (Number(person?.eth) || 0) >= 2;
+}
+
+function applyGrotesquePortrait(village, target) {
+  const ethLoss = clampValue(round3((Number(target.eth) || 0) - 1), 0, 100);
+  target.mindTraits = Array.isArray(target.mindTraits) ? target.mindTraits : [];
+  if (!target.mindTraits.includes("肖像")) {
+    target.mindTraits.push("肖像");
+  }
+  target.portraitEthLoss = ethLoss;
+  target.portraitMonths = 0;
+  syncEffectiveStats(target);
+  refreshJobTable(target, village);
+  village.log(`【秘宝】悍ましい肖像画を${target.name}に使いました。倫理-${ethLoss}、魅力+${ethLoss}`);
+  showSecretTreasureResult(village, "悍ましい肖像画", `${target.name}の内に暗い美が宿りました。`, [target]);
+}
+
 function growToSixteen(person, village) {
   const oldBodyAge = Number(person.bodyAge) || 0;
   const oldSpiritAge = Number(person.spiritAge) || 0;
@@ -292,6 +311,16 @@ export const SECRET_TREASURES = [
     }
   },
   {
+    id: "grotesque_portrait",
+    name: "悍ましい肖像画",
+    desc: "倫理が2以上の村人1名に使用可能。今月のみ精神特性「肖像」を付与し、倫理を1まで下げ、下がった分だけ魅力を上げる。",
+    sellPrice: SECRET_TREASURE_SELL_PRICES.grotesque_portrait,
+    target: "villager",
+    targetFilter: canUsePortraitOn,
+    targetBlockedReason: "倫理が2以上の村人が必要です",
+    use: (village, target) => applyGrotesquePortrait(village, target)
+  },
+  {
     id: "chronos_elixir",
     name: "クロノスの秘薬",
     desc: "肉体年齢15以下または精神年齢15以下の村人に使用可能。該当する年齢を16まで成長させ、潜在成長も反映する。",
@@ -388,11 +417,16 @@ function getSecretTreasureLabel(entry) {
 
 function getTargetCandidates(village, definition) {
   const villagers = getVillagers(village);
+  let candidates = [];
   if (definition.target === "childVillager") {
-    return villagers.filter(person => (Number(person.bodyAge) || 0) <= 15 || (Number(person.spiritAge) || 0) <= 15);
+    candidates = villagers.filter(person => (Number(person.bodyAge) || 0) <= 15 || (Number(person.spiritAge) || 0) <= 15);
+  } else if (definition.target === "villager") {
+    candidates = villagers;
   }
-  if (definition.target === "villager") return villagers;
-  return [];
+  if (typeof definition.targetFilter === "function") {
+    candidates = candidates.filter(person => definition.targetFilter(person, village));
+  }
+  return candidates;
 }
 
 function isSecretTreasureUsable(village, definition) {
@@ -409,7 +443,9 @@ function getSecretTreasureBlockedReason(village, definition) {
       ? definition.blockedReason(village)
       : definition.blockedReason || "使用条件を満たしていません";
   }
-  if (definition.target && getTargetCandidates(village, definition).length === 0) return "対象になる村人がいません";
+  if (definition.target && getTargetCandidates(village, definition).length === 0) {
+    return definition.targetBlockedReason || "対象になる村人がいません";
+  }
   return "";
 }
 

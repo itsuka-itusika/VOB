@@ -153,6 +153,9 @@ export class Villager {
     this.ares = 0;
     // ニケ効果期間管理用
     this.nikeMonths = 0;
+    // 肖像効果期間・倫理低下量管理用
+    this.portraitMonths = 0;
+    this.portraitEthLoss = 0;
 
     /** 顔グラフィックのファイル名 */
     this.portraitFile = "default.png";

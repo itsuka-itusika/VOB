@@ -391,6 +391,24 @@ export function endOfMonthProcess(v) {
     }
   });
 
+  // 肖像の効果期間更新 (1ヶ月経過した場合、効果を終了)
+  v.villagers.forEach(p => {
+    if (p.mindTraits.includes("肖像")) {
+      if (typeof p.portraitMonths !== "number") {
+        p.portraitMonths = 0;
+      }
+      p.portraitMonths++;
+      if (p.portraitMonths >= 1) {
+        p.mindTraits = p.mindTraits.filter(trait => trait !== "肖像");
+        p.portraitMonths = 0;
+        p.portraitEthLoss = 0;
+        syncEffectiveStats(p);
+        refreshJobTable(p, v);
+        v.log(`【肖像終了】${p.name}の肖像効果が切れました`);
+      }
+    }
+  });
+
   // 状態異常の解除処理
   v.villagers.forEach(p => {
     let changed = false;

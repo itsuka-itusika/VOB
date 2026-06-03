@@ -48,6 +48,13 @@ const LEGACY_TEMP_BODY_TRAIT_EFFECTS = Object.freeze({
   "火星の加護": { mul: { str: 1.6, vit: 1.6, cou: 1.6, int: 0.2, ind: 0.2, eth: 0.2 } }
 });
 
+function getPortraitEffect(person) {
+  const mindTraits = Array.isArray(person?.mindTraits) ? person.mindTraits : [];
+  if (!mindTraits.includes("肖像")) return null;
+  const ethLoss = clampValue(round3(numberOr(person.portraitEthLoss, 0)), 0, 100);
+  return ethLoss > 0 ? { add: { eth: -ethLoss, chr: ethLoss } } : null;
+}
+
 export function createStatMap(initialValue = 0) {
   return Object.fromEntries(ABILITY_STATS.map(stat => [stat, initialValue]));
 }
@@ -98,6 +105,7 @@ function getTemporaryEffect(person, { includeLegacyAres = false } = {}) {
 
   bodyTraits.forEach(trait => applyEffect(bodyEffects[trait]));
   mindTraits.forEach(trait => applyEffect(TEMP_MIND_TRAIT_EFFECTS[trait]));
+  applyEffect(getPortraitEffect(person));
   return { mul, add };
 }
 
