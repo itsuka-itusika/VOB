@@ -99,7 +99,7 @@ export function handleAllVillagerJobs(village) {
 
       let roll = randInt(1, 100);
       // サボり判定
-      if (roll <= saboProb && p.action !== "休養" && p.action !== "余暇" && p.action !== "なし" && p.action !== "揺籃" && p.action !== "迎撃" && p.action !== "罠作成" && p.action !== "療養" && p.action !== "臨終") {
+      if (roll <= saboProb && p.action !== "休養" && p.action !== "余暇" && p.action !== "なし" && p.action !== "揺籃" && p.action !== "迎撃" && p.action !== "籠城" && p.action !== "射撃" && p.action !== "罠作成" && p.action !== "療養" && p.action !== "臨終") {
         doSabori(p, village);
       } else {
         doJobAction(p, village, secretTreasureFlags);
@@ -320,9 +320,11 @@ function doJobAction(p, v, secretTreasureFlags = null) {
       doBrewing(p, v);
       if (secretTreasureFlags) secretTreasureFlags.field = true;
       break;
-    // "罠作成", "迎撃" は襲撃専用(raid.js)で処理するので、ここはログだけ
+    // "罠作成", "射撃", "迎撃", "籠城" は襲撃専用(raid.js)で処理するので、ここはログだけ
     case "罠作成":
+    case "射撃":
     case "迎撃":
+    case "籠城":
       v.log(`${p.name}は${p.action}(襲撃専用フェーズで実行)`);
       break;
 

@@ -240,8 +240,8 @@ export const SECRET_TREASURES = [
     name: "黄金の林檎",
     desc: "襲撃を発生させる。襲撃中は使用不可。",
     sellPrice: SECRET_TREASURE_SELL_PRICES.golden_apple,
-    canUse: (village) => !village.villageTraits?.includes("襲撃中") && !(Array.isArray(village.raidEnemies) && village.raidEnemies.length > 0),
-    blockedReason: "襲撃中は使用できません",
+    canUse: (village) => !village.pendingRaid && !village.villageTraits?.includes("襲撃中") && !(Array.isArray(village.raidEnemies) && village.raidEnemies.length > 0),
+    blockedReason: "襲撃中または襲撃予約中は使用できません",
     use: (village) => {
       village.log("【秘宝】黄金の林檎を使いました。襲撃を呼び寄せます");
       showSecretTreasureResult(village, "黄金の林檎", "黄金の林檎の甘い香りが災いを呼び、村の外に不穏な影が集まりました。");

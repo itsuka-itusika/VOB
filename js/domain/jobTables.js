@@ -1,5 +1,15 @@
 import { isForcedHealingAction } from "../util.js";
-import { ACTION_DEFEND, ACTION_TRAP, canDefendInRaid, canMakeTrapInRaid } from "../raidRules.js";
+import {
+  ACTION_DEFEND,
+  ACTION_FORTIFY,
+  ACTION_SHOOT,
+  ACTION_TRAP,
+  RAID_ACTIONS,
+  canDefendInRaid,
+  canFortifyInRaid,
+  canMakeTrapInRaid,
+  canShootInRaid
+} from "../raidRules.js";
 import { syncEffectiveStats } from "./statLayers.js";
 
 export const ACTION_NONE = "なし";
@@ -18,6 +28,8 @@ const NON_PREFERRED_ACTIONS = new Set([
   ACTION_HEAL,
   ACTION_LAST_MOMENTS,
   ACTION_DEFEND,
+  ACTION_FORTIFY,
+  ACTION_SHOOT,
   ACTION_TRAP,
   "訪問",
   "襲撃"
@@ -98,10 +110,12 @@ function addRaidActionsIfAllowed(person, village) {
 
   const raidActions = [];
   if (canDefendInRaid(person)) raidActions.push(ACTION_DEFEND);
+  if (canFortifyInRaid(person, village)) raidActions.push(ACTION_FORTIFY);
+  if (canShootInRaid(person, village)) raidActions.push(ACTION_SHOOT);
   if (canMakeTrapInRaid(person)) raidActions.push(ACTION_TRAP);
   if (raidActions.length === 0) return;
 
-  person.actionTable = person.actionTable.filter(action => action !== ACTION_DEFEND && action !== ACTION_TRAP);
+  person.actionTable = person.actionTable.filter(action => !RAID_ACTIONS.includes(action));
   person.actionTable.unshift(...raidActions);
 }
 

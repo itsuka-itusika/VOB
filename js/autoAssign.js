@@ -10,10 +10,15 @@ import {
 import { getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "./util.js";
 import {
   ACTION_DEFEND,
+  ACTION_FORTIFY,
+  ACTION_SHOOT,
   ACTION_TRAP,
+  canFortifyInRaid,
   canDefendInRaid,
   canMakeTrapInRaid,
   canPerformRaidAction,
+  canShootInRaid,
+  isRaidAction,
   isRaidActive
 } from "./raidRules.js";
 
@@ -346,9 +351,9 @@ function canUseAction(person, action) {
 
 function chooseRaidFallbackAction(person, currentPreferred, currentAction) {
   const actionTable = Array.isArray(person.actionTable) ? person.actionTable : [];
-  const isRaidAction = currentAction === ACTION_DEFEND || currentAction === ACTION_TRAP;
+  const isCurrentRaidAction = isRaidAction(currentAction);
 
-  if (!isRaidAction && actionTable.includes(currentAction)) {
+  if (!isCurrentRaidAction && actionTable.includes(currentAction)) {
     return currentAction;
   }
   if (actionTable.includes(currentPreferred)) {
@@ -374,8 +379,27 @@ function getExpectedTrapDamage(person) {
   return ((Number(person.dex) || 0) * (Number(person.int) || 0) / 400) * 30;
 }
 
+function getExpectedShootDamage(person, village) {
+  const enemies = Array.isArray(village?.raidEnemies)
+    ? village.raidEnemies.filter(enemy => (Number(enemy.hp) || 0) > 0)
+    : [];
+  const avgEnemyVit = enemies.length > 0
+    ? enemies.reduce((sum, enemy) => sum + (Number(enemy.vit) || 0), 0) / enemies.length
+    : 0;
+  const damage = ((Number(person.dex) || 0) * (Number(person.cou) || 0) / 400) * 40 - avgEnemyVit * 1.5;
+  return Math.max(0, damage);
+}
+
 function isSafeDefender(person) {
   return (Number(person.hp) || 0) >= 55 && (Number(person.mp) || 0) >= 20;
+}
+
+function isSafeFortifier(person) {
+  return (Number(person.hp) || 0) >= 50 && (Number(person.mp) || 0) >= 15;
+}
+
+function isSafeShooter(person) {
+  return (Number(person.hp) || 0) >= 35 && (Number(person.mp) || 0) >= 10;
 }
 
 function isSafeTrapMaker(person) {
@@ -406,6 +430,27 @@ function getTrapScore(person) {
   );
 }
 
+function getShooterScore(person, village) {
+  const damage = getExpectedShootDamage(person, village);
+  if (damage <= 0) return -Infinity;
+
+  return (
+    damage * 3.2
+    + (Number(person.dex) || 0) * 2.0
+    + (Number(person.cou) || 0) * 1.7
+    + (Number(person.hp) || 0) * 0.25
+  ) * getHealthFactor(person);
+}
+
+function getFortifierScore(person) {
+  return (
+    (Number(person.vit) || 0) * 2.4
+    + (Number(person.hp) || 0) * 0.8
+    + (Number(person.cou) || 0) * 1.2
+    + (Number(person.str) || 0) * 0.6
+  ) * getHealthFactor(person);
+}
+
 function getRaidAssignmentProfile(person, village) {
   const currentPreferred = person.preferredAction || person.job || JOB_NONE;
   const currentAction = person.action;
@@ -417,36 +462,49 @@ function getRaidAssignmentProfile(person, village) {
   const fallbackAction = chooseRaidFallbackAction(person, keptPreferred, currentAction);
   const canDefendByRule = canDefendInRaid(person);
   const canTrapByRule = canMakeTrapInRaid(person);
+  const canShootByRule = canShootInRaid(person, village);
+  const canFortifyByRule = canFortifyInRaid(person, village);
 
   const defenderDamage = getExpectedDefenderDamage(person);
   const trapDamage = getExpectedTrapDamage(person);
+  const shootDamage = getExpectedShootDamage(person, village);
   const canDefend = canDefendByRule && canUseAction(person, ACTION_DEFEND) && isSafeDefender(person) && defenderDamage >= 8;
   const canTrap = canTrapByRule && canUseAction(person, ACTION_TRAP) && isSafeTrapMaker(person) && trapDamage >= 6;
+  const canShoot = canShootByRule && canUseAction(person, ACTION_SHOOT) && isSafeShooter(person) && shootDamage >= 5;
+  const canFortify = canFortifyByRule && canUseAction(person, ACTION_FORTIFY) && isSafeFortifier(person);
 
   return {
     person,
     fallback: { preferredAction: keptPreferred, action: fallbackAction },
-    forcedNormal: !canDefendByRule && !canTrapByRule,
+    forcedNormal: !canDefendByRule && !canTrapByRule && !canShootByRule && !canFortifyByRule,
     canDefend,
     canTrap,
+    canShoot,
+    canFortify,
     defenderScore: canDefend ? getDefenderScore(person) : -Infinity,
     trapScore: canTrap ? getTrapScore(person) : -Infinity,
+    shooterScore: canShoot ? getShooterScore(person, village) : -Infinity,
+    fortifierScore: canFortify ? getFortifierScore(person) : -Infinity,
     defenderDamage: canDefend ? defenderDamage : 0,
-    trapDamage: canTrap ? trapDamage : 0
+    trapDamage: canTrap ? trapDamage : 0,
+    shootDamage: canShoot ? shootDamage : 0
   };
 }
 
-function getMinimumDefenders(village, profiles) {
+function getMinimumFrontliners(village, profiles) {
   const enemyCount = Array.isArray(village.raidEnemies) ? village.raidEnemies.length : 0;
-  const activeProfiles = profiles.filter(profile => !profile.forcedNormal && (profile.canDefend || profile.canTrap));
-  const defenderOptions = activeProfiles.filter(profile => profile.canDefend && Number.isFinite(profile.defenderScore));
+  const activeProfiles = profiles.filter(profile => !profile.forcedNormal && (profile.canDefend || profile.canFortify || profile.canShoot || profile.canTrap));
+  const frontOptions = activeProfiles.filter(profile =>
+    (profile.canDefend && Number.isFinite(profile.defenderScore)) ||
+    (profile.canFortify && Number.isFinite(profile.fortifierScore))
+  );
 
-  if (defenderOptions.length === 0 || activeProfiles.length === 0) {
+  if (frontOptions.length === 0 || activeProfiles.length === 0) {
     return 0;
   }
 
   return Math.min(
-    defenderOptions.length,
+    frontOptions.length,
     Math.max(1, Math.ceil(Math.min(enemyCount || 1, activeProfiles.length) / 2))
   );
 }
@@ -454,23 +512,34 @@ function getMinimumDefenders(village, profiles) {
 function buildRaidAssignments(village, targets) {
   const assignments = new Map();
   const profiles = targets.map(person => getRaidAssignmentProfile(person, village));
-  const minimumDefenders = getMinimumDefenders(village, profiles);
-  const defenderSlots = new Set(
+  const minimumFrontliners = getMinimumFrontliners(village, profiles);
+  const frontlinerSlots = new Set(
     profiles
-      .filter(profile => !profile.forcedNormal && profile.canDefend && Number.isFinite(profile.defenderScore))
-      .sort((a, b) => b.defenderScore - a.defenderScore)
-      .slice(0, minimumDefenders)
+      .filter(profile => !profile.forcedNormal && (
+        (profile.canDefend && Number.isFinite(profile.defenderScore)) ||
+        (profile.canFortify && Number.isFinite(profile.fortifierScore))
+      ))
+      .sort((a, b) => Math.max(b.defenderScore, b.fortifierScore) - Math.max(a.defenderScore, a.fortifierScore))
+      .slice(0, minimumFrontliners)
       .map(profile => profile.person)
   );
 
   profiles.forEach(profile => {
-    if (profile.forcedNormal || (!profile.canDefend && !profile.canTrap)) {
+    if (profile.forcedNormal || (!profile.canDefend && !profile.canFortify && !profile.canShoot && !profile.canTrap)) {
       assignments.set(profile.person, profile.fallback);
       return;
     }
 
-    if (defenderSlots.has(profile.person)) {
-      assignments.set(profile.person, { preferredAction: profile.fallback.preferredAction, action: ACTION_DEFEND });
+    if (frontlinerSlots.has(profile.person)) {
+      const action = profile.canDefend && profile.defenderScore >= profile.fortifierScore * 0.8
+        ? ACTION_DEFEND
+        : (profile.canFortify ? ACTION_FORTIFY : ACTION_DEFEND);
+      assignments.set(profile.person, { preferredAction: profile.fallback.preferredAction, action });
+      return;
+    }
+
+    if (profile.canShoot && profile.shooterScore >= Math.max(profile.trapScore, profile.defenderScore) * 0.9) {
+      assignments.set(profile.person, { preferredAction: profile.fallback.preferredAction, action: ACTION_SHOOT });
       return;
     }
 
@@ -479,8 +548,18 @@ function buildRaidAssignments(village, targets) {
       return;
     }
 
+    if (profile.canShoot) {
+      assignments.set(profile.person, { preferredAction: profile.fallback.preferredAction, action: ACTION_SHOOT });
+      return;
+    }
+
     if (profile.canDefend) {
       assignments.set(profile.person, { preferredAction: profile.fallback.preferredAction, action: ACTION_DEFEND });
+      return;
+    }
+
+    if (profile.canFortify) {
+      assignments.set(profile.person, { preferredAction: profile.fallback.preferredAction, action: ACTION_FORTIFY });
       return;
     }
 
@@ -519,6 +598,8 @@ export function autoAssignRaidActions(village) {
 
   let changed = 0;
   let defenders = 0;
+  let fortifiers = 0;
+  let shooters = 0;
   let trapMakers = 0;
   let nonParticipants = 0;
   const targets = Array.isArray(village.villagers) ? village.villagers : [];
@@ -536,10 +617,12 @@ export function autoAssignRaidActions(village) {
     setPreferredAction(person, next.preferredAction);
     person.action = next.action;
 
-    if (person.action === ACTION_DEFEND && canPerformRaidAction(person, ACTION_DEFEND)) defenders++;
-    else if (person.action === ACTION_TRAP && canPerformRaidAction(person, ACTION_TRAP)) trapMakers++;
+    if (person.action === ACTION_DEFEND && canPerformRaidAction(person, ACTION_DEFEND, village)) defenders++;
+    else if (person.action === ACTION_FORTIFY && canPerformRaidAction(person, ACTION_FORTIFY, village)) fortifiers++;
+    else if (person.action === ACTION_SHOOT && canPerformRaidAction(person, ACTION_SHOOT, village)) shooters++;
+    else if (person.action === ACTION_TRAP && canPerformRaidAction(person, ACTION_TRAP, village)) trapMakers++;
     else nonParticipants++;
   });
 
-  village.log(`迎撃割り振り: ${changed}人を更新しました。迎撃${defenders}人、罠作成${trapMakers}人、不参加${nonParticipants}人`);
+  village.log(`防衛割り振り: ${changed}人を更新しました。迎撃${defenders}人、籠城${fortifiers}人、射撃${shooters}人、罠作成${trapMakers}人、不参加${nonParticipants}人`);
 }

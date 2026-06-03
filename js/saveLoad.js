@@ -21,6 +21,10 @@ function cloneNullableObject(value) {
   return value == null ? null : { ...value };
 }
 
+function cloneNullableDeepObject(value) {
+  return value == null ? null : JSON.parse(JSON.stringify(value));
+}
+
 function hasOwn(obj, key) {
   return Object.prototype.hasOwnProperty.call(obj, key);
 }
@@ -156,6 +160,9 @@ function convertVillageToObject(village) {
     raidTurnCount: village.raidTurnCount,
     currentActionIndex: village.currentActionIndex,
     currentRaid: cloneNullableObject(village.currentRaid),
+    monthsSinceRaid: normalizeFiniteNumber(village.monthsSinceRaid, 0),
+    raidCooldown: normalizeFiniteNumber(village.raidCooldown, 0),
+    pendingRaid: cloneNullableDeepObject(village.pendingRaid),
     // raidEnemies (Villager互換配列)
     raidEnemies: village.raidEnemies.map(vill => convertVillagerToObject(vill)),
 
@@ -246,6 +253,10 @@ function convertVillagerToObject(vill) {
     toddlerPortraitFile: vill.toddlerPortraitFile || "",
     toddlerPortraitGroup: vill.toddlerPortraitGroup || "",
     childMindTrait: vill.childMindTrait || "",
+    ...(vill.raiderType ? { raiderType: vill.raiderType } : {}),
+    ...(vill.raiderRole ? { raiderRole: vill.raiderRole } : {}),
+    ...(vill.raidPosition ? { raidPosition: vill.raidPosition } : {}),
+    ...(vill.raidTargeting ? { raidTargeting: vill.raidTargeting } : {}),
     adultBodyReached: vill.adultBodyReached !== undefined
       ? !!vill.adultBodyReached
       : !!(vill.potentialStats && Number(vill.bodyAge) >= 16),
@@ -320,6 +331,9 @@ function convertObjectToVillage(dataObj) {
   v.raidTurnCount = dataObj.raidTurnCount ?? 0;
   v.currentActionIndex = dataObj.currentActionIndex ?? 0;
   v.currentRaid = cloneNullableObject(dataObj.currentRaid);
+  v.monthsSinceRaid = Math.max(0, Math.floor(normalizeFiniteNumber(dataObj.monthsSinceRaid, 0)));
+  v.raidCooldown = Math.max(0, Math.floor(normalizeFiniteNumber(dataObj.raidCooldown, 0)));
+  v.pendingRaid = cloneNullableDeepObject(dataObj.pendingRaid);
   if (Array.isArray(dataObj.raidEnemies)) {
     v.raidEnemies = dataObj.raidEnemies.map(o => convertObjectToVillager(o));
   }
@@ -418,6 +432,18 @@ function convertObjectToVillager(obj) {
     : cloneNullableObject(obj.potentialStats);
   if (Array.isArray(obj.raiderDialogues)) {
     vill.raiderDialogues = [...obj.raiderDialogues];
+  }
+  if (obj.raiderType) {
+    vill.raiderType = obj.raiderType;
+  }
+  if (obj.raiderRole) {
+    vill.raiderRole = obj.raiderRole;
+  }
+  if (obj.raidPosition) {
+    vill.raidPosition = obj.raidPosition;
+  }
+  if (obj.raidTargeting) {
+    vill.raidTargeting = obj.raidTargeting;
   }
   vill.adultBodyTraits = normalizeBodyTraitList(obj.adultBodyTraits);
   vill.adultMindTraits = Array.isArray(obj.adultMindTraits) ? [...obj.adultMindTraits] : [];

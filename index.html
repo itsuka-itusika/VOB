@@ -42,7 +42,7 @@
       <div class="action-buttons">
         <!-- 保存/読込/説明メニュー -->
         <button id="autoAssignButton" onclick="onAutoAssignJobs()" data-mobile-label="自動">自動割り振り</button>
-        <button id="raidAssignButton" onclick="onAutoAssignRaidActions()" style="display:none;" data-mobile-label="迎撃割当">迎撃割り振り</button>
+        <button id="raidAssignButton" onclick="onAutoAssignRaidActions()" style="display:none;" data-mobile-label="防衛割当">防衛割り振り</button>
         <button id="nextTurnButton" onclick="onNextTurn()">次の月へ</button>
         <div class="special-action-buttons">
           <button onclick="openMiracleModal()" data-mobile-label="奇跡">奇跡の行使</button>
@@ -229,21 +229,20 @@
 <!-- モーダル: 迎撃フェーズ(襲撃イベント) -->
 <div id="raidOverlay"></div>
 <div id="raidModal">
-  <h2>襲撃発生中！ 迎撃フェーズ</h2>
+  <h2>襲撃発生中！ 防衛フェーズ</h2>
   <div class="raid-buttons">
     <button id="raidStepButton" onclick="proceedRaidAction()">次のステップ</button>
   </div>
   <div class="raid-section">
-    <h3>罠作成部隊</h3>
+    <h3>後衛（罠作成）</h3>
     <table id="defenderTable">
       <thead>
         <tr>
           <th>名前</th>
           <th>体力</th>
           <th>行動</th>
-          <th>筋力</th>
-          <th>耐久</th>
-          <th>魔力</th>
+          <th>器用</th>
+          <th>知力</th>
           <th>勇気</th>
         </tr>
       </thead>
@@ -251,12 +250,30 @@
     </table>
   </div>
   <div class="raid-section">
-    <h3>迎撃部隊</h3>
+    <h3>中衛（射撃）</h3>
+    <table id="shootersTable">
+      <thead>
+        <tr>
+          <th>名前</th>
+          <th>体力</th>
+          <th>行動</th>
+          <th>筋力</th>
+          <th>耐久</th>
+          <th>器用</th>
+          <th>勇気</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="raid-section">
+    <h3>前衛（迎撃・籠城）</h3>
     <table id="raidersTable">
       <thead>
         <tr>
           <th>名前</th>
           <th>体力</th>
+          <th>行動</th>
           <th>筋力</th>
           <th>耐久</th>
           <th>魔力</th>
@@ -274,6 +291,7 @@
           <th>名前</th>
           <th>体力</th>
           <th>行動</th>
+          <th>位置</th>
           <th>筋力</th>
           <th>耐久</th>
           <th>魔力</th>

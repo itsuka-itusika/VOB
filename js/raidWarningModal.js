@@ -162,7 +162,7 @@ function showRaidWarningWhenReady() {
 
   const interceptButton = document.createElement("button");
   interceptButton.type = "button";
-  interceptButton.textContent = "迎撃する";
+  interceptButton.textContent = "防衛する";
   interceptButton.onclick = closeRaidWarningModal;
 
   modal.appendChild(title);

@@ -3,7 +3,7 @@
 import { randInt, clampValue, round3, getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "./util.js";
 import { doLoverCheck, doMarriageCheck, clearRelationshipsForDepartedVillager } from "./relationships.js";
 import { createRandomVillager, createRandomVisitor } from "./createVillagers.js";
-import { startRaidEvent } from "./raidStart.js";
+import { processRaidScheduleAtMonthStart } from "./raidSchedule.js";
 import { RandomEvents } from "./RandomEvents.js";
 import { recordCriticalHistory, recordVillagerDeathHistory } from "./history.js";
 import { handleBirthAndPostpartum, handlePregnancyChecks, updateChildGrowthStage } from "./reproduction.js";
@@ -152,12 +152,9 @@ export function doRandomEventPost(village) {
 }
 
 export function doRaidStartCheck(village) {
-  if (isOpeningRaidGraceActive(village)) return;
-
-  const raidProb = village.villageTraits.includes("荒廃") ? 0.4 : 0.2;
-  if (Math.random() < raidProb) {
-    startRaidEvent(village);
-  }
+  processRaidScheduleAtMonthStart(village, {
+    suspendReservation: isOpeningRaidGraceActive(village)
+  });
 }
 
 function isOpeningRaidGraceActive(village) {
@@ -590,7 +587,7 @@ export function doMonthStartProcess(v) {
 
     const preferredAction = String(p.preferredAction || p.job || ACTION_NONE).trim() || ACTION_NONE;
     const hasPreferredAction = preferredAction !== ACTION_NONE && p.actionTable.includes(preferredAction);
-    const isRaidAction = currentAction === "迎撃" || currentAction === "罠作成";
+    const isRaidAction = currentAction === "迎撃" || currentAction === "籠城" || currentAction === "射撃" || currentAction === "罠作成";
     const isFixedAction = [ACTION_CRADLE, ACTION_HEAL, ACTION_LAST_MOMENTS].includes(p.action);
 
     if (!isFixedAction && (isTemporaryAction(currentAction) || isRaidAction || !p.actionTable.includes(currentAction))) {

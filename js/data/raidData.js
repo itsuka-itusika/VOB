@@ -11,6 +11,7 @@ export const RAIDER_TYPES = [
       job: "野盗",
       action: "襲撃"
     },
+    raidPosition: "front",
     portraits: [
       "BAN1.png", "BAN2.png", "BAN3.png", "BAN4.png", "BAN5.png",
       "BAN6.png", "BAN7.png", "BAN8.png", "BAN9.png", "BAN10.png",
@@ -51,6 +52,7 @@ export const RAIDER_TYPES = [
       job: "傭兵団",
       action: "襲撃"
     },
+    raidPosition: "front",
     portraits: [
       "BAN1.png", "BAN2.png", "BAN3.png", "BAN4.png", "BAN5.png",
       "BAN6.png", "BAN7.png", "BAN8.png", "BAN9.png", "BAN10.png",
@@ -91,6 +93,7 @@ export const RAIDER_TYPES = [
       job: "ゴブリン",
       action: "襲撃"
     },
+    raidPosition: "front",
     portraits: [
       "GOB1.png", "GOB2.png", "GOB3.png", "GOB4.png", "GOB5.png",
       "GOB6.png", "GOB7.png", "GOB8.png", "GOB9.png", "GOB10.png", "GOB11.png", "GOB12.png", "GOB13.png"
@@ -128,6 +131,7 @@ export const RAIDER_TYPES = [
       job: "狼",
       action: "襲撃"
     },
+    raidPosition: "front",
     ranges: {
       hp: [30, 50],
       str: [15, 20],
@@ -169,6 +173,7 @@ export const RAIDER_TYPES = [
       job: "狼",
       action: "襲撃"
     },
+    raidPosition: "front",
     ranges: {
       hp: [30, 50],
       str: [15, 20],
@@ -211,6 +216,7 @@ export const RAIDER_TYPES = [
       job: "キュクロプス",
       action: "襲撃"
     },
+    raidPosition: "front",
     ranges: {
       hp: [90, 120],
       str: [28, 35],
@@ -249,6 +255,7 @@ export const RAIDER_TYPES = [
       job: "ハーピー",
       action: "襲撃"
     },
+    raidPosition: "front",
     portraits: [
       "HARPY1.png", "HARPY2.png", "HARPY3.png", "HARPY4.png",
       "HARPY5.png", "HARPY6.png", "HARPY7.png", "HARPY8.png",
@@ -293,6 +300,7 @@ export const RAIDER_TYPES = [
       job: "ハーピー",
       action: "襲撃"
     },
+    raidPosition: "front",
     portraits: [
       "HARPY1.png", "HARPY2.png", "HARPY3.png", "HARPY4.png",
       "HARPY5.png", "HARPY6.png", "HARPY7.png", "HARPY8.png",
@@ -328,7 +336,7 @@ export const RAIDER_TYPES = [
 ];
 
 const DEFAULT_RAID_DEFENSE = {
-  surviveTurns: 3,
+  surviveTurns: 5,
   defeatAll: true
 };
 

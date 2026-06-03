@@ -40,6 +40,9 @@ export class Village {
     // 襲撃イベント用フラグ/データ
     this.raidEnemies = [];
     this.currentRaid = null;
+    this.monthsSinceRaid = 0;
+    this.raidCooldown = 0;
+    this.pendingRaid = null;
     this.isRaidProcessDone = false;
     this.isRaidFinalizing = false;
     this.raidTurnCount = 0;

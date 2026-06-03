@@ -4,7 +4,7 @@ import { getPortraitPath, isForcedHealingAction } from "./util.js";
 import { ACTION_NONE, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { getPermanentStat } from "./domain/statLayers.js";
-import { ACTION_DEFEND, ACTION_TRAP, canPerformRaidAction } from "./raidRules.js";
+import { ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT, ACTION_TRAP, RAID_ACTIONS, canPerformRaidAction } from "./raidRules.js";
 import { getConversationLine } from "./dialogue/dialogueEngine.js";
 import { recordVillagerJoinHistory } from "./history.js";
 import { MERCHANT_SECRET_TREASURE_LINES } from "./data/dialogue/visitorLines.js";
@@ -172,31 +172,26 @@ export function openConversationModal(character) {
       });
     }
   } else if (isUnderRaid && isVillageMember) {
-    const canDefend = canPerformRaidAction(character, ACTION_DEFEND);
-    const canMakeTrap = canPerformRaidAction(character, ACTION_TRAP);
-    const buttons = [];
-    if (canDefend) {
-      buttons.push(`<button id="assignDefender" class="${character.action === ACTION_DEFEND ? 'active-action' : ''}">迎撃任命</button>`);
-    }
-    if (canMakeTrap) {
-      buttons.push(`<button id="assignTrapMaker" class="${character.action === ACTION_TRAP ? 'active-action' : ''}">罠作成任命</button>`);
-    }
+    const raidButtonDefs = [
+      { action: ACTION_DEFEND, id: "assignDefender" },
+      { action: ACTION_FORTIFY, id: "assignFortifier" },
+      { action: ACTION_SHOOT, id: "assignShooter" },
+      { action: ACTION_TRAP, id: "assignTrapMaker" }
+    ];
+    const buttons = raidButtonDefs
+      .filter(def => canPerformRaidAction(character, def.action, theVillage))
+      .map(def => `<button id="${def.id}" class="${character.action === def.action ? 'active-action' : ''}">${def.action}任命</button>`);
     actionButtons.innerHTML = buttons.join("");
     actionButtons.style.display = buttons.length > 0 ? "block" : "none";
 
-    const defenderButton = document.getElementById("assignDefender");
-    if (defenderButton) {
-      defenderButton.addEventListener("click", () => {
-        changeCharacterAction(character, ACTION_DEFEND);
-      });
-    }
-
-    const trapMakerButton = document.getElementById("assignTrapMaker");
-    if (trapMakerButton) {
-      trapMakerButton.addEventListener("click", () => {
-        changeCharacterAction(character, ACTION_TRAP);
-      });
-    }
+    raidButtonDefs.forEach(def => {
+      const button = document.getElementById(def.id);
+      if (button) {
+        button.addEventListener("click", () => {
+          changeCharacterAction(character, def.action);
+        });
+      }
+    });
   } else {
     actionButtons.style.display = "none";
   }
@@ -227,12 +222,7 @@ function changeCharacterAction(character, newAction) {
     return;
   }
 
-  if (newAction === ACTION_DEFEND && !canPerformRaidAction(character, ACTION_DEFEND)) {
-    console.error(`Action ${newAction} is not available for this character`);
-    return;
-  }
-
-  if (newAction === ACTION_TRAP && !canPerformRaidAction(character, ACTION_TRAP)) {
+  if (RAID_ACTIONS.includes(newAction) && !canPerformRaidAction(character, newAction, theVillage)) {
     console.error(`Action ${newAction} is not available for this character`);
     return;
   }
@@ -242,15 +232,15 @@ function changeCharacterAction(character, newAction) {
     refreshConversationText(character);
     
     // ボタンのアクティブ状態を更新
-    const defenderButton = document.getElementById("assignDefender");
-    const trapMakerButton = document.getElementById("assignTrapMaker");
-    
-    if (defenderButton) {
-      defenderButton.className = newAction === ACTION_DEFEND ? "active-action" : "";
-    }
-    if (trapMakerButton) {
-      trapMakerButton.className = newAction === ACTION_TRAP ? "active-action" : "";
-    }
+    [
+      ["assignDefender", ACTION_DEFEND],
+      ["assignFortifier", ACTION_FORTIFY],
+      ["assignShooter", ACTION_SHOOT],
+      ["assignTrapMaker", ACTION_TRAP]
+    ].forEach(([id, action]) => {
+      const button = document.getElementById(id);
+      if (button) button.className = newAction === action ? "active-action" : "";
+    });
     
     // 村のUIを更新
     updateUI(theVillage);

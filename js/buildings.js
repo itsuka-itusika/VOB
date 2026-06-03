@@ -36,6 +36,13 @@ function canBuildStorehouse(village) {
   );
 }
 
+function canBuildDefensiveWall(village) {
+  return !!(
+    village?.buildingFlags?.hasMoat ||
+    hasBuilt(village, "moat")
+  );
+}
+
 /** 建築物の定義 */
 export const BUILDINGS = [
   {
@@ -239,6 +246,16 @@ export const BUILDINGS = [
     desc: "豊かな村で解放。村の周囲に濠を巡らせる。規模+30",
     isUnlocked: (village) => isScaleAtLeast(village, 180),
     effect: standardBuildingEffect({ scale: 30, flag: "hasMoat", log: "環濠建設完了: 村の周囲に濠を巡らせました、規模+30" })
+  },
+  {
+    id: "defensiveWall",
+    name: "防壁",
+    materials: 100,
+    funds: 50,
+    tech: 100,
+    desc: "環濠建設後に解放。襲撃中の「籠城」解放。規模+30",
+    isUnlocked: canBuildDefensiveWall,
+    effect: standardBuildingEffect({ scale: 30, flag: "hasDefensiveWall", log: "防壁建設完了: 籠城が可能になりました、規模+30" })
   },
   {
     id: "prison",

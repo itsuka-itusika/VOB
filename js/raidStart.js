@@ -101,6 +101,64 @@ function createRaidState(raidDefinition) {
   };
 }
 
+function createPendingRaidEnemyGroups(raidDefinition) {
+  return raidDefinition.enemyGroups.map(group => {
+    const raiderType = getRaiderTypeByType(group.raiderType);
+    if (!raiderType) return null;
+
+    const minCount = group.minCount ?? raiderType.minCount;
+    const maxCount = group.maxCount ?? raiderType.maxCount;
+    return {
+      raiderType: group.raiderType,
+      count: randInt(minCount, maxCount)
+    };
+  }).filter(Boolean);
+}
+
+export function createPendingRaidReservation(village, monthsUntil = 1) {
+  const raidDefinition = selectRaidDefinition(village);
+  return {
+    raidId: raidDefinition.id,
+    raidName: raidDefinition.name,
+    warningName: raidDefinition.warningName || raidDefinition.name,
+    enemyGroups: createPendingRaidEnemyGroups(raidDefinition),
+    monthsUntil: Math.max(1, Math.floor(Number(monthsUntil) || 1)),
+    prophecyNotified: false
+  };
+}
+
+function getRaidDefinitionFromPendingRaid(pendingRaid) {
+  const raidId = pendingRaid?.raidId || pendingRaid?.id;
+  return raidId ? getRaidModuleById(raidId) : null;
+}
+
+function getResolvedEnemyGroups(raidDefinition, pendingRaid = null) {
+  if (Array.isArray(pendingRaid?.enemyGroups) && pendingRaid.enemyGroups.length > 0) {
+    return pendingRaid.enemyGroups
+      .map(group => {
+        const raiderType = getRaiderTypeByType(group.raiderType);
+        if (!raiderType) return null;
+        const count = Math.max(0, Math.floor(Number(group.count) || 0));
+        return count > 0 ? { raiderType, count } : null;
+      })
+      .filter(Boolean);
+  }
+
+  return raidDefinition.enemyGroups
+    .map(group => {
+      const raiderType = getRaiderTypeByType(group.raiderType);
+      if (!raiderType) return null;
+
+      const minCount = group.minCount ?? raiderType.minCount;
+      const maxCount = group.maxCount ?? raiderType.maxCount;
+      return {
+        raiderType,
+        count: randInt(minCount, maxCount)
+      };
+    })
+    .filter(Boolean);
+}
+
 function createRaidEnemy(village, raiderType, existingNames) {
   const displayType = raiderType.displayType || raiderType.type;
   let e = createRandomVillager({
@@ -182,6 +240,8 @@ function createRaidEnemy(village, raiderType, existingNames) {
   e.action = "襲撃";
   e.raiderType = raiderType.type;
   e.raiderRole = raiderType.role || "";
+  e.raidPosition = raiderType.raidPosition || "front";
+  e.raidTargeting = raiderType.raidTargeting || "frontFirst";
   e.name = `${displayType}の${e.name}`;
 
   // ニート特性は不要なので削除
@@ -285,35 +345,31 @@ function executeRaidAvoidance(village, raidDefinition) {
 /**
  * 襲撃イベント開始を修正
  */
-export function startRaidEvent(village) {
-  // 荒廃状態かどうかでメッセージを変える
-  if (village.villageTraits.includes("荒廃")) {
-    village.log("【襲撃イベント発生】40%判定により発生(荒廃状態)");
-  } else {
-    village.log("【襲撃イベント発生】20%判定により発生");
-  }
+export function startRaidEvent(village, options = {}) {
+  const pendingRaid = options.pendingRaid || null;
+  const raidDefinition = options.raidDefinition ||
+    getRaidDefinitionFromPendingRaid(pendingRaid) ||
+    selectRaidDefinition(village);
+  village.log(pendingRaid
+    ? `【襲撃発生】予兆のあった${raidDefinition.name}が村へ押し寄せました。`
+    : `【襲撃発生】${raidDefinition.name}が村へ押し寄せました。`);
   if (!village.villageTraits.includes("襲撃中")) {
     village.villageTraits.push("襲撃中");
   }
 
-  const raidDefinition = selectRaidDefinition(village);
+  village.monthsSinceRaid = 0;
+  village.raidCooldown = 1;
+  village.pendingRaid = null;
   village.raidEnemies = [];
   village.currentRaid = createRaidState(raidDefinition);
 
-  raidDefinition.enemyGroups.forEach(group => {
-    const raiderType = getRaiderTypeByType(group.raiderType);
-    if (!raiderType) return;
-
-    const minCount = group.minCount ?? raiderType.minCount;
-    const maxCount = group.maxCount ?? raiderType.maxCount;
-    const enemyCount = randInt(minCount, maxCount);
-
-    for (let i = 0; i < enemyCount; i++) {
+  getResolvedEnemyGroups(raidDefinition, pendingRaid).forEach(group => {
+    for (let i = 0; i < group.count; i++) {
       const existingNames = [
         ...village.villagers.map(person => person.name),
         ...village.raidEnemies.map(person => person.name)
       ];
-      village.raidEnemies.push(createRaidEnemy(village, raiderType, existingNames));
+      village.raidEnemies.push(createRaidEnemy(village, group.raiderType, existingNames));
     }
   });
 
@@ -344,7 +400,7 @@ export function startRaidEvent(village) {
   if (typeof document !== "undefined") {
     let nextBtn = document.getElementById("nextTurnButton");
     if (nextBtn) {
-      nextBtn.innerHTML = `<b style="color:red;">迎撃開始</b>`;
+      nextBtn.innerHTML = `<b style="color:red;">防衛開始</b>`;
     }
     let autoAssignBtn = document.getElementById("autoAssignButton");
     if (autoAssignBtn) {

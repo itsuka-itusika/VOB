@@ -237,10 +237,18 @@ function buildWarningMessages(village) {
     });
   }
 
+  if (village.pendingRaid?.prophecyNotified) {
+    const raidName = village.pendingRaid.warningName || village.pendingRaid.raidName || "襲撃者";
+    warnings.push({
+      level: "danger",
+      text: `太陽神の予言: 来月、${raidName}の襲撃が予見されています。防衛準備を確認してください。`
+    });
+  }
+
   if (village.villageTraits.includes("襲撃中")) {
     warnings.push({
       level: "danger",
-      text: "襲撃中です。迎撃や罠作成の行動割り振りを確認してください。"
+      text: "襲撃中です。前衛・中衛・後衛の行動割り振りを確認してください。"
     });
   }
 
@@ -423,6 +431,16 @@ function estimateTrapDamage(person) {
   return Math.floor(((Number(person.dex) || 0) * (Number(person.int) || 0) / 400) * 30);
 }
 
+function estimateShootDamage(person, village) {
+  const enemies = Array.isArray(village.raidEnemies)
+    ? village.raidEnemies.filter(enemy => Number(enemy.hp) > 0)
+    : [];
+  const avgEnemyVit = enemies.length > 0
+    ? enemies.reduce((sum, enemy) => sum + (Number(enemy.vit) || 0), 0) / enemies.length
+    : 0;
+  return Math.max(0, Math.floor((((Number(person.dex) || 0) * (Number(person.cou) || 0)) / 400) * 40 - avgEnemyVit * 1.5));
+}
+
 function getTaskEstimateParts(person, task, village) {
   const chr = Number(person.chr) || 0;
   const cou = Number(person.cou) || 0;
@@ -560,6 +578,12 @@ function getTaskEstimateParts(person, task, village) {
     case "迎撃":
       parts = [`想定ダメージ${estimateDefendDamage(person, village)}`];
       break;
+    case "籠城":
+      parts = ["攻撃なし", "被ダメージ0.8倍", "反撃あり"];
+      break;
+    case "射撃":
+      parts = [`想定ダメージ${estimateShootDamage(person, village)}`, "反撃なし"];
+      break;
     case "罠作成":
       parts = [`想定ダメージ${estimateTrapDamage(person)}`];
       break;
@@ -618,6 +642,8 @@ const ACTION_DESCRIPTIONS = {
   "機織り": "布を織り、資金を得る生産行動。",
   "醸造": "酒を仕込み、食料と魔素を得る行動。",
   "迎撃": "襲撃中に敵へ直接攻撃する一時行動。",
+  "籠城": "襲撃中に前衛で守りを固め、攻撃された時に反撃する一時行動。",
+  "射撃": "襲撃中に中衛から攻撃し、反撃を受けない一時行動。",
   "罠作成": "襲撃中に罠を作り、敵へ事前ダメージを与える一時行動。"
 };
 
@@ -659,7 +685,11 @@ const JOB_KEY_STATS = {
   "錬金術": "魔力×知力",
   "写本": "耐久×知力",
   "機織り": "器用×勤勉",
-  "醸造": "魔力×耐久×勤勉"
+  "醸造": "魔力×耐久×勤勉",
+  "迎撃": "筋力/魔力×勇気",
+  "籠城": "耐久×勇気",
+  "射撃": "器用×勇気",
+  "罠作成": "器用×知力"
 };
 
 function getJobLabel(job, compact = false) {
