@@ -1,7 +1,7 @@
 // RandomEvents.js
 
 import { randInt, clampValue, round3 } from "./util.js";
-import { doLoverCheck, addRelationship as addCategorizedRelationship, hasNonEnemyRelationship, normalizeRelationship } from "./relationships.js";
+import { doLoverCheck, addRelationship as addCategorizedRelationship, hasNonEnemyRelationship, normalizeRelationship, parseRelationship } from "./relationships.js";
 import { doExchange } from "./exchange.js";
 import { showRandomEventModal } from "./randomEventModal.js";
 import { matureBodyToAdultOnly, scheduleGoldenRainPregnancy } from "./reproduction.js";
@@ -33,6 +33,7 @@ const VILLAGER_STATE_KEYS = [
   "bodyTraits", "mindTraits", "relationships", "hobby",
   "bodySex", "bodyAge", "bodyOwner", "race", "portraitFile"
 ];
+const YURI_BLOCKING_RELATION_PREFIXES = ["天敵", "母", "父", "子", "夫", "妻", "恋人"];
 
 function snapshotVillager(person) {
   return JSON.stringify(Object.fromEntries(VILLAGER_STATE_KEYS.map(key => [key, person[key]])));
@@ -370,7 +371,7 @@ export class RandomEvents {
             if (a.hobby !== b.hobby) return;
             const relA = `${a.hobby}仲間:${b.name}`;
             const relB = `${b.hobby}仲間:${a.name}`;
-            if (this.hasMutualRelationship(a, b, `${a.hobby}仲間`)) return;
+            if (this.hasPairRelationship(a, b, ["天敵", `${a.hobby}仲間`])) return;
             pairs.push({ a, b, hobby: a.hobby, relA, relB });
           });
         });
@@ -393,7 +394,7 @@ export class RandomEvents {
         const pairs = [];
         men.forEach((a, index) => {
           men.slice(index + 1).forEach(b => {
-            if (!this.hasMutualRelationship(a, b, "親友")) pairs.push([a, b]);
+            if (!this.hasPairRelationship(a, b, ["天敵", "親友"])) pairs.push([a, b]);
           });
         });
         if (pairs.length > 0) {
@@ -426,8 +427,18 @@ export class RandomEvents {
         );
 
         if (candidates.length >= 2) {
-          let a = this.randChoice(candidates);
-          let b = this.randChoice(candidates.filter(x => x !== a));
+          const pairs = [];
+          candidates.forEach((a, index) => {
+            candidates.slice(index + 1).forEach(b => {
+              if (!this.hasPairRelationship(a, b, YURI_BLOCKING_RELATION_PREFIXES)) pairs.push([a, b]);
+            });
+          });
+
+          if (pairs.length === 0) {
+            return null;
+          }
+
+          let [a, b] = this.randChoice(pairs);
 
           a.happiness = clampValue(a.happiness + 50, 0, 100);
           b.happiness = clampValue(b.happiness + 50, 0, 100);
@@ -768,6 +779,19 @@ export class RandomEvents {
   static hasMutualRelationship(a, b, prefix) {
     return this.hasRelationship(a, `${prefix}:${b.name}`) &&
       this.hasRelationship(b, `${prefix}:${a.name}`);
+  }
+
+  static hasRelationshipTo(person, target, prefixes) {
+    if (!person || !target?.name || !Array.isArray(person.relationships)) return false;
+    return person.relationships.some(existing => {
+      const parsed = parseRelationship(normalizeRelationship(existing));
+      return parsed?.target === target.name && prefixes.includes(parsed.prefix);
+    });
+  }
+
+  static hasPairRelationship(a, b, prefixes) {
+    return this.hasRelationshipTo(a, b, prefixes) ||
+      this.hasRelationshipTo(b, a, prefixes);
   }
 
   static hasHobby(person, hobby) {

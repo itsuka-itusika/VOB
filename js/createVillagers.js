@@ -429,15 +429,15 @@ export function initRandomParams(v) {
     if (me < 5) me = 5;
     v.eth = randNormalInRange(5, me);
     v.cou = randNormalInRange(8, 30);
-    v.sexdr = randNormalInRange(8, 35);
+    v.sexdr = randNormalInRange(8, 30);
   } else {
     v.vit = randNormalInRange(5, 25);
     let mx = Math.min(25, v.vit * 1.5);
     if (mx < 5) mx = 5;
     v.str = randNormalInRange(5, Math.floor(mx));
     v.dex = randNormalInRange(5, 25);
-    v.mag = randNormalInRange(14, 30);
-    v.chr = randNormalInRange(14, 30);
+    v.mag = randNormalInRange(15, 27);
+    v.chr = randNormalInRange(15, 27);
     v.int = randNormalInRange(5, 25);
     v.ind = randNormalInRange(5, 25);
     let me = Math.min(30, Math.floor(v.ind * 1.8));
@@ -516,7 +516,7 @@ export function assignBodyMindTraits(v) {
     { name: "薄倖", condition: (v) => v.bodySex === "女" && v.vit <= 11 && v.chr >= 20 },
     { name: "健康的", condition: (v) => v.bodySex === "女" && v.vit >= 16 && v.chr >= 16  && v.chr <= 22 },
     { name: "神秘的", condition: (v) => v.bodySex === "女" && v.mag >= 20 && v.chr >= 23 && v.sexdr <= 17 },
-    { name: "絶世の美女", condition: (v) => v.bodySex === "女" && v.chr >= 28 },
+    { name: "絶世の美女", condition: (v) => v.bodySex === "女" && v.chr >= 27 },
     { name: "ミステリアス", condition: (v) => v.mag >= 20 && v.chr >= 21 && v.chr <= 27},
     { name: "クール", condition: (v) => v.sexdr <= 10 && v.chr >= 20},
     { name: "あやしげ", condition: (v) => v.bodySex === "男" && v.mag >= 22 && v.chr <= 15 },
@@ -588,12 +588,12 @@ export function assignBodyMindTraits(v) {
     { name: "優等生", condition: (v) => v.int >= 18 && v.ind >= 18 && v.eth >= 18 },
     { name: "策士", condition: (v) => v.int >= 20 && v.cou >= 20 },
     { name: "神経質", condition: (v) => v.vit <= 14 && v.chr <= 12 },
-    { name: "女好き", condition: (v) => v.bodySex === "男" && v.sexdr >= 25 },
+    { name: "女好き", condition: (v) => v.bodySex === "男" && v.sexdr >= 24 },
     { name: "チャラい", condition: (v) => v.bodySex === "男" && v.sexdr >= 18 && v.chr >=18 },
     { name: "情熱的", condition: (v) => v.sexdr >= 19 && v.cou >= 19},
     { name: "男嫌い", condition: (v) => v.bodySex === "女" && v.sexdr <= 7 },
     { name: "夢見がち", condition: (v) => v.bodySex === "女" && v.sexdr >= 18 && v.int <= 15 },
-    { name: "好奇心旺盛", condition: (v) => v.int >= 18 && v.sexdr >= 20 && v.dex >= 18 },
+    { name: "好奇心旺盛", condition: (v) => v.int >= 17 && v.sexdr >= 17 && v.dex >= 17 },
     { name: "冒険好き", condition: (v) => v.int >= 18 && v.cou >= 20 },
     { name: "陰キャ", condition: (v) => v.chr <= 17 && v.cou <= 15 && v.str <= 16 },
     { name: "計算高い", condition: (v) => v.int >= 22 && v.eth <= 14 },
@@ -623,7 +623,7 @@ export function assignBodyMindTraits(v) {
     { name: "草食系", condition: (v) => v.bodySex === "男" && v.sexdr <= 12 },
     { name: "スケベ", condition: (v) => v.bodySex === "男" && v.int <= 18 && v.eth <= 16 && v.sexdr >= 20 },
     { name: "遊び人", condition: (v) => v.bodySex === "男" && v.chr >= 18 && v.eth <= 12 && v.sexdr >= 20 },
-    { name: "むっつり", condition: (v) => v.eth >= 20 && v.sexdr >= 22 },
+    { name: "むっつり", condition: (v) => v.eth >= 20 && v.sexdr >= 20 },
     { name: "勇敢", condition: (v) => v.str >= 20 && v.cou >= 22 },
     { name: "勇猛果敢", condition: (v) => v.cou >= 28 },
     { name: "豪傑", condition: (v) => v.str >= 24 && v.cou >= 24 },
