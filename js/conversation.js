@@ -4,6 +4,7 @@ import { getPortraitPath, isForcedHealingAction } from "./util.js";
 import { ACTION_NONE, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { getPermanentStat } from "./domain/statLayers.js";
+import { DEFAULT_PORTRAIT_KEY, getPortraitAssetPath } from "./data/portraitPaths.js";
 import { ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT, ACTION_TRAP, RAID_ACTIONS, canPerformRaidAction } from "./raidRules.js";
 import { getConversationLine } from "./dialogue/dialogueEngine.js";
 import { recordVillagerJoinHistory } from "./history.js";
@@ -15,6 +16,8 @@ import {
   MERCHANT_SECRET_TREASURE_PRICE,
   showSecretTreasureEventModals
 } from "./secretTreasureEvents.js";
+
+const DEFAULT_PORTRAIT_PATH = getPortraitAssetPath(DEFAULT_PORTRAIT_KEY);
 
 // 訪問者タイプごとの勧誘成功率係数
 const RECRUITMENT_COEFFICIENTS = {
@@ -98,11 +101,11 @@ export function openConversationModal(character) {
     portrait.src = portraitPath;
     portrait.onerror = () => {
       console.error(`Portrait image not found: ${portraitPath}`);
-      portrait.src = 'images/portraits/default.png';
+      portrait.src = DEFAULT_PORTRAIT_PATH;
     };
   } catch (error) {
     console.error('Error loading portrait:', error);
-    portrait.src = 'images/portraits/default.png';
+    portrait.src = DEFAULT_PORTRAIT_PATH;
   }
   portrait.style.cursor = "pointer";
   portrait.title = "クリックで会話を更新";

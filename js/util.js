@@ -1,5 +1,7 @@
 // util.js
 
+import { getPortraitAssetPath } from "./data/portraitPaths.js";
+
 /** 乱数系/Clamp/シャッフルなどのユーティリティ */
 
 /**
@@ -73,11 +75,7 @@ export function randNormalInRange(min, max, mean = (min + max) / 2, stddev = (ma
  * @returns {string} 顔グラフィックのパス
  */
 export function getPortraitPath(character) {
-  const fileName = String(character?.portraitFile || "").trim();
-  const normalizedFileName = !fileName || fileName.toLowerCase() === "default.png"
-    ? "default.png"
-    : fileName;
-  return `images/portraits/${normalizedFileName}`;
+  return getPortraitAssetPath(character?.portraitFile);
 }
 
 /**

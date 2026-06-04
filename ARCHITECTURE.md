@@ -126,6 +126,19 @@
 
 `historyEvents` を持たない既存セーブデータを読み込んだ場合は、読込時点の年月に「古い村史の欠落」イベントを1件追加し、それ以降の出来事だけを村史に記録します。個人記録は同じ `historyEvents` を人物名で絞り込んで表示し、村史に出さない個人向けイベントは `scope: "person"` として保存します。
 
+## 顔グラフィック画像
+
+- `portraitFile` / `adultPortraitFile` / `toddlerPortraitFile` は `MA1.png` や `T_D1.png` のような論理IDとして保存する。`images/portraits/...` の実パスは保存しない。
+- 表示時の実パス解決は `js/data/portraitPaths.js` に集約し、`getPortraitAssetPath()` でタイプ別フォルダへ変換する。
+- 顔グラ画像は `images/portraits/villagers/`、`images/portraits/children/`、`images/portraits/raiders/`、`images/portraits/babies/`、`images/portraits/system/` に配置する。
+- 今後実装予定の特殊種族画像は `angel/` や `alseid/` のような小文字フォルダに置き、論理IDは `ANGEL1.png` のような大文字prefix連番にする。
+
+## 訪問者とレア種族
+
+- 訪問者タイプの月次抽選は `js/createVillagers.js` の `VISITOR_TABLES_BY_SCALE` を使う。レア種族枠が選ばれた場合は、同ファイル内でさらにレア種族テーブルを重み付き抽選する。
+- 旅人の奇跡で生成される訪問者は、現在の村規模にかかわらず自治集落相当の訪問者テーブルで抽選する。
+- レア種族も保存形式は既存の `race`、`bodyTraits`、`mindTraits`、`portraitFile` を使い、専用の保存フィールドは増やさない。
+
 ## 変更時に壊れやすい場所
 
 - 月次処理の順序。

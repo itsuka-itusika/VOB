@@ -3,6 +3,7 @@
 import { Villager } from "./classes.js";
 import { randInt, randChoice, randNormalInRange } from "./util.js";
 import { ACTION_NONE, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
+import { getPortraitGroupKey, normalizePortraitKey } from "./data/portraitPaths.js";
 import { applyGenerationBaseTraitBonuses, setBaseStatsFromEffective, syncEffectiveStats } from "./domain/statLayers.js";
 import { getVillageScaleStage } from "./villageScale.js";
 import {
@@ -34,7 +35,6 @@ const VISITOR_TABLES_BY_SCALE = [
   },
   {
     maxStageIndex: 4,
-    // 将来的にレア訪問者 weight 5 を追加予定。現時点では未実装のため、合計95で抽選する。
     entries: [
       { type: "流民", weight: 20 },
       { type: "旅人", weight: 16 },
@@ -42,12 +42,13 @@ const VISITOR_TABLES_BY_SCALE = [
       { type: "巡礼者", weight: 15 },
       { type: "行商人", weight: 15 },
       { type: "冒険者", weight: 12 },
-      { type: "学者", weight: 12 }
+      { type: "学者", weight: 12 },
+      { type: "レア種族", weight: 5 }
     ]
   },
   {
     maxStageIndex: Infinity,
-    // 将来的にレア訪問者5、お忍び5、遍歴騎士5を追加予定。未実装のため現行タイプだけで抽選する。
+    // 将来的にお忍び5、遍歴騎士5を追加予定。現時点では未実装のため現行タイプだけで抽選する。
     entries: [
       { type: "流民", weight: 15 },
       { type: "旅人", weight: 10 },
@@ -56,13 +57,109 @@ const VISITOR_TABLES_BY_SCALE = [
       { type: "巡礼者", weight: 15 },
       { type: "行商人", weight: 15 },
       { type: "冒険者", weight: 15 },
-      { type: "学者", weight: 15 }
+      { type: "学者", weight: 15 },
+      { type: "レア種族", weight: 10 }
     ]
   }
 ];
 
+const RARE_VISITOR_TYPE = "レア種族";
+const WINGED_VISITOR_PORTRAITS = Array.from({ length: 16 }, (_, index) => `ANGEL${index + 1}.png`);
+const ALSEID_VISITOR_PORTRAITS = Array.from({ length: 13 }, (_, index) => `ALSEID${index + 1}.png`);
+const NEREID_VISITOR_PORTRAITS = Array.from({ length: 15 }, (_, index) => `NEREID${index + 1}.png`);
+const RARE_VISITOR_TYPES = [
+  {
+    type: "翼人",
+    weight: 2,
+    implemented: true,
+    visitor: {
+      type: "翼人",
+      displayType: "旅人",
+      forcedSex: "女",
+      ageRange: { min: 18, max: 25 },
+      params: {
+        job: "旅人",
+        action: "訪問",
+        race: "翼人"
+      },
+      ranges: {
+        int: [10, 20],
+        ind: [10, 20],
+        cou: [8, 20],
+        eth: [20, 30],
+        sexdr: [3, 8]
+      },
+      forcedBodyTraits: ["飛行", "光輪"],
+      forcedMindTraits: ["神聖"],
+      chanceMindTraits: [{ trait: "非戦主義", chance: 0.5 }],
+      portraits: WINGED_VISITOR_PORTRAITS
+    }
+  },
+  {
+    type: "アルセイド",
+    weight: 2,
+    implemented: true,
+    visitor: {
+      type: "アルセイド",
+      displayType: "旅人",
+      forcedSex: "女",
+      ageRange: { min: 18, max: 25 },
+      params: {
+        job: "旅人",
+        action: "訪問",
+        race: "アルセイド"
+      },
+      ranges: {
+        str: [5, 20],
+        vit: [5, 20],
+        chr: [18, 27],
+        mag: [18, 27],
+        int: [5, 25],
+        ind: [5, 20],
+        cou: [3, 25],
+        eth: [12, 25],
+        sexdr: [3, 15]
+      },
+      forcedBodyTraits: ["緑の指", "不老"],
+      forcedMindTraits: ["文明忌避"],
+      chanceMindTraits: [{ trait: "非戦主義", chance: 0.5 }],
+      portraits: ALSEID_VISITOR_PORTRAITS
+    }
+  },
+  {
+    type: "ネレイド",
+    weight: 2,
+    implemented: true,
+    visitor: {
+      type: "ネレイド",
+      displayType: "旅人",
+      forcedSex: "女",
+      ageRange: { min: 18, max: 25 },
+      params: {
+        job: "旅人",
+        action: "訪問",
+        race: "ネレイド"
+      },
+      ranges: {
+        str: [5, 20],
+        vit: [5, 20],
+        chr: [18, 27],
+        mag: [18, 27],
+        int: [5, 20],
+        cou: [3, 16]
+      },
+      forcedBodyTraits: ["水中呼吸", "不老"],
+      chanceMindTraits: [{ trait: "非戦主義", chance: 0.5 }],
+      portraits: NEREID_VISITOR_PORTRAITS
+    }
+  },
+  { type: "ドライアド", weight: 1, implemented: false },
+  { type: "アラクニド", weight: 1, implemented: false, uniqueRace: true }
+];
+
 // 使用済みの名前を追跡する Set を追加
 const usedNames = new Set();
+const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老"]);
 
 export function registerUsedName(name) {
   const normalized = String(name || "").trim();
@@ -101,8 +198,12 @@ export const usedPortraits = {
  */
 
 function getPortraitGroupKeyFromFile(portraitFile) {
-  const match = String(portraitFile || "").match(/^(GG|MA|MB|MC|MD|ME|BB|A|C|D)\d+\.png$/);
-  return match ? match[1] : "";
+  const groupKey = getPortraitGroupKey(normalizePortraitKey(portraitFile));
+  return TODDLER_PORTRAIT_FILES[groupKey] ? groupKey : "";
+}
+
+function hasNoAgingBodyTrait(v) {
+  return Array.isArray(v?.bodyTraits) && v.bodyTraits.some(trait => NO_AGING_BODY_TRAITS.has(trait));
 }
 
 function getFallbackToddlerPortraitGroup(character) {
@@ -153,7 +254,7 @@ export function selectPortraitByCharacter(character) {
     // 1. まず特性による判定を行う
     if (bodyTraits.some(trait => [
       "巨漢", "怪力", "マッチョ", "筋骨隆々",
-      "筋肉質", "巨躯"
+      "巨躯"
     ].includes(trait))) {
       selectedGroup = MALE_PORTRAIT_FILES.GROUP_A;
     } 
@@ -696,10 +797,12 @@ export function assignBodyMindTraits(v) {
   });
 
   // 年齢由来
-  if (v.bodyAge >= 60) {
-    v.bodyTraits.push("老人");
-  } else if (v.bodyAge >= 40) {
-    v.bodyTraits.push("中年");
+  if (!hasNoAgingBodyTrait(v)) {
+    if (v.bodyAge >= 60) {
+      v.bodyTraits.push("老人");
+    } else if (v.bodyAge >= 40) {
+      v.bodyTraits.push("中年");
+    }
   }
 
   // 精神特性が決定した後に口調タイプを設定
@@ -713,10 +816,12 @@ export function applyTraitParameterBonuses(v) {
   applyGenerationBaseTraitBonuses(v);
 
   // 加齢
-  if (v.bodyAge >= 60) {
-    if (!v.bodyTraits.includes("老人")) v.bodyTraits.push("老人");
-  } else if (v.bodyAge >= 40) {
-    if (!v.bodyTraits.includes("中年")) v.bodyTraits.push("中年");
+  if (!hasNoAgingBodyTrait(v)) {
+    if (v.bodyAge >= 60) {
+      if (!v.bodyTraits.includes("老人")) v.bodyTraits.push("老人");
+    } else if (v.bodyAge >= 40) {
+      if (!v.bodyTraits.includes("中年")) v.bodyTraits.push("中年");
+    }
   }
 
   syncEffectiveStats(v);
@@ -784,6 +889,59 @@ export function assignHobby(v) {
 /**
  * 重み付き抽選で訪問者タイプを選択
  */
+function hasRaceInVillage(village, race) {
+  const people = [
+    ...(Array.isArray(village?.villagers) ? village.villagers : []),
+    ...(Array.isArray(village?.visitors) ? village.visitors : [])
+  ];
+  return people.some(person => person?.race === race);
+}
+
+function getRareVisitorWeight(entry, village = null) {
+  if (!entry.implemented) return 0;
+  if (entry.uniqueRace && hasRaceInVillage(village, entry.type)) return 0;
+  return entry.weight;
+}
+
+function buildRareVisitorType(entry) {
+  return {
+    ...entry.visitor,
+    rareVisitorType: entry.type
+  };
+}
+
+function selectRareVisitorType(village = null) {
+  const entries = RARE_VISITOR_TYPES
+    .map(entry => ({ entry, weight: getRareVisitorWeight(entry, village) }))
+    .filter(item => item.weight > 0);
+  if (entries.length === 0) return null;
+
+  const totalWeight = entries.reduce((sum, item) => sum + item.weight, 0);
+  let random = Math.random() * totalWeight;
+  for (const item of entries) {
+    random -= item.weight;
+    if (random <= 0) {
+      return buildRareVisitorType(item.entry);
+    }
+  }
+  return buildRareVisitorType(entries[0].entry);
+}
+
+function hasAvailableRareVisitorType(village = null) {
+  return RARE_VISITOR_TYPES.some(entry => getRareVisitorWeight(entry, village) > 0);
+}
+
+function resolveForcedVisitorType(forcedType, village = null) {
+  if (!forcedType) return null;
+  if (forcedType === RARE_VISITOR_TYPE) return selectRareVisitorType(village);
+
+  const visitorType = VISITOR_TYPES.find(type => type.type === forcedType);
+  if (visitorType) return visitorType;
+
+  const rareEntry = RARE_VISITOR_TYPES.find(entry => entry.type === forcedType && getRareVisitorWeight(entry, village) > 0);
+  return rareEntry ? buildRareVisitorType(rareEntry) : null;
+}
+
 function resolveVisitorTable(village = null) {
   const table = village
     ? VISITOR_TABLES_BY_SCALE.find(entry => getVillageScaleStage(village.building).index <= entry.maxStageIndex)
@@ -792,6 +950,9 @@ function resolveVisitorTable(village = null) {
 
   return table.entries
     .map(entry => {
+      if (entry.type === RARE_VISITOR_TYPE) {
+        return hasAvailableRareVisitorType(village) ? { type: RARE_VISITOR_TYPE, weight: entry.weight } : null;
+      }
       const visitorType = VISITOR_TYPES.find(type => type.type === entry.type);
       return visitorType ? { ...visitorType, weight: entry.weight } : null;
     })
@@ -806,10 +967,30 @@ function selectVisitorType(village = null) {
   for (const visitorType of visitorTable) {
     random -= visitorType.weight;
     if (random <= 0) {
-      return visitorType;
+      return visitorType.type === RARE_VISITOR_TYPE
+        ? (selectRareVisitorType(village) || VISITOR_TYPES[0])
+        : visitorType;
     }
   }
   return visitorTable[0] || VISITOR_TYPES[0]; // フォールバック
+}
+
+function addUniqueTrait(traits, trait) {
+  if (Array.isArray(traits) && !traits.includes(trait)) {
+    traits.push(trait);
+  }
+}
+
+function applyVisitorTypeTraits(visitor, visitorType) {
+  (visitorType.forcedBodyTraits || []).forEach(trait => addUniqueTrait(visitor.bodyTraits, trait));
+  (visitorType.forcedMindTraits || []).forEach(trait => addUniqueTrait(visitor.mindTraits, trait));
+  (visitorType.chanceMindTraits || []).forEach(({ trait, chance }) => {
+    if (Math.random() < chance) {
+      addUniqueTrait(visitor.mindTraits, trait);
+    }
+  });
+  visitor.speechType = determineSpeechType(visitor);
+  syncEffectiveStats(visitor);
 }
 
 /**
@@ -817,7 +998,7 @@ function selectVisitorType(village = null) {
  */
 export function createRandomVisitor(existingNames = [], forcedType = null, village = null) {
   const visitorType = forcedType
-    ? (VISITOR_TYPES.find(type => type.type === forcedType) || selectVisitorType(village))
+    ? (resolveForcedVisitorType(forcedType, village) || selectVisitorType(village))
     : selectVisitorType(village);
   
   // 性別を明示的に設定（visitorTypeに指定がなければランダム）
@@ -835,7 +1016,7 @@ export function createRandomVisitor(existingNames = [], forcedType = null, villa
   });
 
   // 訪問者の名前を修正
-  const visitorName = `${visitorType.type}の${visitor.name}`;
+  const visitorName = `${visitorType.displayType || visitorType.type}の${visitor.name}`;
   const reservedNames = getReservedNames(existingNames);
   visitor.name = reservedNames.has(visitorName)
     ? buildFallbackChildName(visitorName, reservedNames)
@@ -850,6 +1031,7 @@ export function createRandomVisitor(existingNames = [], forcedType = null, villa
   
   // 精神特性に訪問者を追加（1回のみ）
   visitor.mindTraits.push("訪問者");
+  applyVisitorTypeTraits(visitor, visitorType);
 
   if (visitorType.type === "行商人") {
     visitor.merchantStock = {
@@ -871,7 +1053,9 @@ export function createRandomVisitor(existingNames = [], forcedType = null, villa
   }
 
   // 顔グラフィックを設定
-  visitor.portraitFile = selectPortraitByCharacter(visitor);
+  visitor.portraitFile = Array.isArray(visitorType.portraits) && visitorType.portraits.length > 0
+    ? randChoice(visitorType.portraits)
+    : selectPortraitByCharacter(visitor);
   
   // 精神性別が設定されていない場合は肉体性別と同じに設定
   if (!visitor.spiritSex) {

@@ -26,6 +26,7 @@ import { syncEffectiveStats } from "./domain/statLayers.js";
 
 const OPENING_RAID_GRACE_YEAR = 1091;
 const OPENING_RAID_GRACE_LAST_MONTH = 6;
+const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老"]);
 
 function resetMonthlySocialAttemptFlags(village) {
   (village.villagers || []).forEach(person => {
@@ -683,7 +684,9 @@ export function doAgingProcess(v) {
   v.villagers.forEach(p=>{
     p.bodyAge++;
     p.spiritAge++;
-    if (!p.bodyTraits.includes("老人")) {
+    if (p.bodyTraits.some(trait => NO_AGING_BODY_TRAITS.has(trait))) {
+      syncEffectiveStats(p);
+    } else if (!p.bodyTraits.includes("老人")) {
       if (p.bodyAge>=60) {
         p.bodyTraits.push("老人");
         syncEffectiveStats(p);

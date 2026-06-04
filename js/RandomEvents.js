@@ -35,6 +35,10 @@ const VILLAGER_STATE_KEYS = [
 ];
 const YURI_BLOCKING_RELATION_PREFIXES = ["天敵", "母", "父", "子", "夫", "妻", "恋人"];
 
+function hasMindTrait(person, trait) {
+  return Array.isArray(person?.mindTraits) && person.mindTraits.includes(trait);
+}
+
 function snapshotVillager(person) {
   return JSON.stringify(Object.fromEntries(VILLAGER_STATE_KEYS.map(key => [key, person[key]])));
 }
@@ -233,6 +237,7 @@ export class RandomEvents {
           Number(p.bodyAge) <= 29 &&
           Number(p.chr) >= 25 &&
           GOLDEN_RAIN_RACES.has(p.race || "人間") &&
+          !hasMindTrait(p, "神聖") &&
           !p.pregnancy &&
           !p.bodyTraits.includes("妊娠") &&
           !p.bodyTraits.includes("臨月") &&
@@ -423,6 +428,7 @@ export class RandomEvents {
           x.bodySex === "女" &&
           x.bodyAge >= 12 && x.bodyAge <= 30 &&
           x.spiritAge >= 16 &&
+          !hasMindTrait(x, "神聖") &&
           !x.relationships.some(r => r.includes("既婚") || r.includes("恋人"))
         );
 

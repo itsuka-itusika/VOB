@@ -25,9 +25,10 @@ const SECRET_TREASURE_SELL_PRICES = {
   old_priest_statue: 100,
   pan_flute: 300,
   grotesque_portrait: 500,
-  golden_mask: 300,
+  golden_mask: 500,
   blue_stone_tablet: 150
 };
+const DISABLED_RANDOM_SECRET_TREASURE_IDS = new Set(["blue_stone_tablet"]);
 
 function getVillagers(village) {
   return Array.isArray(village.villagers) ? village.villagers : [];
@@ -384,7 +385,8 @@ export const SECRET_TREASURES = [
 ];
 
 export function grantRandomSecretTreasure(village) {
-  const definition = randFrom(SECRET_TREASURES);
+  const candidates = SECRET_TREASURES.filter(definition => !DISABLED_RANDOM_SECRET_TREASURE_IDS.has(definition.id));
+  const definition = randFrom(candidates);
   if (!definition) return null;
   if (!Array.isArray(village.secretTreasures)) village.secretTreasures = [];
   village.secretTreasures.push({ id: definition.id });

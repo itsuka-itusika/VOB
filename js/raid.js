@@ -135,6 +135,14 @@ function removeDefeatedEnemy(enemy, village) {
   }
 }
 
+function isRaidEnemyActionActor(actor, village) {
+  return isEnemyUnit(actor, village) || Boolean(actor?.raiderType);
+}
+
+function shouldSkipDefeatedEnemyAction(actor, village) {
+  return Boolean(actor) && actor.hp <= 0 && isRaidEnemyActionActor(actor, village);
+}
+
 /**
  * 襲撃者タイプの定義
  */
@@ -293,6 +301,10 @@ function createCombatActions(village) {
 function doOneCombatAction(action, village) {
   let actor=action.actor;
   let logDiv=document.getElementById("raidLogArea");
+  if (shouldSkipDefeatedEnemyAction(actor, village)) {
+    updateRaidTables(village);
+    return;
+  }
   if (!canActInCombat(actor, village)) {
     logDiv.innerHTML+=`<br>【戦闘】${actor?actor.name:"??"}は行動不能`;
     updateRaidTables(village);

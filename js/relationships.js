@@ -11,6 +11,7 @@ export function doLoverCheck(village, options = {}) {
   let candidatesA = village.villagers.filter(x=>
     x.spiritAge >= 16
     && isSingle(x)
+    && !hasMindTrait(x, "神聖")
   );
   if (candidatesA.length===0) {
     village.log("恋人判定:対象者なし");
@@ -58,6 +59,7 @@ function getOppositeSex(sex) {
 
 function isLoverCandidate(a, b) {
   if (!a || !b || a === b) return false;
+  if (hasMindTrait(a, "神聖") || hasMindTrait(b, "神聖")) return false;
   const expectedBodySex = getOppositeSex(a.spiritSex);
   if (!expectedBodySex) return false;
   return isSingle(b)
@@ -73,6 +75,10 @@ function getLoverSuccessRate(a, b) {
   let pA=Math.min(100, (Number(a.sexdr) || 0)*4);
   let pB=Math.min(100, (Number(b.sexdr) || 0)*4);
   return clampValue((pA*pB)/10000, 0.1, 0.5);
+}
+
+function hasMindTrait(person, trait) {
+  return Array.isArray(person?.mindTraits) && person.mindTraits.includes(trait);
 }
 
 /**

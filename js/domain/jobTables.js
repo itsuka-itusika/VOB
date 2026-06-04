@@ -44,6 +44,17 @@ const INFANT_BODY_ALLOWED_ACTIONS = new Set([
   "研究",
   "研究助手"
 ]);
+const SACRED_BLOCKED_ADULT_ACTIONS = new Set(["踊り子", "バニー", "あんま", "巫女"]);
+const CIVILIZATION_AVOIDANT_BLOCKED_ACTIONS = new Set([
+  "内職",
+  "行商",
+  "研究",
+  "写本",
+  "錬金術",
+  "醸造",
+  "機織り",
+  "バニー"
+]);
 
 function traitList(person, key) {
   return Array.isArray(person?.[key]) ? person[key] : [];
@@ -102,6 +113,12 @@ function applyInfantBodyActionFilter(person) {
   if (!hasInfantBody(person)) return;
   person.jobTable = person.jobTable.filter(action => INFANT_BODY_ALLOWED_ACTIONS.has(action));
   person.actionTable = person.actionTable.filter(action => INFANT_BODY_ALLOWED_ACTIONS.has(action));
+}
+
+function applyCivilizationAvoidanceFilter(person) {
+  if (!traitList(person, "mindTraits").includes("文明忌避")) return;
+  person.jobTable = person.jobTable.filter(action => !CIVILIZATION_AVOIDANT_BLOCKED_ACTIONS.has(action));
+  person.actionTable = person.actionTable.filter(action => !CIVILIZATION_AVOIDANT_BLOCKED_ACTIONS.has(action));
 }
 
 function addRaidActionsIfAllowed(person, village) {
@@ -222,14 +239,16 @@ function buildAdultPersistentActions(person, village) {
   if (buildingFlags.hasAlchemy) common.push("錬金術");
   if (buildingFlags.hasWeaving) common.push("機織り");
 
-  if (person.bodySex === "男") {
-    return [...common, "詩人", "神官"];
+  const actions = person.bodySex === "男"
+    ? [...common, "詩人", "神官"]
+    : [...common, "踊り子", "シスター"];
+  if (person.bodySex !== "男") {
+    if (buildingFlags.hasTavern) actions.push("バニー");
+    if (buildingFlags.hasChurch) actions.push("巫女");
   }
 
-  const actions = [...common, "踊り子", "シスター"];
-  if (buildingFlags.hasTavern) actions.push("バニー");
-  if (buildingFlags.hasChurch) actions.push("巫女");
-  return actions;
+  if (!traitList(person, "mindTraits").includes("神聖")) return actions;
+  return actions.filter(action => !SACRED_BLOCKED_ADULT_ACTIONS.has(action));
 }
 
 export function refreshJobTable(v, village = {}) {
@@ -256,6 +275,7 @@ export function refreshJobTable(v, village = {}) {
   if (isToddlerStage) {
     const preferredTable = ["遊び", "お手伝い"];
     setTables(v, preferredTable, [ACTION_REST, "遊び", "お手伝い"]);
+    applyCivilizationAvoidanceFilter(v);
     applyInfantBodyActionFilter(v);
     normalizePreferredForTable(v, v.jobTable, { defaultPreferred: "遊び" });
     addRaidActionsIfAllowed(v, village);
@@ -266,6 +286,7 @@ export function refreshJobTable(v, village = {}) {
   if (isAdolescentStage) {
     const preferredTable = ["遊び", "農作業", "伐採", "狩猟", "漁", "採集", "内職", "丁稚", "研究助手"];
     setTables(v, preferredTable, [ACTION_REST, ...preferredTable]);
+    applyCivilizationAvoidanceFilter(v);
     applyInfantBodyActionFilter(v);
     normalizePreferredForTable(v, v.jobTable, { defaultPreferred: "遊び" });
     addRaidActionsIfAllowed(v, village);
@@ -275,6 +296,7 @@ export function refreshJobTable(v, village = {}) {
 
   const preferredTable = buildAdultPersistentActions(v, village);
   setTables(v, preferredTable, [ACTION_REST, ACTION_LEISURE, ...preferredTable]);
+  applyCivilizationAvoidanceFilter(v);
   applyInfantBodyActionFilter(v);
   normalizePreferredForTable(v, v.jobTable);
   addRaidActionsIfAllowed(v, village);

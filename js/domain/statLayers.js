@@ -5,6 +5,7 @@ import { evaluateTitles } from "../titles.js";
 export const STAT_LAYER_VERSION = 1;
 
 const ZERO_STAT_MAP = Object.freeze(Object.fromEntries(ABILITY_STATS.map(stat => [stat, 0])));
+const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老"]);
 
 const PERMANENT_BODY_TRAIT_ADDS = Object.freeze({
   "聖女の輝き": { mag: 10, chr: 10 },
@@ -12,6 +13,7 @@ const PERMANENT_BODY_TRAIT_ADDS = Object.freeze({
   "月の巫女": { dex: 10, chr: 10 },
   "太陽の巫女": { str: 15, chr: 5 },
   "梟の巫女": { mag: 10, chr: 10 },
+  "光輪": { mag: 3, chr: 5 },
   "大地の加護": { vit: 5 },
   "月の加護": { dex: 5 },
   "太陽の加護": { str: 5 },
@@ -112,6 +114,7 @@ function getTemporaryEffect(person, { includeLegacyAres = false } = {}) {
 function getAgeMultiplier(person, stat) {
   if (!["str", "vit", "chr"].includes(stat)) return 1;
   const bodyTraits = Array.isArray(person?.bodyTraits) ? person.bodyTraits : [];
+  if (bodyTraits.some(trait => NO_AGING_BODY_TRAITS.has(trait))) return 1;
   if (bodyTraits.includes("老人")) return 0.375;
   if (bodyTraits.includes("中年")) return 0.75;
   return 1;

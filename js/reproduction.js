@@ -9,12 +9,13 @@ import {
   selectToddlerPortraitByCharacter
 } from "./createVillagers.js";
 import { refreshJobTable } from "./domain/jobTables.js";
+import { BABY_FEMALE_PORTRAIT_KEY, BABY_MALE_PORTRAIT_KEY } from "./data/portraitPaths.js";
 import { getBaseStat, setBaseStat, setBaseStatsFromEffective, syncEffectiveStats } from "./domain/statLayers.js";
 import { recordAdulthoodHistory, recordBirthHistory, recordPregnancyHistory } from "./history.js";
 import { addRelationship, checkHasRelationship, getRelationshipTargetName, normalizeRelationship } from "./relationships.js";
 import { getDialogueLine } from "./dialogue/dialogueEngine.js";
 
-const HUMANOID_RACES = new Set(["人間", "ハーピー", "半神", "キュクロプス", "サイクロプス", "巨人"]);
+const HUMANOID_RACES = new Set(["人間", "ハーピー", "半神", "キュクロプス", "サイクロプス", "巨人", "翼人", "アルセイド", "ネレイド"]);
 const PHYSICAL_STATS = ["str", "vit", "dex", "mag", "chr"];
 const MENTAL_STATS = ["int", "ind", "eth", "cou", "sexdr"];
 const CHILD_BODY_TRAITS = ["赤子", "子供", "少年", "少女"];
@@ -159,6 +160,7 @@ function canBeMother(person, village) {
     person.bodySex === "女" &&
     Number(person.bodyAge) >= 16 &&
     Number(person.bodyAge) <= 38 &&
+    !hasMindTrait(person, "神聖") &&
     checkHasRelationship(person, "既婚") &&
     !person.pregnancy &&
     !hasTrait(person, "妊娠") &&
@@ -178,6 +180,7 @@ function canReceiveGoldenRainPregnancy(person) {
     person.bodySex === "女" &&
     Number(person.bodyAge) >= 16 &&
     Number(person.bodyAge) <= 29 &&
+    !hasMindTrait(person, "神聖") &&
     !person.pregnancy &&
     !hasTrait(person, "妊娠") &&
     !hasTrait(person, "臨月") &&
@@ -362,7 +365,7 @@ function chooseChildMindTrait(child) {
 function setChildPortrait(child) {
   if (child.bodyAge < 10) {
     if (child.bodyAge <= 3) {
-      child.portraitFile = child.bodySex === "男" ? "../malebaby.png" : "../femalebaby.png";
+      child.portraitFile = child.bodySex === "男" ? BABY_MALE_PORTRAIT_KEY : BABY_FEMALE_PORTRAIT_KEY;
     } else {
       if (!child.toddlerPortraitFile) {
         child.toddlerPortraitFile = selectToddlerPortraitByCharacter(child);

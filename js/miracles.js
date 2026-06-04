@@ -9,8 +9,12 @@ import { refreshJobTable } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
 import { recordMarriageHistory, recordVillagerLeaveHistory } from "./history.js";
+import { DEFAULT_PORTRAIT_KEY, getPortraitAssetPath } from "./data/portraitPaths.js";
 import { resolveDialogueTone } from "./data/dialogue/toneProfiles.js";
 import { BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
+
+const DEFAULT_PORTRAIT_PATH = getPortraitAssetPath(DEFAULT_PORTRAIT_KEY);
+const AUTONOMOUS_SETTLEMENT_SCALE = 350;
 /**
  * 奇跡リスト
  */
@@ -694,10 +698,14 @@ function hearthMiracle(v) {
 
 /** 旅人の奇跡(1名来訪) */
 function travelerMiracle(v) {
+  const visitorTableVillage = {
+    ...v,
+    building: AUTONOMOUS_SETTLEMENT_SCALE
+  };
   let newV = createRandomVisitor([
     ...v.villagers.map(person => person.name),
     ...v.visitors.map(person => person.name)
-  ], null, v);
+  ], null, visitorTableVillage);
   v.visitors.push(newV);
   v.log(`【旅人の奇跡】${newV.name}が来訪(訪問者)`);
   showMiracleResultModal(v, "旅人の奇跡", `${newV.name}が村を訪れました。`, [newV]);
@@ -944,11 +952,11 @@ function createPanFluteExchangePerson(person) {
   try {
     img.src = getPortraitPath(person);
   } catch {
-    img.src = "images/portraits/default.png";
+    img.src = DEFAULT_PORTRAIT_PATH;
   }
   img.alt = `${person.name} portrait`;
   img.onerror = () => {
-    img.src = "images/portraits/default.png";
+    img.src = DEFAULT_PORTRAIT_PATH;
   };
   portraitArea.appendChild(img);
 
@@ -1040,19 +1048,19 @@ export function openExchangeModal(personA, personB, options = {}) {
     portraitA.src = getPortraitPath(personA);
     portraitA.onerror = () => {
       console.error(`Portrait image not found: ${portraitA.src}`);
-      portraitA.src = 'images/portraits/default.png';
+      portraitA.src = DEFAULT_PORTRAIT_PATH;
     };
     
     // 同様に、personBの体はpersonAの顔グラフィックを表示
     portraitB.src = getPortraitPath(personB);
     portraitB.onerror = () => {
       console.error(`Portrait image not found: ${portraitB.src}`);
-      portraitB.src = 'images/portraits/default.png';
+      portraitB.src = DEFAULT_PORTRAIT_PATH;
     };
   } catch (error) {
     console.error('Error loading portraits:', error);
-    portraitA.src = 'images/portraits/default.png';
-    portraitB.src = 'images/portraits/default.png';
+    portraitA.src = DEFAULT_PORTRAIT_PATH;
+    portraitB.src = DEFAULT_PORTRAIT_PATH;
   }
   
   // 交換反応は精神側の実効口調で選び、襲撃者だけ専用キーを優先する。

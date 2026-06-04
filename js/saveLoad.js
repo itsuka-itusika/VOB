@@ -4,6 +4,7 @@ import { determineSpeechType, registerUsedName } from "./createVillagers.js";
 import { ACTION_NONE, isPreferredActionCandidate, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
 import { getPermanentStat, hydrateStatLayersFromObject, syncEffectiveStats } from "./domain/statLayers.js";
 import { createArchiveGapHistoryEvent, normalizeHistoryEvents } from "./history.js";
+import { normalizePortraitKey } from "./data/portraitPaths.js";
 import { normalizeRelationships } from "./relationships.js";
 import { ensureTitleState, evaluateTitles } from "./titles.js";
 import { getInitialScaleStageIndex } from "./villageScale.js";
@@ -30,9 +31,11 @@ function hasOwn(obj, key) {
 }
 
 function normalizePortraitFile(fileName) {
-  const file = String(fileName || "").trim();
-  if (!file || file.toLowerCase() === "default.png") return "default.png";
-  return file;
+  return normalizePortraitKey(fileName);
+}
+
+function normalizeOptionalPortraitFile(fileName) {
+  return String(fileName || "").trim() ? normalizePortraitKey(fileName) : "";
 }
 
 function normalizeFiniteNumber(value, fallback = 0) {
@@ -251,8 +254,8 @@ function convertVillagerToObject(vill) {
     adultBodyTraits: normalizeBodyTraitList(vill.adultBodyTraits),
     adultMindTraits: Array.isArray(vill.adultMindTraits) ? [...vill.adultMindTraits] : [],
     adultHobby: vill.adultHobby || "",
-    adultPortraitFile: vill.adultPortraitFile || "",
-    toddlerPortraitFile: vill.toddlerPortraitFile || "",
+    adultPortraitFile: normalizeOptionalPortraitFile(vill.adultPortraitFile),
+    toddlerPortraitFile: normalizeOptionalPortraitFile(vill.toddlerPortraitFile),
     toddlerPortraitGroup: vill.toddlerPortraitGroup || "",
     childMindTrait: vill.childMindTrait || "",
     ...(vill.raiderType ? { raiderType: vill.raiderType } : {}),
@@ -452,8 +455,8 @@ function convertObjectToVillager(obj) {
   vill.adultBodyTraits = normalizeBodyTraitList(obj.adultBodyTraits);
   vill.adultMindTraits = Array.isArray(obj.adultMindTraits) ? [...obj.adultMindTraits] : [];
   vill.adultHobby = obj.adultHobby || "";
-  vill.adultPortraitFile = obj.adultPortraitFile || "";
-  vill.toddlerPortraitFile = obj.toddlerPortraitFile || "";
+  vill.adultPortraitFile = normalizeOptionalPortraitFile(obj.adultPortraitFile);
+  vill.toddlerPortraitFile = normalizeOptionalPortraitFile(obj.toddlerPortraitFile);
   vill.toddlerPortraitGroup = obj.toddlerPortraitGroup || "";
   vill.childMindTrait = obj.childMindTrait || "";
   vill.adultBodyReached = obj.adultBodyReached !== undefined
