@@ -886,7 +886,7 @@ function getMarriageMiracleLine(person, partner, miracleName) {
     "お嬢様": [`${partner.name}様と結ばれるとは……奇跡とは優雅なものですわ。`, "突然ではありますけれど、心を込めて歩みますわ。"],
     "クールＭ": [`${miracleName}の結果は理解した。${partner.name}との関係を大切にする。`, "状況は急だが、責任は果たす。"],
     "クールＦ": [`${partner.name}と夫婦ね。冷静に受け止めるわ。`, "奇跡の結果なら、これからを考えるだけよ。"],
-    "老人": [`ほう、${partner.name}と夫婦とはのう。長く生きても驚きは尽きん。`, "奇跡とはまこと不思議なものじゃな。"]
+    "老人": [`${partner.name}と夫婦になるとはのう。奇跡に導かれた縁、大事にしよう。`, "新たな家族を得るとはな。わしも心を決めよう。"]
   };
   return randFrom(lines[type] || lines[person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
 }

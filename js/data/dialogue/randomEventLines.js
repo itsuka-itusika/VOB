@@ -563,7 +563,7 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     coolF: "刺青ね。印象を変えるには十分だわ。",
     neutral: "刺青か。体に刻むことで気分も変わる。",
     gal: "刺青入れたら雰囲気変わったかも。けっこうアリじゃん！",
-    elder: "刺青とは思い切ったのう。消えぬ印は覚悟も残すぞ。"
+    elder: "この刺青を刻むと、わしの覚悟まで肌に残るようじゃ。"
   }),
   fashion: makeEventSpecificLines({
     // イベント条件は精神男性かつ女性肉体。女性口調は通常発生しないため持たせず、矛盾時は男性側fallbackで受ける。
