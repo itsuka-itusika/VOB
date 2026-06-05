@@ -228,80 +228,110 @@
 
 <!-- モーダル: 迎撃フェーズ(襲撃イベント) -->
 <div id="raidOverlay"></div>
-<div id="raidModal">
-  <h2>襲撃発生中！ 防衛フェーズ</h2>
-  <div class="raid-buttons">
-    <button id="raidStepButton" onclick="proceedRaidAction()">次のステップ</button>
+<div id="raidModal" class="raid-battle-modal">
+  <div class="raid-battle-header">
+    <div class="raid-battle-title">
+      <h2>襲撃発生中！ 防衛フェーズ</h2>
+      <div id="raidStatusLine" class="raid-status-line"></div>
+    </div>
+    <div class="raid-buttons">
+      <button id="raidStepButton" onclick="proceedRaidAction()">次のステップ</button>
+    </div>
   </div>
-  <div class="raid-section">
-    <h3>後衛（罠作成）</h3>
-    <table id="defenderTable">
-      <thead>
-        <tr>
-          <th>名前</th>
-          <th>体力</th>
-          <th>行動</th>
-          <th>器用</th>
-          <th>知力</th>
-          <th>勇気</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+  <div class="raid-battle-grid">
+    <section class="raid-board raid-board-allies">
+      <h3>村側</h3>
+      <div id="raidFrontSection" class="raid-section raid-role-section">
+        <div class="raid-role-heading">前衛</div>
+        <div class="raid-table-scroll">
+          <table id="raidersTable" class="raid-unit-table">
+            <thead>
+              <tr>
+                <th>顔</th>
+                <th>名前/状態</th>
+                <th>体力</th>
+                <th>メンタル</th>
+                <th>能力</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="raidMiddleSection" class="raid-section raid-role-section">
+        <div class="raid-role-heading">中衛</div>
+        <div class="raid-table-scroll">
+          <table id="shootersTable" class="raid-unit-table">
+            <thead>
+              <tr>
+                <th>顔</th>
+                <th>名前/状態</th>
+                <th>体力</th>
+                <th>メンタル</th>
+                <th>能力</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="raidRearSection" class="raid-section raid-role-section">
+        <div class="raid-role-heading">後衛</div>
+        <div class="raid-table-scroll">
+          <table id="defenderTable" class="raid-unit-table">
+            <thead>
+              <tr>
+                <th>顔</th>
+                <th>名前/状態</th>
+                <th>体力</th>
+                <th>メンタル</th>
+                <th>能力</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+    <section class="raid-board raid-board-enemies">
+      <h3>襲撃者</h3>
+      <div id="enemyFrontSection" class="raid-section raid-role-section">
+        <div class="raid-role-heading">前衛</div>
+        <div class="raid-table-scroll raid-enemy-scroll">
+          <table id="enemyFrontTable" class="raid-unit-table">
+            <thead>
+              <tr>
+                <th>顔</th>
+                <th>名前/状態</th>
+                <th>体力</th>
+                <th>メンタル</th>
+                <th>能力</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="enemyMiddleSection" class="raid-section raid-role-section">
+        <div class="raid-role-heading">中衛</div>
+        <div class="raid-table-scroll raid-enemy-scroll">
+          <table id="enemyMiddleTable" class="raid-unit-table">
+            <thead>
+              <tr>
+                <th>顔</th>
+                <th>名前/状態</th>
+                <th>体力</th>
+                <th>メンタル</th>
+                <th>能力</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
   </div>
-  <div class="raid-section">
-    <h3>中衛（射撃）</h3>
-    <table id="shootersTable">
-      <thead>
-        <tr>
-          <th>名前</th>
-          <th>体力</th>
-          <th>行動</th>
-          <th>筋力</th>
-          <th>耐久</th>
-          <th>器用</th>
-          <th>勇気</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-  <div class="raid-section">
-    <h3>前衛（迎撃・籠城）</h3>
-    <table id="raidersTable">
-      <thead>
-        <tr>
-          <th>名前</th>
-          <th>体力</th>
-          <th>行動</th>
-          <th>筋力</th>
-          <th>耐久</th>
-          <th>魔力</th>
-          <th>勇気</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-  <div class="raid-section">
-    <h3>襲撃者</h3>
-    <table id="enemyTable">
-      <thead>
-        <tr>
-          <th>名前</th>
-          <th>体力</th>
-          <th>行動</th>
-          <th>位置</th>
-          <th>筋力</th>
-          <th>耐久</th>
-          <th>魔力</th>
-          <th>勇気</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-  <div class="raid-section">
+  <div class="raid-section raid-log-section">
     <h3>迎撃ログ</h3>
     <div id="raidLogArea"></div>
   </div>

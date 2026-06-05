@@ -1,6 +1,6 @@
 // raid.js
 
-import { randInt, randChoice, clampValue, shuffleArray } from "./util.js";
+import { randInt, randChoice, clampValue, shuffleArray, getPortraitPath } from "./util.js";
 import { getRaidRulesById } from "./data/raidData.js";
 import { endOfMonthProcess, doFixedEventPost, doAgingProcess, runMonthStartPhase } from "./events.js";
 import { handleAllVillagerJobs } from "./jobs.js";
@@ -15,6 +15,9 @@ import {
 import { updateUI } from "./ui.js";
 
 const RAID_CLOSE_DELAY_MS = 500;
+const RAID_ACTION_SETTLE_DELAY_MS = 650;
+const RAID_ACTOR_FOCUS_DELAY_MS = 220;
+const RAID_DAMAGE_EFFECT_DELAY_MS = 360;
 const RAID_PHASE_REAR = "rear";
 const RAID_PHASE_COMBAT = "combat";
 const RAID_POSITION_FRONT = "front";
@@ -23,6 +26,10 @@ const RAID_TARGET_FRONT_FIRST = "frontFirst";
 const RAID_TARGET_MIDDLE_FIRST = "middleFirst";
 const RAID_TARGET_MIDDLE_ONLY = "middleOnly";
 const RAID_TARGET_FRONT_MIDDLE_RANDOM = "frontMiddleRandom";
+const pendingRaidDepartures = new WeakSet();
+const settlingRaidVillages = new WeakSet();
+const raidUnitRenderIds = new WeakMap();
+let nextRaidUnitRenderId = 1;
 
 function getRaidStepButton() {
   return document.getElementById("raidStepButton") ||
@@ -30,10 +37,133 @@ function getRaidStepButton() {
 }
 
 function setRaidStepButtonState(disabled, text = "") {
-  const button = getRaidStepButton();
-  if (!button) return;
-  button.disabled = disabled;
-  if (text) button.textContent = text;
+  const stepButton = getRaidStepButton();
+  if (stepButton) {
+    stepButton.disabled = disabled;
+    if (text) stepButton.textContent = text;
+  }
+}
+
+function scrollRaidLogToLatest() {
+  const logDiv = document.getElementById("raidLogArea");
+  if (!logDiv) return;
+  logDiv.scrollTop = logDiv.scrollHeight;
+}
+
+function waitRaidActionSettle() {
+  return new Promise(resolve => setTimeout(resolve, RAID_ACTION_SETTLE_DELAY_MS));
+}
+
+function waitRaidAnimation(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function isRaidActionSettling(village) {
+  return Boolean(village) && settlingRaidVillages.has(village);
+}
+
+function markRaidDeparture(unit) {
+  if (unit && typeof unit === "object") pendingRaidDepartures.add(unit);
+}
+
+function isPendingRaidDeparture(unit) {
+  return Boolean(unit) && pendingRaidDepartures.has(unit);
+}
+
+function clearPendingRaidDepartures(village) {
+  if (Array.isArray(village?.raidEnemies)) {
+    village.raidEnemies = village.raidEnemies.filter(enemy => {
+      const shouldRemove = enemy?.hp <= 0 && isPendingRaidDeparture(enemy);
+      if (shouldRemove) pendingRaidDepartures.delete(enemy);
+      return !shouldRemove;
+    });
+  }
+  if (Array.isArray(village?.villagers)) {
+    village.villagers.forEach(villager => {
+      if (villager?.hp <= 0 && isPendingRaidDeparture(villager)) {
+        pendingRaidDepartures.delete(villager);
+      }
+    });
+  }
+}
+
+function getRaidUnitRenderId(unit) {
+  if (!unit || typeof unit !== "object") return "";
+  if (!raidUnitRenderIds.has(unit)) {
+    raidUnitRenderIds.set(unit, `raid-unit-${nextRaidUnitRenderId++}`);
+  }
+  return raidUnitRenderIds.get(unit);
+}
+
+function getRaidUnitRow(unit) {
+  const renderId = getRaidUnitRenderId(unit);
+  if (!renderId) return null;
+  return document.querySelector(`#raidModal tr[data-raid-unit-id="${renderId}"]`);
+}
+
+function createRaidActionResult(actor = null) {
+  return {
+    actor,
+    animations: [],
+    logs: []
+  };
+}
+
+function addRaidActionLog(result, log) {
+  if (result && log) result.logs.push(log);
+}
+
+function addRaidDamageAnimation(result, actor, target, damage, isCounter = false) {
+  if (!result || !actor) return;
+  result.animations.push({ actor, target, damage, isCounter });
+}
+
+function appendRaidActionLogs(logs) {
+  if (!Array.isArray(logs) || logs.length === 0) return;
+  const logDiv = document.getElementById("raidLogArea");
+  if (!logDiv) return;
+  logDiv.innerHTML += logs.map(log => `<br>${log}`).join("");
+  scrollRaidLogToLatest();
+}
+
+function clearRaidAnimationClasses(...rows) {
+  rows.forEach(row => {
+    if (!row) return;
+    row.classList.remove("is-acting", "is-countering", "is-hit");
+  });
+}
+
+function showRaidDamagePop(row, damage) {
+  if (!row || damage == null) return;
+  const anchor = row.querySelector(".raid-unit-hp") || row.querySelector(".raid-unit-name") || row.lastElementChild;
+  if (!anchor) return;
+  const pop = document.createElement("span");
+  pop.className = "raid-damage-pop";
+  pop.textContent = `-${Math.floor(Number(damage) || 0)}`;
+  anchor.appendChild(pop);
+  setTimeout(() => pop.remove(), RAID_DAMAGE_EFFECT_DELAY_MS + 220);
+}
+
+async function playRaidAnimationStep(step) {
+  const actorRow = getRaidUnitRow(step?.actor);
+  const targetRow = getRaidUnitRow(step?.target);
+
+  if (actorRow) actorRow.classList.add(step.isCounter ? "is-countering" : "is-acting");
+  await waitRaidAnimation(RAID_ACTOR_FOCUS_DELAY_MS);
+
+  if (targetRow) {
+    targetRow.classList.add("is-hit");
+    showRaidDamagePop(targetRow, step.damage);
+  }
+  await waitRaidAnimation(RAID_DAMAGE_EFFECT_DELAY_MS);
+  clearRaidAnimationClasses(actorRow, targetRow);
+}
+
+async function playRaidActionAnimations(result) {
+  const animations = Array.isArray(result?.animations) ? result.animations : [];
+  for (const animation of animations) {
+    await playRaidAnimationStep(animation);
+  }
 }
 
 function getActiveRaidRules(village) {
@@ -80,6 +210,29 @@ function getTrapMakers(village) {
   );
 }
 
+function getVisibleTrapMakers(village) {
+  if (village.raidPhase !== RAID_PHASE_REAR) return [];
+  return village.villagers.filter(p =>
+    (
+      p.action === ACTION_TRAP &&
+      p.hp > 0 &&
+      canPerformRaidAction(p, ACTION_TRAP, village)
+    ) ||
+    (isPendingRaidDeparture(p) && p.action === ACTION_TRAP)
+  );
+}
+
+function getPendingTrapMakers(village) {
+  if (village.raidPhase !== RAID_PHASE_REAR) return [];
+  const queue = Array.isArray(village.raidActionQueue) ? village.raidActionQueue : [];
+  const currentIndex = Math.max(0, Number(village.currentActionIndex) || 0);
+  return queue
+    .slice(currentIndex)
+    .filter(action => action?.type === "TRAP")
+    .map(action => action.actor)
+    .filter(p => p && p.hp > 0 && canPerformRaidAction(p, ACTION_TRAP, village));
+}
+
 function getVillageCombatants(village) {
   return village.villagers.filter(p =>
     p.hp > 0 &&
@@ -97,6 +250,35 @@ function sortByCourage(units) {
     if (b.cou === a.cou) return Math.random() < 0.5 ? -1 : 1;
     return b.cou - a.cou;
   });
+}
+
+function getRaidPhaseLabel(village) {
+  if (village.isRaidProcessDone) return "終了";
+  if (village.raidPhase === RAID_PHASE_REAR) return "後衛準備";
+  if (village.raidPhase === RAID_PHASE_COMBAT) return `戦闘 ${Math.max(1, Number(village.raidTurnCount) || 1)}ターン目`;
+  return "開始前";
+}
+
+function updateRaidStatusLine(village) {
+  const statusLine = document.getElementById("raidStatusLine");
+  if (!statusLine) return;
+
+  const frontliners = village.villagers.filter(p =>
+    p.hp > 0 &&
+    (p.action === ACTION_DEFEND || p.action === ACTION_FORTIFY) &&
+    canPerformRaidAction(p, p.action, village)
+  ).length;
+  const shooters = village.villagers.filter(p =>
+    p.hp > 0 &&
+    p.action === ACTION_SHOOT &&
+    canPerformRaidAction(p, ACTION_SHOOT, village)
+  ).length;
+  const pendingTraps = getPendingTrapMakers(village).length;
+  const enemyCount = getAliveEnemies(village).length;
+  const surviveTurns = getRaidSurviveTurns(village);
+  const surviveText = surviveTurns ? ` / 撤退目安 ${surviveTurns}ターン` : "";
+
+  statusLine.textContent = `フェーズ: ${getRaidPhaseLabel(village)}${surviveText} / 前衛${frontliners}・中衛${shooters}・後衛残り${pendingTraps} / 襲撃者${enemyCount}`;
 }
 
 function pickFrontFirst(candidates, village) {
@@ -129,9 +311,9 @@ function selectTarget(actor, village) {
   return randChoice(getTargetCandidates(actor, village));
 }
 
-function removeDefeatedEnemy(enemy, village) {
+function scheduleDefeatedEnemyDeparture(enemy) {
   if (enemy?.hp <= 0) {
-    village.raidEnemies = village.raidEnemies.filter(e => e !== enemy);
+    markRaidDeparture(enemy);
   }
 }
 
@@ -159,8 +341,6 @@ export function openRaidModal(village) {
   document.getElementById("raidOverlay").style.display="block";
   document.getElementById("raidModal").style.display="block";
   setRaidStepButtonState(false, "次のステップ");
-
-  updateRaidTables(village);
   const rlog=document.getElementById("raidLogArea");
   rlog.innerHTML="襲撃が始まります。<br>「次のステップ」ボタンを押して進めてください。";
 
@@ -175,6 +355,7 @@ export function openRaidModal(village) {
     village.raidTurnCount=0;
     createRearActionQueue(village);
   }
+  updateRaidTables(village);
 }
 
 /**
@@ -199,9 +380,8 @@ function createRearActionQueue(village) {
  * 「次のステップ」ボタン
  */
 export function proceedRaidAction(village) {
-  if (village.isRaidFinalizing || village.isRaidProcessDone) return;
+  if (village.isRaidFinalizing || village.isRaidProcessDone || isRaidActionSettling(village)) return;
 
-  const logDiv = document.getElementById("raidLogArea");
   let action = village.raidActionQueue[village.currentActionIndex];
 
   if (!action) {
@@ -212,49 +392,68 @@ export function proceedRaidAction(village) {
     finalizeCombatTurn(village);
     return;
   }
+  setRaidStepButtonState(true, "処理中...");
+  let actionResult = createRaidActionResult(action.actor);
   switch(action.type) {
     case "TRAP":
-      doOneTrapAction(action, village);
+      actionResult = doOneTrapAction(action, village);
       break;
     case "COMBAT":
-      doOneCombatAction(action, village);
+      actionResult = doOneCombatAction(action, village);
       break;
     case "AUTO_FAIL":
       finalizeRaid(false, "戦闘部隊0", village);
       return;
   }
   village.currentActionIndex++;
-  checkCombatEndOfActions(village);
+  settleRaidAction(village, actionResult);
+}
+
+async function settleRaidAction(village, actionResult = null) {
+  settlingRaidVillages.add(village);
+  try {
+    updateRaidTables(village);
+    await playRaidActionAnimations(actionResult);
+    appendRaidActionLogs(actionResult?.logs);
+    await waitRaidActionSettle();
+    clearPendingRaidDepartures(village);
+    updateRaidTables(village);
+    checkCombatEndOfActions(village);
+    updateRaidTables(village);
+  } finally {
+    settlingRaidVillages.delete(village);
+    if (!village.isRaidFinalizing && !village.isRaidProcessDone) {
+      setRaidStepButtonState(false, "次のステップ");
+    }
+  }
 }
 
 /** 1件のTRAP行動 */
 function doOneTrapAction(action, village) {
   let p=action.actor;
-  let logDiv=document.getElementById("raidLogArea");
+  const result = createRaidActionResult(p);
   if (!p||p.hp<=0 || !canPerformRaidAction(p, ACTION_TRAP, village)) {
-    logDiv.innerHTML+=`<br>【罠作成】${p?p.name:"??"} は行動不能`;
-    updateRaidTables(village);
-    return;
+    addRaidActionLog(result, `【罠作成】${p?p.name:"??"} は行動不能`);
+    return result;
   }
   if (village.raidEnemies.length===0) {
-    logDiv.innerHTML+=`<br>【罠作成】敵は既に全滅`;
-    updateRaidTables(village);
-    return;
+    addRaidActionLog(result, "【罠作成】敵は既に全滅");
+    return result;
   }
   let e=selectTarget(p, village);
   if (!e) {
-    logDiv.innerHTML+=`<br>【罠作成】狙える敵がいない`;
-    updateRaidTables(village);
-    return;
+    addRaidActionLog(result, "【罠作成】狙える敵がいない");
+    return result;
   }
   let dmg = Math.floor((p.dex*p.int/400)*30);
   e.hp = clampValue(e.hp - dmg, 0, 100);
-  logDiv.innerHTML+=`<br>【罠作成】${p.name}→${e.name}に${dmg}ダメージ`;
+  addRaidDamageAnimation(result, p, e, dmg);
+  addRaidActionLog(result, `【罠作成】${p.name}→${e.name}に${dmg}ダメージ`);
   if (e.hp<=0) {
-    logDiv.innerHTML+=`<br>　　→ ${e.name}は倒れた！`;
-    removeDefeatedEnemy(e, village);
+    addRaidActionLog(result, `　　→ ${e.name}は倒れた！`);
+    scheduleDefeatedEnemyDeparture(e);
   }
-  updateRaidTables(village);
+  return result;
 }
 
 /** 後衛行動後 -> 戦闘フェーズ */
@@ -300,50 +499,47 @@ function createCombatActions(village) {
 /** 1件のCOMBAT行動 */
 function doOneCombatAction(action, village) {
   let actor=action.actor;
-  let logDiv=document.getElementById("raidLogArea");
+  const result = createRaidActionResult(actor);
   if (shouldSkipDefeatedEnemyAction(actor, village)) {
-    updateRaidTables(village);
-    return;
+    return result;
   }
   if (!canActInCombat(actor, village)) {
-    logDiv.innerHTML+=`<br>【戦闘】${actor?actor.name:"??"}は行動不能`;
-    updateRaidTables(village);
-    return;
+    addRaidActionLog(result, `【戦闘】${actor?actor.name:"??"}は行動不能`);
+    return result;
   }
 
   if (!isEnemyUnit(actor, village) && actor.action === ACTION_FORTIFY) {
-    logDiv.innerHTML+=`<br>【籠城】${actor.name}は防壁に身を寄せ、攻撃に備えた`;
-    updateRaidTables(village);
-    return;
+    addRaidActionLog(result, `【籠城】${actor.name}は防壁に身を寄せ、攻撃に備えた`);
+    return result;
   }
 
   let target = selectTarget(actor, village);
   if (!target) {
-    logDiv.innerHTML+=`<br>【戦闘】${actor.name}が狙える相手はいない`;
-    updateRaidTables(village);
-    return;
+    addRaidActionLog(result, `【戦闘】${actor.name}が狙える相手はいない`);
+    return result;
   }
 
   const actorIsEnemy = isEnemyUnit(actor, village);
   const isRanged = getCombatPosition(actor, village) === RAID_POSITION_MIDDLE;
-  const result = isRanged ? calcRangedDamage(actor, target) : calcAttackDamage(actor, target, false);
+  const attackResult = isRanged ? calcRangedDamage(actor, target) : calcAttackDamage(actor, target, false);
   const label = getAttackLogLabel(actor, village, isRanged);
-  let dmg = result.damage;
+  let dmg = attackResult.damage;
   if (!actorIsEnemy) {
-    dmg = applyOffensiveTraitModifiers(actor, dmg, label, logDiv);
+    dmg = applyOffensiveTraitModifiers(actor, dmg, label, result);
   }
   dmg = applyIncomingDamageModifiers(dmg, target, village);
 
-  const atkTypeText = result.isMagic ? "魔法攻撃" : result.attackText;
+  const atkTypeText = attackResult.isMagic ? "魔法攻撃" : attackResult.attackText;
   target.hp = clampValue(target.hp - dmg, 0, 100);
-  logDiv.innerHTML+=`<br>${label}${actor.name}の${atkTypeText}→${target.name}に ${dmg}ダメージ`;
+  addRaidDamageAnimation(result, actor, target, dmg);
+  addRaidActionLog(result, `${label}${actor.name}の${atkTypeText}→${target.name}に ${dmg}ダメージ`);
 
   if (target.hp<=0) {
-    handleCombatDefeat(target, village, logDiv);
+    handleCombatDefeat(target, village, result);
   } else if (!isRanged && canCounterAttack(target, village)) {
-    doCounterAttack(target, actor, village, logDiv);
+    doCounterAttack(target, actor, village, result);
   }
-  updateRaidTables(village);
+  return result;
 }
 
 function canActInCombat(actor, village) {
@@ -366,20 +562,20 @@ function getAttackLogLabel(actor, village, isRanged) {
   return isRanged ? "【射撃】" : "【迎撃】";
 }
 
-function applyOffensiveTraitModifiers(actor, damage, label, logDiv) {
+function applyOffensiveTraitModifiers(actor, damage, label, result) {
   let nextDamage = damage;
   if (hasTrait(actor, "歴戦")) {
     nextDamage = Math.floor(nextDamage * 1.2);
-    logDiv.innerHTML+=`<br>${label}${actor.name}は歴戦の経験で強力な攻撃！`;
+    addRaidActionLog(result, `${label}${actor.name}は歴戦の経験で強力な攻撃！`);
   }
 
   if (hasTrait(actor, "非戦主義")) {
     nextDamage = 0;
-    logDiv.innerHTML+=`<br>${label}${actor.name}は非戦主義のため攻撃を拒否！`;
+    addRaidActionLog(result, `${label}${actor.name}は非戦主義のため攻撃を拒否！`);
   }
   if (hasTrait(actor, "不殺")) {
     nextDamage = 0;
-    logDiv.innerHTML+=`<br>${label}${actor.name}は不殺の誓いにより攻撃を止めた！`;
+    addRaidActionLog(result, `${label}${actor.name}は不殺の誓いにより攻撃を止めた！`);
   }
   return nextDamage;
 }
@@ -399,25 +595,27 @@ function canCounterAttack(target, village) {
   return getCombatPosition(target, village) === RAID_POSITION_FRONT;
 }
 
-function doCounterAttack(counterActor, target, village, logDiv) {
+function doCounterAttack(counterActor, target, village, result) {
   let ret=calcAttackDamage(counterActor, target, true);
   let rdmg=Math.floor(ret.damage*0.5);
   let retTypeText=ret.isMagic? "魔法攻撃":"物理攻撃";
   target.hp = clampValue(target.hp - rdmg, 0, 100);
-  logDiv.innerHTML+=`<br>　　→ 反撃(${retTypeText}):${counterActor.name}→${target.name}に${rdmg}ダメージ`;
+  addRaidDamageAnimation(result, counterActor, target, rdmg, true);
+  addRaidActionLog(result, `　　→ 反撃(${retTypeText}):${counterActor.name}→${target.name}に${rdmg}ダメージ`);
   if (target.hp<=0) {
-    handleCombatDefeat(target, village, logDiv);
+    handleCombatDefeat(target, village, result);
   }
 }
 
-function handleCombatDefeat(target, village, logDiv) {
+function handleCombatDefeat(target, village, result) {
   if (isEnemyUnit(target, village)) {
-    logDiv.innerHTML+=`<br>　　→ ${target.name}は倒れた！`;
-    removeDefeatedEnemy(target, village);
+    addRaidActionLog(result, `　　→ ${target.name}は倒れた！`);
+    scheduleDefeatedEnemyDeparture(target);
     return;
   }
-  logDiv.innerHTML+=`<br>　　→ ${target.name}は負傷離脱(HP0)`;
+  addRaidActionLog(result, `　　→ ${target.name}は負傷離脱(HP0)`);
   if (!target.bodyTraits.includes("負傷")) target.bodyTraits.push("負傷");
+  markRaidDeparture(target);
 }
 
 function calcAttackDamage(atk, def, isCounter) {
@@ -496,6 +694,7 @@ function finalizeRaid(isSuccess, reason, village) {
   village.log(`【襲撃結果】${isSuccess?"防衛成功":"防衛失敗"} : ${reason}`);
   let rlog=document.getElementById("raidLogArea");
   rlog.innerHTML+=`<br>→ 襲撃結果: ${isSuccess?"防衛成功":"失敗"} (${reason})<br>モーダルを閉じます...`;
+  scrollRaidLogToLatest();
 
   endRaidProcess(isSuccess, false, village);
 }
@@ -506,6 +705,7 @@ function finalizeRaidPartSuccess(village) {
   village.log(`【襲撃結果】${surviveTurns}ターン粘って敵撤退→部分的成功`);
   let rlog=document.getElementById("raidLogArea");
   rlog.innerHTML+=`<br>→ 襲撃結果: 敵撤退(部分成功)<br>モーダルを閉じます...`;
+  scrollRaidLogToLatest();
 
   endRaidProcess(true,true,village);
 }
@@ -657,87 +857,210 @@ export function closeRaidModal() {
  */
 /** 迎撃画面更新 */
 export function updateRaidTables(village) {
-  // 敵側
-  let enemyTbody = document.querySelector("#enemyTable tbody");
-  if (enemyTbody) {
-    enemyTbody.innerHTML = "";
-    village.raidEnemies.forEach(e => {
-      let tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${e.name}</td>
-        <td>${Math.floor(e.hp)}</td>
-        <td>${e.action}</td>
-        <td>${getCombatPosition(e, village) === RAID_POSITION_MIDDLE ? "中衛" : "前衛"}</td>
-        <td>${Math.floor(e.str)}</td>
-        <td>${Math.floor(e.vit)}</td>
-        <td>${Math.floor(e.mag)}</td>
-        <td>${Math.floor(e.cou)}</td>
-      `;
-      enemyTbody.appendChild(tr);
-    });
-  }
-  
-  // 後衛
-  let trapMakers = getTrapMakers(village);
-  let defenderTbody = document.querySelector("#defenderTable tbody");
-  if (defenderTbody) {
-    defenderTbody.innerHTML = "";
-    trapMakers.forEach(v => {
-      let tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${v.name}</td>
-        <td>${Math.floor(v.hp)}</td>
-        <td>${v.action}</td>
-        <td>${Math.floor(v.dex)}</td>
-        <td>${Math.floor(v.int)}</td>
-        <td>${Math.floor(v.cou)}</td>
-      `;
-      defenderTbody.appendChild(tr);
-    });
+  const trapMakers = getVisibleTrapMakers(village);
+  const shooters = village.villagers.filter(v =>
+    (
+      v.hp > 0 &&
+      v.action === ACTION_SHOOT &&
+      canPerformRaidAction(v, ACTION_SHOOT, village)
+    ) ||
+    (isPendingRaidDeparture(v) && v.action === ACTION_SHOOT)
+  );
+  const frontliners = village.villagers.filter(v =>
+    (
+      v.hp > 0 &&
+      (v.action === ACTION_DEFEND || v.action === ACTION_FORTIFY) &&
+      canPerformRaidAction(v, v.action, village)
+    ) ||
+    (isPendingRaidDeparture(v) && (v.action === ACTION_DEFEND || v.action === ACTION_FORTIFY))
+  );
+
+  renderRaidUnits({
+    tableSelector: "#defenderTable tbody",
+    sectionId: "raidRearSection",
+    units: trapMakers,
+    village
+  });
+  renderRaidUnits({
+    tableSelector: "#shootersTable tbody",
+    sectionId: "raidMiddleSection",
+    units: shooters,
+    village
+  });
+  renderRaidUnits({
+    tableSelector: "#raidersTable tbody",
+    sectionId: "raidFrontSection",
+    units: frontliners,
+    village
+  });
+  renderEnemyRaidUnits(village);
+  updateRaidStatusLine(village);
+  scrollRaidLogToLatest();
+}
+
+function setRaidSectionVisible(sectionId, visible) {
+  const section = document.getElementById(sectionId);
+  if (section) section.style.display = visible ? "" : "none";
+}
+
+function renderRaidUnits({ tableSelector, sectionId = "", units, village }) {
+  const tbody = document.querySelector(tableSelector);
+  if (!tbody) return;
+
+  const rows = Array.isArray(units) ? units : [];
+  if (sectionId) setRaidSectionVisible(sectionId, rows.length > 0);
+  tbody.innerHTML = "";
+  rows.forEach(unit => {
+    tbody.appendChild(createRaidUnitRow(unit));
+  });
+}
+
+function renderEnemyRaidUnits(village) {
+  const rows = Array.isArray(village?.raidEnemies)
+    ? village.raidEnemies.filter(unit => unit.hp > 0 || isPendingRaidDeparture(unit))
+    : [];
+  const front = rows.filter(unit => getCombatPosition(unit, village) === RAID_POSITION_FRONT);
+  const middle = rows.filter(unit => getCombatPosition(unit, village) === RAID_POSITION_MIDDLE);
+  renderRaidUnits({
+    tableSelector: "#enemyFrontTable tbody",
+    sectionId: "enemyFrontSection",
+    units: front,
+    village
+  });
+  renderRaidUnits({
+    tableSelector: "#enemyMiddleTable tbody",
+    sectionId: "enemyMiddleSection",
+    units: middle,
+    village
+  });
+}
+
+function createRaidUnitRow(unit) {
+  const row = document.createElement("tr");
+  row.dataset.raidUnitId = getRaidUnitRenderId(unit);
+  if (isPendingRaidDeparture(unit)) row.className = "is-leaving";
+  appendRaidPortraitCell(row, unit);
+  appendRaidNameCell(row, unit);
+  appendRaidValueCell(row, unit?.hp, "raid-unit-hp", Number(unit?.hp) <= 33);
+  appendRaidValueCell(row, unit?.mp, "raid-unit-mp", Number(unit?.mp) <= 33);
+  appendRaidStatSummaryCell(row, unit);
+  return row;
+}
+
+function appendRaidPortraitCell(row, unit) {
+  const cell = document.createElement("td");
+  cell.className = "raid-portrait-cell";
+
+  const frame = document.createElement("div");
+  frame.className = "raid-portrait-frame";
+
+  const portrait = document.createElement("img");
+  portrait.src = getPortraitPath(unit);
+  portrait.alt = unit?.name || "";
+  portrait.loading = "lazy";
+
+  frame.appendChild(portrait);
+  cell.appendChild(frame);
+  row.appendChild(cell);
+}
+
+function appendRaidNameCell(row, unit) {
+  const cell = document.createElement("td");
+  cell.className = "raid-unit-name";
+
+  const title = document.createElement("span");
+  title.className = "raid-unit-title";
+  title.textContent = unit?.name || "";
+  cell.appendChild(title);
+
+  const meta = document.createElement("div");
+  meta.className = "raid-unit-meta";
+
+  if (unit?.action) {
+    const action = document.createElement("span");
+    action.className = "raid-unit-action";
+    action.textContent = unit.action;
+    meta.appendChild(action);
   }
 
-  // 中衛
-  let shooters = village.villagers.filter(v => v.action === ACTION_SHOOT && canPerformRaidAction(v, ACTION_SHOOT, village));
-  let shootersTbody = document.querySelector("#shootersTable tbody");
-  if (shootersTbody) {
-    shootersTbody.innerHTML = "";
-    shooters.forEach(v => {
-      let tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${v.name}</td>
-        <td>${Math.floor(v.hp)}</td>
-        <td>${v.action}</td>
-        <td>${Math.floor(v.str)}</td>
-        <td>${Math.floor(v.vit)}</td>
-        <td>${Math.floor(v.dex)}</td>
-        <td>${Math.floor(v.cou)}</td>
-      `;
-      shootersTbody.appendChild(tr);
+  getRaidVisibleEffects(unit).forEach(effectName => {
+    const effect = document.createElement("span");
+    effect.className = "raid-unit-effect";
+    effect.textContent = effectName;
+    meta.appendChild(effect);
+  });
+
+  cell.appendChild(meta);
+  row.appendChild(cell);
+}
+
+function getRaidVisibleEffects(unit) {
+  const sources = [unit?.raidEffects, unit?.statusEffects, unit?.buffs, unit?.debuffs];
+  const names = [];
+  sources.forEach(source => {
+    if (!Array.isArray(source)) return;
+    source.forEach(effect => {
+      const name = typeof effect === "string" ? effect : effect?.name || effect?.label;
+      if (name && !names.includes(name)) names.push(name);
     });
-  }
-  
-  // 前衛
-  let raiders = village.villagers.filter(v =>
-    (v.action === ACTION_DEFEND || v.action === ACTION_FORTIFY) &&
-    canPerformRaidAction(v, v.action, village)
-  );
-  let raidersTbody = document.querySelector("#raidersTable tbody");
-  if (raidersTbody) {
-    raidersTbody.innerHTML = "";
-    raiders.forEach(v => {
-      let tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${v.name}</td>
-        <td>${Math.floor(v.hp)}</td>
-        <td>${v.action}</td>
-        <td>${Math.floor(v.str)}</td>
-        <td>${Math.floor(v.vit)}</td>
-        <td>${Math.floor(v.mag)}</td>
-        <td>${Math.floor(v.cou)}</td>
-      `;
-      raidersTbody.appendChild(tr);
-    });
-  }
+  });
+  return names;
+}
+
+function appendRaidValueCell(row, value, className = "", isLow = false) {
+  const cell = document.createElement("td");
+  if (className) cell.className = className;
+  if (isLow) cell.classList.add("is-low");
+  cell.textContent = Math.floor(Number(value) || 0);
+  row.appendChild(cell);
+}
+
+function formatRaidStat(label, value) {
+  return `${label}${Math.floor(Number(value) || 0)}`;
+}
+
+function appendRaidStatValue(line, label, value) {
+  if (line.childNodes.length > 0) line.appendChild(document.createTextNode(" "));
+  const stat = document.createElement("span");
+  stat.className = "raid-stat-value";
+  if (Number(value) >= 20) stat.classList.add("is-high");
+  stat.textContent = formatRaidStat(label, value);
+  line.appendChild(stat);
+}
+
+function appendRaidStatLine(line, stats) {
+  stats.forEach(([label, value]) => {
+    appendRaidStatValue(line, label, value);
+  });
+}
+
+function appendRaidStatSummaryCell(row, unit) {
+  const cell = document.createElement("td");
+  cell.className = "raid-stat-summary";
+
+  const bodyLine = document.createElement("span");
+  bodyLine.className = "raid-stat-line";
+  appendRaidStatLine(bodyLine, [
+    ["筋", unit?.str],
+    ["耐", unit?.vit],
+    ["器", unit?.dex],
+    ["魔", unit?.mag],
+    ["魅", unit?.chr]
+  ]);
+
+  const mindLine = document.createElement("span");
+  mindLine.className = "raid-stat-line";
+  appendRaidStatLine(mindLine, [
+    ["知", unit?.int],
+    ["勤", unit?.ind],
+    ["倫", unit?.eth],
+    ["勇", unit?.cou],
+    ["色", unit?.sexdr]
+  ]);
+
+  cell.appendChild(bodyLine);
+  cell.appendChild(mindLine);
+  row.appendChild(cell);
 }
 
 // 戦闘ダメージを受けた際の処理を追加

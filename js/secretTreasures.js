@@ -265,6 +265,7 @@ export const SECRET_TREASURES = [
     blockedReason: "襲撃中または襲撃予約中は使用できません",
     use: (village) => {
       village.log("【秘宝】黄金の林檎を使いました。襲撃を呼び寄せます");
+      closeSecretTreasureModal();
       showSecretTreasureResult(village, "黄金の林檎", "黄金の林檎の甘い香りが災いを呼び、村の外に不穏な影が集まりました。");
       startRaidEvent(village);
     }
