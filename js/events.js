@@ -422,7 +422,6 @@ export function endOfMonthProcess(v) {
     bodyTraitsToRemove.forEach(trait => {
       if (p.bodyTraits.includes(trait)) {
         p.bodyTraits = p.bodyTraits.filter(t => t !== trait);
-        if (trait === "疫病") p.hp = clampValue(round3((Number(p.hp) || 0) / 0.5), 0, 100);
         changed = true;
       }
     });

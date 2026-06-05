@@ -7,6 +7,7 @@ import { createArchiveGapHistoryEvent, normalizeHistoryEvents } from "./history.
 import { normalizePortraitKey } from "./data/portraitPaths.js";
 import { normalizeRelationships } from "./relationships.js";
 import { ensureTitleState, evaluateTitles } from "./titles.js";
+import { normalizeTutorialState } from "./tutorial.js";
 import { getInitialScaleStageIndex } from "./villageScale.js";
 
 function normalizeBodyTraitName(trait) {
@@ -147,6 +148,7 @@ function convertVillageToObject(village) {
     popLimit: village.popLimit,
     villageTraits: [...village.villageTraits],
     secretTreasures: normalizeSecretTreasures(village),
+    tutorial: normalizeTutorialState(village.tutorial),
     logs: [...village.logs],
     historyEvents: normalizeHistoryEvents(village.historyEvents),
     gameOver: village.gameOver,
@@ -302,6 +304,7 @@ function convertObjectToVillage(dataObj) {
     v.villageTraits = [...dataObj.villageTraits];
   }
   v.secretTreasures = normalizeSecretTreasures(dataObj);
+  v.tutorial = normalizeTutorialState(dataObj.tutorial);
   v.logs = Array.isArray(dataObj.logs) ? [...dataObj.logs] : [];
   if (hasOwn(dataObj, "historyEvents")) {
     v.historyEvents = normalizeHistoryEvents(dataObj.historyEvents);

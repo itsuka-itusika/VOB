@@ -8,6 +8,7 @@ import { updateChildGrowthStage } from "./reproduction.js";
 import { clampValue, round3 } from "./util.js";
 import { updateUI } from "./ui.js";
 import { addAcquiredStat, syncEffectiveStats } from "./domain/statLayers.js";
+import { MESSENGER_PASS_SECRET_TREASURE_ID } from "./data/tutorialData.js";
 
 const SEASON_TRAITS_TO_REMOVE = ["夏", "秋", "冬", "冷夏", "飛蝗", "厳冬", "疫病流行"];
 const BAD_BODY_TRAITS = ["負傷", "疲労", "過労", "飢餓", "凍え", "病気", "疫病", "産褥", "危篤"];
@@ -26,9 +27,10 @@ const SECRET_TREASURE_SELL_PRICES = {
   pan_flute: 300,
   grotesque_portrait: 500,
   golden_mask: 500,
-  blue_stone_tablet: 150
+  blue_stone_tablet: 150,
+  [MESSENGER_PASS_SECRET_TREASURE_ID]: 50
 };
-const DISABLED_RANDOM_SECRET_TREASURE_IDS = new Set(["blue_stone_tablet"]);
+const DISABLED_RANDOM_SECRET_TREASURE_IDS = new Set(["blue_stone_tablet", MESSENGER_PASS_SECRET_TREASURE_ID]);
 
 function getVillagers(village) {
   return Array.isArray(village.villagers) ? village.villagers : [];
@@ -109,7 +111,6 @@ function restoreBadStatus(person, village, options = {}) {
     if (!person.bodyTraits.includes(trait)) return;
     recovered.push(trait);
     person.bodyTraits = person.bodyTraits.filter(item => item !== trait);
-    if (trait === "疫病") person.hp = clampValue(round3(person.hp / 0.5), 0, 100);
     if (trait === "産褥") person.postpartumMonths = 0;
   });
 
@@ -267,6 +268,14 @@ export const SECRET_TREASURES = [
       showSecretTreasureResult(village, "黄金の林檎", "黄金の林檎の甘い香りが災いを呼び、村の外に不穏な影が集まりました。");
       startRaidEvent(village);
     }
+  },
+  {
+    id: MESSENGER_PASS_SECRET_TREASURE_ID,
+    name: "伝令神の手形",
+    desc: "襲撃発生時に使用できる。使用すると、その襲撃をなかったことにする。",
+    sellPrice: SECRET_TREASURE_SELL_PRICES[MESSENGER_PASS_SECRET_TREASURE_ID],
+    canUse: () => false,
+    blockedReason: "襲撃発生モーダルで使用できます"
   },
   {
     id: "nectar",

@@ -9,6 +9,7 @@ import {
 import { refreshJobTable } from "./domain/jobTables.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
 import { showRaidWarningModal } from "./raidWarningModal.js";
+import { MESSENGER_PASS_SECRET_TREASURE_ID } from "./data/tutorialData.js";
 import { updateUI } from "./ui.js";
 import { randChoice, randInt } from "./util.js";
 import { getVillageScaleStage } from "./villageScale.js";
@@ -283,6 +284,23 @@ function createAvoidanceOption(village, avoidance) {
   };
 }
 
+function createMessengerPassAvoidanceOption(village) {
+  if (!hasMessengerPass(village)) return null;
+  return {
+    type: "messengerPass",
+    label: "伝令神の手形を使う",
+    detail: "秘宝「伝令神の手形」を使うと、この襲撃をなかったことにします。",
+    disabled: false
+  };
+}
+
+function createRaidAvoidanceOptions(village, avoidance) {
+  return [
+    createAvoidanceOption(village, avoidance),
+    createMessengerPassAvoidanceOption(village)
+  ].filter(Boolean);
+}
+
 function resetRaidUiAfterAvoidance() {
   if (typeof document === "undefined") return;
 
@@ -322,23 +340,61 @@ function endRaidByAvoidance(village, raidDefinition, option) {
   }
 
   village.villagers.forEach(person => refreshJobTable(person, village));
-  village.log(`${raidDefinition.name}: ${option.resourceLabel}${option.amount}を支払い、襲撃者は去っていった。`);
+  if (option.type === "messengerPass") {
+    village.log(`【秘宝】伝令神の手形を使い、${raidDefinition.name}の襲撃をなかったことにしました。`);
+  } else {
+    village.log(`${raidDefinition.name}: ${option.resourceLabel}${option.amount}を支払い、襲撃者は去っていった。`);
+  }
 
   resetRaidUiAfterAvoidance();
   updateUI(village);
 }
 
-function executeRaidAvoidance(village, raidDefinition) {
-  const avoidance = raidDefinition.avoidance;
-  const option = createAvoidanceOption(village, avoidance);
+function executeRaidAvoidance(village, raidDefinition, option = null) {
+  option = option || createAvoidanceOption(village, raidDefinition.avoidance);
   if (!option || option.disabled) {
     if (option?.disabledReason) village.log(`${raidDefinition.name}: ${option.disabledReason}`);
     return false;
   }
 
-  const currentAmount = Number(village[option.resource]) || 0;
-  village[option.resource] = Math.max(0, currentAmount - option.amount);
+  if (option.type === "messengerPass") {
+    if (!consumeMessengerPass(village)) return false;
+  } else {
+    const currentAmount = Number(village[option.resource]) || 0;
+    village[option.resource] = Math.max(0, currentAmount - option.amount);
+  }
   endRaidByAvoidance(village, raidDefinition, option);
+  return true;
+}
+
+function getSecretTreasureEntryId(entry) {
+  if (typeof entry === "string") return entry;
+  return entry?.id || entry?.name || "";
+}
+
+function getMessengerPassIndex(village) {
+  const secretTreasures = Array.isArray(village?.secretTreasures)
+    ? village.secretTreasures
+    : (Array.isArray(village?.treasures) ? village.treasures : []);
+  return secretTreasures.findIndex(entry => {
+    const id = getSecretTreasureEntryId(entry);
+    return id === MESSENGER_PASS_SECRET_TREASURE_ID || id === "伝令神の手形";
+  });
+}
+
+function hasMessengerPass(village) {
+  return getMessengerPassIndex(village) >= 0;
+}
+
+function consumeMessengerPass(village) {
+  const source = Array.isArray(village.secretTreasures)
+    ? village.secretTreasures
+    : (Array.isArray(village.treasures) ? village.treasures : []);
+  const index = getMessengerPassIndex(village);
+  if (index < 0) return false;
+  source.splice(index, 1);
+  village.secretTreasures = source;
+  if (Array.isArray(village.treasures)) delete village.treasures;
   return true;
 }
 
@@ -418,8 +474,8 @@ export function startRaidEvent(village, options = {}) {
     representative,
     introDialogues: raidDefinition.introDialogues,
     enemyCount,
-    avoidanceOption: createAvoidanceOption(village, raidDefinition.avoidance),
-    onAvoidance: () => executeRaidAvoidance(village, raidDefinition)
+    avoidanceOptions: createRaidAvoidanceOptions(village, raidDefinition.avoidance),
+    onAvoidance: option => executeRaidAvoidance(village, raidDefinition, option)
   });
 
   if (typeof document !== "undefined") {

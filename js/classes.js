@@ -30,6 +30,10 @@ export class Village {
     this.popLimit = 8;
     this.villageTraits = ["春"];
     this.secretTreasures = [];
+    this.tutorial = {
+      completed: {},
+      complete: false
+    };
 
     this.logs = [];
     this.historyEvents = [];

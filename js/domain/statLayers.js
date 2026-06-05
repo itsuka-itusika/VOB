@@ -2,12 +2,13 @@ import { clampValue, round3 } from "../util.js";
 import { ABILITY_STATS, PHYSICAL_ABILITY_STATS } from "./personSchema.js";
 import { evaluateTitles } from "../titles.js";
 
-export const STAT_LAYER_VERSION = 1;
+export const STAT_LAYER_VERSION = 2;
 
 const ZERO_STAT_MAP = Object.freeze(Object.fromEntries(ABILITY_STATS.map(stat => [stat, 0])));
 const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成"]);
 
 const PERMANENT_BODY_TRAIT_ADDS = Object.freeze({
+  "巨躯": { str: 10 },
   "聖女の輝き": { mag: 10, chr: 10 },
   "大地の巫女": { vit: 10, chr: 10 },
   "月の巫女": { dex: 10, chr: 10 },
@@ -139,6 +140,17 @@ export function hasStatLayerData(source) {
   return !!source && typeof source.baseStats === "object" && source.baseStats !== null;
 }
 
+function hasBodyTrait(person, trait) {
+  return Array.isArray(person?.bodyTraits) && person.bodyTraits.includes(trait);
+}
+
+function migrateStatLayers(person, source) {
+  const version = Number(source?.statLayerVersion) || 0;
+  if (version < 2 && hasBodyTrait(person, "巨躯")) {
+    person.baseStats.str = clampValue(round3(numberOr(person.baseStats.str, 10) - 10), 0, 100);
+  }
+}
+
 export function ensureStatLayers(person) {
   if (!person) return person;
   if (!hasStatLayerData(person)) {
@@ -147,6 +159,7 @@ export function ensureStatLayers(person) {
   } else {
     person.baseStats = normalizeStatMap(person.baseStats, person, 10);
     person.acquiredStatMods = normalizeStatMap(person.acquiredStatMods, ZERO_STAT_MAP, 0);
+    migrateStatLayers(person, person);
   }
   person.statLayerVersion = STAT_LAYER_VERSION;
   return person;
@@ -157,6 +170,7 @@ export function hydrateStatLayersFromObject(person, source) {
   if (hasStatLayerData(source)) {
     person.baseStats = normalizeStatMap(source.baseStats, source, 10);
     person.acquiredStatMods = normalizeStatMap(source.acquiredStatMods, ZERO_STAT_MAP, 0);
+    migrateStatLayers(person, source);
   } else {
     person.baseStats = inferLegacyBaseStats(person);
     person.acquiredStatMods = createStatMap(0);
@@ -237,9 +251,6 @@ export function setBaseStatsFromEffective(person) {
 }
 
 export function applyGenerationBaseTraitBonuses(person) {
-  if (Array.isArray(person?.bodyTraits) && person.bodyTraits.includes("巨躯")) {
-    addBaseStat(person, "str", 10);
-  }
   if (Array.isArray(person?.mindTraits) && person.mindTraits.includes("箱入り")) {
     addBaseStat(person, "chr", 5);
   }

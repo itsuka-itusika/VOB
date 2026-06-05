@@ -16,6 +16,17 @@ import { addRelationship, checkHasRelationship, getRelationshipTargetName, norma
 import { getDialogueLine } from "./dialogue/dialogueEngine.js";
 
 const HUMANOID_RACES = new Set(["人間", "ハーピー", "半神", "キュクロプス", "サイクロプス", "巨人", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド"]);
+const FEMALE_FIXED_RACES = new Set(["ハーピー", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド"]);
+const LONG_LIVED_RACES = new Set(["ドライアド", "ネレイド", "アルセイド", "翼人"]);
+const RACE_BODY_TRAITS = {
+  "翼人": ["飛行", "光輪"],
+  "アルセイド": ["緑の指", "不老"],
+  "ネレイド": ["水中呼吸", "不老"],
+  "ドライアド": ["緑の指", "光合成"],
+  "アラクニド": ["糸吐き"],
+  "キュクロプス": ["巨躯", "単眼"],
+  "ハーピー": ["飛行", "澄んだ声"]
+};
 const PHYSICAL_STATS = ["str", "vit", "dex", "mag", "chr"];
 const MENTAL_STATS = ["int", "ind", "eth", "cou", "sexdr"];
 const CHILD_BODY_TRAITS = ["赤子", "子供", "少年", "少女"];
@@ -75,6 +86,14 @@ function isHumanoid(person) {
 function normalizeChildRace(race) {
   if (race === "サイクロプス" || race === "巨人") return "キュクロプス";
   return race || "人間";
+}
+
+function isFemaleFixedRace(race) {
+  return FEMALE_FIXED_RACES.has(normalizeChildRace(race));
+}
+
+function isLongLivedRace(race) {
+  return LONG_LIVED_RACES.has(normalizeChildRace(race));
 }
 
 function snapshotParent(person) {
@@ -138,6 +157,12 @@ function applyInheritedBodyTraits(child, traits) {
   syncEffectiveStats(child);
 }
 
+function applyRaceBodyTraits(character) {
+  (RACE_BODY_TRAITS[normalizeChildRace(character?.race)] || [])
+    .forEach(trait => addUnique(character.bodyTraits, trait));
+  syncEffectiveStats(character);
+}
+
 function hasOwnChildInVillage(village, parent) {
   if (!Array.isArray(parent?.relationships)) return false;
   return parent.relationships.some(rel => normalizeRelationship(rel).startsWith("【家族関係】子："));
@@ -155,11 +180,15 @@ function getBuddingStatusLine(character) {
   return randChoice(character?.spiritSex === "女" ? femaleLines : maleLines);
 }
 
+function isPregnancyAge(person, maxAge) {
+  const age = Number(person?.bodyAge) || 0;
+  return age >= 16 && (isLongLivedRace(person?.race) || age <= maxAge);
+}
+
 function canBeMother(person, village) {
   return isHumanoid(person) &&
     person.bodySex === "女" &&
-    Number(person.bodyAge) >= 16 &&
-    Number(person.bodyAge) <= 38 &&
+    isPregnancyAge(person, 38) &&
     !hasMindTrait(person, "神聖") &&
     checkHasRelationship(person, "既婚") &&
     !person.pregnancy &&
@@ -178,8 +207,7 @@ function canBeFather(person) {
 function canReceiveGoldenRainPregnancy(person) {
   return isHumanoid(person) &&
     person.bodySex === "女" &&
-    Number(person.bodyAge) >= 16 &&
-    Number(person.bodyAge) <= 29 &&
+    isPregnancyAge(person, 29) &&
     !hasMindTrait(person, "神聖") &&
     !person.pregnancy &&
     !hasTrait(person, "妊娠") &&
@@ -214,10 +242,17 @@ export function scheduleGoldenRainPregnancy(village, mother) {
   return true;
 }
 
-function decideChildSex(race) {
-  if (race === "ハーピー") return "女";
-  if (race === "キュクロプス" || race === "サイクロプス" || race === "巨人") return "男";
+function decideChildSex() {
   return Math.random() < 0.5 ? "男" : "女";
+}
+
+function decideChildRace(childSex, motherSnapshot, fatherSnapshot, explicitRace = null) {
+  if (explicitRace) return normalizeChildRace(explicitRace);
+  if (childSex === "女") return normalizeChildRace(motherSnapshot?.race);
+  if (childSex === "男" && isFemaleFixedRace(motherSnapshot?.race)) {
+    return normalizeChildRace(fatherSnapshot?.race);
+  }
+  return "人間";
 }
 
 function inheritStat(mother, father, stat, variance) {
@@ -305,10 +340,7 @@ function buildAdultTemplate(child, potentialStats) {
   assignBodyMindTraits(adult);
   adult.bodyTraits = removeTraits(adult.bodyTraits, ["中年", "老人"]);
   adult.mindTraits = removeTraits(adult.mindTraits, CHILD_MIND_TRAITS);
-  if (adult.race === "ハーピー") {
-    addUnique(adult.bodyTraits, "飛行");
-    addUnique(adult.bodyTraits, "澄んだ声");
-  }
+  applyRaceBodyTraits(adult);
   assignHobby(adult);
   adult.portraitFile = selectPortraitByCharacter(adult);
   return adult;
@@ -567,8 +599,8 @@ function processPendingGoldenRainPregnancies(village) {
 function startPregnancy(village, mother, father, options = {}) {
   const motherSnapshot = snapshotParent(mother);
   const fatherSnapshot = options.fatherSnapshot || snapshotParent(father);
-  const childRace = normalizeChildRace(options.childRace || mother.race);
-  const childSex = decideChildSex(childRace);
+  const childSex = decideChildSex();
+  const childRace = decideChildRace(childSex, motherSnapshot, fatherSnapshot, options.childRace);
   const potentialStats = buildPotentialStats(motherSnapshot, fatherSnapshot, childSex, childRace);
   const inheritedBodyTraits = [
     ...rollInheritedTraits({ motherSnapshot, fatherSnapshot, childSex }),
@@ -620,10 +652,7 @@ function giveBirth(village, mother) {
   setBaseStatsFromEffective(child);
   child.bodyTraits = ["赤子"];
   child.mindTraits = ["無垢"];
-  if (child.race === "ハーピー") {
-    addUnique(child.bodyTraits, "飛行");
-    addUnique(child.bodyTraits, "澄んだ声");
-  }
+  applyRaceBodyTraits(child);
   applyInheritedBodyTraits(child, data.inheritedBodyTraits || []);
   child.hobby = "";
   child.hp = 100;

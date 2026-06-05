@@ -25,16 +25,20 @@ export function showRaidWarningModal({
   introDialogues = [],
   enemyCount,
   avoidanceOption = null,
+  avoidanceOptions = null,
   onAvoidance = null
 }) {
   if (typeof document === "undefined") return;
+  const resolvedAvoidanceOptions = Array.isArray(avoidanceOptions)
+    ? avoidanceOptions
+    : (avoidanceOption ? [avoidanceOption] : []);
 
   pendingRaidWarning = {
     raidName,
     representative,
     introDialogues,
     enemyCount,
-    avoidanceOption,
+    avoidanceOptions: resolvedAvoidanceOptions,
     onAvoidance
   };
   closeRaidWarningModal();
@@ -78,7 +82,7 @@ function showRaidWarningWhenReady() {
     representative,
     introDialogues,
     enemyCount,
-    avoidanceOption,
+    avoidanceOptions,
     onAvoidance
   } = pendingRaidWarning;
   pendingRaidWarning = null;
@@ -132,11 +136,12 @@ function showRaidWarningWhenReady() {
   const detail = document.createElement("div");
   detail.className = "raid-warning-detail";
   detail.textContent = `${raidName || "襲撃"} / ${countText}`;
-  if (avoidanceOption?.detail) {
+  avoidanceOptions.forEach(avoidanceOption => {
+    if (!avoidanceOption?.detail) return;
     const avoidanceDetail = document.createElement("div");
     avoidanceDetail.textContent = avoidanceOption.detail;
     detail.appendChild(avoidanceDetail);
-  }
+  });
 
   dialogueArea.appendChild(characterInfo);
   dialogueArea.appendChild(text);
@@ -147,7 +152,13 @@ function showRaidWarningWhenReady() {
   const buttons = document.createElement("div");
   buttons.className = "modal-buttons";
 
-  if (avoidanceOption) {
+  const interceptButton = document.createElement("button");
+  interceptButton.type = "button";
+  interceptButton.textContent = "防衛する";
+  interceptButton.onclick = closeRaidWarningModal;
+  buttons.appendChild(interceptButton);
+
+  avoidanceOptions.forEach(avoidanceOption => {
     const avoidanceButton = document.createElement("button");
     avoidanceButton.type = "button";
     avoidanceButton.textContent = avoidanceOption.label;
@@ -156,22 +167,16 @@ function showRaidWarningWhenReady() {
       avoidanceButton.title = avoidanceOption.disabledReason;
     }
     avoidanceButton.onclick = () => {
-      if (typeof onAvoidance === "function" && onAvoidance()) {
+      if (typeof onAvoidance === "function" && onAvoidance(avoidanceOption)) {
         closeRaidWarningModal();
       }
     };
     buttons.appendChild(avoidanceButton);
-  }
-
-  const interceptButton = document.createElement("button");
-  interceptButton.type = "button";
-  interceptButton.textContent = "防衛する";
-  interceptButton.onclick = closeRaidWarningModal;
+  });
 
   modal.appendChild(title);
   modal.appendChild(content);
   modal.appendChild(buttons);
-  buttons.appendChild(interceptButton);
 
   document.body.appendChild(overlay);
   document.body.appendChild(modal);

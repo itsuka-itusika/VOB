@@ -22,6 +22,7 @@ import {
   expandEventVillagerLines,
   findLineByKeys
 } from "../data/dialogue/randomEventLines.js";
+import { BODY_EXCHANGE_SOURCE_RACE_LINE_KEYS } from "../data/dialogue/exchangeLines.js";
 
 export { resolveDialogueTone, resolveStoredSpeechType } from "../data/dialogue/toneProfiles.js";
 
@@ -108,10 +109,12 @@ export function getChildlikeRandomEventLine(character, { eventKey = null, kind =
   return null;
 }
 
-export function selectRandomEventLineBySpeechType(group, speechType, character) {
+export function selectRandomEventLineBySpeechType(group, speechType, character, options = {}) {
   if (!group) return null;
   const genderFallback = character?.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ";
+  const extraKeys = Array.isArray(options.extraKeys) ? options.extraKeys : [];
   const keys = uniqueKeys([
+    ...extraKeys,
     speechType,
     ...(SPEECH_TYPE_LINE_FALLBACKS[speechType] || []),
     genderFallback,
@@ -125,12 +128,26 @@ export function selectRandomEventLineBySpeechType(group, speechType, character) 
 }
 
 function getRandomEventLine(character, eventKey, { kind = null, subject = null, mood = null } = {}) {
-  const childLine = getChildlikeRandomEventLine(character, { eventKey, kind, mood });
-  if (childLine) return childLine;
+  const isBodyExchangeEvent = eventKey === "lightning2";
+  if (!isBodyExchangeEvent) {
+    const childLine = getChildlikeRandomEventLine(character, { eventKey, kind, mood });
+    if (childLine) return childLine;
+  }
 
-  const speechType = resolveStoredSpeechType(character);
-  const eventLine = selectRandomEventLineBySpeechType(EVENT_LINES_BY_SPEECH_TYPE[eventKey], speechType, character);
+  const speechType = isBodyExchangeEvent ? resolveDialogueTone(character) : resolveStoredSpeechType(character);
+  const sourceRace = character?.lastBodyExchangeSourceRace;
+  const sourceRaceLineKey = sourceRace && sourceRace !== character?.race
+    ? BODY_EXCHANGE_SOURCE_RACE_LINE_KEYS[sourceRace]
+    : null;
+  const eventLine = selectRandomEventLineBySpeechType(EVENT_LINES_BY_SPEECH_TYPE[eventKey], speechType, character, {
+    extraKeys: isBodyExchangeEvent && !isChildlikeDialogueTone(speechType) ? [sourceRaceLineKey] : []
+  });
   if (eventLine) return pickDialogueLine(eventLine);
+
+  if (isBodyExchangeEvent) {
+    const childLine = getChildlikeRandomEventLine(character, { eventKey, kind, mood });
+    if (childLine) return childLine;
+  }
 
   const fallbackLines = createRandomEventFallbackLines(subject || "出来事");
   const eventMood = mood || getRandomEventMood(eventKey, kind);

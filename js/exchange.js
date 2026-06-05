@@ -61,12 +61,29 @@ function refreshAssignmentAfterExchange(person, village) {
   refreshJobTable(person, village);
 }
 
+function markBodyExchangeSourceRace(person, fromRace, toRace) {
+  Object.defineProperties(person, {
+    lastBodyExchangeSourceRace: {
+      configurable: true,
+      value: fromRace || "人間",
+      writable: true
+    },
+    lastBodyExchangeTargetRace: {
+      configurable: true,
+      value: toRace || "人間",
+      writable: true
+    }
+  });
+}
+
 /**
  * Swap body-related parameters between two characters.
  */
 export function doExchange(a, b, v, isLightning = false, historySource = null) {
   ensureStatLayers(a);
   ensureStatLayers(b);
+  const sourceRaceA = a.race || "人間";
+  const sourceRaceB = b.race || "人間";
   const exchangeParams = {
     bodySex: a.bodySex,
     bodyAge: a.bodyAge,
@@ -135,6 +152,8 @@ export function doExchange(a, b, v, isLightning = false, historySource = null) {
   evaluateTitles(b, { getPermanentStat });
   refreshAssignmentAfterExchange(a, v);
   refreshAssignmentAfterExchange(b, v);
+  markBodyExchangeSourceRace(a, sourceRaceA, a.race);
+  markBodyExchangeSourceRace(b, sourceRaceB, b.race);
 
   if (!isLightning) {
     v.log(`【交換の奇跡】${a.name}と${b.name}の肉体を交換しました`);

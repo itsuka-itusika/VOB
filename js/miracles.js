@@ -11,8 +11,9 @@ import { syncEffectiveStats } from "./domain/statLayers.js";
 import { recordMarriageHistory, recordVillagerLeaveHistory } from "./history.js";
 import { DEFAULT_PORTRAIT_KEY, getPortraitAssetPath } from "./data/portraitPaths.js";
 import { resolveDialogueTone } from "./data/dialogue/toneProfiles.js";
-import { BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
+import { BODY_EXCHANGE_SOURCE_RACE_LINE_KEYS, BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
 import { getVisitorArrivalLine } from "./data/dialogue/visitorLines.js";
+import { completeTutorialTask } from "./tutorial.js";
 
 const DEFAULT_PORTRAIT_PATH = getPortraitAssetPath(DEFAULT_PORTRAIT_KEY);
 const AUTONOMOUS_SETTLEMENT_SCALE = 350;
@@ -572,6 +573,7 @@ export function performMiracle(village) {
       break;
   }
 
+  completeTutorialTask(village, "use_miracle");
   updateUI(village);
   closeMiracleModal();
 }
@@ -601,7 +603,6 @@ function healMiracle(p,v) {
     if (p.bodyTraits.includes(trait)) {
       recoveredTraits.push(trait);
       p.bodyTraits = p.bodyTraits.filter(t => t !== trait);
-      if (trait === "疫病") p.hp = clampValue(p.hp / 0.5, 0, 100);
       if (trait === "産褥") p.postpartumMonths = 0;
     }
   });
@@ -966,12 +967,22 @@ function randFrom(lines) {
   return lines[Math.floor(Math.random() * lines.length)];
 }
 
-function getBodyExchangeReactionLine(person) {
+function getBodyExchangeLineKey(person) {
   const raiderTypes = ["野盗", "ゴブリン", "狼", "キュクロプス", "ハーピー"];
-  let type = resolveDialogueTone(person);
   if (person.mindTraits && person.mindTraits.includes("襲撃者")) {
-    type = raiderTypes.find(raiderType => person.name.includes(raiderType)) || type;
+    const raiderType = raiderTypes.find(type => person.name.includes(type));
+    if (raiderType) return raiderType;
   }
+  const sourceRace = person.lastBodyExchangeSourceRace;
+  if (sourceRace && sourceRace !== person.race) {
+    const sourceRaceKey = BODY_EXCHANGE_SOURCE_RACE_LINE_KEYS[sourceRace];
+    if (sourceRaceKey) return sourceRaceKey;
+  }
+  return resolveDialogueTone(person);
+}
+
+function getBodyExchangeReactionLine(person) {
+  const type = getBodyExchangeLineKey(person);
   const fallbackType = person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ";
   return randFrom(BODY_EXCHANGE_REACTION_LINES[type] || BODY_EXCHANGE_REACTION_LINES[fallbackType] || BODY_EXCHANGE_REACTION_LINES["普通Ｍ"]);
 }
@@ -1097,23 +1108,8 @@ export function openExchangeModal(personA, personB, options = {}) {
     portraitB.src = DEFAULT_PORTRAIT_PATH;
   }
   
-  // 交換反応は精神側の実効口調で選び、襲撃者だけ専用キーを優先する。
-  const getExchangeLineKey = (person) => {
-    // 襲撃者の場合は襲撃者タイプを使用
-    if (person.mindTraits && person.mindTraits.includes("襲撃者")) {
-      // 名前から襲撃者タイプを抽出
-      const raiderTypes = ["野盗", "ゴブリン", "狼", "キュクロプス", "ハーピー"];
-      for (const type of raiderTypes) {
-        if (person.name.includes(type)) {
-          return type;
-        }
-      }
-    }
-    return resolveDialogueTone(person);
-  };
-
-  const speechTypeA = getExchangeLineKey(personA);
-  const speechTypeB = getExchangeLineKey(personB);
+  const speechTypeA = getBodyExchangeLineKey(personA);
+  const speechTypeB = getBodyExchangeLineKey(personB);
   
   // 入れ替わり時のセリフをランダムに選択
   const getRandomLine = (patterns, type, person) => {

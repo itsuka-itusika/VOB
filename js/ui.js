@@ -43,6 +43,7 @@ import { combinedDictionaryData } from "./data/dictionaryData.js";
 import { getPortraitPath, getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "./util.js";
 import { openPersonalHistoryModal } from "./history.js";
 import { formatRelationshipsForDisplay, normalizeRelationship } from "./relationships.js";
+import { getTutorialWarnings } from "./tutorial.js";
 import { applyVillageScaleArtClass, getVillageScaleTitle } from "./villageScale.js";
 
 
@@ -158,6 +159,8 @@ function buildWarningMessages(village) {
     village.buildingFlags?.hasAssemblyHall ||
     (Array.isArray(village.buildings) && village.buildings.includes("assemblyHall"))
   );
+
+  warnings.push(...getTutorialWarnings(village));
 
   if (foodCost > 0 && monthsOfFood <= 3) {
     warnings.push({

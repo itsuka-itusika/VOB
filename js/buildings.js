@@ -1,5 +1,6 @@
 import { refreshJobTable } from "./domain/jobTables.js";
 import { MAX_STOREHOUSES, getResourceStorageLimit } from "./domain/resourceLimits.js";
+import { completeTutorialTask } from "./tutorial.js";
 import { showVillageScaleMilestones } from "./villageScale.js";
 
 function ensureBuildingFlags(village) {
@@ -393,6 +394,9 @@ function constructBuilding(building, village) {
   village.buildings.push(building.id);
 
   building.effect(village);
+  if (building.id === "barn") {
+    completeTutorialTask(village, "build_barn");
+  }
   refreshVillageJobTables(village);
   showVillageScaleMilestones(village);
 

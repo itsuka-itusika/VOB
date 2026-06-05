@@ -1,6 +1,6 @@
 // jobs.js
 
-import { randInt, randFloat, clampValue, round3 } from "./util.js";
+import { randInt, randFloat, clampValue } from "./util.js";
 import { HobbyEffects } from "./HobbyEffects.js";
 import {
   calculateAlchemyYield,
@@ -33,6 +33,7 @@ import { refreshJobTable } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { addAcquiredStat, getPermanentStat, syncEffectiveStats } from "./domain/statLayers.js";
 import { rollSecretTreasureJobEvents, showSecretTreasureEventModals } from "./secretTreasureEvents.js";
+import { completeTutorialTask } from "./tutorial.js";
 import { incrementTitleCounter, TITLE_COUNTER_KEYS } from "./titles.js";
 
 const HEALING_RECOVERABLE_BODY_TRAITS = ["負傷", "疫病"];
@@ -68,11 +69,6 @@ function getJobStatGrowthChance(person, stat, baseChance = BASE_JOB_STAT_GROWTH_
 
 function rollJobStatGrowth(person, stat, baseChance = BASE_JOB_STAT_GROWTH_CHANCE) {
   return Math.random() < getJobStatGrowthChance(person, stat, baseChance);
-}
-
-function restoreRecoveredBodyTraitStats(person, trait) {
-  if (trait !== "疫病") return;
-  person.hp = clampValue(round3((Number(person.hp) || 0) / 0.5), 0, 100);
 }
 
 /**
@@ -433,6 +429,8 @@ function doHelpJob(p, v) {
   p.hp = clampValue(p.hp - tc, 0, 100);
   addStoredResource(v, "food", foodGain);
   addStoredResource(v, "materials", materialGain);
+  completeTutorialTask(v, "produce_food");
+  completeTutorialTask(v, "produce_materials");
 
   let logMsg = `${p.name}お手伝い:食料+${foodGain},資材+${materialGain},体力-${tc}`;
   if (Math.random() < 0.01) {
@@ -459,6 +457,7 @@ function doFarm(p, v) {
     resourceLabel = "資金";
   } else {
     addStoredResource(v, "food", amt);
+    if (amt >= 1) completeTutorialTask(v, "produce_food");
   }
 
   let logMsg = `${p.name}農作業:${resourceLabel}+${amt},体力-${tc},メンタル-${mc}`;
@@ -495,6 +494,7 @@ function doLumber(p, v) {
 
   let amt=calculateLumberYield(p, v);
   addStoredResource(v, "materials", amt);
+  if (amt >= 1) completeTutorialTask(v, "produce_materials");
 
   let logMsg = `${p.name}伐採:資材+${amt},体力-${tc},メンタル-${mc}`;
 
@@ -553,6 +553,7 @@ function doHunt(p, v) {
     v.log(`${p.name}狩猟:${result} 資金+${amt},体力-${tc},メンタル-${mc}`);
   } else {
     addStoredResource(v, "food", amt);
+    if (amt >= 1) completeTutorialTask(v, "produce_food");
     v.log(`${p.name}狩猟:${result} 食料+${amt},体力-${tc},メンタル-${mc}`);
   }
   if (result === "大成功") {
@@ -613,6 +614,7 @@ function doFish(p, v) {
     v.log(`${p.name}漁:${result} 資金+${amt},体力-${tc},メンタル-${mc}`);
   } else {
     addStoredResource(v, "food", amt);
+    if (amt >= 1) completeTutorialTask(v, "produce_food");
     v.log(`${p.name}漁:${result} 食料+${amt},体力-${tc},メンタル-${mc}`);
   }
   if (result === "大成功") {
@@ -660,10 +662,13 @@ function doGather(p, v) {
   if (v.villageTraits.includes("ミダス")) {
     v.funds = clampValue(v.funds+f, 0, 99999);
     addStoredResource(v, "materials", mm);
+    if (mm >= 1) completeTutorialTask(v, "produce_materials");
     v.log(`${p.name}採集:資金+${f},資材+${mm},体力-${tc},メンタル-${mc}`);
   } else {
     addStoredResource(v, "food", f);
     addStoredResource(v, "materials", mm);
+    if (f >= 1) completeTutorialTask(v, "produce_food");
+    if (mm >= 1) completeTutorialTask(v, "produce_materials");
     v.log(`${p.name}採集:食料+${f},資材+${mm},体力-${tc},メンタル-${mc}`);
   }
 
@@ -783,7 +788,6 @@ function doHealingJob(p, v) {
   
   const recoveredTraits = HEALING_RECOVERABLE_BODY_TRAITS.filter(trait => p.bodyTraits.includes(trait));
   if (recoveredTraits.length > 0) {
-    recoveredTraits.forEach(trait => restoreRecoveredBodyTraitStats(p, trait));
     p.bodyTraits = p.bodyTraits.filter(trait => !HEALING_RECOVERABLE_BODY_TRAITS.includes(trait));
     syncEffectiveStats(p);
     refreshJobTable(p, v);
@@ -1231,6 +1235,7 @@ function doBrewing(p, v) {
     v.funds = clampValue(v.funds + foodGain, 0, 99999);
   } else {
     addStoredResource(v, "food", foodGain);
+    if (foodGain >= 1) completeTutorialTask(v, "produce_food");
   }
   v.mana = clampValue(v.mana + manaGain, 0, 99999);
 
