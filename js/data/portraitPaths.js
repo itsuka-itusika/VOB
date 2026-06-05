@@ -1,11 +1,19 @@
 export const DEFAULT_PORTRAIT_KEY = "default.png";
 export const BABY_MALE_PORTRAIT_KEY = "malebaby.png";
 export const BABY_FEMALE_PORTRAIT_KEY = "femalebaby.png";
+export const ARACHNID_PORTRAIT_FILES = [
+  "Arachnid/ChatGPT Image 2026年6月4日 01_41_09.png",
+  "Arachnid/ChatGPT Image 2026年6月4日 01_41_23.png",
+  "Arachnid/ChatGPT Image 2026年6月4日 01_41_50.png",
+  "Arachnid/ChatGPT Image 2026年6月4日 01_44_46.png",
+  "Arachnid/ChatGPT Image 2026年6月4日 01_44_58.png"
+];
 
 const PORTRAIT_ROOT = "images/portraits";
 const CHILD_SHADOW_PORTRAIT_KEYS = new Set(["CHILD_SHADOW.svg", "CHILD_SHADOW_BABY.svg"]);
 const SYSTEM_PORTRAIT_KEYS = new Set([DEFAULT_PORTRAIT_KEY, ...CHILD_SHADOW_PORTRAIT_KEYS]);
 const BABY_PORTRAIT_KEYS = new Set([BABY_MALE_PORTRAIT_KEY, BABY_FEMALE_PORTRAIT_KEY]);
+const ARACHNID_PORTRAIT_KEY_SET = new Set(ARACHNID_PORTRAIT_FILES);
 
 const NUMBERED_PORTRAIT_LIMITS = new Map([
   ["MA", 16],
@@ -71,6 +79,22 @@ function getFileName(value) {
     .pop() || "";
 }
 
+function getArachnidPortraitKey(value) {
+  const segments = String(value ?? "")
+    .trim()
+    .replace(/[?#].*$/, "")
+    .replace(/\\/g, "/")
+    .split("/")
+    .filter(Boolean);
+
+  if (segments.length < 2) return "";
+
+  const folder = segments[segments.length - 2];
+  const fileName = segments[segments.length - 1];
+  const key = `${folder}/${fileName}`;
+  return ARACHNID_PORTRAIT_KEY_SET.has(key) ? key : "";
+}
+
 function getNumberedPortraitParts(key) {
   const toddlerMatch = key.match(/^T_(MA|MB|MC|MD|ME|GG|A|BB|C|D)(\d+)\.png$/i);
   if (toddlerMatch) {
@@ -93,6 +117,7 @@ function getNumberedPortraitParts(key) {
 
 function isKnownPortraitKey(key) {
   if (SYSTEM_PORTRAIT_KEYS.has(key) || BABY_PORTRAIT_KEYS.has(key)) return true;
+  if (ARACHNID_PORTRAIT_KEY_SET.has(key)) return true;
 
   const parts = getNumberedPortraitParts(key);
   if (!parts || !Number.isInteger(parts.number) || parts.number < 1) return false;
@@ -106,6 +131,9 @@ function isKnownPortraitKey(key) {
 }
 
 export function normalizePortraitKey(value) {
+  const arachnidKey = getArachnidPortraitKey(value);
+  if (arachnidKey) return arachnidKey;
+
   const fileName = getFileName(value);
   if (!fileName) return DEFAULT_PORTRAIT_KEY;
 
@@ -138,6 +166,7 @@ export function getPortraitAssetPath(value) {
 
   if (BABY_PORTRAIT_KEYS.has(key)) return `${PORTRAIT_ROOT}/babies/${key}`;
   if (SYSTEM_PORTRAIT_KEYS.has(key)) return `${PORTRAIT_ROOT}/system/${key}`;
+  if (ARACHNID_PORTRAIT_KEY_SET.has(key)) return `${PORTRAIT_ROOT}/${key}`;
 
   const route = PORTRAIT_ROUTES.find(item => item.pattern.test(key));
   if (!route) return `${PORTRAIT_ROOT}/system/${DEFAULT_PORTRAIT_KEY}`;

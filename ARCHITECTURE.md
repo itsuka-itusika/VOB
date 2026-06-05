@@ -132,6 +132,7 @@
 - 表示時の実パス解決は `js/data/portraitPaths.js` に集約し、`getPortraitAssetPath()` でタイプ別フォルダへ変換する。
 - 顔グラ画像は `images/portraits/villagers/`、`images/portraits/children/`、`images/portraits/raiders/`、`images/portraits/babies/`、`images/portraits/system/` に配置する。
 - 今後実装予定の特殊種族画像は `angel/` や `alseid/` のような小文字フォルダに置き、論理IDは `ANGEL1.png` のような大文字prefix連番にする。
+- アラクニドのように既存画像名をそのまま使う特殊種族は、`Arachnid/<ファイル名>.png` のような `images/portraits/` 以下のフォルダ付き論理IDを使う。`images/portraits/` から始まる実パスは保存しない。
 
 ## 訪問者とレア種族
 

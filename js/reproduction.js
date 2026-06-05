@@ -15,7 +15,7 @@ import { recordAdulthoodHistory, recordBirthHistory, recordPregnancyHistory } fr
 import { addRelationship, checkHasRelationship, getRelationshipTargetName, normalizeRelationship } from "./relationships.js";
 import { getDialogueLine } from "./dialogue/dialogueEngine.js";
 
-const HUMANOID_RACES = new Set(["人間", "ハーピー", "半神", "キュクロプス", "サイクロプス", "巨人", "翼人", "アルセイド", "ネレイド", "ドライアド"]);
+const HUMANOID_RACES = new Set(["人間", "ハーピー", "半神", "キュクロプス", "サイクロプス", "巨人", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド"]);
 const PHYSICAL_STATS = ["str", "vit", "dex", "mag", "chr"];
 const MENTAL_STATS = ["int", "ind", "eth", "cou", "sexdr"];
 const CHILD_BODY_TRAITS = ["赤子", "子供", "少年", "少女"];

@@ -3,8 +3,8 @@
 import { Villager } from "./classes.js";
 import { randInt, randChoice, randNormalInRange } from "./util.js";
 import { ACTION_NONE, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
-import { getPortraitGroupKey, normalizePortraitKey } from "./data/portraitPaths.js";
-import { applyGenerationBaseTraitBonuses, setBaseStatsFromEffective, syncEffectiveStats } from "./domain/statLayers.js";
+import { ARACHNID_PORTRAIT_FILES, getPortraitGroupKey, normalizePortraitKey } from "./data/portraitPaths.js";
+import { addBaseStat, applyGenerationBaseTraitBonuses, getPermanentStat, setBaseStatsFromEffective, syncEffectiveStats } from "./domain/statLayers.js";
 import { getVillageScaleStage } from "./villageScale.js";
 import {
   FEMALE_PORTRAIT_FILES,
@@ -184,7 +184,32 @@ const RARE_VISITOR_TYPES = [
       portraits: DRYAD_VISITOR_PORTRAITS
     }
   },
-  { type: "アラクニド", weight: 1, implemented: false, uniqueRace: true }
+  {
+    type: "アラクニド",
+    weight: 1,
+    implemented: true,
+    uniqueRace: true,
+    visitor: {
+      type: "アラクニド",
+      displayType: "旅人",
+      forcedSex: "女",
+      ageRange: { min: 18, max: 28 },
+      params: {
+        job: "旅人",
+        action: "訪問",
+        race: "アラクニド"
+      },
+      ranges: {
+        int: [5, 16],
+        ind: [5, 16],
+        eth: [5, 18],
+        dex: [18, 25]
+      },
+      lockedRangeStats: ["int", "ind", "eth", "dex"],
+      forcedBodyTraits: ["糸吐き"],
+      portraits: ARACHNID_PORTRAIT_FILES
+    }
+  }
 ];
 
 // 使用済みの名前を追跡する Set を追加
@@ -445,12 +470,15 @@ export function createInitialVillagers() {
  * @param {number} [options.maxAge] - 最大年齢
  * @param {Object} [options.params] - 固定パラメータ設定
  * @param {Object} [options.ranges] - パラメータ範囲設定 { param: [min, max] }
+ * @param {string[]} [options.lockedRangeStats] - 特性補正後も範囲値に戻すパラメータ
  */
-export function createRandomVillager({ sex, minAge, maxAge, params = {}, ranges = {}, existingNames = [], fallbackParentName = "" }) {
+export function createRandomVillager({ sex, minAge, maxAge, params = {}, ranges = {}, lockedRangeStats = [], existingNames = [], fallbackParentName = "" }) {
   let age = randInt(minAge, maxAge);
 
   let nm = generateRandomName(sex, { existingNames, fallbackParentName });
   let vill = new Villager(nm, sex, age);
+  const lockedRangeValues = {};
+  const lockedRangeStatSet = new Set(lockedRangeStats);
   
   if (params || ranges) {
     // デフォルトのランダム値で初期化
@@ -466,6 +494,9 @@ export function createRandomVillager({ sex, minAge, maxAge, params = {}, ranges 
       Object.entries(ranges).forEach(([param, [min, max]]) => {
         if (Array.isArray([min, max]) && min <= max) {
           vill[param] = randNormalInRange(min, max);
+          if (lockedRangeStatSet.has(param)) {
+            lockedRangeValues[param] = vill[param];
+          }
         }
       });
     }
@@ -477,6 +508,9 @@ export function createRandomVillager({ sex, minAge, maxAge, params = {}, ranges 
 
   assignBodyMindTraits(vill);
   applyTraitParameterBonuses(vill);
+  Object.entries(lockedRangeValues).forEach(([stat, targetValue]) => {
+    addBaseStat(vill, stat, targetValue - getPermanentStat(vill, stat));
+  });
   assignHobby(vill);
   refreshJobTable(vill);
   
@@ -1042,6 +1076,7 @@ export function createRandomVisitor(existingNames = [], forcedType = null, villa
       ...visitorType.params
     },
     ranges: visitorType.ranges,
+    lockedRangeStats: visitorType.lockedRangeStats,
     existingNames
   });
 

@@ -300,6 +300,9 @@ export function calculateCopyBookYield(person) {
 
 export function calculateWeavingYield(person) {
   let amount = Math.round(42 * statProduct(person, "dex", "ind"));
+  if (hasBodyTrait(person, "糸吐き")) {
+    amount = Math.round(amount * 2);
+  }
   if (hasBodyTrait(person, "梟の巫女")) {
     amount = Math.round(amount * 1.5);
   }
