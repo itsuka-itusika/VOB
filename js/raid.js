@@ -377,6 +377,10 @@ function applyOffensiveTraitModifiers(actor, damage, label, logDiv) {
     nextDamage = 0;
     logDiv.innerHTML+=`<br>${label}${actor.name}は非戦主義のため攻撃を拒否！`;
   }
+  if (hasTrait(actor, "不殺")) {
+    nextDamage = 0;
+    logDiv.innerHTML+=`<br>${label}${actor.name}は不殺の誓いにより攻撃を止めた！`;
+  }
   return nextDamage;
 }
 

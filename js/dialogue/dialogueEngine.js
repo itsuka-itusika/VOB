@@ -235,6 +235,8 @@ function getCurrentSeason(village) {
 }
 
 function getVisitorType(visitor) {
+  if (VISITOR_LINES[visitor?.rareVisitorType]) return visitor.rareVisitorType;
+  if (visitor?.race !== "人間" && VISITOR_LINES[visitor?.race]) return visitor.race;
   const match = visitor?.name?.match(/^(.+)の/);
   return match ? match[1] : null;
 }

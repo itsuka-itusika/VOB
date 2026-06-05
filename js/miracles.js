@@ -12,6 +12,7 @@ import { recordMarriageHistory, recordVillagerLeaveHistory } from "./history.js"
 import { DEFAULT_PORTRAIT_KEY, getPortraitAssetPath } from "./data/portraitPaths.js";
 import { resolveDialogueTone } from "./data/dialogue/toneProfiles.js";
 import { BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
+import { getVisitorArrivalLine } from "./data/dialogue/visitorLines.js";
 
 const DEFAULT_PORTRAIT_PATH = getPortraitAssetPath(DEFAULT_PORTRAIT_KEY);
 const AUTONOMOUS_SETTLEMENT_SCALE = 350;
@@ -708,7 +709,12 @@ function travelerMiracle(v) {
   ], null, visitorTableVillage);
   v.visitors.push(newV);
   v.log(`【旅人の奇跡】${newV.name}が来訪(訪問者)`);
-  showMiracleResultModal(v, "旅人の奇跡", `${newV.name}が村を訪れました。`, [newV]);
+  const arrivalLine = getVisitorArrivalLine(newV);
+  if (arrivalLine) v.log(`${newV.name}「${arrivalLine}」`);
+  const message = arrivalLine
+    ? `${newV.name}が村を訪れました。<br>「${arrivalLine}」`
+    : `${newV.name}が村を訪れました。`;
+  showMiracleResultModal(v, "旅人の奇跡", message, [newV]);
 }
 
 /** 市場の奇跡(行商人3名来訪) */
@@ -754,7 +760,35 @@ function getChildlikeMiracleLine(person) {
   return null;
 }
 
+function getGrotesquePortraitLine(person) {
+  const mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
+  if (mindTraits.includes("無垢")) return randFrom(["あ……こわい。", "ん……いや。"]);
+  if (mindTraits.includes("萌芽")) {
+    const lines = person.spiritSex === "女"
+      ? ["この絵、なんだかこわい……わたしの顔なの？", "胸がざわざわする。見ちゃだめな気がする。"]
+      : ["この絵、なんだかこわい……ぼくの顔なの？", "胸がざわざわする。見ちゃだめな気がする。"];
+    return randFrom(lines);
+  }
+  const type = person.speechType || determineSpeechType(person);
+  const lines = {
+    "普通Ｍ": ["……この絵、俺に似ているのか。見ていると、胸の奥がざわつくな。", "顔を描かれただけなのに、何かを置いてきた気がする。"],
+    "普通Ｆ": ["この絵、私の中の暗いところまで映しているみたいです。", "見つめていると、少し怖いのに目を離せません。"],
+    "強気Ｍ": ["上等だ。この不気味な絵ごと、俺の力にしてやる。", "清らかさなんて、今は邪魔になるだけだ。"],
+    "強気Ｆ": ["気味が悪い絵ね。でも、この艶だけは悪くないわ。", "私の影まで描くなら、その影も使ってみせる。"],
+    "内気": ["こ、これ……私なんですか？ 見ていると心まで汚れるみたいで……。", "怖いです。でも、目をそらせないんです……。"],
+    "陰気": ["……よく描けている。俺の嫌なところまでな。", "この絵の目、俺より正直だ。……不愉快なくらいに。"],
+    "お調子者": ["うわ、怖い絵っすね……でも妙に色気が出てないっすか？", "これ本当に自分っすか？ なんか危ない感じがするっす。"],
+    "快活": ["なんだか怖い絵だね。でも、今の私、少し強く見えるかも。", "胸がざわざわする……これも私の顔なんだね。"],
+    "お嬢様": ["まあ……なんて禍々しい筆致ですの。でも、目を離せませんわ。", "この肖像、私の影まで飾り立ててしまうのですわね。"],
+    "クールＭ": ["肖像の影響を確認した。ためらいが薄れ、印象が強まっている。", "不快な絵だが、変化は明確だ。利用価値はある。"],
+    "クールＦ": ["肖像の影響を確認したわ。ためらいが薄れて、印象だけが強く残る。", "気味は悪いけれど、変化は認めるしかないわね。"],
+    "老人": ["なんとも悍ましい絵じゃ。わしの業まで塗り込めたようじゃな。", "長く生きた影が、顔に浮いたかのう。目をそらせんわい。"]
+  };
+  return randFrom(lines[type] || lines[person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
+}
+
 function getGenericMiracleLine(person, miracleName) {
+  if (miracleName === "悍ましい肖像画") return getGrotesquePortraitLine(person);
   const childLine = getChildlikeMiracleLine(person);
   if (childLine) return childLine;
   if (miracleName === "市場の奇跡") return getMarketMiracleLine(person);

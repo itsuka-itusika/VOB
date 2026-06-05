@@ -96,6 +96,7 @@ export function isForcedHealingAction(character) {
 export function getVillagerFoodConsumption(character) {
   const bodyTraits = Array.isArray(character?.bodyTraits) ? character.bodyTraits : [];
   const mindTraits = Array.isArray(character?.mindTraits) ? character.mindTraits : [];
+  if (bodyTraits.includes("光合成")) return 0;
   if (bodyTraits.includes("赤子")) return 2;
   if (bodyTraits.includes("子供")) return 6;
   if (bodyTraits.includes("少年") || bodyTraits.includes("少女")) return 8;

@@ -23,10 +23,11 @@ import {
 } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
+import { getVisitorArrivalLine } from "./data/dialogue/visitorLines.js";
 
 const OPENING_RAID_GRACE_YEAR = 1091;
 const OPENING_RAID_GRACE_LAST_MONTH = 6;
-const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老"]);
+const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成"]);
 
 function resetMonthlySocialAttemptFlags(village) {
   (village.villagers || []).forEach(person => {
@@ -308,6 +309,10 @@ export function endOfMonthProcess(v) {
 
     if (isWinter) {
       totalMat += getVillagerWinterMaterialConsumption(p);
+      if (Array.isArray(p.bodyTraits) && p.bodyTraits.includes("光合成")) {
+        p.hp = clampValue((Number(p.hp) || 0) - 10, 0, 100);
+        v.log(`${p.name}は冬の光不足で体力-10`);
+      }
     }
   });
   v.food=clampValue(v.food - totalF,0,99999);
@@ -483,6 +488,10 @@ export function doMonthStartProcess(v) {
   if (v.food<=0) {
     v.log("食料0→飢餓発生");
     v.villagers.forEach(p=>{
+      if (Array.isArray(p.bodyTraits) && p.bodyTraits.includes("光合成")) {
+        v.log(`${p.name}は光合成により飢餓を免れた`);
+        return;
+      }
       // 飢餓の身体特性を付与（まだ持っていない場合のみ）
       if (!p.bodyTraits.includes("飢餓")) {
         p.bodyTraits.push("飢餓");
@@ -586,6 +595,8 @@ export function doMonthStartProcess(v) {
       ], null, v);
       v.visitors.push(visitor);
       v.log(`訪問者 ${visitor.name} が村を訪れました`);
+      const arrivalLine = getVisitorArrivalLine(visitor);
+      if (arrivalLine) v.log(`${visitor.name}「${arrivalLine}」`);
     }
   }
 

@@ -5,7 +5,7 @@ import { evaluateTitles } from "../titles.js";
 export const STAT_LAYER_VERSION = 1;
 
 const ZERO_STAT_MAP = Object.freeze(Object.fromEntries(ABILITY_STATS.map(stat => [stat, 0])));
-const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老"]);
+const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成"]);
 
 const PERMANENT_BODY_TRAIT_ADDS = Object.freeze({
   "聖女の輝き": { mag: 10, chr: 10 },

@@ -28,6 +28,7 @@ const JOB_LEISURE = ACTION_LEISURE;
 const JOB_HEAL = "\u7642\u990a";
 const JOB_LAST_MOMENTS = "\u81e8\u7d42";
 const TRAIT_PACIFIST = "\u975e\u6226\u4e3b\u7fa9";
+const TRAIT_NO_KILLING = "\u4e0d\u6bba";
 const JOB_FOOD_SET = new Set([
   "\u8fb2\u4f5c\u696d",
   "\u72e9\u731f",
@@ -366,7 +367,7 @@ function chooseRaidFallbackAction(person, currentPreferred, currentAction) {
 
 function getExpectedDefenderDamage(person) {
   const mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
-  if (mindTraits.includes(TRAIT_PACIFIST)) return 0;
+  if (mindTraits.includes(TRAIT_PACIFIST) || mindTraits.includes(TRAIT_NO_KILLING)) return 0;
 
   const physical = ((Number(person.str) || 0) * (Number(person.cou) || 0) / 400) * 50;
   const magical = ((Number(person.mag) || 0) * (Number(person.cou) || 0) / 400) * 25;
@@ -380,6 +381,9 @@ function getExpectedTrapDamage(person) {
 }
 
 function getExpectedShootDamage(person, village) {
+  const mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
+  if (mindTraits.includes(TRAIT_PACIFIST) || mindTraits.includes(TRAIT_NO_KILLING)) return 0;
+
   const enemies = Array.isArray(village?.raidEnemies)
     ? village.raidEnemies.filter(enemy => (Number(enemy.hp) || 0) > 0)
     : [];

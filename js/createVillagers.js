@@ -67,6 +67,7 @@ const RARE_VISITOR_TYPE = "レア種族";
 const WINGED_VISITOR_PORTRAITS = Array.from({ length: 16 }, (_, index) => `ANGEL${index + 1}.png`);
 const ALSEID_VISITOR_PORTRAITS = Array.from({ length: 13 }, (_, index) => `ALSEID${index + 1}.png`);
 const NEREID_VISITOR_PORTRAITS = Array.from({ length: 15 }, (_, index) => `NEREID${index + 1}.png`);
+const DRYAD_VISITOR_PORTRAITS = Array.from({ length: 18 }, (_, index) => `DRYAD${index + 1}.png`);
 const RARE_VISITOR_TYPES = [
   {
     type: "翼人",
@@ -153,13 +154,42 @@ const RARE_VISITOR_TYPES = [
       portraits: NEREID_VISITOR_PORTRAITS
     }
   },
-  { type: "ドライアド", weight: 1, implemented: false },
+  {
+    type: "ドライアド",
+    weight: 1,
+    implemented: true,
+    visitor: {
+      type: "ドライアド",
+      displayType: "旅人",
+      forcedSex: "女",
+      ageRange: { min: 18, max: 25 },
+      params: {
+        job: "旅人",
+        action: "訪問",
+        race: "ドライアド"
+      },
+      ranges: {
+        str: [5, 20],
+        vit: [5, 20],
+        chr: [18, 27],
+        mag: [20, 30],
+        int: [5, 16],
+        ind: [5, 16],
+        eth: [12, 20],
+        cou: [12, 16],
+        sexdr: [3, 8]
+      },
+      forcedBodyTraits: ["緑の指", "光合成"],
+      forcedMindTraits: ["不殺"],
+      portraits: DRYAD_VISITOR_PORTRAITS
+    }
+  },
   { type: "アラクニド", weight: 1, implemented: false, uniqueRace: true }
 ];
 
 // 使用済みの名前を追跡する Set を追加
 const usedNames = new Set();
-const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老"]);
+const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成"]);
 
 export function registerUsedName(name) {
   const normalized = String(name || "").trim();

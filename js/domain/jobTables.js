@@ -55,6 +55,13 @@ const CIVILIZATION_AVOIDANT_BLOCKED_ACTIONS = new Set([
   "機織り",
   "バニー"
 ]);
+const NO_KILLING_BLOCKED_ACTIONS = new Set([
+  "農作業",
+  "狩猟",
+  "漁",
+  "伐採",
+  "醸造"
+]);
 
 function traitList(person, key) {
   return Array.isArray(person?.[key]) ? person[key] : [];
@@ -119,6 +126,12 @@ function applyCivilizationAvoidanceFilter(person) {
   if (!traitList(person, "mindTraits").includes("文明忌避")) return;
   person.jobTable = person.jobTable.filter(action => !CIVILIZATION_AVOIDANT_BLOCKED_ACTIONS.has(action));
   person.actionTable = person.actionTable.filter(action => !CIVILIZATION_AVOIDANT_BLOCKED_ACTIONS.has(action));
+}
+
+function applyNoKillingFilter(person) {
+  if (!traitList(person, "mindTraits").includes("不殺")) return;
+  person.jobTable = person.jobTable.filter(action => !NO_KILLING_BLOCKED_ACTIONS.has(action));
+  person.actionTable = person.actionTable.filter(action => !NO_KILLING_BLOCKED_ACTIONS.has(action));
 }
 
 function addRaidActionsIfAllowed(person, village) {
@@ -276,6 +289,7 @@ export function refreshJobTable(v, village = {}) {
     const preferredTable = ["遊び", "お手伝い"];
     setTables(v, preferredTable, [ACTION_REST, "遊び", "お手伝い"]);
     applyCivilizationAvoidanceFilter(v);
+    applyNoKillingFilter(v);
     applyInfantBodyActionFilter(v);
     normalizePreferredForTable(v, v.jobTable, { defaultPreferred: "遊び" });
     addRaidActionsIfAllowed(v, village);
@@ -287,6 +301,7 @@ export function refreshJobTable(v, village = {}) {
     const preferredTable = ["遊び", "農作業", "伐採", "狩猟", "漁", "採集", "内職", "丁稚", "研究助手"];
     setTables(v, preferredTable, [ACTION_REST, ...preferredTable]);
     applyCivilizationAvoidanceFilter(v);
+    applyNoKillingFilter(v);
     applyInfantBodyActionFilter(v);
     normalizePreferredForTable(v, v.jobTable, { defaultPreferred: "遊び" });
     addRaidActionsIfAllowed(v, village);
@@ -297,6 +312,7 @@ export function refreshJobTable(v, village = {}) {
   const preferredTable = buildAdultPersistentActions(v, village);
   setTables(v, preferredTable, [ACTION_REST, ACTION_LEISURE, ...preferredTable]);
   applyCivilizationAvoidanceFilter(v);
+  applyNoKillingFilter(v);
   applyInfantBodyActionFilter(v);
   normalizePreferredForTable(v, v.jobTable);
   addRaidActionsIfAllowed(v, village);
