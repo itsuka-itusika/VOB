@@ -38,7 +38,17 @@ const FESTIVAL_DATA = {
 
 const queue = [];
 const afterFestivalQueue = [];
+const POST_FESTIVAL_MODAL_SELECTORS = [
+  "[data-close-relationship-modal]",
+  "[data-close-reproduction-modal]",
+  ".effect-result-modal",
+  "#randomEventModal",
+  "#secretTreasureEventModal",
+  "#headmanElectionModal"
+];
 let isShowing = false;
+let isWaitingForPostFestivalModals = false;
+let postFestivalModalObserver = null;
 
 export function showFestivalModal(festivalKey) {
   const data = FESTIVAL_DATA[festivalKey];
@@ -50,24 +60,74 @@ export function showFestivalModal(festivalKey) {
 
 export function runAfterFestivalModals(callback) {
   if (typeof callback !== "function") return;
-  if (!isShowing && queue.length === 0) {
+  if (!isShowing && queue.length === 0 && !isWaitingForPostFestivalModals) {
     callback();
     return;
   }
   afterFestivalQueue.push(callback);
 }
 
-function flushAfterFestivalQueue() {
-  if (isShowing || queue.length > 0) return;
+function isVisibleElement(element) {
+  if (!element || !element.isConnected || typeof window === "undefined") return false;
+  let current = element;
+  while (current && current !== document.body) {
+    const style = window.getComputedStyle(current);
+    if (style.display === "none" || style.visibility === "hidden") return false;
+    current = current.parentElement;
+  }
+  return element.getClientRects().length > 0;
+}
+
+function isPostFestivalModalOpen() {
+  if (typeof document === "undefined") return false;
+  return POST_FESTIVAL_MODAL_SELECTORS.some(selector =>
+    Array.from(document.querySelectorAll(selector)).some(isVisibleElement)
+  );
+}
+
+function stopWaitingForPostFestivalModals() {
+  if (!postFestivalModalObserver) return;
+  postFestivalModalObserver.disconnect();
+  postFestivalModalObserver = null;
+}
+
+function waitForPostFestivalModalsToClose() {
+  if (typeof document === "undefined" || postFestivalModalObserver) return;
+  postFestivalModalObserver = new MutationObserver(resumeFestivalQueueAfterPostFestivalModals);
+  postFestivalModalObserver.observe(document.body, {
+    attributes: true,
+    attributeFilter: ["class", "style", "hidden", "aria-hidden"],
+    childList: true,
+    subtree: true
+  });
+}
+
+function resumeFestivalQueueAfterPostFestivalModals() {
+  if (isPostFestivalModalOpen()) {
+    waitForPostFestivalModalsToClose();
+    return;
+  }
+  stopWaitingForPostFestivalModals();
+  isWaitingForPostFestivalModals = false;
+  showNextFestivalModal();
+}
+
+function flushAfterFestivalQueueBeforeNextFestival() {
+  if (isShowing) return false;
+  if (afterFestivalQueue.length === 0) return false;
+
+  isWaitingForPostFestivalModals = true;
   const callbacks = afterFestivalQueue.splice(0);
   callbacks.forEach(callback => callback());
+  setTimeout(resumeFestivalQueueAfterPostFestivalModals, 0);
+  return true;
 }
 
 function showNextFestivalModal() {
   const data = queue.shift();
   if (!data) {
     isShowing = false;
-    flushAfterFestivalQueue();
+    flushAfterFestivalQueueBeforeNextFestival();
     return;
   }
   isShowing = true;
@@ -192,6 +252,6 @@ function closeFestivalModal() {
   if (overlay) overlay.remove();
   if (modal) modal.remove();
   isShowing = false;
+  if (flushAfterFestivalQueueBeforeNextFestival()) return;
   showNextFestivalModal();
-  flushAfterFestivalQueue();
 }

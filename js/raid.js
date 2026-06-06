@@ -14,10 +14,11 @@ import {
 } from "./raidRules.js";
 import { updateUI } from "./ui.js";
 
-const RAID_CLOSE_DELAY_MS = 500;
-const RAID_ACTION_SETTLE_DELAY_MS = 650;
-const RAID_ACTOR_FOCUS_DELAY_MS = 380;
-const RAID_DAMAGE_EFFECT_DELAY_MS = 360;
+const RAID_CLOSE_DELAY_MS = 700;
+const RAID_ACTION_SETTLE_DELAY_MS = 780;
+const RAID_ACTOR_FOCUS_DELAY_MS = 460;
+const RAID_DAMAGE_EFFECT_DELAY_MS = 430;
+const RAID_DEFEAT_POP_REMOVE_DELAY_MS = 720;
 const RAID_PHASE_REAR = "rear";
 const RAID_PHASE_COMBAT = "combat";
 const RAID_POSITION_FRONT = "front";
@@ -139,8 +140,16 @@ function appendRaidActionLogs(logs) {
 function clearRaidAnimationClasses(...rows) {
   rows.forEach(row => {
     if (!row) return;
-    row.classList.remove("is-acting", "is-countering", "is-hit");
+    row.classList.remove("is-acting", "is-countering", "is-hit", "is-retreating");
   });
+}
+
+function getRaidDamageLabel(damage) {
+  return `${Math.floor(Number(damage) || 0)}ダメージ`;
+}
+
+function getRaidHpDamageLabel(damage) {
+  return `-${Math.floor(Number(damage) || 0)}`;
 }
 
 function showRaidDamagePop(row, damage) {
@@ -149,21 +158,56 @@ function showRaidDamagePop(row, damage) {
   if (!anchor) return;
   const pop = document.createElement("span");
   pop.className = "raid-damage-pop";
-  pop.textContent = `-${Math.floor(Number(damage) || 0)}`;
+  pop.textContent = getRaidHpDamageLabel(damage);
   anchor.appendChild(pop);
   setTimeout(() => pop.remove(), RAID_DAMAGE_EFFECT_DELAY_MS + 220);
 }
 
-function showRaidActionPop(row, label, isCounter = false) {
+function isRaidRetreatLabel(label) {
+  const text = String(label || "").trim();
+  return text === "離脱" || text === "撤退" || text === "撤収";
+}
+
+function isRaidDefeatLabel(label) {
+  return String(label || "").trim() === "撃退";
+}
+
+function getRaidActionPopClass(label, isDeparture = false, popType = "") {
+  const classes = ["raid-action-pop"];
+  if (popType) {
+    classes.push(`is-${popType}`);
+  }
+  if (isDeparture && isRaidRetreatLabel(label)) {
+    classes.push("is-retreat");
+  }
+  if (isRaidDefeatLabel(label)) {
+    classes.push("is-defeat");
+  }
+  return classes.join(" ");
+}
+
+function getRaidActionPopRemoveDelay(label, isDeparture = false) {
+  if (isRaidDefeatLabel(label)) return RAID_DEFEAT_POP_REMOVE_DELAY_MS;
+  return isDeparture
+    ? RAID_ACTOR_FOCUS_DELAY_MS + 120
+    : RAID_ACTOR_FOCUS_DELAY_MS + RAID_DAMAGE_EFFECT_DELAY_MS + 220;
+}
+
+function showRaidActionPop(row, label, isDeparture = false, popType = "") {
   if (!row || !label) return;
   const anchor = row.querySelector(".raid-unit-name") || row.querySelector(".raid-portrait-cell") || row.lastElementChild;
   if (!anchor) return;
   anchor.querySelector(".raid-action-pop")?.remove();
   const pop = document.createElement("span");
-  pop.className = `raid-action-pop${isCounter ? " is-counter" : ""}`;
+  pop.className = getRaidActionPopClass(label, isDeparture, popType);
   pop.textContent = label;
   anchor.appendChild(pop);
-  setTimeout(() => pop.remove(), RAID_ACTOR_FOCUS_DELAY_MS + RAID_DAMAGE_EFFECT_DELAY_MS + 220);
+  setTimeout(() => pop.remove(), getRaidActionPopRemoveDelay(label, isDeparture));
+}
+
+function showRaidDamageActionPop(row, damage) {
+  if (!row || damage == null) return;
+  showRaidActionPop(row, getRaidDamageLabel(damage), false, "damage");
 }
 
 async function playRearDepartureAnimations(village) {
@@ -174,7 +218,8 @@ async function playRearDepartureAnimations(village) {
     const row = getRaidUnitRow(unit);
     if (!row) return;
     row.classList.add("is-leaving");
-    showRaidActionPop(row, "離脱");
+    row.classList.add("is-retreating");
+    showRaidActionPop(row, "離脱", true);
   });
   await waitRaidAnimation(RAID_ACTOR_FOCUS_DELAY_MS + RAID_DAMAGE_EFFECT_DELAY_MS);
 }
@@ -184,14 +229,20 @@ async function playRaidAnimationStep(step) {
   const targetRow = getRaidUnitRow(step?.target);
 
   if (actorRow) {
-    actorRow.classList.add(step.isDeparture ? "is-leaving" : (step.isCounter ? "is-countering" : "is-acting"));
-    showRaidActionPop(actorRow, step.actionLabel, step.isCounter);
+    if (step.isDeparture) {
+      actorRow.classList.add("is-leaving");
+      if (isRaidRetreatLabel(step.actionLabel)) actorRow.classList.add("is-retreating");
+    } else {
+      actorRow.classList.add(step.isCounter ? "is-countering" : "is-acting");
+    }
+    showRaidActionPop(actorRow, step.actionLabel, step.isDeparture);
   }
   await waitRaidAnimation(RAID_ACTOR_FOCUS_DELAY_MS);
 
   if (targetRow) {
     targetRow.classList.add("is-hit");
     showRaidDamagePop(targetRow, step.damage);
+    showRaidDamageActionPop(targetRow, step.damage);
   }
   await waitRaidAnimation(RAID_DAMAGE_EFFECT_DELAY_MS);
   clearRaidAnimationClasses(actorRow, targetRow);
@@ -269,6 +320,14 @@ function getPendingTrapMakers(village) {
     .filter(action => action?.type === "TRAP")
     .map(action => action.actor)
     .filter(p => p && p.hp > 0 && canPerformRaidAction(p, ACTION_TRAP, village));
+}
+
+function isRearRetreatingUnit(unit, village) {
+  if (village?.raidPhase !== RAID_PHASE_REAR || unit?.action !== ACTION_TRAP) return false;
+  const queue = Array.isArray(village.raidActionQueue) ? village.raidActionQueue : [];
+  if (queue.length === 0) return false;
+  const currentIndex = Math.max(0, Number(village.currentActionIndex) || 0);
+  return currentIndex >= queue.length;
 }
 
 function getVillageCombatants(village) {
@@ -452,10 +511,10 @@ async function settleRaidAction(village, actionResult = null) {
   try {
     updateRaidTables(village);
     await playRaidActionAnimations(actionResult);
-    appendRaidActionLogs(actionResult?.logs);
-    await waitRaidActionSettle();
     clearPendingRaidDepartures(village);
     updateRaidTables(village);
+    appendRaidActionLogs(actionResult?.logs);
+    await waitRaidActionSettle();
     await checkCombatEndOfActions(village);
     updateRaidTables(village);
   } finally {
@@ -964,7 +1023,7 @@ function renderRaidUnits({ tableSelector, sectionId = "", units, village }) {
   if (sectionId) setRaidSectionVisible(sectionId, rows.length > 0);
   tbody.innerHTML = "";
   rows.forEach(unit => {
-    tbody.appendChild(createRaidUnitRow(unit));
+    tbody.appendChild(createRaidUnitRow(unit, village));
   });
 }
 
@@ -988,10 +1047,13 @@ function renderEnemyRaidUnits(village) {
   });
 }
 
-function createRaidUnitRow(unit) {
+function createRaidUnitRow(unit, village = null) {
   const row = document.createElement("tr");
   row.dataset.raidUnitId = getRaidUnitRenderId(unit);
   if (isPendingRaidDeparture(unit)) row.className = "is-leaving";
+  if (isRearRetreatingUnit(unit, village)) {
+    row.classList.add("is-leaving", "is-retreating");
+  }
   appendRaidPortraitCell(row, unit);
   appendRaidNameCell(row, unit);
   appendRaidValueCell(row, unit?.hp, "raid-unit-hp", Number(unit?.hp) <= 33);

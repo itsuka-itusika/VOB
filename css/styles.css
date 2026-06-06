@@ -787,14 +787,15 @@ table.show-spirit-columns .spirit-column {
   background: #fff0ea;
   color: #8a3529;
 }
+#raidModal tr.is-retreating td {
+  background: #eef7ff;
+  color: #245f87;
+  box-shadow: inset 3px 0 0 #3578a8;
+}
 #raidModal tr.is-acting td,
 #raidModal tr.is-countering td {
   background: #fff6d8;
   box-shadow: inset 3px 0 0 #b8801c;
-}
-#raidModal tr.is-countering td {
-  background: #eef7ff;
-  box-shadow: inset 3px 0 0 #3578a8;
 }
 #raidModal tr.is-hit td {
   animation: raidHitFlash 0.34s ease-out;
@@ -891,7 +892,7 @@ table.show-spirit-columns .spirit-column {
   left: 50%;
   z-index: 2;
   pointer-events: none;
-  color: #a3261b;
+  color: #d82018;
   font-weight: bold;
   font-size: 0.82rem;
   text-shadow: 0 1px 0 #fff, 0 0 4px rgba(255, 255, 255, 0.9);
@@ -900,22 +901,25 @@ table.show-spirit-columns .spirit-column {
 .raid-action-pop {
   position: absolute;
   left: 50%;
-  top: -4px;
+  top: 4px;
   z-index: 3;
   pointer-events: none;
-  padding: 2px 7px;
+  padding: 4px 10px;
   border-radius: 999px;
   background: #5d3d12;
   color: #fff;
   font-weight: bold;
-  font-size: 0.74rem;
+  font-size: 0.9rem;
   line-height: 1.2;
   white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 2px 9px rgba(0, 0, 0, 0.26);
   animation: raidActionPop 0.72s ease-out forwards;
 }
-.raid-action-pop.is-counter {
+.raid-action-pop.is-retreat {
   background: #245f87;
+}
+.raid-action-pop.is-damage {
+  background: #d82018;
 }
 @keyframes raidHitFlash {
   0% { background-color: #ffe1d5; }
@@ -924,15 +928,15 @@ table.show-spirit-columns .spirit-column {
 @keyframes raidActionPop {
   0% {
     opacity: 0;
-    transform: translate(-50%, -40%) scale(0.92);
+    transform: translate(-50%, 0%) scale(0.92);
   }
   18% {
     opacity: 1;
-    transform: translate(-50%, -80%) scale(1);
+    transform: translate(-50%, -15%) scale(1);
   }
   100% {
     opacity: 0;
-    transform: translate(-50%, -145%) scale(1.06);
+    transform: translate(-50%, -45%) scale(1.03);
   }
 }
 @keyframes raidDamagePop {
