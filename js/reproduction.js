@@ -208,7 +208,6 @@ function canReceiveGoldenRainPregnancy(person) {
   return isHumanoid(person) &&
     person.bodySex === "女" &&
     isPregnancyAge(person, 29) &&
-    !hasMindTrait(person, "神聖") &&
     !person.pregnancy &&
     !hasTrait(person, "妊娠") &&
     !hasTrait(person, "臨月") &&
@@ -253,6 +252,15 @@ function decideChildRace(childSex, motherSnapshot, fatherSnapshot, explicitRace 
     return normalizeChildRace(fatherSnapshot?.race);
   }
   return "人間";
+}
+
+function decidePregnancyChildRace(childSex, motherSnapshot, fatherSnapshot, options = {}) {
+  const raceFatherSnapshot = options.childRaceFatherSnapshot || fatherSnapshot;
+  const childRace = decideChildRace(childSex, motherSnapshot, raceFatherSnapshot, options.childRace);
+  if (options.humanChildRace && childRace === "人間") {
+    return normalizeChildRace(options.humanChildRace);
+  }
+  return childRace;
 }
 
 function inheritStat(mother, father, stat, variance) {
@@ -587,7 +595,8 @@ function processPendingGoldenRainPregnancies(village) {
 
     startPregnancy(village, mother, null, {
       fatherSnapshot: VIRTUAL_THUNDER_FATHER,
-      childRace: "半神",
+      childRaceFatherSnapshot: { race: "人間" },
+      humanChildRace: "半神",
       inheritedBodyTraits: [THUNDER_BLESSING_TRAIT],
       geneticFatherUnknown: true
     });
@@ -600,7 +609,7 @@ function startPregnancy(village, mother, father, options = {}) {
   const motherSnapshot = snapshotParent(mother);
   const fatherSnapshot = options.fatherSnapshot || snapshotParent(father);
   const childSex = decideChildSex();
-  const childRace = decideChildRace(childSex, motherSnapshot, fatherSnapshot, options.childRace);
+  const childRace = decidePregnancyChildRace(childSex, motherSnapshot, fatherSnapshot, options);
   const potentialStats = buildPotentialStats(motherSnapshot, fatherSnapshot, childSex, childRace);
   const inheritedBodyTraits = [
     ...rollInheritedTraits({ motherSnapshot, fatherSnapshot, childSex }),

@@ -13,7 +13,7 @@ export class Village {
     this.year = 1091;
     this.month = 4;
 
-    this.food = 200;
+    this.food = 150;
     this.materials = 120;
     this.funds = 0;
     this.mana = 40;

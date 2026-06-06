@@ -264,6 +264,12 @@ button {
   color: #a40000;
   font-weight: bold;
 }
+.message-item.tutorial {
+  color: #5d3d12;
+  background: #faf6ee;
+  border-left: 3px solid #b8a36d;
+  padding-left: 6px;
+}
 .message-empty {
   color: #666;
 }
@@ -891,9 +897,43 @@ table.show-spirit-columns .spirit-column {
   text-shadow: 0 1px 0 #fff, 0 0 4px rgba(255, 255, 255, 0.9);
   animation: raidDamagePop 0.52s ease-out forwards;
 }
+.raid-action-pop {
+  position: absolute;
+  left: 50%;
+  top: -4px;
+  z-index: 3;
+  pointer-events: none;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #5d3d12;
+  color: #fff;
+  font-weight: bold;
+  font-size: 0.74rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+  animation: raidActionPop 0.72s ease-out forwards;
+}
+.raid-action-pop.is-counter {
+  background: #245f87;
+}
 @keyframes raidHitFlash {
   0% { background-color: #ffe1d5; }
   100% { background-color: inherit; }
+}
+@keyframes raidActionPop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -40%) scale(0.92);
+  }
+  18% {
+    opacity: 1;
+    transform: translate(-50%, -80%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -145%) scale(1.06);
+  }
 }
 @keyframes raidDamagePop {
   0% {
@@ -1229,6 +1269,92 @@ section h2 {
 .event-modal-buttons {
   margin-top: 14px;
   text-align: right;
+}
+.tutorial-completion-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 9998;
+}
+.tutorial-completion-modal {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(560px, calc(100vw - 32px));
+  max-height: min(86vh, 720px);
+  overflow: auto;
+  background: #fff;
+  color: #222;
+  border: 1px solid #7a5c32;
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  z-index: 9999;
+}
+.tutorial-completion-body {
+  padding: 18px 20px 12px;
+}
+.tutorial-completion-body h3 {
+  margin: 0 0 12px;
+  color: #5d3d12;
+}
+.tutorial-completion-current,
+.tutorial-completion-description,
+.tutorial-completion-reward,
+.tutorial-completion-all-done {
+  margin: 0 0 10px;
+  line-height: 1.55;
+}
+.tutorial-completion-current,
+.tutorial-completion-reward,
+.tutorial-completion-all-done {
+  font-weight: bold;
+}
+.tutorial-checklist {
+  margin: 0 20px 14px;
+  padding: 12px;
+  background: #faf6ee;
+  border: 1px solid #d8c7a8;
+  border-radius: 6px;
+}
+.tutorial-checklist-heading {
+  margin-bottom: 8px;
+  font-weight: bold;
+  color: #5d3d12;
+}
+.tutorial-checklist-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+}
+.tutorial-checklist-title {
+  min-width: 0;
+}
+.tutorial-checklist-status {
+  color: #666;
+  font-size: 0.88rem;
+}
+.tutorial-completion-all-done {
+  padding: 0 20px;
+}
+.tutorial-completion-buttons {
+  padding: 12px 20px 16px;
+  text-align: right;
+  border-top: 1px solid #d8c7a8;
+  background: #faf6ee;
+}
+.tutorial-completion-buttons button {
+  padding: 6px 18px;
+}
+@media (max-width: 760px) {
+  .tutorial-checklist-item {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .tutorial-checklist-status {
+    grid-column: 2;
+  }
 }
 .building-item {
   border: 1px solid #ddd;

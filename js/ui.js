@@ -160,8 +160,6 @@ function buildWarningMessages(village) {
     (Array.isArray(village.buildings) && village.buildings.includes("assemblyHall"))
   );
 
-  warnings.push(...getTutorialWarnings(village));
-
   if (foodCost > 0 && monthsOfFood <= 3) {
     warnings.push({
       level: monthsOfFood <= 1 ? "danger" : "warning",
@@ -254,6 +252,8 @@ function buildWarningMessages(village) {
       text: "襲撃中です。前衛・中衛・後衛の行動割り振りを確認してください。"
     });
   }
+
+  warnings.push(...getTutorialWarnings(village));
 
   return warnings;
 }

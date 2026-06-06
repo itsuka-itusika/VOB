@@ -67,12 +67,11 @@ export function getTutorialWarnings(village) {
   const state = ensureTutorialState(village);
   if (state.complete) return [];
 
-  return TUTORIAL_TASKS
-    .filter(task => !state.completed[task.id])
-    .map(task => ({
-      level: "warning",
-      text: task.warningText
-    }));
+  const nextTask = TUTORIAL_TASKS.find(task => !state.completed[task.id]);
+  return nextTask ? [{
+    level: "tutorial",
+    text: nextTask.warningText
+  }] : [];
 }
 
 function applyTutorialReward(village, task) {
@@ -116,13 +115,23 @@ export function completeTutorialTask(village, taskId) {
 
 function isPriorityModalOpen() {
   if (typeof document === "undefined") return false;
-  return PRIORITY_MODAL_SELECTORS.some(selector => document.querySelector(selector));
+  return PRIORITY_MODAL_SELECTORS.some(selector => {
+    return Array.from(document.querySelectorAll(selector)).some(element => {
+      const style = getComputedStyle(element);
+      return style.display !== "none" && style.visibility !== "hidden" && element.getClientRects().length > 0;
+    });
+  });
 }
 
 function waitForPriorityModalsToClose() {
   if (typeof document === "undefined" || modalObserver) return;
   modalObserver = new MutationObserver(showNextTutorialModal);
-  modalObserver.observe(document.body, { childList: true, subtree: true });
+  modalObserver.observe(document.body, {
+    attributes: true,
+    attributeFilter: ["class", "style", "hidden", "aria-hidden"],
+    childList: true,
+    subtree: true
+  });
 }
 
 function stopWaitingForPriorityModals() {
@@ -157,9 +166,10 @@ function showNextTutorialModal() {
 function buildChecklistHtml(village) {
   const state = ensureTutorialState(village);
   return TUTORIAL_TASKS.map(task => `
-    <label style="display:block;padding:4px 0;">
+    <label class="tutorial-checklist-item">
       <input type="checkbox" disabled ${state.completed[task.id] ? "checked" : ""}>
-      ${escapeHtml(task.title)}
+      <span class="tutorial-checklist-title">${escapeHtml(task.title)}</span>
+      <span class="tutorial-checklist-status">${state.completed[task.id] ? "達成済み" : "未達成"}</span>
     </label>
   `).join("");
 }
@@ -175,24 +185,26 @@ function showTutorialCompletionModal(village, taskId) {
   const state = ensureTutorialState(village);
   const overlay = document.createElement("div");
   overlay.id = TUTORIAL_OVERLAY_ID;
-  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9998;";
+  overlay.className = "tutorial-completion-overlay";
 
   const modal = document.createElement("div");
   modal.id = TUTORIAL_MODAL_ID;
-  modal.className = "effect-result-modal";
+  modal.className = "effect-result-modal tutorial-completion-modal";
   modal.setAttribute("role", "dialog");
   modal.setAttribute("aria-modal", "true");
-  modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;max-width:520px;width:calc(100% - 32px);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
   modal.innerHTML = `
-    <h3 style="margin:0 0 12px;">チュートリアル達成</h3>
-    <p style="margin:0 0 8px;">今回達成: ${escapeHtml(task.title)}</p>
-    <p style="margin:0 0 12px;">獲得報酬: ${escapeHtml(task.rewardText)}</p>
-    <div style="margin:0 0 12px;">
-      <div style="font-weight:bold;margin-bottom:4px;">達成状況</div>
+    <div class="tutorial-completion-body">
+      <h3>チュートリアル達成</h3>
+      <p class="tutorial-completion-current">今回達成: ${escapeHtml(task.title)}</p>
+      <p class="tutorial-completion-description">${escapeHtml(task.descriptionText || task.conditionText || "")}</p>
+      <p class="tutorial-completion-reward">報酬を獲得しました。報酬: ${escapeHtml(task.rewardText)}</p>
+    </div>
+    <div class="tutorial-checklist">
+      <div class="tutorial-checklist-heading">チュートリアル一覧</div>
       ${buildChecklistHtml(village)}
     </div>
-    ${state.complete ? '<p style="margin:0 0 12px;">すべてのチュートリアルを達成しました。</p>' : ""}
-    <div style="text-align:right;">
+    ${state.complete ? '<p class="tutorial-completion-all-done">すべてのチュートリアルを達成しました。</p>' : ""}
+    <div class="tutorial-completion-buttons">
       <button type="button" data-close-tutorial-modal>閉じる</button>
     </div>
   `;

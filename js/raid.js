@@ -16,7 +16,7 @@ import { updateUI } from "./ui.js";
 
 const RAID_CLOSE_DELAY_MS = 500;
 const RAID_ACTION_SETTLE_DELAY_MS = 650;
-const RAID_ACTOR_FOCUS_DELAY_MS = 220;
+const RAID_ACTOR_FOCUS_DELAY_MS = 380;
 const RAID_DAMAGE_EFFECT_DELAY_MS = 360;
 const RAID_PHASE_REAR = "rear";
 const RAID_PHASE_COMBAT = "combat";
@@ -113,9 +113,19 @@ function addRaidActionLog(result, log) {
   if (result && log) result.logs.push(log);
 }
 
-function addRaidDamageAnimation(result, actor, target, damage, isCounter = false) {
+function addRaidActionAnimation(result, actor, actionLabel, isCounter = false) {
   if (!result || !actor) return;
-  result.animations.push({ actor, target, damage, isCounter });
+  result.animations.push({ actor, actionLabel, isCounter });
+}
+
+function addRaidDepartureAnimation(result, actor, actionLabel) {
+  if (!result || !actor || !actionLabel) return;
+  result.animations.push({ actor, actionLabel, isDeparture: true });
+}
+
+function addRaidDamageAnimation(result, actor, target, damage, isCounter = false, actionLabel = "") {
+  if (!result || !actor) return;
+  result.animations.push({ actor, target, damage, isCounter, actionLabel });
 }
 
 function appendRaidActionLogs(logs) {
@@ -144,11 +154,39 @@ function showRaidDamagePop(row, damage) {
   setTimeout(() => pop.remove(), RAID_DAMAGE_EFFECT_DELAY_MS + 220);
 }
 
+function showRaidActionPop(row, label, isCounter = false) {
+  if (!row || !label) return;
+  const anchor = row.querySelector(".raid-unit-name") || row.querySelector(".raid-portrait-cell") || row.lastElementChild;
+  if (!anchor) return;
+  anchor.querySelector(".raid-action-pop")?.remove();
+  const pop = document.createElement("span");
+  pop.className = `raid-action-pop${isCounter ? " is-counter" : ""}`;
+  pop.textContent = label;
+  anchor.appendChild(pop);
+  setTimeout(() => pop.remove(), RAID_ACTOR_FOCUS_DELAY_MS + RAID_DAMAGE_EFFECT_DELAY_MS + 220);
+}
+
+async function playRearDepartureAnimations(village) {
+  const rearUnits = getVisibleTrapMakers(village);
+  if (rearUnits.length === 0) return;
+  updateRaidTables(village);
+  rearUnits.forEach(unit => {
+    const row = getRaidUnitRow(unit);
+    if (!row) return;
+    row.classList.add("is-leaving");
+    showRaidActionPop(row, "離脱");
+  });
+  await waitRaidAnimation(RAID_ACTOR_FOCUS_DELAY_MS + RAID_DAMAGE_EFFECT_DELAY_MS);
+}
+
 async function playRaidAnimationStep(step) {
   const actorRow = getRaidUnitRow(step?.actor);
   const targetRow = getRaidUnitRow(step?.target);
 
-  if (actorRow) actorRow.classList.add(step.isCounter ? "is-countering" : "is-acting");
+  if (actorRow) {
+    actorRow.classList.add(step.isDeparture ? "is-leaving" : (step.isCounter ? "is-countering" : "is-acting"));
+    showRaidActionPop(actorRow, step.actionLabel, step.isCounter);
+  }
   await waitRaidAnimation(RAID_ACTOR_FOCUS_DELAY_MS);
 
   if (targetRow) {
@@ -418,7 +456,7 @@ async function settleRaidAction(village, actionResult = null) {
     await waitRaidActionSettle();
     clearPendingRaidDepartures(village);
     updateRaidTables(village);
-    checkCombatEndOfActions(village);
+    await checkCombatEndOfActions(village);
     updateRaidTables(village);
   } finally {
     settlingRaidVillages.delete(village);
@@ -447,10 +485,11 @@ function doOneTrapAction(action, village) {
   }
   let dmg = Math.floor((p.dex*p.int/400)*30);
   e.hp = clampValue(e.hp - dmg, 0, 100);
-  addRaidDamageAnimation(result, p, e, dmg);
+  addRaidDamageAnimation(result, p, e, dmg, false, "罠発動");
   addRaidActionLog(result, `【罠作成】${p.name}→${e.name}に${dmg}ダメージ`);
   if (e.hp<=0) {
     addRaidActionLog(result, `　　→ ${e.name}は倒れた！`);
+    addRaidDepartureAnimation(result, e, "撃退");
     scheduleDefeatedEnemyDeparture(e);
   }
   return result;
@@ -509,6 +548,7 @@ function doOneCombatAction(action, village) {
   }
 
   if (!isEnemyUnit(actor, village) && actor.action === ACTION_FORTIFY) {
+    addRaidActionAnimation(result, actor, "籠城");
     addRaidActionLog(result, `【籠城】${actor.name}は防壁に身を寄せ、攻撃に備えた`);
     return result;
   }
@@ -531,7 +571,7 @@ function doOneCombatAction(action, village) {
 
   const atkTypeText = attackResult.isMagic ? "魔法攻撃" : attackResult.attackText;
   target.hp = clampValue(target.hp - dmg, 0, 100);
-  addRaidDamageAnimation(result, actor, target, dmg);
+  addRaidDamageAnimation(result, actor, target, dmg, false, getAttackActionPopLabel(attackResult, isRanged));
   addRaidActionLog(result, `${label}${actor.name}の${atkTypeText}→${target.name}に ${dmg}ダメージ`);
 
   if (target.hp<=0) {
@@ -560,6 +600,11 @@ function calcRangedDamage(atk, def) {
 function getAttackLogLabel(actor, village, isRanged) {
   if (isEnemyUnit(actor, village)) return isRanged ? "【敵の射撃】" : "【敵の攻撃】";
   return isRanged ? "【射撃】" : "【迎撃】";
+}
+
+function getAttackActionPopLabel(attackResult, isRanged) {
+  if (attackResult?.isMagic) return "魔法で攻撃";
+  return isRanged ? "射撃" : "攻撃";
 }
 
 function applyOffensiveTraitModifiers(actor, damage, label, result) {
@@ -600,7 +645,7 @@ function doCounterAttack(counterActor, target, village, result) {
   let rdmg=Math.floor(ret.damage*0.5);
   let retTypeText=ret.isMagic? "魔法攻撃":"物理攻撃";
   target.hp = clampValue(target.hp - rdmg, 0, 100);
-  addRaidDamageAnimation(result, counterActor, target, rdmg, true);
+  addRaidDamageAnimation(result, counterActor, target, rdmg, true, ret.isMagic ? "魔法で反撃" : "反撃");
   addRaidActionLog(result, `　　→ 反撃(${retTypeText}):${counterActor.name}→${target.name}に${rdmg}ダメージ`);
   if (target.hp<=0) {
     handleCombatDefeat(target, village, result);
@@ -610,11 +655,13 @@ function doCounterAttack(counterActor, target, village, result) {
 function handleCombatDefeat(target, village, result) {
   if (isEnemyUnit(target, village)) {
     addRaidActionLog(result, `　　→ ${target.name}は倒れた！`);
+    addRaidDepartureAnimation(result, target, "撃退");
     scheduleDefeatedEnemyDeparture(target);
     return;
   }
   addRaidActionLog(result, `　　→ ${target.name}は負傷離脱(HP0)`);
   if (!target.bodyTraits.includes("負傷")) target.bodyTraits.push("負傷");
+  addRaidDepartureAnimation(result, target, "負傷離脱");
   markRaidDeparture(target);
 }
 
@@ -662,8 +709,14 @@ function finalizeCombatTurn(village) {
 }
 
 /** 全員の行動終了時に敵 or 迎撃側が全滅したかどうか確認 */
-function checkCombatEndOfActions(village) {
+async function checkCombatEndOfActions(village) {
   let enemies   = getAliveEnemies(village);
+  const rearPhaseComplete = village.raidPhase === RAID_PHASE_REAR &&
+    village.currentActionIndex >= village.raidActionQueue.length;
+
+  if (rearPhaseComplete) {
+    await playRearDepartureAnimations(village);
+  }
 
   if (enemies.length===0) {
     finalizeRaid(true, "敵全滅", village);

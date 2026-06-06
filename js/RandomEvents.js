@@ -237,7 +237,6 @@ export class RandomEvents {
           Number(p.bodyAge) <= 29 &&
           Number(p.chr) >= 25 &&
           GOLDEN_RAIN_RACES.has(p.race || "人間") &&
-          !hasMindTrait(p, "神聖") &&
           !p.pregnancy &&
           !p.bodyTraits.includes("妊娠") &&
           !p.bodyTraits.includes("臨月") &&
