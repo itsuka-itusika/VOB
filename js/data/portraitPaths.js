@@ -1,19 +1,26 @@
 export const DEFAULT_PORTRAIT_KEY = "default.png";
 export const BABY_MALE_PORTRAIT_KEY = "malebaby.png";
 export const BABY_FEMALE_PORTRAIT_KEY = "femalebaby.png";
-export const ARACHNID_PORTRAIT_FILES = [
+const LEGACY_ARACHNID_PORTRAIT_FILES = [
   "Arachnid/ChatGPT Image 2026年6月4日 01_41_09.png",
   "Arachnid/ChatGPT Image 2026年6月4日 01_41_23.png",
   "Arachnid/ChatGPT Image 2026年6月4日 01_41_50.png",
   "Arachnid/ChatGPT Image 2026年6月4日 01_44_46.png",
   "Arachnid/ChatGPT Image 2026年6月4日 01_44_58.png"
 ];
+export const ARACHNID_PORTRAIT_FILES = Array.from({ length: 5 }, (_, index) => `ARACHNID${index + 1}.png`);
 
 const PORTRAIT_ROOT = "images/portraits";
 const CHILD_SHADOW_PORTRAIT_KEYS = new Set(["CHILD_SHADOW.svg", "CHILD_SHADOW_BABY.svg"]);
 const SYSTEM_PORTRAIT_KEYS = new Set([DEFAULT_PORTRAIT_KEY, ...CHILD_SHADOW_PORTRAIT_KEYS]);
 const BABY_PORTRAIT_KEYS = new Set([BABY_MALE_PORTRAIT_KEY, BABY_FEMALE_PORTRAIT_KEY]);
-const ARACHNID_PORTRAIT_KEY_SET = new Set(ARACHNID_PORTRAIT_FILES);
+const LEGACY_ARACHNID_PORTRAIT_KEY_MAP = new Map();
+LEGACY_ARACHNID_PORTRAIT_FILES.forEach((key, index) => {
+  const normalizedKey = ARACHNID_PORTRAIT_FILES[index];
+  const fileName = key.split("/").pop();
+  LEGACY_ARACHNID_PORTRAIT_KEY_MAP.set(key, normalizedKey);
+  LEGACY_ARACHNID_PORTRAIT_KEY_MAP.set(fileName, normalizedKey);
+});
 
 const NUMBERED_PORTRAIT_LIMITS = new Map([
   ["MA", 16],
@@ -33,41 +40,52 @@ const NUMBERED_PORTRAIT_LIMITS = new Map([
   ["CYCLOPS", 4],
   ["ANGEL_FIGHTER", 16],
   ["ARCHANGEL", 13],
+  ["CENTAUR", 9],
+  ["MINOTAUR", 4],
+  ["KNIGHT", 26],
+  ["ELITE", 22],
+  ["HOLY_KNIGHT", 8],
+  ["ARACHNID", 5],
   ["ANGEL", 16],
   ["ALSEID", 13],
   ["DRYAD", 18],
   ["NEREID", 15],
-  ["SAINT", 9]
+  ["SAINT", 21]
 ]);
 
 const TODDLER_PORTRAIT_GROUPS = new Set(["MA", "MB", "MC", "MD", "ME", "GG", "A", "BB", "C", "D"]);
 const TODDLER_PORTRAIT_LIMIT = 2;
 
-const PORTRAIT_ROUTES = [
-  { pattern: /^CYCLOPS\d+\.png$/, path: `${PORTRAIT_ROOT}/raiders/cyclops` },
-  { pattern: /^T_(MA|MB|MC|MD|ME|GG|A|BB|C|D)\d+\.png$/, path: `${PORTRAIT_ROOT}/children`, groupFromKey: true },
-  { pattern: /^MA\d+\.png$/, path: `${PORTRAIT_ROOT}/villagers/male/MA` },
-  { pattern: /^MB\d+\.png$/, path: `${PORTRAIT_ROOT}/villagers/male/MB` },
-  { pattern: /^MC\d+\.png$/, path: `${PORTRAIT_ROOT}/villagers/male/MC` },
-  { pattern: /^MD\d+\.png$/, path: `${PORTRAIT_ROOT}/villagers/male/MD` },
-  { pattern: /^ME\d+\.png$/, path: `${PORTRAIT_ROOT}/villagers/male/ME` },
-  { pattern: /^BB\d+\.png$/, path: `${PORTRAIT_ROOT}/villagers/female/BB` },
-  { pattern: /^A\d+\.png$/, path: `${PORTRAIT_ROOT}/villagers/female/A` },
-  { pattern: /^C\d+\.png$/, path: `${PORTRAIT_ROOT}/villagers/female/C` },
-  { pattern: /^D\d+\.png$/, path: `${PORTRAIT_ROOT}/villagers/female/D` },
-  { pattern: /^GG\d+\.png$/, path: `${PORTRAIT_ROOT}/villagers/outcast/GG` },
-  { pattern: /^BAN\d+\.png$/, path: `${PORTRAIT_ROOT}/raiders/bandit` },
-  { pattern: /^GOB\d+\.png$/, path: `${PORTRAIT_ROOT}/raiders/goblin` },
-  { pattern: /^HARPY\d+\.png$/, path: `${PORTRAIT_ROOT}/raiders/harpy` },
-  { pattern: /^WOLF\d+\.png$/, path: `${PORTRAIT_ROOT}/raiders/wolf` },
-  { pattern: /^ANGEL_FIGHTER\d+\.png$/, path: `${PORTRAIT_ROOT}/angel_fighter` },
-  { pattern: /^ARCHANGEL\d+\.png$/, path: `${PORTRAIT_ROOT}/archangel` },
-  { pattern: /^ANGEL\d+\.png$/, path: `${PORTRAIT_ROOT}/angel` },
-  { pattern: /^ALSEID\d+\.png$/, path: `${PORTRAIT_ROOT}/alseid` },
-  { pattern: /^DRYAD\d+\.png$/, path: `${PORTRAIT_ROOT}/dryad` },
-  { pattern: /^NEREID\d+\.png$/, path: `${PORTRAIT_ROOT}/nereid` },
-  { pattern: /^SAINT\d+\.png$/, path: `${PORTRAIT_ROOT}/saint` }
-];
+const PORTRAIT_GROUP_FOLDERS = new Map([
+  ["MA", "MA"],
+  ["MB", "MB"],
+  ["MC", "MC"],
+  ["MD", "MD"],
+  ["ME", "ME"],
+  ["A", "A"],
+  ["BB", "BB"],
+  ["C", "C"],
+  ["D", "D"],
+  ["GG", "GG"],
+  ["BAN", "bandit"],
+  ["GOB", "goblin"],
+  ["HARPY", "harpy"],
+  ["WOLF", "wolf"],
+  ["CYCLOPS", "cyclops"],
+  ["ANGEL_FIGHTER", "angel_fighter"],
+  ["ARCHANGEL", "archangel"],
+  ["CENTAUR", "centaur"],
+  ["MINOTAUR", "minotaur"],
+  ["KNIGHT", "knight"],
+  ["ELITE", "elite"],
+  ["HOLY_KNIGHT", "holy_knight"],
+  ["ARACHNID", "arachnid"],
+  ["ANGEL", "angel"],
+  ["ALSEID", "alseid"],
+  ["DRYAD", "dryad"],
+  ["NEREID", "nereid"],
+  ["SAINT", "saint"]
+]);
 
 function getFileName(value) {
   return String(value ?? "")
@@ -79,7 +97,7 @@ function getFileName(value) {
     .pop() || "";
 }
 
-function getArachnidPortraitKey(value) {
+function getLegacyArachnidPortraitKey(value) {
   const segments = String(value ?? "")
     .trim()
     .replace(/[?#].*$/, "")
@@ -87,12 +105,10 @@ function getArachnidPortraitKey(value) {
     .split("/")
     .filter(Boolean);
 
-  if (segments.length < 2) return "";
-
-  const folder = segments[segments.length - 2];
   const fileName = segments[segments.length - 1];
-  const key = `${folder}/${fileName}`;
-  return ARACHNID_PORTRAIT_KEY_SET.has(key) ? key : "";
+  const folder = segments.length >= 2 ? segments[segments.length - 2] : "";
+  const key = folder ? `${folder}/${fileName}` : fileName;
+  return LEGACY_ARACHNID_PORTRAIT_KEY_MAP.get(key) || LEGACY_ARACHNID_PORTRAIT_KEY_MAP.get(fileName) || "";
 }
 
 function getNumberedPortraitParts(key) {
@@ -105,7 +121,7 @@ function getNumberedPortraitParts(key) {
     };
   }
 
-  const match = key.match(/^(ANGEL_FIGHTER|ARCHANGEL|CYCLOPS|HARPY|ALSEID|NEREID|DRYAD|SAINT|ANGEL|BAN|GOB|WOLF|GG|MA|MB|MC|MD|ME|BB|A|C|D)(\d+)\.png$/i);
+  const match = key.match(/^(ANGEL_FIGHTER|HOLY_KNIGHT|ARCHANGEL|MINOTAUR|CENTAUR|ARACHNID|CYCLOPS|KNIGHT|ALSEID|NEREID|DRYAD|SAINT|ELITE|HARPY|ANGEL|BAN|GOB|WOLF|GG|MA|MB|MC|MD|ME|BB|A|C|D)(\d+)\.png$/i);
   if (!match) return null;
 
   return {
@@ -117,7 +133,6 @@ function getNumberedPortraitParts(key) {
 
 function isKnownPortraitKey(key) {
   if (SYSTEM_PORTRAIT_KEYS.has(key) || BABY_PORTRAIT_KEYS.has(key)) return true;
-  if (ARACHNID_PORTRAIT_KEY_SET.has(key)) return true;
 
   const parts = getNumberedPortraitParts(key);
   if (!parts || !Number.isInteger(parts.number) || parts.number < 1) return false;
@@ -131,7 +146,7 @@ function isKnownPortraitKey(key) {
 }
 
 export function normalizePortraitKey(value) {
-  const arachnidKey = getArachnidPortraitKey(value);
+  const arachnidKey = getLegacyArachnidPortraitKey(value);
   if (arachnidKey) return arachnidKey;
 
   const fileName = getFileName(value);
@@ -166,11 +181,13 @@ export function getPortraitAssetPath(value) {
 
   if (BABY_PORTRAIT_KEYS.has(key)) return `${PORTRAIT_ROOT}/babies/${key}`;
   if (SYSTEM_PORTRAIT_KEYS.has(key)) return `${PORTRAIT_ROOT}/system/${key}`;
-  if (ARACHNID_PORTRAIT_KEY_SET.has(key)) return `${PORTRAIT_ROOT}/${key}`;
 
-  const route = PORTRAIT_ROUTES.find(item => item.pattern.test(key));
-  if (!route) return `${PORTRAIT_ROOT}/system/${DEFAULT_PORTRAIT_KEY}`;
+  const parts = getNumberedPortraitParts(key);
+  if (parts?.type === "toddler") {
+    return `${PORTRAIT_ROOT}/children/${parts.group}/${key}`;
+  }
 
-  const childGroup = route.groupFromKey ? `/${getPortraitGroupKey(key)}` : "";
-  return `${route.path}${childGroup}/${key}`;
+  const folder = PORTRAIT_GROUP_FOLDERS.get(parts?.group);
+  if (!folder) return `${PORTRAIT_ROOT}/system/${DEFAULT_PORTRAIT_KEY}`;
+  return `${PORTRAIT_ROOT}/${folder}/${key}`;
 }

@@ -134,10 +134,10 @@
 ## 顔グラフィック画像
 
 - `portraitFile` / `adultPortraitFile` / `toddlerPortraitFile` は `MA1.png` や `T_D1.png` のような論理IDとして保存する。`images/portraits/...` の実パスは保存しない。
-- 表示時の実パス解決は `js/data/portraitPaths.js` に集約し、`getPortraitAssetPath()` でタイプ別フォルダへ変換する。
-- 顔グラ画像は `images/portraits/villagers/`、`images/portraits/children/`、`images/portraits/raiders/`、`images/portraits/babies/`、`images/portraits/system/` に配置する。
-- 今後実装予定の特殊種族画像は `angel/` や `alseid/` のような小文字フォルダに置き、論理IDは `ANGEL1.png` のような大文字prefix連番にする。
-- アラクニドのように既存画像名をそのまま使う特殊種族は、`Arachnid/<ファイル名>.png` のような `images/portraits/` 以下のフォルダ付き論理IDを使う。`images/portraits/` から始まる実パスは保存しない。
+- 表示時の実パス解決は `js/data/portraitPaths.js` に集約し、`getPortraitAssetPath()` で選択グループ別フォルダへ変換する。
+- 赤子、幼児、system 用画像を除き、顔グラ画像は `images/portraits/<選択グループ>/` に配置する。村人用、襲撃者用といった用途別フォルダでは分けない。
+- 村人、訪問者、襲撃者は可能な限り同じ人物生成・顔グラ参照システムで扱う。襲撃者として登場した人物グループを村人側でも使えるよう、顔グラの分類は役割ではなく見た目・種族などの選択グループを基準にする。
+- 特殊種族画像は `angel/` や `alseid/` のような選択グループフォルダに置き、論理IDは `ANGEL1.png` のような大文字prefix連番にする。旧アラクニド論理IDは読込時に `ARACHNID1.png` 形式へ正規化する。
 
 ## 訪問者とレア種族
 
