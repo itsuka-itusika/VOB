@@ -2,8 +2,10 @@ import { addStoredResource } from "./domain/resourceLimits.js";
 import { TUTORIAL_ALL_COMPLETE_REWARD, TUTORIAL_TASKS } from "./data/tutorialData.js";
 import { clampValue } from "./util.js";
 
-const TUTORIAL_MODAL_ID = "tutorialCompletionModal";
-const TUTORIAL_OVERLAY_ID = "tutorialCompletionOverlay";
+const TUTORIAL_COMPLETION_MODAL_ID = "tutorialCompletionModal";
+const TUTORIAL_COMPLETION_OVERLAY_ID = "tutorialCompletionOverlay";
+const TUTORIAL_ALL_COMPLETE_MODAL_ID = "tutorialAllCompleteModal";
+const TUTORIAL_ALL_COMPLETE_OVERLAY_ID = "tutorialAllCompleteOverlay";
 const PRIORITY_MODAL_SELECTORS = [
   "#actionPhaseModal",
   "#seasonChangeDialog",
@@ -189,16 +191,15 @@ function showTutorialCompletionModal(village, taskId) {
   const task = taskById.get(taskId);
   if (!task) return;
 
-  document.getElementById(TUTORIAL_OVERLAY_ID)?.remove();
-  document.getElementById(TUTORIAL_MODAL_ID)?.remove();
+  removeTutorialModals();
   modalOpen = true;
 
   const overlay = document.createElement("div");
-  overlay.id = TUTORIAL_OVERLAY_ID;
+  overlay.id = TUTORIAL_COMPLETION_OVERLAY_ID;
   overlay.className = "tutorial-completion-overlay";
 
   const modal = document.createElement("div");
-  modal.id = TUTORIAL_MODAL_ID;
+  modal.id = TUTORIAL_COMPLETION_MODAL_ID;
   modal.className = "effect-result-modal tutorial-completion-modal";
   modal.setAttribute("role", "dialog");
   modal.setAttribute("aria-modal", "true");
@@ -222,17 +223,16 @@ function showTutorialCompletionModal(village, taskId) {
 }
 
 function showTutorialAllCompleteModal(village) {
-  document.getElementById(TUTORIAL_OVERLAY_ID)?.remove();
-  document.getElementById(TUTORIAL_MODAL_ID)?.remove();
+  removeTutorialModals();
   modalOpen = true;
 
   const overlay = document.createElement("div");
-  overlay.id = TUTORIAL_OVERLAY_ID;
+  overlay.id = TUTORIAL_ALL_COMPLETE_OVERLAY_ID;
   overlay.className = "tutorial-completion-overlay";
 
   const modal = document.createElement("div");
-  modal.id = TUTORIAL_MODAL_ID;
-  modal.className = "effect-result-modal tutorial-completion-modal";
+  modal.id = TUTORIAL_ALL_COMPLETE_MODAL_ID;
+  modal.className = "effect-result-modal tutorial-completion-modal tutorial-all-complete-modal";
   modal.setAttribute("role", "dialog");
   modal.setAttribute("aria-modal", "true");
   modal.innerHTML = `
@@ -252,6 +252,15 @@ function showTutorialAllCompleteModal(village) {
   `;
 
   mountTutorialModal(overlay, modal);
+}
+
+function removeTutorialModals() {
+  [
+    TUTORIAL_COMPLETION_OVERLAY_ID,
+    TUTORIAL_COMPLETION_MODAL_ID,
+    TUTORIAL_ALL_COMPLETE_OVERLAY_ID,
+    TUTORIAL_ALL_COMPLETE_MODAL_ID
+  ].forEach(id => document.getElementById(id)?.remove());
 }
 
 function mountTutorialModal(overlay, modal) {

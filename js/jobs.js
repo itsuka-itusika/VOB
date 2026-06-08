@@ -35,6 +35,7 @@ import { addAcquiredStat, getPermanentStat, syncEffectiveStats } from "./domain/
 import { rollSecretTreasureJobEvents, showSecretTreasureEventModals } from "./secretTreasureEvents.js";
 import { completeTutorialTask } from "./tutorial.js";
 import { incrementTitleCounter, TITLE_COUNTER_KEYS } from "./titles.js";
+import { addDivineMight, showPendingDivineMightLevelUpModal } from "./divineMight.js";
 
 const HEALING_RECOVERABLE_BODY_TRAITS = ["負傷", "疫病"];
 const BASE_JOB_STAT_GROWTH_CHANCE = 0.05;
@@ -106,7 +107,12 @@ export function handleAllVillagerJobs(village) {
     village.log = originalLog;
   }
 
-  showActionPhaseResultModal(village, actionLogs, () => showSecretTreasureEventModals(secretTreasureEvents));
+  showActionPhaseResultModal(village, actionLogs, () => {
+    const showSecretEvents = () => showSecretTreasureEventModals(secretTreasureEvents);
+    if (!showPendingDivineMightLevelUpModal(village, showSecretEvents)) {
+      showSecretEvents();
+    }
+  });
 }
 
 function showActionPhaseResultModal(village, messages, afterClose = null) {
@@ -1092,8 +1098,9 @@ function doMiko(p, v) {
 
   let manaGain = calculateMikoMana(p);
   v.mana = clampValue(v.mana + manaGain, 0, 99999);
+  addDivineMight(v, 2);
 
-  let logMsg = `${p.name}巫女:体力-${tc},メンタル-${mc},魔素+${manaGain}`;
+  let logMsg = `${p.name}巫女:体力-${tc},メンタル-${mc},魔素+${manaGain},神威+2`;
   
   // ステータス上昇判定
   if (rollJobStatGrowth(p, "chr")) {
@@ -1238,8 +1245,9 @@ function doBrewing(p, v) {
     if (foodGain >= 1) completeTutorialTask(v, "produce_food");
   }
   v.mana = clampValue(v.mana + manaGain, 0, 99999);
+  addDivineMight(v, 1);
 
-  let logMsg = `${p.name}醸造:${foodResourceName}+${foodGain},魔素+${manaGain},体力-${tc},メンタル-${mc}`;
+  let logMsg = `${p.name}醸造:${foodResourceName}+${foodGain},魔素+${manaGain},神威+1,体力-${tc},メンタル-${mc}`;
   
   // ステータス上昇判定
   if (rollJobStatGrowth(p, "mag")) {

@@ -24,6 +24,7 @@ import {
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
 import { getVisitorArrivalLine } from "./data/dialogue/visitorLines.js";
+import { addDivineMight, getDivineMightGainFromMonthlyMana } from "./divineMight.js";
 
 const OPENING_RAID_GRACE_YEAR = 1091;
 const OPENING_RAID_GRACE_LAST_MONTH = 6;
@@ -482,6 +483,11 @@ export function doMonthStartProcess(v) {
   let gain=Math.floor(tot);
   v.mana=clampValue(v.mana+gain,0,99999);
   v.log(`魔素+${gain}(村人幸福度由来)`);
+  const divineGain = getDivineMightGainFromMonthlyMana(gain);
+  if (divineGain > 0) {
+    addDivineMight(v, divineGain);
+    v.log(`神威+${divineGain}(幸福度由来魔素)`);
+  }
 
   // 食料/資材0のペナルティ
   if (v.food<=0) {

@@ -992,8 +992,16 @@ function resolveForcedVisitorType(forcedType, village = null) {
   const visitorType = VISITOR_TYPES.find(type => type.type === forcedType);
   if (visitorType) return visitorType;
 
-  const rareEntry = RARE_VISITOR_TYPES.find(entry => entry.type === forcedType && getRareVisitorWeight(entry, village) > 0);
+  const rareEntry = RARE_VISITOR_TYPES.find(entry => entry.type === forcedType && entry.implemented);
   return rareEntry ? buildRareVisitorType(rareEntry) : null;
+}
+
+export function getVisitorTypeChoices() {
+  return [
+    ...VISITOR_TYPES.map(type => type.type),
+    RARE_VISITOR_TYPE,
+    ...RARE_VISITOR_TYPES.filter(entry => entry.implemented).map(entry => entry.type)
+  ];
 }
 
 function resolveVisitorTable(village = null) {

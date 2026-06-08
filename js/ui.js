@@ -45,6 +45,7 @@ import { openPersonalHistoryModal } from "./history.js";
 import { formatRelationshipsForDisplay, normalizeRelationship } from "./relationships.js";
 import { getTutorialWarnings } from "./tutorial.js";
 import { applyVillageScaleArtClass, getVillageScaleTitle } from "./villageScale.js";
+import { getDivineMightStatus } from "./divineMight.js";
 
 
 function openConversationFor(person) {
@@ -931,11 +932,14 @@ export function updateUI(v) {
   if (!rp) return;
   applyVillageScaleArtClass(v.building);
   const villageInfoHeading = document.getElementById("villageInfoHeading");
+  const scaleTitle = getVillageScaleTitle(v.building);
+  const divineStatus = getDivineMightStatus(v);
+  const divineLabel = `神威 Lv${divineStatus.level}（${divineStatus.amountLabel}）`;
   if (villageInfoHeading) {
-    villageInfoHeading.textContent = getVillageScaleTitle(v.building);
+    villageInfoHeading.textContent = `${scaleTitle}　${divineLabel}`;
   }
   const mobileScaleTitleBox = isMobileViewMode()
-    ? `<div class="resource-box village-scale-title"><span class="resource-value">${getVillageScaleTitle(v.building)}</span></div>`
+    ? `<div class="resource-box village-scale-title"><span class="resource-value">${scaleTitle} / ${divineLabel}</span></div>`
     : "";
   const foodStorage = getResourceStorageStatus(v, "food");
   const materialStorage = getResourceStorageStatus(v, "materials");

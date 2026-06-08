@@ -21,9 +21,11 @@ export class Village {
     this.security = 60;
     this.building = 0;
     this.heresy = 0;
+    this.divineMight = 0;
     this.scaleTitleStage = 0;
     this.lastHeadmanElectionYear = null;
     this.nextHeadmanElectionYear = null;
+    this.lastThunderboltMiracleMonth = "";
 
     this.villagers = [];
     this.pendingGoldenRainPregnancies = [];

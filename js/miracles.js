@@ -14,15 +14,26 @@ import { resolveDialogueTone } from "./data/dialogue/toneProfiles.js";
 import { BODY_EXCHANGE_SOURCE_RACE_LINE_KEYS, BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
 import { getVisitorArrivalLine } from "./data/dialogue/visitorLines.js";
 import { completeTutorialTask } from "./tutorial.js";
+import {
+  addDivineMight,
+  getDivineMightGainFromMiracleCost,
+  getDivineMightStatus,
+  getMiracleUnlockInfo,
+  getMiracleUnlockReason,
+  showPendingDivineMightLevelUpModal,
+  subtractDivineMight
+} from "./divineMight.js";
 
 const DEFAULT_PORTRAIT_PATH = getPortraitAssetPath(DEFAULT_PORTRAIT_KEY);
 const AUTONOMOUS_SETTLEMENT_SCALE = 350;
+const THUNDERBOLT_MIRACLE_DAMAGE = 60;
+let pendingExchangeResultVillage = null;
 /**
  * 奇跡リスト
  */
 export const MIRACLES = [
   {id:"12", name:"交換の奇跡(20)", cost:20, desc:"2人の肉体を交換"},
-  {id:"13", name:"交換の奇跡・強(80)", cost:80, desc:"村外含む2人交換"},
+  {id:"13", name:"交換の奇跡・強(100)", cost:100, desc:"村外含む2人交換"},
   {id:"1",  name:"豊穣の奇跡(100)", cost:100, desc:"今月のみ、農作業・伐採・狩猟・漁・採集の成果と醸造の食料獲得2倍"},
   {id:"2",  name:"マナの奇跡(40)",  cost:40,  desc:"食料+80"},
   {id:"3",  name:"クピドの奇跡(80)", cost:80, desc:"2人を強制結婚(条件無視)"},
@@ -36,7 +47,8 @@ export const MIRACLES = [
   {id:"10", name:"旅人の奇跡(60)", cost:60, desc:"ランダム来訪者(訪問者付与)"},
   {id:"11", name:"出立の奇跡(50)", cost:50, desc:"1人離脱→幸福度分の魔素獲得"},
   {id:"14", name:"ミダスの奇跡(100)", cost:100, desc:"1ヶ月間、食料を得る代わりに資金を得る"},
-  {id:"15", name:"市場の奇跡(150)", cost:150, desc:"行商人の訪問者を3人生成"}
+  {id:"15", name:"市場の奇跡(150)", cost:150, desc:"行商人の訪問者を3人生成"},
+  {id:"17", name:"雷霆の奇跡(100)", cost:100, desc:"月1回。襲撃者1体の体力を60減らす。最低1で止まる"}
 ];
 
 /**
@@ -111,10 +123,13 @@ function getMiracleCostInfo(miracle, village) {
   return { mana: miracle.cost, funds: 0, label: `魔素: ${miracle.cost}` };
 }
 
-function getMiracleBlockReason(costInfo, village) {
+function getMiracleBlockReason(costInfo, village, miracleId = "") {
   const reasons = [];
+  const unlockReason = getMiracleUnlockReason(miracleId, village);
+  if (unlockReason) reasons.push(unlockReason);
   if (village.mana < costInfo.mana) reasons.push("魔素不足");
   if (village.funds < costInfo.funds) reasons.push("資金不足");
+  if (miracleId === "17" && hasUsedThunderboltMiracleThisMonth(village)) reasons.push("今月は使用済み");
   return reasons.join(", ");
 }
 
@@ -129,6 +144,7 @@ function spendMiracleMana(village, cost) {
     0,
     99999
   );
+  addDivineMight(village, getDivineMightGainFromMiracleCost(cost));
 }
 
 function refundMiracleMana(village, cost) {
@@ -138,15 +154,25 @@ function refundMiracleMana(village, cost) {
     0,
     99999
   );
+  subtractDivineMight(village, getDivineMightGainFromMiracleCost(cost));
+}
+
+function getVillageMonthKey(village) {
+  return `${Number(village?.year) || 0}-${Number(village?.month) || 0}`;
+}
+
+function hasUsedThunderboltMiracleThisMonth(village) {
+  return village?.lastThunderboltMiracleMonth === getVillageMonthKey(village);
 }
 
 function getMiracleTargetCount(mid) {
   if (["3", "12", "13"].includes(mid)) return 2;
-  if (["6", "7", "11", "16"].includes(mid)) return 1;
+  if (["6", "7", "11", "16", "17"].includes(mid)) return 1;
   return 0;
 }
 
 function getMiracleTargetOptions(mid) {
+  if (mid === "17") return { raidersOnly: true };
   if (mid === "12") return { normalExchangeOnly: true };
   if (mid === "3" || mid === "6" || mid === "7" || mid === "11" || mid === "16") return { villagersOnly: true };
   return {};
@@ -206,10 +232,10 @@ function updateMiraclePreview(mid, village, preview) {
 }
 
 function updateMiracleActionButton(mid, button, village, costInfo, preview) {
-  const reason = getMiracleBlockReason(costInfo, village);
+  const reason = getMiracleBlockReason(costInfo, village, mid);
   const targetsReady = areMiracleTargetsReady(mid);
   button.disabled = Boolean(reason) || !targetsReady;
-  button.textContent = targetsReady ? "行使" : "対象を選んでください";
+  button.textContent = reason || (targetsReady ? "行使" : "対象を選んでください");
   updateMiraclePreview(mid, village, preview);
 }
 
@@ -258,16 +284,18 @@ function setSelectedMiracle(id, village) {
 function createMiracleItem(miracle, village, selectedId) {
   const div = document.createElement("div");
   const isActive = miracle.id === selectedId;
+  const unlockInfo = getMiracleUnlockInfo(miracle.id, village);
+  const isLocked = !unlockInfo.unlocked;
   const costInfo = getMiracleCostInfo(miracle, village);
-  const reasonText = getMiracleBlockReason(costInfo, village);
+  const reasonText = getMiracleBlockReason(costInfo, village, miracle.id);
   const targetCount = getMiracleTargetCount(miracle.id);
   const needsTarget = targetCount > 0;
 
-  div.className = `miracle-item${isActive ? " active" : ""}`;
+  div.className = `miracle-item${isActive ? " active" : ""}${isLocked ? " locked" : ""}`;
   div.innerHTML = `
     <div class="miracle-header">
       <h4>${miracle.name}</h4>
-      ${isActive ? '<span class="miracle-mark">選択中</span>' : ""}
+      ${isLocked ? '<span class="miracle-mark locked">未解放</span>' : (isActive ? '<span class="miracle-mark">選択中</span>' : "")}
     </div>
     <div class="miracle-desc">${miracle.desc}</div>
     <div class="miracle-cost"><div>${costInfo.label}</div></div>
@@ -277,7 +305,10 @@ function createMiracleItem(miracle, village, selectedId) {
   const button = document.createElement("button");
   button.className = "miracle-button";
 
-  if (reasonText) {
+  if (isLocked) {
+    button.disabled = true;
+    button.textContent = unlockInfo.reason;
+  } else if (reasonText) {
     button.disabled = true;
     button.textContent = "行使不可";
   } else if (!isActive && needsTarget) {
@@ -299,6 +330,7 @@ function createMiracleItem(miracle, village, selectedId) {
 
   div.appendChild(button);
   div.onclick = (event) => {
+    if (isLocked) return;
     if (event.target.closest("button") || event.target.closest("select")) return;
     if (!isActive) setSelectedMiracle(miracle.id, village);
   };
@@ -308,19 +340,29 @@ function createMiracleItem(miracle, village, selectedId) {
 function renderMiracleCards(village, selectedId = "12") {
   const content = document.getElementById("miracleOptions");
   if (!content) return;
-  const currentId = MIRACLES.some(m => m.id === selectedId) ? selectedId : "12";
+  const fallbackId = MIRACLES.find(m => getMiracleUnlockInfo(m.id, village).unlocked)?.id || "12";
+  const selectedMiracle = MIRACLES.find(m => m.id === selectedId);
+  const currentId = selectedMiracle && getMiracleUnlockInfo(selectedMiracle.id, village).unlocked
+    ? selectedId
+    : fallbackId;
   const select = document.getElementById("miracleSelect");
   if (select) select.value = currentId;
+  const divineStatus = getDivineMightStatus(village);
+  const nextDivineText = divineStatus.next
+    ? `次Lv${divineStatus.next.level}: 神威${divineStatus.next.threshold}まで残り${Math.ceil(divineStatus.remaining)}`
+    : "すべて解放済み";
 
   content.innerHTML = `
     <div class="miracle-resources">
       <div>魔素: ${village.mana}</div>
       <div>資金: ${village.funds}</div>
       <div>異端: ${village.heresy || 0}</div>
+      <div>神威: Lv${divineStatus.level} / ${divineStatus.amountLabel}</div>
+      <div>${nextDivineText}</div>
       <div>村人: ${village.villagers.length}</div>
     </div>
     <div class="miracle-list">
-      <h3>行使できる奇跡</h3>
+      <h3>奇跡</h3>
       <div class="miracle-grid"></div>
     </div>
   `;
@@ -338,29 +380,35 @@ function createVillagerSelect(id, village, options = {}) {
   sel.appendChild(op0);
 
   // 村人を追加
-  village.villagers
-    .filter(vv => !options.normalExchangeOnly || isNormalExchangeCandidate(vv, village))
-    .forEach(vv=>{
-    let opp=document.createElement("option");
-    opp.value=vv.name;
-    opp.textContent=vv.name;
-    sel.appendChild(opp);
-  });
+  if (!options.raidersOnly) {
+    village.villagers
+      .filter(vv => !options.normalExchangeOnly || isNormalExchangeCandidate(vv, village))
+      .forEach(vv=>{
+      let opp=document.createElement("option");
+      opp.value=vv.name;
+      opp.textContent=vv.name;
+      sel.appendChild(opp);
+    });
+  }
 
   if (options.normalExchangeOnly || options.villagersOnly) {
     return sel;
   }
 
   // 訪問者を追加
-  village.visitors.forEach(vv=>{
-    let opp=document.createElement("option");
-    opp.value=vv.name;
-    opp.textContent=`${vv.name}(訪問者)`;
-    sel.appendChild(opp);
-  });
+  if (!options.raidersOnly) {
+    village.visitors.forEach(vv=>{
+      let opp=document.createElement("option");
+      opp.value=vv.name;
+      opp.textContent=`${vv.name}(訪問者)`;
+      sel.appendChild(opp);
+    });
+  }
 
   // 襲撃者を追加
-  village.raidEnemies.forEach(vv=>{
+  village.raidEnemies
+    .filter(vv => !options.raidersOnly || Number(vv.hp) > 0)
+    .forEach(vv=>{
     let opp=document.createElement("option");
     opp.value=vv.name;
     opp.textContent=`${vv.name}(襲撃者)`;
@@ -382,6 +430,11 @@ export function performMiracle(village) {
   let mid=sel.value;
   let info=MIRACLES.find(x=>x.id===mid);
   if (!info) return;
+  const unlockReason = getMiracleUnlockReason(info.id, village);
+  if (unlockReason) {
+    village.log(`【奇跡】${info.name}は${unlockReason}`);
+    return;
+  }
 
   // コスト計算
   let cost = info.cost;
@@ -506,6 +559,19 @@ export function performMiracle(village) {
           }
           warMiracle(vA,village);
           break;
+        case "17": // 雷霆(襲撃者1体)
+          if (hasUsedThunderboltMiracleThisMonth(village)) {
+            village.log("【雷霆の奇跡】今月はすでに使用済みです");
+            refundMiracleMana(village, cost);
+            return;
+          }
+          if (!vA || !village.raidEnemies.includes(vA)) {
+            village.log("【雷霆の奇跡】襲撃者1体を選択");
+            refundMiracleMana(village, cost);
+            return;
+          }
+          thunderboltMiracle(vA, village);
+          break;
         case "8": // 竈女神
           hearthMiracle(village);
           break;
@@ -545,7 +611,7 @@ export function performMiracle(village) {
           village.log(`【交換の奇跡】${vA.name}と${vB.name}が肉体交換`);
           
           // 交換専用モーダルを表示
-          openExchangeModal(vA, vB);
+          openExchangeModal(vA, vB, { village });
           break;
         case "13": // 交換(強)
           if (!vA||!vB||vA===vB) {
@@ -557,7 +623,7 @@ export function performMiracle(village) {
           village.log(`【交換の奇跡・強】${vA.name}と${vB.name}が肉体交換`);
           
           // 交換専用モーダルを表示
-          openExchangeModal(vA, vB);
+          openExchangeModal(vA, vB, { village });
           break;
         case "14": // ミダスの奇跡
           if (!village.villageTraits.includes("ミダス")) {
@@ -656,6 +722,15 @@ function warMiracle(p, v) {
   refreshJobTable(p, v);
   v.log(`【戦神の奇跡】${p.name}に火星の加護付与(筋力+7,耐久+7,勇気+7,魔力/知力/勤勉/倫理*0.2)3ヶ月継続`);
   showMiracleResultModal(v, "戦神の奇跡", `${p.name}に戦神の加護が宿りました。`, [p]);
+}
+
+function thunderboltMiracle(target, village) {
+  const beforeHp = Number(target.hp) || 0;
+  target.hp = beforeHp <= 1 ? beforeHp : Math.max(1, beforeHp - THUNDERBOLT_MIRACLE_DAMAGE);
+  village.lastThunderboltMiracleMonth = getVillageMonthKey(village);
+  const actualDamage = Math.max(0, beforeHp - target.hp);
+  village.log(`【雷霆の奇跡】${target.name}に雷霆を落としました。体力-${actualDamage}`);
+  showMiracleResultModal(village, "雷霆の奇跡", `${target.name}を雷光が打ちました。`, [target]);
 }
 
 /** 竈女神(恋人を結婚100%) */
@@ -902,6 +977,7 @@ export function showMiracleResultModal(village, miracleName, message, people = [
     overlay.remove();
     modal.remove();
     updateUI(village);
+    showPendingDivineMightLevelUpModal(village);
   };
 }
 
@@ -1072,6 +1148,7 @@ export function closePanFluteExchangeModal() {
  * 交換の奇跡モーダルを開く
  */
 export function openExchangeModal(personA, personB, options = {}) {
+  pendingExchangeResultVillage = options.village || null;
   const overlay = document.getElementById("exchangeOverlay");
   const modal = document.getElementById("exchangeModal");
   const portraitA = document.getElementById("exchangePortraitA");
@@ -1136,7 +1213,10 @@ export function openExchangeModal(personA, personB, options = {}) {
 export function closeExchangeModal() {
   const overlay = document.getElementById("exchangeOverlay");
   const modal = document.getElementById("exchangeModal");
+  const village = pendingExchangeResultVillage;
+  pendingExchangeResultVillage = null;
   
   if (overlay) overlay.style.display = "none";
   if (modal) modal.style.display = "none";
+  if (village) showPendingDivineMightLevelUpModal(village);
 }

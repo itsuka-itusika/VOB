@@ -136,9 +136,11 @@ function convertVillageToObject(village) {
     security: village.security,
     building: village.building,
     heresy: normalizeFiniteNumber(village.heresy, 0),
+    divineMight: normalizeFiniteNumber(village.divineMight, 0),
     scaleTitleStage: Number.isInteger(village.scaleTitleStage)
       ? village.scaleTitleStage
       : getInitialScaleStageIndex(village.building),
+    lastThunderboltMiracleMonth: String(village.lastThunderboltMiracleMonth || ""),
     lastHeadmanElectionYear: village.lastHeadmanElectionYear != null && Number.isFinite(Number(village.lastHeadmanElectionYear))
       ? Number(village.lastHeadmanElectionYear)
       : null,
@@ -290,9 +292,11 @@ function convertObjectToVillage(dataObj) {
   v.security = dataObj.security;
   v.building = dataObj.building;
   v.heresy = normalizeFiniteNumber(dataObj.heresy, 0);
+  v.divineMight = normalizeFiniteNumber(dataObj.divineMight, 0);
   v.scaleTitleStage = Number.isInteger(dataObj.scaleTitleStage)
     ? dataObj.scaleTitleStage
     : getInitialScaleStageIndex(v.building);
+  v.lastThunderboltMiracleMonth = String(dataObj.lastThunderboltMiracleMonth || "");
   v.lastHeadmanElectionYear = dataObj.lastHeadmanElectionYear != null && Number.isFinite(Number(dataObj.lastHeadmanElectionYear))
     ? Number(dataObj.lastHeadmanElectionYear)
     : null;

@@ -1,5 +1,6 @@
 import { autoAssignJobs, autoAssignRaidActions } from "./autoAssign.js";
 import { openBuildingModal, closeBuildingModal } from "./buildings.js";
+import { createRandomVisitor, getVisitorTypeChoices } from "./createVillagers.js";
 import "./dictionary.js";
 import { closeHistoryModal, closePersonalHistoryModal, openHistoryModal } from "./history.js";
 import { theVillage, onNextTurn } from "./main.js";
@@ -12,6 +13,7 @@ import {
   performMiracle
 } from "./miracles.js";
 import { proceedRaidAction } from "./raid.js";
+import { startRaidEvent } from "./raidStart.js";
 import {
   loadVillageFromJsonFile,
   loadVillageFromLocalStorage,
@@ -19,9 +21,11 @@ import {
   saveVillageToLocalStorage
 } from "./saveLoad.js";
 import { closeSecretTreasureModal, openSecretTreasureModal, SECRET_TREASURES, sellSelectedSecretTreasure, useSelectedSecretTreasure } from "./secretTreasures.js";
+import { RAID_MODULES } from "./data/raidData.js";
 import { updateUI } from "./ui.js";
 
 const VIEW_MODE_STORAGE_KEY = "vob.viewMode";
+let debugTitleActionsEnabled = false;
 
 function replaceVillageState(nextVillage, loadedMessage) {
   Object.assign(theVillage, nextVillage);
@@ -55,6 +59,23 @@ function loadFromLocalStorage() {
   replaceVillageState(loadedVillage, "ローカルストレージからロードしました");
 }
 
+function grantAllSecretTreasures(village) {
+  if (!Array.isArray(village.secretTreasures)) village.secretTreasures = [];
+  const ownedTreasureKeys = new Set(village.secretTreasures.flatMap(entry => {
+    if (typeof entry === "string") return [entry];
+    return [entry?.id, entry?.name].filter(Boolean);
+  }));
+  let addedCount = 0;
+  SECRET_TREASURES.forEach(secretTreasure => {
+    if (!ownedTreasureKeys.has(secretTreasure.id) && !ownedTreasureKeys.has(secretTreasure.name)) {
+      village.secretTreasures.push({ id: secretTreasure.id });
+      ownedTreasureKeys.add(secretTreasure.id);
+      addedCount++;
+    }
+  });
+  return addedCount;
+}
+
 function runDebugAction() {
   if (window.prompt("パスワードを入力してください") !== "VOB") {
     alert("パスワードが違います。");
@@ -66,20 +87,96 @@ function runDebugAction() {
   theVillage.funds = 10000;
   theVillage.tech = 10000;
 
-  if (!Array.isArray(theVillage.secretTreasures)) theVillage.secretTreasures = [];
-  const ownedTreasureKeys = new Set(theVillage.secretTreasures.flatMap(entry => {
-    if (typeof entry === "string") return [entry];
-    return [entry?.id, entry?.name].filter(Boolean);
-  }));
-  SECRET_TREASURES.forEach(secretTreasure => {
-    if (!ownedTreasureKeys.has(secretTreasure.id) && !ownedTreasureKeys.has(secretTreasure.name)) {
-      theVillage.secretTreasures.push({ id: secretTreasure.id });
-      ownedTreasureKeys.add(secretTreasure.id);
+  grantAllSecretTreasures(theVillage);
+  debugTitleActionsEnabled = true;
+
+  theVillage.log("【デバッグ】食料・資材・資金・技術を10000にし、全秘宝を入手しました。タイトルのV/B/末尾sクリックを有効化しました");
+  updateUI(theVillage);
+}
+
+function getExistingNames() {
+  return [
+    ...(Array.isArray(theVillage.villagers) ? theVillage.villagers : []),
+    ...(Array.isArray(theVillage.visitors) ? theVillage.visitors : []),
+    ...(Array.isArray(theVillage.raidEnemies) ? theVillage.raidEnemies : [])
+  ].map(person => person.name).filter(Boolean);
+}
+
+function promptChoice(title, choices, formatChoice, matchesChoice) {
+  const list = choices.map((choice, index) => `${index + 1}: ${formatChoice(choice)}`).join("\n");
+  const answer = window.prompt(`${title}\n${list}\n番号・ID・名前のいずれかを入力してください`);
+  if (answer === null) return null;
+
+  const trimmed = answer.trim();
+  const number = Number(trimmed);
+  if (Number.isInteger(number) && number >= 1 && number <= choices.length) {
+    return choices[number - 1];
+  }
+  return choices.find(choice => matchesChoice(choice, trimmed)) || null;
+}
+
+function runDebugRaidTitleAction() {
+  if (
+    theVillage.villageTraits?.includes("襲撃中") ||
+    theVillage.currentRaid ||
+    (Array.isArray(theVillage.raidEnemies) && theVillage.raidEnemies.length > 0)
+  ) {
+    theVillage.log("【デバッグ】襲撃者がすでにいるため、追加の襲撃は発生させませんでした");
+    updateUI(theVillage);
+    return;
+  }
+
+  const raidDefinition = promptChoice(
+    "発生させる襲撃者テーブルを選んでください",
+    RAID_MODULES,
+    raid => `${raid.id} / ${raid.name}`,
+    (raid, value) => raid.id === value || raid.name === value || raid.warningName === value
+  );
+  if (!raidDefinition) return;
+
+  theVillage.log(`【デバッグ】${raidDefinition.name}を発生させます`);
+  startRaidEvent(theVillage, { raidDefinition });
+  updateUI(theVillage);
+}
+
+function runDebugVisitorTitleAction() {
+  const visitorType = promptChoice(
+    "発生させる訪問者タイプを選んでください",
+    getVisitorTypeChoices(),
+    type => type,
+    (type, value) => type === value
+  );
+  if (!visitorType) return;
+
+  const visitor = createRandomVisitor(getExistingNames(), visitorType, theVillage);
+  if (!Array.isArray(theVillage.visitors)) theVillage.visitors = [];
+  theVillage.visitors.push(visitor);
+  theVillage.log(`【デバッグ】${visitor.name}が村を訪れました`);
+  updateUI(theVillage);
+}
+
+function runDebugTreasureTitleAction() {
+  const addedCount = grantAllSecretTreasures(theVillage);
+  theVillage.log(`【デバッグ】全秘宝を再取得しました（追加${addedCount}個）`);
+  updateUI(theVillage);
+}
+
+function bindDebugTitleActions() {
+  const title = document.getElementById("appTitle");
+  if (!title) return;
+
+  title.addEventListener("click", event => {
+    const action = event.target?.dataset?.debugTitleAction;
+    if (!action || !debugTitleActionsEnabled) return;
+
+    if (action === "raid") {
+      runDebugRaidTitleAction();
+    } else if (action === "visitor") {
+      runDebugVisitorTitleAction();
+    } else if (action === "treasures") {
+      runDebugTreasureTitleAction();
     }
   });
-
-  theVillage.log("【デバッグ】食料・資材・資金・技術を10000にし、全秘宝を入手しました");
-  updateUI(theVillage);
 }
 
 function runUtilityAction() {
@@ -203,4 +300,5 @@ function bindGlobalHandlers() {
 }
 
 bindGlobalHandlers();
+bindDebugTitleActions();
 initViewMode();

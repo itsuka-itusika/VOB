@@ -4,6 +4,7 @@ import { randInt, randChoice, clampValue, shuffleArray, getPortraitPath } from "
 import { getRaidRulesById } from "./data/raidData.js";
 import { endOfMonthProcess, doFixedEventPost, doAgingProcess, runMonthStartPhase } from "./events.js";
 import { handleAllVillagerJobs } from "./jobs.js";
+import { addDivineMight } from "./divineMight.js";
 import {
   ACTION_DEFEND,
   ACTION_FORTIFY,
@@ -862,9 +863,11 @@ function endRaidProcess(isSuccess, isPartSuccess, village) {
           p.happiness=clampValue(p.happiness+happinessGain,0,100);
         });
       }
+      const divineGain = isPartSuccess ? 1 : 5;
+      addDivineMight(village, divineGain);
       village.log(isPartSuccess
-        ? `防衛成功(部分):村人幸福+${happinessGain}`
-        : `防衛成功(敵全滅):村人幸福+${happinessGain}`);
+        ? `防衛成功(部分):村人幸福+${happinessGain},神威+${divineGain}`
+        : `防衛成功(敵全滅):村人幸福+${happinessGain},神威+${divineGain}`);
     } else {
       const penalty = raidRules.failurePenalty || {};
       const fLoss=Math.floor(village.food*(Number(penalty.foodRate) || 0));

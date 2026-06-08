@@ -47,6 +47,7 @@ const TURN_BLOCKING_MODAL_SELECTORS = [
   "#panFluteExchangeModal",
   "#raidModal",
   "#villageScaleModal",
+  "#divineMightLevelUpModal",
   "#headmanElectionModal",
   "[data-close-relationship-modal]",
   "[data-close-reproduction-modal]"
