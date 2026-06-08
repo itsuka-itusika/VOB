@@ -1,4 +1,10 @@
 export const MESSENGER_PASS_SECRET_TREASURE_ID = "messenger_pass";
+export const NECTAR_SECRET_TREASURE_ID = "nectar";
+
+export const TUTORIAL_ALL_COMPLETE_REWARD = {
+  rewardText: "秘宝「伝令神の手形」、秘宝「ネクタル」",
+  reward: { secretTreasureIds: [MESSENGER_PASS_SECRET_TREASURE_ID, NECTAR_SECRET_TREASURE_ID] }
+};
 
 export const TUTORIAL_TASKS = [
   {
@@ -34,7 +40,7 @@ export const TUTORIAL_TASKS = [
     warningText: "チュートリアル: 奇跡の行使∶奇跡コマンドから奇跡を使いましょう",
     conditionText: "奇跡コマンドから奇跡を使う",
     descriptionText: "奇跡は魔素を使って神の力を行使するコマンドです。資源獲得や回復などに使えます。",
-    rewardText: "秘宝「伝令神の手形」",
-    reward: { secretTreasureId: MESSENGER_PASS_SECRET_TREASURE_ID }
+    rewardText: "魔素+50",
+    reward: { resource: "mana", amount: 50 }
   }
 ];

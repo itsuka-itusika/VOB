@@ -1,5 +1,5 @@
 import { addStoredResource } from "./domain/resourceLimits.js";
-import { MESSENGER_PASS_SECRET_TREASURE_ID, TUTORIAL_TASKS } from "./data/tutorialData.js";
+import { TUTORIAL_ALL_COMPLETE_REWARD, TUTORIAL_TASKS } from "./data/tutorialData.js";
 import { clampValue } from "./util.js";
 
 const TUTORIAL_MODAL_ID = "tutorialCompletionModal";
@@ -84,9 +84,14 @@ function applyTutorialReward(village, task) {
     village.funds = clampValue((Number(village.funds) || 0) + (Number(reward.amount) || 0), 0, 99999);
     return;
   }
-  if (reward.secretTreasureId === MESSENGER_PASS_SECRET_TREASURE_ID) {
+  if (reward.resource === "mana") {
+    village.mana = clampValue((Number(village.mana) || 0) + (Number(reward.amount) || 0), 0, 99999);
+    return;
+  }
+  if (reward.secretTreasureId || Array.isArray(reward.secretTreasureIds)) {
+    const ids = Array.isArray(reward.secretTreasureIds) ? reward.secretTreasureIds : [reward.secretTreasureId];
     if (!Array.isArray(village.secretTreasures)) village.secretTreasures = [];
-    village.secretTreasures.push({ id: MESSENGER_PASS_SECRET_TREASURE_ID });
+    ids.filter(Boolean).forEach(id => village.secretTreasures.push({ id }));
   }
 }
 
@@ -101,15 +106,17 @@ export function completeTutorialTask(village, taskId) {
   applyTutorialReward(village, task);
 
   const allComplete = TUTORIAL_TASKS.every(item => state.completed[item.id]);
+  if (allComplete) applyTutorialReward(village, TUTORIAL_ALL_COMPLETE_REWARD);
   state.complete = allComplete;
   village.tutorial = state;
 
   if (typeof village.log === "function") {
     village.log(`【チュートリアル】${task.title}達成。報酬: ${task.rewardText}`);
-    if (allComplete) village.log("【チュートリアル】すべての項目を達成しました。");
+    if (allComplete) village.log(`【チュートリアル】すべての項目を達成しました。報酬: ${TUTORIAL_ALL_COMPLETE_REWARD.rewardText}`);
   }
 
   queueTutorialModal(village, task.id);
+  if (allComplete) queueTutorialModal(village, null, "allComplete");
   return true;
 }
 
@@ -140,9 +147,9 @@ function stopWaitingForPriorityModals() {
   modalObserver = null;
 }
 
-function queueTutorialModal(village, taskId) {
+function queueTutorialModal(village, taskId, type = "task") {
   if (typeof document === "undefined") return;
-  modalQueue.push({ village, taskId });
+  modalQueue.push({ village, taskId, type });
   setTimeout(showNextTutorialModal, 0);
 }
 
@@ -160,7 +167,11 @@ function showNextTutorialModal() {
 
   stopWaitingForPriorityModals();
   const item = modalQueue.shift();
-  showTutorialCompletionModal(item.village, item.taskId);
+  if (item.type === "allComplete") {
+    showTutorialAllCompleteModal(item.village);
+  } else {
+    showTutorialCompletionModal(item.village, item.taskId);
+  }
 }
 
 function buildChecklistHtml(village) {
@@ -182,7 +193,6 @@ function showTutorialCompletionModal(village, taskId) {
   document.getElementById(TUTORIAL_MODAL_ID)?.remove();
   modalOpen = true;
 
-  const state = ensureTutorialState(village);
   const overlay = document.createElement("div");
   overlay.id = TUTORIAL_OVERLAY_ID;
   overlay.className = "tutorial-completion-overlay";
@@ -203,12 +213,48 @@ function showTutorialCompletionModal(village, taskId) {
       <div class="tutorial-checklist-heading">チュートリアル一覧</div>
       ${buildChecklistHtml(village)}
     </div>
-    ${state.complete ? '<p class="tutorial-completion-all-done">すべてのチュートリアルを達成しました。</p>' : ""}
     <div class="tutorial-completion-buttons">
       <button type="button" data-close-tutorial-modal>閉じる</button>
     </div>
   `;
 
+  mountTutorialModal(overlay, modal);
+}
+
+function showTutorialAllCompleteModal(village) {
+  document.getElementById(TUTORIAL_OVERLAY_ID)?.remove();
+  document.getElementById(TUTORIAL_MODAL_ID)?.remove();
+  modalOpen = true;
+
+  const overlay = document.createElement("div");
+  overlay.id = TUTORIAL_OVERLAY_ID;
+  overlay.className = "tutorial-completion-overlay";
+
+  const modal = document.createElement("div");
+  modal.id = TUTORIAL_MODAL_ID;
+  modal.className = "effect-result-modal tutorial-completion-modal";
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-modal", "true");
+  modal.innerHTML = `
+    <div class="tutorial-completion-body">
+      <h3>チュートリアル全達成</h3>
+      <p class="tutorial-completion-description">村を動かす基本の流れをひと通り確認しました。</p>
+      <p class="tutorial-completion-reward">全達成報酬を獲得しました。報酬: ${escapeHtml(TUTORIAL_ALL_COMPLETE_REWARD.rewardText)}</p>
+    </div>
+    <div class="tutorial-checklist">
+      <div class="tutorial-checklist-heading">チュートリアル一覧</div>
+      ${buildChecklistHtml(village)}
+    </div>
+    <p class="tutorial-completion-all-done">すべてのチュートリアルを達成しました。</p>
+    <div class="tutorial-completion-buttons">
+      <button type="button" data-close-tutorial-modal>閉じる</button>
+    </div>
+  `;
+
+  mountTutorialModal(overlay, modal);
+}
+
+function mountTutorialModal(overlay, modal) {
   const close = () => {
     overlay.remove();
     modal.remove();

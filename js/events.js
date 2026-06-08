@@ -476,7 +476,7 @@ export function doMonthStartProcess(v) {
   // 幸福度由来の魔素増加
   let tot=0;
   v.villagers.forEach(p=>{
-    let amt=10*(p.happiness/100);
+    let amt=6*(p.happiness/100);
     tot+=amt;
   });
   let gain=Math.floor(tot);

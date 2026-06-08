@@ -19,7 +19,8 @@ const SECRET_TREASURE_SELL_PRICES = {
   armless_angel: 200,
   golden_arrow: 150,
   golden_apple: 150,
-  nectar: 300,
+  ambrosia: 300,
+  nectar: 10,
   strange_calculator: 300,
   serpent_staff: 500,
   chronos_elixir: 500,
@@ -28,7 +29,7 @@ const SECRET_TREASURE_SELL_PRICES = {
   grotesque_portrait: 500,
   golden_mask: 500,
   blue_stone_tablet: 150,
-  [MESSENGER_PASS_SECRET_TREASURE_ID]: 50
+  [MESSENGER_PASS_SECRET_TREASURE_ID]: 10
 };
 const DISABLED_RANDOM_SECRET_TREASURE_IDS = new Set(["blue_stone_tablet", MESSENGER_PASS_SECRET_TREASURE_ID]);
 
@@ -103,10 +104,12 @@ function showSecretTreasureResult(village, title, message, people = []) {
 function restoreBadStatus(person, village, options = {}) {
   const recovered = [];
   const excludedTraits = Array.isArray(options.excludeTraits) ? options.excludeTraits : [];
+  const includedBodyTraits = Array.isArray(options.includeBodyTraits) ? options.includeBodyTraits : BAD_BODY_TRAITS;
+  const includedMindTraits = Array.isArray(options.includeMindTraits) ? options.includeMindTraits : BAD_MIND_TRAITS;
   person.bodyTraits = Array.isArray(person.bodyTraits) ? person.bodyTraits : [];
   person.mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
 
-  BAD_BODY_TRAITS.forEach(trait => {
+  includedBodyTraits.forEach(trait => {
     if (excludedTraits.includes(trait)) return;
     if (!person.bodyTraits.includes(trait)) return;
     recovered.push(trait);
@@ -114,7 +117,7 @@ function restoreBadStatus(person, village, options = {}) {
     if (trait === "産褥") person.postpartumMonths = 0;
   });
 
-  BAD_MIND_TRAITS.forEach(trait => {
+  includedMindTraits.forEach(trait => {
     if (excludedTraits.includes(trait)) return;
     if (!person.mindTraits.includes(trait)) return;
     recovered.push(trait);
@@ -279,15 +282,32 @@ export const SECRET_TREASURES = [
     blockedReason: "襲撃発生モーダルで使用できます"
   },
   {
-    id: "nectar",
-    name: "ネクタル",
+    id: "ambrosia",
+    name: "アンブロシア",
     desc: "指定した村人1名の体力を100にし、負傷・産褥などの状態異常を解除して行動可能にする。危篤は解除できない。",
-    sellPrice: SECRET_TREASURE_SELL_PRICES.nectar,
+    sellPrice: SECRET_TREASURE_SELL_PRICES.ambrosia,
     target: "villager",
     use: (village, target) => {
       const recovered = restoreBadStatus(target, village, { fullHp: true, excludeTraits: ["危篤"] });
-      village.log(`【秘宝】ネクタルを${target.name}に使いました。体力100${recovered.length ? `、${recovered.join("・")}を解除` : ""}`);
-      showSecretTreasureResult(village, "ネクタル", `${target.name}の傷と疲れが癒されました。`, [target]);
+      village.log(`【秘宝】アンブロシアを${target.name}に使いました。体力100${recovered.length ? `、${recovered.join("・")}を解除` : ""}`);
+      showSecretTreasureResult(village, "アンブロシア", `${target.name}の傷と疲れが癒されました。`, [target]);
+    }
+  },
+  {
+    id: "nectar",
+    name: "ネクタル",
+    desc: "指定した村人1名の体力とメンタルを40回復し、負傷・疲労・過労・病気・疫病・心労・抑鬱を解除する。",
+    sellPrice: SECRET_TREASURE_SELL_PRICES.nectar,
+    target: "villager",
+    use: (village, target) => {
+      target.hp = clampValue((Number(target.hp) || 0) + 40, 0, 100);
+      target.mp = clampValue((Number(target.mp) || 0) + 40, 0, 100);
+      const recovered = restoreBadStatus(target, village, {
+        includeBodyTraits: ["負傷", "疲労", "過労", "病気", "疫病"],
+        includeMindTraits: ["心労", "抑鬱"]
+      });
+      village.log(`【秘宝】ネクタルを${target.name}に使いました。体力+40、メンタル+40${recovered.length ? `、${recovered.join("・")}を解除` : ""}`);
+      showSecretTreasureResult(village, "ネクタル", `${target.name}の体力と心が癒されました。`, [target]);
     }
   },
   {
