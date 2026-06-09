@@ -53,13 +53,14 @@ export const BUILDINGS = [
     materials: 100,
     funds: 0,
     tech: 0,
-    desc: "村の上限人口が2人増える。規模+10",
+    desc: "村の上限人口が2人増える。最大6つまで建設可能。規模+15",
     effect: (village) => {
       village.popLimit += 2;
-      village.building += 10;
-      village.log(`家屋建設: 人口上限+2 (現在${village.popLimit}人), 規模+10`);
+      village.building += 15;
+      village.log(`家屋建設: 人口上限+2 (現在${village.popLimit}人), 規模+15`);
     },
-    allowMultiple: true
+    allowMultiple: true,
+    maxCount: 6
   },
   {
     id: "barn",

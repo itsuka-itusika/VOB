@@ -9,6 +9,9 @@ const LEGACY_ARACHNID_PORTRAIT_FILES = [
   "Arachnid/ChatGPT Image 2026年6月4日 01_44_58.png"
 ];
 export const ARACHNID_PORTRAIT_FILES = Array.from({ length: 5 }, (_, index) => `ARACHNID${index + 1}.png`);
+export const EQUINA_PORTRAIT_FILES = Array.from({ length: 18 }, (_, index) => `EQUINA${index + 1}.png`);
+export const SATYR_PORTRAIT_FILES = Array.from({ length: 12 }, (_, index) => `SATYR${index + 1}.png`);
+export const MAENAD_PORTRAIT_FILES = Array.from({ length: 16 }, (_, index) => `MAENAD${index + 1}.png`);
 
 const PORTRAIT_ROOT = "images/portraits";
 const CHILD_SHADOW_PORTRAIT_KEYS = new Set(["CHILD_SHADOW.svg", "CHILD_SHADOW_BABY.svg"]);
@@ -49,6 +52,9 @@ const NUMBERED_PORTRAIT_LIMITS = new Map([
   ["ANGEL", 16],
   ["ALSEID", 13],
   ["DRYAD", 18],
+  ["EQUINA", 18],
+  ["SATYR", 12],
+  ["MAENAD", 16],
   ["NEREID", 15],
   ["SAINT", 21]
 ]);
@@ -83,6 +89,9 @@ const PORTRAIT_GROUP_FOLDERS = new Map([
   ["ANGEL", "angel"],
   ["ALSEID", "alseid"],
   ["DRYAD", "dryad"],
+  ["EQUINA", "equina"],
+  ["SATYR", "satyr"],
+  ["MAENAD", "maenad"],
   ["NEREID", "nereid"],
   ["SAINT", "saint"]
 ]);
@@ -121,7 +130,7 @@ function getNumberedPortraitParts(key) {
     };
   }
 
-  const match = key.match(/^(ANGEL_FIGHTER|HOLY_KNIGHT|ARCHANGEL|MINOTAUR|CENTAUR|ARACHNID|CYCLOPS|KNIGHT|ALSEID|NEREID|DRYAD|SAINT|ELITE|HARPY|ANGEL|BAN|GOB|WOLF|GG|MA|MB|MC|MD|ME|BB|A|C|D)(\d+)\.png$/i);
+  const match = key.match(/^(ANGEL_FIGHTER|HOLY_KNIGHT|ARCHANGEL|MINOTAUR|CENTAUR|ARACHNID|CYCLOPS|KNIGHT|ALSEID|EQUINA|SATYR|MAENAD|NEREID|DRYAD|SAINT|ELITE|HARPY|ANGEL|BAN|GOB|WOLF|GG|MA|MB|MC|MD|ME|BB|A|C|D)(\d+)\.png$/i);
   if (!match) return null;
 
   return {

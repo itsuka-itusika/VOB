@@ -3,8 +3,16 @@
 import { Villager } from "./classes.js";
 import { randInt, randChoice, randNormalInRange } from "./util.js";
 import { ACTION_NONE, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
-import { ARACHNID_PORTRAIT_FILES, getPortraitGroupKey, normalizePortraitKey } from "./data/portraitPaths.js";
+import {
+  ARACHNID_PORTRAIT_FILES,
+  EQUINA_PORTRAIT_FILES,
+  MAENAD_PORTRAIT_FILES,
+  SATYR_PORTRAIT_FILES,
+  getPortraitGroupKey,
+  normalizePortraitKey
+} from "./data/portraitPaths.js";
 import { applyGenerationBaseTraitBonuses, setBaseStatsFromEffective, syncEffectiveStats } from "./domain/statLayers.js";
+import { PHYSICAL_ABILITY_STATS } from "./domain/personSchema.js";
 import { getVillageScaleStage } from "./villageScale.js";
 import {
   FEMALE_PORTRAIT_FILES,
@@ -43,7 +51,8 @@ const VISITOR_TABLES_BY_SCALE = [
       { type: "行商人", weight: 15 },
       { type: "冒険者", weight: 12 },
       { type: "学者", weight: 12 },
-      { type: "レア種族", weight: 5 }
+      { type: "レア種族", weight: 5 },
+      { type: "エクイナ", weight: 5 }
     ]
   },
   {
@@ -58,7 +67,10 @@ const VISITOR_TABLES_BY_SCALE = [
       { type: "行商人", weight: 15 },
       { type: "冒険者", weight: 15 },
       { type: "学者", weight: 15 },
-      { type: "レア種族", weight: 10 }
+      { type: "レア種族", weight: 10 },
+      { type: "エクイナ", weight: 10 },
+      { type: "サテュロス", weight: 10 },
+      { type: "メナド", weight: 10 }
     ]
   }
 ];
@@ -210,6 +222,96 @@ const RARE_VISITOR_TYPES = [
     }
   }
 ];
+
+const EQUINA_VISITOR_TYPE = {
+  type: "エクイナ",
+  displayTypes: [
+    { type: "行商人", weight: 50 },
+    { type: "流民", weight: 30 },
+    { type: "旅人", weight: 20 }
+  ],
+  useDisplayTypeAsJob: true,
+  ageRange: { min: 18, max: 35 },
+  params: {
+    job: "旅人",
+    action: "訪問",
+    race: "エクイナ"
+  },
+  ranges: {
+    str: [11, 25],
+    vit: [11, 25],
+    dex: [11, 25],
+    mag: [15, 27],
+    chr: [18, 27],
+    int: [5, 20],
+    ind: [5, 20],
+    eth: [8, 20],
+    cou: [11, 25],
+    sexdr: [8, 25]
+  },
+  forcedBodyTraits: ["健脚"],
+  portraits: EQUINA_PORTRAIT_FILES
+};
+
+const GOAT_PAIR_DISPLAY_TYPES = [
+  { type: "吟遊詩人", weight: 50 },
+  { type: "巡礼者", weight: 50 }
+];
+
+const SATYR_VISITOR_TYPE = {
+  type: "サテュロス",
+  displayTypes: GOAT_PAIR_DISPLAY_TYPES,
+  useDisplayTypeAsJob: true,
+  forcedSex: "男",
+  ageRange: { min: 18, max: 28 },
+  params: {
+    job: "旅人",
+    action: "訪問",
+    race: "サテュロス"
+  },
+  ranges: {
+    mag: [11, 25],
+    chr: [15, 25],
+    int: [5, 25],
+    ind: [5, 18],
+    eth: [5, 18],
+    cou: [8, 30],
+    sexdr: [18, 30]
+  },
+  forcedBodyTraits: ["通る声", "山羊角"],
+  portraits: SATYR_PORTRAIT_FILES,
+  rareVisitorType: "サテュロス"
+};
+
+const MAENAD_VISITOR_TYPE = {
+  type: "メナド",
+  displayTypes: GOAT_PAIR_DISPLAY_TYPES,
+  useDisplayTypeAsJob: true,
+  forcedSex: "女",
+  ageRange: { min: 16, max: 25 },
+  params: {
+    job: "旅人",
+    action: "訪問",
+    race: "メナド"
+  },
+  ranges: {
+    mag: [20, 27],
+    chr: [20, 27],
+    int: [5, 25],
+    ind: [5, 18],
+    eth: [8, 18],
+    cou: [3, 25],
+    sexdr: [15, 25]
+  },
+  forcedBodyTraits: ["澄んだ声", "山羊角"],
+  portraits: MAENAD_PORTRAIT_FILES,
+  rareVisitorType: "メナド"
+};
+
+const GOAT_PAIR_VISITOR_TYPES = new Map([
+  [SATYR_VISITOR_TYPE.type, SATYR_VISITOR_TYPE],
+  [MAENAD_VISITOR_TYPE.type, MAENAD_VISITOR_TYPE]
+]);
 
 // 使用済みの名前を追跡する Set を追加
 const usedNames = new Set();
@@ -985,9 +1087,32 @@ function hasAvailableRareVisitorType(village = null) {
   return RARE_VISITOR_TYPES.some(entry => getRareVisitorWeight(entry, village) > 0);
 }
 
+function selectWeightedVisitorOption(options = []) {
+  const entries = options
+    .map(option => ({ option, weight: Number(option?.weight) || 0 }))
+    .filter(item => item.weight > 0);
+  if (entries.length === 0) return null;
+
+  const totalWeight = entries.reduce((sum, item) => sum + item.weight, 0);
+  let random = Math.random() * totalWeight;
+  for (const item of entries) {
+    random -= item.weight;
+    if (random <= 0) return item.option;
+  }
+  return entries[0].option;
+}
+
+function getVisitorDisplayType(visitorType) {
+  const selected = selectWeightedVisitorOption(visitorType.displayTypes);
+  return selected?.type || visitorType.displayType || visitorType.type;
+}
+
 function resolveForcedVisitorType(forcedType, village = null) {
   if (!forcedType) return null;
   if (forcedType === RARE_VISITOR_TYPE) return selectRareVisitorType(village);
+
+  if (forcedType === EQUINA_VISITOR_TYPE.type) return EQUINA_VISITOR_TYPE;
+  if (GOAT_PAIR_VISITOR_TYPES.has(forcedType)) return GOAT_PAIR_VISITOR_TYPES.get(forcedType);
 
   const visitorType = VISITOR_TYPES.find(type => type.type === forcedType);
   if (visitorType) return visitorType;
@@ -999,6 +1124,9 @@ function resolveForcedVisitorType(forcedType, village = null) {
 export function getVisitorTypeChoices() {
   return [
     ...VISITOR_TYPES.map(type => type.type),
+    EQUINA_VISITOR_TYPE.type,
+    SATYR_VISITOR_TYPE.type,
+    MAENAD_VISITOR_TYPE.type,
     RARE_VISITOR_TYPE,
     ...RARE_VISITOR_TYPES.filter(entry => entry.implemented).map(entry => entry.type)
   ];
@@ -1014,6 +1142,12 @@ function resolveVisitorTable(village = null) {
     .map(entry => {
       if (entry.type === RARE_VISITOR_TYPE) {
         return hasAvailableRareVisitorType(village) ? { type: RARE_VISITOR_TYPE, weight: entry.weight } : null;
+      }
+      if (entry.type === EQUINA_VISITOR_TYPE.type) {
+        return { ...EQUINA_VISITOR_TYPE, weight: entry.weight };
+      }
+      if (GOAT_PAIR_VISITOR_TYPES.has(entry.type)) {
+        return { ...GOAT_PAIR_VISITOR_TYPES.get(entry.type), weight: entry.weight };
       }
       const visitorType = VISITOR_TYPES.find(type => type.type === entry.type);
       return visitorType ? { ...visitorType, weight: entry.weight } : null;
@@ -1055,35 +1189,141 @@ function applyVisitorTypeTraits(visitor, visitorType) {
   syncEffectiveStats(visitor);
 }
 
+function cloneNullableObject(value) {
+  return value == null ? null : { ...value };
+}
+
+function pickStats(source, stats) {
+  return Object.fromEntries(stats.map(stat => [stat, source?.[stat] ?? 0]));
+}
+
+function applyStats(target, stats) {
+  Object.entries(stats || {}).forEach(([stat, value]) => {
+    target[stat] = value;
+  });
+}
+
+function markGeneratedBodyExchange(person, fromRace, toRace) {
+  Object.defineProperties(person, {
+    lastBodyExchangeSourceRace: {
+      configurable: true,
+      value: fromRace || "人間",
+      writable: true
+    },
+    lastBodyExchangeTargetRace: {
+      configurable: true,
+      value: toRace || "人間",
+      writable: true
+    }
+  });
+}
+
+function exchangeGeneratedVisitorBodies(a, b) {
+  const sourceRaceA = a.race || "人間";
+  const sourceRaceB = b.race || "人間";
+  const body = {
+    bodySex: a.bodySex,
+    bodyAge: a.bodyAge,
+    bodyOwner: a.bodyOwner,
+    race: a.race,
+    portraitFile: a.portraitFile,
+    raiderPortrait: a.raiderPortrait,
+    visitorPortrait: a.visitorPortrait,
+    hp: a.hp,
+    baseStats: pickStats(a.baseStats, PHYSICAL_ABILITY_STATS),
+    acquiredStatMods: pickStats(a.acquiredStatMods, PHYSICAL_ABILITY_STATS),
+    bodyTraits: Array.isArray(a.bodyTraits) ? [...a.bodyTraits] : [],
+    pregnancy: a.pregnancy ? JSON.parse(JSON.stringify(a.pregnancy)) : null,
+    postpartumMonths: a.postpartumMonths || 0,
+    bodyPotentialStats: cloneNullableObject(a.bodyPotentialStats),
+    adultBodyTraits: Array.isArray(a.adultBodyTraits) ? [...a.adultBodyTraits] : [],
+    adultBodyReached: !!a.adultBodyReached,
+    adultPortraitFile: a.adultPortraitFile || "",
+    toddlerPortraitFile: a.toddlerPortraitFile || "",
+    toddlerPortraitGroup: a.toddlerPortraitGroup || ""
+  };
+
+  a.bodySex = b.bodySex;
+  a.bodyAge = b.bodyAge;
+  a.bodyOwner = b.bodyOwner;
+  a.race = b.race;
+  a.portraitFile = b.portraitFile;
+  a.raiderPortrait = b.raiderPortrait;
+  a.visitorPortrait = b.visitorPortrait;
+  a.hp = b.hp;
+  applyStats(a.baseStats, pickStats(b.baseStats, PHYSICAL_ABILITY_STATS));
+  applyStats(a.acquiredStatMods, pickStats(b.acquiredStatMods, PHYSICAL_ABILITY_STATS));
+  a.bodyTraits = Array.isArray(b.bodyTraits) ? [...b.bodyTraits] : [];
+  a.pregnancy = b.pregnancy ? JSON.parse(JSON.stringify(b.pregnancy)) : null;
+  a.postpartumMonths = b.postpartumMonths || 0;
+  a.bodyPotentialStats = cloneNullableObject(b.bodyPotentialStats);
+  a.adultBodyTraits = Array.isArray(b.adultBodyTraits) ? [...b.adultBodyTraits] : [];
+  a.adultBodyReached = !!b.adultBodyReached;
+  a.adultPortraitFile = b.adultPortraitFile || "";
+  a.toddlerPortraitFile = b.toddlerPortraitFile || "";
+  a.toddlerPortraitGroup = b.toddlerPortraitGroup || "";
+
+  b.bodySex = body.bodySex;
+  b.bodyAge = body.bodyAge;
+  b.bodyOwner = body.bodyOwner;
+  b.race = body.race;
+  b.portraitFile = body.portraitFile;
+  b.raiderPortrait = body.raiderPortrait;
+  b.visitorPortrait = body.visitorPortrait;
+  b.hp = body.hp;
+  applyStats(b.baseStats, body.baseStats);
+  applyStats(b.acquiredStatMods, body.acquiredStatMods);
+  b.bodyTraits = [...body.bodyTraits];
+  b.pregnancy = body.pregnancy ? JSON.parse(JSON.stringify(body.pregnancy)) : null;
+  b.postpartumMonths = body.postpartumMonths;
+  b.bodyPotentialStats = cloneNullableObject(body.bodyPotentialStats);
+  b.adultBodyTraits = [...body.adultBodyTraits];
+  b.adultBodyReached = body.adultBodyReached;
+  b.adultPortraitFile = body.adultPortraitFile;
+  b.toddlerPortraitFile = body.toddlerPortraitFile;
+  b.toddlerPortraitGroup = body.toddlerPortraitGroup;
+
+  syncEffectiveStats(a);
+  syncEffectiveStats(b);
+  markGeneratedBodyExchange(a, sourceRaceA, a.race);
+  markGeneratedBodyExchange(b, sourceRaceB, b.race);
+}
+
+function isGoatPairVisitorType(visitorType) {
+  return !!visitorType && GOAT_PAIR_VISITOR_TYPES.has(visitorType.type);
+}
+
 /**
  * 訪問者を生成する関数
  */
-export function createRandomVisitor(existingNames = [], forcedType = null, village = null) {
-  const visitorType = forcedType
-    ? (resolveForcedVisitorType(forcedType, village) || selectVisitorType(village))
-    : selectVisitorType(village);
+function buildVisitorFromType(visitorType, existingNames = [], options = {}) {
+  const displayType = getVisitorDisplayType(visitorType);
   
   // 性別を明示的に設定（visitorTypeに指定がなければランダム）
   const bodySex = visitorType.forcedSex || (Math.random() < 0.5 ? "男" : "女");
+  const visitorParams = {
+    ...visitorType.params,
+    ...(visitorType.useDisplayTypeAsJob ? { job: displayType } : {})
+  };
   
   const visitor = createRandomVillager({
     sex: bodySex,  // 肉体性別を明示的に設定
     minAge: visitorType.ageRange.min,
     maxAge: visitorType.ageRange.max,
-    params: {
-      ...visitorType.params
-    },
+    params: visitorParams,
     ranges: visitorType.ranges,
     existingNames
   });
 
   // 訪問者の名前を修正
-  const visitorName = `${visitorType.displayType || visitorType.type}の${visitor.name}`;
+  const visitorName = `${displayType}の${visitor.name}`;
   const reservedNames = getReservedNames(existingNames);
   visitor.name = reservedNames.has(visitorName)
     ? buildFallbackChildName(visitorName, reservedNames)
     : visitorName;
-  registerUsedName(visitor.name);
+  if (options.registerName !== false) {
+    registerUsedName(visitor.name);
+  }
   
   // 訪問者は村人化するまで訪問固定。通常時の復帰先は持たない。
   setPreferredAction(visitor, ACTION_NONE);
@@ -1093,6 +1333,9 @@ export function createRandomVisitor(existingNames = [], forcedType = null, villa
   
   // 精神特性に訪問者を追加（1回のみ）
   visitor.mindTraits.push("訪問者");
+  if (visitorType.rareVisitorType) {
+    visitor.rareVisitorType = visitorType.rareVisitorType;
+  }
   applyVisitorTypeTraits(visitor, visitorType);
 
   if (visitorType.type === "行商人") {
@@ -1125,6 +1368,28 @@ export function createRandomVisitor(existingNames = [], forcedType = null, villa
   }
 
   return visitor;
+}
+
+function createBodyExchangedPairVisitor(selectedType, existingNames = []) {
+  const satyr = buildVisitorFromType(SATYR_VISITOR_TYPE, existingNames, { registerName: false });
+  const maenad = buildVisitorFromType(MAENAD_VISITOR_TYPE, [...existingNames, satyr.name], { registerName: false });
+  exchangeGeneratedVisitorBodies(satyr, maenad);
+
+  const visitor = selectedType === MAENAD_VISITOR_TYPE.type ? maenad : satyr;
+  registerUsedName(visitor.name);
+  return visitor;
+}
+
+export function createRandomVisitor(existingNames = [], forcedType = null, village = null) {
+  const visitorType = forcedType
+    ? (resolveForcedVisitorType(forcedType, village) || selectVisitorType(village))
+    : selectVisitorType(village);
+
+  if (isGoatPairVisitorType(visitorType)) {
+    return createBodyExchangedPairVisitor(visitorType.type, existingNames);
+  }
+
+  return buildVisitorFromType(visitorType, existingNames);
 }
 
 export function createRandomVisitorOfType(type, existingNames = []) {

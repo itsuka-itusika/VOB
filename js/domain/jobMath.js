@@ -46,6 +46,7 @@ const AUTUMN_JOBS = ["農作業", "採集"];
 const COLD_SUMMER_JOBS = ["農作業", "伐採"];
 const GREEN_THUMB_JOBS = ["農作業", "伐採", "採集"];
 const FLYING_JOBS = ["狩猟", "採集"];
+const SWIFT_LEGS_JOBS = ["行商", "採集"];
 const YOUTH_WORK_JOBS = ["農作業", "伐採", "狩猟", "漁", "採集", "内職", "丁稚", "研究助手"];
 
 function defaultRandomFloat(min, max) {
@@ -142,6 +143,7 @@ export function getLaborYieldMultiplier(job, person = null, village = null) {
   if (hasBodyTrait(person, "夜目") && job === "狩猟") mul *= 1.2;
   if (hasBodyTrait(person, "大地の加護") && job === "農作業") mul *= 1.2;
   if (hasBodyTrait(person, "水中呼吸") && job === "漁") mul *= 2;
+  if (hasBodyTrait(person, "健脚") && SWIFT_LEGS_JOBS.includes(job)) mul *= 1.2;
   if (hasMindTrait(person, "森の知恵") && job === "採集") mul *= 1.2;
   if (hasMindTrait(person, "海の知恵") && job === "漁") mul *= 1.2;
   if ((person?.hobby === "ハンティング" || person?.hobby === "狩猟") && job === "狩猟") mul *= 1.1;

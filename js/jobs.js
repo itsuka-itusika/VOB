@@ -57,6 +57,13 @@ function hasMindTrait(person, trait) {
   return Array.isArray(person?.mindTraits) && person.mindTraits.includes(trait);
 }
 
+function getGoatHornDivineMightBonus(person, jobName) {
+  if (!hasBodyTrait(person, "山羊角")) return 0;
+  if (jobName === "巫女" || jobName === "醸造") return 1;
+  if (jobName === "神官" || jobName === "シスター") return 2;
+  return 0;
+}
+
 function getJobStatGrowthChance(person, stat, baseChance = BASE_JOB_STAT_GROWTH_CHANCE) {
   let chance = baseChance;
   if (MENTAL_JOB_GROWTH_STATS.has(stat) && hasMindTrait(person, "思春期")) {
@@ -933,7 +940,15 @@ function doSister(p, v) {
     affected++;
   });
 
+  const divineGain = getGoatHornDivineMightBonus(p, "シスター");
+  if (divineGain > 0) {
+    addDivineMight(v, divineGain);
+  }
+
   let logMsg = `${p.name}シスター:全${affected}人のメンタル+${heal},体力-${tc},メンタル-${mc}`;
+  if (divineGain > 0) {
+    logMsg += `,神威+${divineGain}`;
+  }
   
   // ステータス上昇判定
   if (rollJobStatGrowth(p, "chr")) {
@@ -962,7 +977,15 @@ function doPriest(p, v) {
     affected++;
   });
 
+  const divineGain = getGoatHornDivineMightBonus(p, "神官");
+  if (divineGain > 0) {
+    addDivineMight(v, divineGain);
+  }
+
   let logMsg = `${p.name}神官:全${affected}人のメンタル+${heal},体力-${tc},メンタル-${mc}`;
+  if (divineGain > 0) {
+    logMsg += `,神威+${divineGain}`;
+  }
   
   // ステータス上昇判定
   if (rollJobStatGrowth(p, "chr")) {
@@ -1098,9 +1121,10 @@ function doMiko(p, v) {
 
   let manaGain = calculateMikoMana(p);
   v.mana = clampValue(v.mana + manaGain, 0, 99999);
-  addDivineMight(v, 2);
+  const divineGain = 2 + getGoatHornDivineMightBonus(p, "巫女");
+  addDivineMight(v, divineGain);
 
-  let logMsg = `${p.name}巫女:体力-${tc},メンタル-${mc},魔素+${manaGain},神威+2`;
+  let logMsg = `${p.name}巫女:体力-${tc},メンタル-${mc},魔素+${manaGain},神威+${divineGain}`;
   
   // ステータス上昇判定
   if (rollJobStatGrowth(p, "chr")) {
@@ -1245,9 +1269,10 @@ function doBrewing(p, v) {
     if (foodGain >= 1) completeTutorialTask(v, "produce_food");
   }
   v.mana = clampValue(v.mana + manaGain, 0, 99999);
-  addDivineMight(v, 1);
+  const divineGain = 1 + getGoatHornDivineMightBonus(p, "醸造");
+  addDivineMight(v, divineGain);
 
-  let logMsg = `${p.name}醸造:${foodResourceName}+${foodGain},魔素+${manaGain},神威+1,体力-${tc},メンタル-${mc}`;
+  let logMsg = `${p.name}醸造:${foodResourceName}+${foodGain},魔素+${manaGain},神威+${divineGain},体力-${tc},メンタル-${mc}`;
   
   // ステータス上昇判定
   if (rollJobStatGrowth(p, "mag")) {

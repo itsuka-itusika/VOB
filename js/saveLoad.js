@@ -248,6 +248,7 @@ function convertVillagerToObject(vill) {
     // 口調タイプと顔グラフィック情報を追加
     speechType: vill.speechType,
     portraitFile: normalizePortraitFile(vill.portraitFile),
+    ...(vill.rareVisitorType ? { rareVisitorType: vill.rareVisitorType } : {}),
     merchantStock: vill.merchantStock ? { ...vill.merchantStock } : undefined,
     pregnancy: vill.pregnancy ? JSON.parse(JSON.stringify(vill.pregnancy)) : null,
     postpartumMonths: vill.postpartumMonths || 0,
@@ -436,6 +437,9 @@ function convertObjectToVillager(obj) {
   
   // 種族情報を復元
   vill.race = obj.race || "人間";
+  if (obj.rareVisitorType) {
+    vill.rareVisitorType = obj.rareVisitorType;
+  }
   if (obj.merchantStock) {
     vill.merchantStock = { ...obj.merchantStock };
   }
