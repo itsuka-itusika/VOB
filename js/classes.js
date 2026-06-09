@@ -32,6 +32,7 @@ export class Village {
     this.popLimit = 8;
     this.villageTraits = ["春"];
     this.secretTreasures = [];
+    this.buildingRequest = null;
     this.tutorial = {
       completed: {},
       complete: false
@@ -55,10 +56,14 @@ export class Village {
     this.raidActionQueue = [];
     this.raidPhase = "";
     this.currentActionIndex = 0;
+    this.defeatedRaidEnemies = [];
 
     // 訪問者配列を追加
     this.visitors = [];
     this.visitorLimit = 1;
+
+    // 捕虜配列
+    this.captives = [];
 
     // 建築物配列を追加
     this.buildings = [];

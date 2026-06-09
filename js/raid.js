@@ -6,11 +6,17 @@ import { endOfMonthProcess, doFixedEventPost, doAgingProcess, runMonthStartPhase
 import { handleAllVillagerJobs } from "./jobs.js";
 import { addDivineMight } from "./divineMight.js";
 import {
+  clearDefeatedRaidEnemies,
+  recordDefeatedRaidEnemy,
+  tryCaptureRaidPrisoner
+} from "./captives.js";
+import {
   ACTION_DEFEND,
   ACTION_FORTIFY,
   ACTION_SHOOT,
   ACTION_TRAP,
   canPerformRaidAction,
+  getActiveRaidShooters,
   isRaidCombatAction
 } from "./raidRules.js";
 import { updateUI } from "./ui.js";
@@ -279,6 +285,13 @@ function hasTrait(person, trait) {
     (Array.isArray(person?.mindTraits) && person.mindTraits.includes(trait));
 }
 
+function hasMoatDefense(village) {
+  return !!(
+    village?.buildingFlags?.hasMoat ||
+    (Array.isArray(village?.buildings) && village.buildings.includes("moat"))
+  );
+}
+
 function normalizeEnemyPosition(position) {
   return position === RAID_POSITION_MIDDLE ? RAID_POSITION_MIDDLE : RAID_POSITION_FRONT;
 }
@@ -332,11 +345,12 @@ function isRearRetreatingUnit(unit, village) {
 }
 
 function getVillageCombatants(village) {
-  return village.villagers.filter(p =>
+  const frontliners = village.villagers.filter(p =>
     p.hp > 0 &&
-    isRaidCombatAction(p.action) &&
+    (p.action === ACTION_DEFEND || p.action === ACTION_FORTIFY) &&
     canPerformRaidAction(p, p.action, village)
   );
+  return frontliners.concat(getActiveRaidShooters(village));
 }
 
 function getAliveEnemies(village) {
@@ -366,11 +380,7 @@ function updateRaidStatusLine(village) {
     (p.action === ACTION_DEFEND || p.action === ACTION_FORTIFY) &&
     canPerformRaidAction(p, p.action, village)
   ).length;
-  const shooters = village.villagers.filter(p =>
-    p.hp > 0 &&
-    p.action === ACTION_SHOOT &&
-    canPerformRaidAction(p, ACTION_SHOOT, village)
-  ).length;
+  const shooters = getActiveRaidShooters(village).length;
   const pendingTraps = getPendingTrapMakers(village).length;
   const enemyCount = getAliveEnemies(village).length;
   const surviveTurns = getRaidSurviveTurns(village);
@@ -550,6 +560,7 @@ function doOneTrapAction(action, village) {
   if (e.hp<=0) {
     addRaidActionLog(result, `　　→ ${e.name}は倒れた！`);
     addRaidDepartureAnimation(result, e, "撃退");
+    recordDefeatedRaidEnemy(village, e);
     scheduleDefeatedEnemyDeparture(e);
   }
   return result;
@@ -609,7 +620,7 @@ function doOneCombatAction(action, village) {
 
   if (!isEnemyUnit(actor, village) && actor.action === ACTION_FORTIFY) {
     addRaidActionAnimation(result, actor, "籠城");
-    addRaidActionLog(result, `【籠城】${actor.name}は防壁に身を寄せ、攻撃に備えた`);
+    addRaidActionLog(result, `【籠城】${actor.name}は木柵に身を寄せ、攻撃に備えた`);
     return result;
   }
 
@@ -691,7 +702,7 @@ function applyIncomingDamageModifiers(damage, target, village) {
     multiplier *= 1.2;
   }
   if (!isEnemyUnit(target, village) && target.action === ACTION_FORTIFY) {
-    multiplier *= 0.8;
+    multiplier *= hasMoatDefense(village) ? 0.7 : 0.8;
   }
   return Math.max(0, Math.floor(damage * multiplier));
 }
@@ -716,6 +727,7 @@ function handleCombatDefeat(target, village, result) {
   if (isEnemyUnit(target, village)) {
     addRaidActionLog(result, `　　→ ${target.name}は倒れた！`);
     addRaidDepartureAnimation(result, target, "撃退");
+    recordDefeatedRaidEnemy(village, target);
     scheduleDefeatedEnemyDeparture(target);
     return;
   }
@@ -845,7 +857,11 @@ function endRaidProcess(isSuccess, isPartSuccess, village) {
     if (idx>=0) {
       village.villageTraits.splice(idx,1);
     }
+    if (isSuccess && !isPartSuccess) {
+      tryCaptureRaidPrisoner(village);
+    }
     village.raidEnemies=[];
+    clearDefeatedRaidEnemies(village);
 
     // 襲撃者一覧セクションを非表示に
     const raidSection = document.getElementById("raidEnemiesSection");
@@ -973,14 +989,9 @@ export function closeRaidModal() {
 /** 迎撃画面更新 */
 export function updateRaidTables(village) {
   const trapMakers = getVisibleTrapMakers(village);
-  const shooters = village.villagers.filter(v =>
-    (
-      v.hp > 0 &&
-      v.action === ACTION_SHOOT &&
-      canPerformRaidAction(v, ACTION_SHOOT, village)
-    ) ||
-    (isPendingRaidDeparture(v) && v.action === ACTION_SHOOT)
-  );
+  const activeShooters = getActiveRaidShooters(village);
+  const pendingShooters = village.villagers.filter(v => isPendingRaidDeparture(v) && v.action === ACTION_SHOOT);
+  const shooters = activeShooters.concat(pendingShooters.filter(v => !activeShooters.includes(v)));
   const frontliners = village.villagers.filter(v =>
     (
       v.hp > 0 &&

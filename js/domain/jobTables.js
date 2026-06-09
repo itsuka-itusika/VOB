@@ -32,7 +32,8 @@ const NON_PREFERRED_ACTIONS = new Set([
   ACTION_SHOOT,
   ACTION_TRAP,
   "訪問",
-  "襲撃"
+  "襲撃",
+  "虜囚"
 ]);
 const INFANT_BODY_ALLOWED_ACTIONS = new Set([
   ACTION_REST,

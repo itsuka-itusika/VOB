@@ -97,12 +97,14 @@ export function getVillagerFoodConsumption(character) {
   const bodyTraits = Array.isArray(character?.bodyTraits) ? character.bodyTraits : [];
   const mindTraits = Array.isArray(character?.mindTraits) ? character.mindTraits : [];
   if (bodyTraits.includes("光合成")) return 0;
-  if (bodyTraits.includes("赤子")) return 2;
-  if (bodyTraits.includes("子供")) return 6;
-  if (bodyTraits.includes("少年") || bodyTraits.includes("少女")) return 8;
-  if (mindTraits.includes("大食い")) return 12;
-  if (mindTraits.includes("小食")) return 8;
-  return 10;
+  let cost = 10;
+  if (bodyTraits.includes("赤子")) cost = 2;
+  else if (bodyTraits.includes("子供")) cost = 6;
+  else if (bodyTraits.includes("少年") || bodyTraits.includes("少女")) cost = 8;
+  else if (mindTraits.includes("大食い")) cost = 12;
+  else if (mindTraits.includes("小食")) cost = 8;
+  if (bodyTraits.includes("巨人")) cost += 5;
+  return cost;
 }
 
 export function getVillagerWinterMaterialConsumption(character) {

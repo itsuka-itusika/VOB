@@ -5,6 +5,7 @@ import { PHYSICAL_ABILITY_STATS } from "./domain/personSchema.js";
 import { ensureStatLayers, getPermanentStat, syncEffectiveStats } from "./domain/statLayers.js";
 import { recordBodyExchangeHistory } from "./history.js";
 import { evaluateTitles } from "./titles.js";
+import { isCaptive, normalizeCaptive } from "./captives.js";
 
 const RAID_JOBS = ["野盗", "ゴブリン", "狼", "キュクロプス", "ハーピー"];
 
@@ -52,6 +53,10 @@ function normalizeRaidEnemyAssignment(person) {
 function refreshAssignmentAfterExchange(person, village) {
   if (isRaidEnemy(person, village)) {
     normalizeRaidEnemyAssignment(person);
+    return;
+  }
+  if (isCaptive(person, village)) {
+    normalizeCaptive(person);
     return;
   }
 

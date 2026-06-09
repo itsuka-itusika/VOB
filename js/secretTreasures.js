@@ -1,7 +1,7 @@
 import { doExchange } from "./exchange.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { recordMarriageHistory } from "./history.js";
-import { openPanFluteExchangeModal, showMarriageMiracleModal, showMiracleResultModal } from "./miracles.js";
+import { openExchangeModal, openPanFluteExchangeModal, showMarriageMiracleModal, showMiracleResultModal } from "./miracles.js";
 import { startRaidEvent } from "./raidStart.js";
 import { addRelationship, removeRelationship, addSpouseRelationships } from "./relationships.js";
 import { updateChildGrowthStage } from "./reproduction.js";
@@ -9,10 +9,12 @@ import { clampValue, round3 } from "./util.js";
 import { updateUI } from "./ui.js";
 import { addAcquiredStat, syncEffectiveStats } from "./domain/statLayers.js";
 import { MESSENGER_PASS_SECRET_TREASURE_ID } from "./data/tutorialData.js";
+import { getCaptives } from "./captives.js";
 
 const SEASON_TRAITS_TO_REMOVE = ["夏", "秋", "冬", "冷夏", "飛蝗", "厳冬", "疫病流行"];
 const BAD_BODY_TRAITS = ["負傷", "疲労", "過労", "飢餓", "凍え", "病気", "疫病", "産褥", "危篤"];
 const BAD_MIND_TRAITS = ["心労", "抑鬱"];
+export const PINECONE_STAFF_SECRET_TREASURE_ID = "pinecone_staff";
 const SECRET_TREASURE_SELL_PRICES = {
   persephone_statue: 300,
   abundance_horn: 300,
@@ -20,16 +22,17 @@ const SECRET_TREASURE_SELL_PRICES = {
   golden_arrow: 150,
   golden_apple: 150,
   ambrosia: 300,
-  nectar: 10,
+  nectar: 50,
   strange_calculator: 300,
   serpent_staff: 500,
   chronos_elixir: 500,
   old_priest_statue: 100,
+  [PINECONE_STAFF_SECRET_TREASURE_ID]: 50,
   pan_flute: 300,
   grotesque_portrait: 500,
   golden_mask: 500,
   blue_stone_tablet: 150,
-  [MESSENGER_PASS_SECRET_TREASURE_ID]: 10
+  [MESSENGER_PASS_SECRET_TREASURE_ID]: 50
 };
 const DISABLED_RANDOM_SECRET_TREASURE_IDS = new Set(["blue_stone_tablet", MESSENGER_PASS_SECRET_TREASURE_ID]);
 
@@ -58,16 +61,22 @@ function shuffled(items) {
   return result;
 }
 
-function getPanFluteCandidates(village) {
+function getBodyExchangeCandidates(village) {
   return [
     ...getVillagers(village),
+    ...getCaptives(village),
     ...(Array.isArray(village.visitors) ? village.visitors : []),
     ...(Array.isArray(village.raidEnemies) ? village.raidEnemies : [])
   ];
 }
 
+function getPanFluteCandidates(village) {
+  return getBodyExchangeCandidates(village);
+}
+
 function pickPanFlutePairs(village) {
   const outsiders = [
+    ...getCaptives(village),
     ...(Array.isArray(village.visitors) ? village.visitors : []),
     ...(Array.isArray(village.raidEnemies) ? village.raidEnemies : [])
   ];
@@ -208,6 +217,19 @@ function growToSixteen(person, village) {
   }
   village.log(`【秘宝】クロノスの秘薬により${person.name}は16歳まで成長しました`);
   showSecretTreasureResult(village, "クロノスの秘薬", `${person.name}は急速に成長し、若い姿を得ました。`, [person]);
+}
+
+function applyPineconeStaff(village, pair) {
+  const [personA, personB] = Array.isArray(pair) ? pair : [];
+  if (!personA || !personB || personA === personB) return;
+
+  doExchange(personA, personB, village, true, "秘宝");
+  village.log(`【秘宝】松かさの杖により${personA.name}と${personB.name}が肉体交換`);
+  openExchangeModal(personA, personB, {
+    village,
+    title: "松かさの杖",
+    message: "松かさの杖がきしみ、二人の身体が入れ替わりました。"
+  });
 }
 
 function getPublicBathBonus(village) {
@@ -379,12 +401,22 @@ export const SECRET_TREASURES = [
     }
   },
   {
+    id: PINECONE_STAFF_SECRET_TREASURE_ID,
+    name: "松かさの杖",
+    desc: "交換の奇跡・強と同じ効果。村人・捕虜・訪問者・襲撃者から2名を選び、肉体を交換する。",
+    sellPrice: SECRET_TREASURE_SELL_PRICES[PINECONE_STAFF_SECRET_TREASURE_ID],
+    target: "exchangePair",
+    canUse: (village) => getBodyExchangeCandidates(village).length >= 2,
+    blockedReason: "村人・捕虜・訪問者・襲撃者の合計が2名以上必要です",
+    use: (village, pair) => applyPineconeStaff(village, pair)
+  },
+  {
     id: "pan_flute",
     name: "牧神の管笛",
-    desc: "村人・訪問者・襲撃者から6名を選び、3組の肉体を入れ替える。",
+    desc: "村人・捕虜・訪問者・襲撃者から6名を選び、3組の肉体を入れ替える。",
     sellPrice: SECRET_TREASURE_SELL_PRICES.pan_flute,
     canUse: (village) => getPanFluteCandidates(village).length > 5,
-    blockedReason: "村人・訪問者・襲撃者の合計が6名以上必要です",
+    blockedReason: "村人・捕虜・訪問者・襲撃者の合計が6名以上必要です",
     use: (village) => {
       const pairs = pickPanFlutePairs(village);
       pairs.forEach(([personA, personB]) => doExchange(personA, personB, village, true, "秘宝"));
@@ -414,13 +446,19 @@ export const SECRET_TREASURES = [
   }
 ];
 
+export function grantSecretTreasure(village, id) {
+  const definition = SECRET_TREASURES.find(secretTreasure => secretTreasure.id === id || secretTreasure.name === id);
+  if (!definition) return null;
+  const secretTreasures = ensureSecretTreasures(village);
+  secretTreasures.push({ id: definition.id });
+  return definition;
+}
+
 export function grantRandomSecretTreasure(village) {
   const candidates = SECRET_TREASURES.filter(definition => !DISABLED_RANDOM_SECRET_TREASURE_IDS.has(definition.id));
   const definition = randFrom(candidates);
   if (!definition) return null;
-  if (!Array.isArray(village.secretTreasures)) village.secretTreasures = [];
-  village.secretTreasures.push({ id: definition.id });
-  return definition;
+  return grantSecretTreasure(village, definition.id);
 }
 
 function ensureSecretTreasures(village) {
@@ -452,6 +490,8 @@ function getTargetCandidates(village, definition) {
   let candidates = [];
   if (definition.target === "childVillager") {
     candidates = villagers.filter(person => (Number(person.bodyAge) || 0) <= 15 || (Number(person.spiritAge) || 0) <= 15);
+  } else if (definition.target === "exchangePair") {
+    candidates = getBodyExchangeCandidates(village);
   } else if (definition.target === "villager") {
     candidates = villagers;
   }
@@ -481,12 +521,41 @@ function getSecretTreasureBlockedReason(village, definition) {
   return "";
 }
 
+function getTargetOptionLabel(person, village) {
+  const role = Array.isArray(village.villagers) && village.villagers.includes(person)
+    ? "村人"
+    : (getCaptives(village).includes(person)
+      ? "捕虜"
+      : (Array.isArray(village.visitors) && village.visitors.includes(person) ? "訪問者" : "襲撃者"));
+  return `${person.name}（${role} / 肉体${person.bodyAge ?? "-"}歳 / 精神${person.spiritAge ?? "-"}歳）`;
+}
+
 function renderTargetSelect(village, definition, container) {
-  const oldTarget = container.querySelector(".secret-treasure-target-label");
-  if (oldTarget) oldTarget.remove();
+  container.querySelectorAll(".secret-treasure-target-label").forEach(element => element.remove());
   if (!definition?.target) return;
 
   const candidates = getTargetCandidates(village, definition);
+  if (definition.target === "exchangePair") {
+    ["A", "B"].forEach(suffix => {
+      const label = document.createElement("label");
+      label.className = "secret-treasure-target-label";
+      label.innerHTML = `<span>対象${suffix}:</span><select id="secretTreasureTargetSelect${suffix}"></select>`;
+      const select = label.querySelector("select");
+      const emptyOption = document.createElement("option");
+      emptyOption.value = "";
+      emptyOption.textContent = "(選択)";
+      select.appendChild(emptyOption);
+      candidates.forEach((person, index) => {
+        const option = document.createElement("option");
+        option.value = String(index);
+        option.textContent = getTargetOptionLabel(person, village);
+        select.appendChild(option);
+      });
+      container.querySelector(".secret-treasure-description")?.before(label);
+    });
+    return;
+  }
+
   const label = document.createElement("label");
   label.className = "secret-treasure-target-label";
   label.innerHTML = `<span>対象を選択:</span><select id="secretTreasureTargetSelect"></select>`;
@@ -579,7 +648,18 @@ export function useSelectedSecretTreasure(village) {
   }
 
   let target = null;
-  if (definition.target) {
+  if (definition.target === "exchangePair") {
+    const candidates = getTargetCandidates(village, definition);
+    const targetASelect = document.getElementById("secretTreasureTargetSelectA");
+    const targetBSelect = document.getElementById("secretTreasureTargetSelectB");
+    const personA = targetASelect?.value === "" ? null : candidates[Number(targetASelect?.value)];
+    const personB = targetBSelect?.value === "" ? null : candidates[Number(targetBSelect?.value)];
+    if (!personA || !personB || personA === personB) {
+      village.log("【秘宝】交換する2人を選択してください");
+      return;
+    }
+    target = [personA, personB];
+  } else if (definition.target) {
     const candidates = getTargetCandidates(village, definition);
     const targetSelect = document.getElementById("secretTreasureTargetSelect");
     target = candidates[Number(targetSelect?.value || 0)];

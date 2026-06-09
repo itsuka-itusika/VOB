@@ -23,6 +23,7 @@ import {
 import { closeSecretTreasureModal, openSecretTreasureModal, SECRET_TREASURES, sellSelectedSecretTreasure, useSelectedSecretTreasure } from "./secretTreasures.js";
 import { RAID_MODULES } from "./data/raidData.js";
 import { updateUI } from "./ui.js";
+import { getCaptives } from "./captives.js";
 
 const VIEW_MODE_STORAGE_KEY = "vob.viewMode";
 let debugTitleActionsEnabled = false;
@@ -97,6 +98,7 @@ function runDebugAction() {
 function getExistingNames() {
   return [
     ...(Array.isArray(theVillage.villagers) ? theVillage.villagers : []),
+    ...getCaptives(theVillage),
     ...(Array.isArray(theVillage.visitors) ? theVillage.visitors : []),
     ...(Array.isArray(theVillage.raidEnemies) ? theVillage.raidEnemies : [])
   ].map(person => person.name).filter(Boolean);
@@ -206,7 +208,7 @@ function runUtilityAction() {
 }
 
 function setSpiritColumnsVisibility(visible) {
-  ["villagersTable", "visitorsTable", "raidEnemiesTable"].forEach(id => {
+  ["villagersTable", "captivesTable", "visitorsTable", "raidEnemiesTable"].forEach(id => {
     const table = document.getElementById(id);
     if (table) table.classList.toggle("show-spirit-columns", Boolean(visible));
   });

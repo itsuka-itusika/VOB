@@ -9,6 +9,7 @@ import { recordCriticalHistory, recordVillagerDeathHistory } from "./history.js"
 import { handleBirthAndPostpartum, handlePregnancyChecks, updateChildGrowthStage } from "./reproduction.js";
 import { showFestivalModal } from "./festivalModal.js";
 import { runHeadmanElectionIfDue } from "./headmanElection.js";
+import { grantSecretTreasure, PINECONE_STAFF_SECRET_TREASURE_ID } from "./secretTreasures.js";
 import {
   ACTION_CRADLE,
   ACTION_HEAL,
@@ -25,6 +26,13 @@ import { addStoredResource } from "./domain/resourceLimits.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
 import { getVisitorArrivalLine } from "./data/dialogue/visitorLines.js";
 import { addDivineMight, getDivineMightGainFromMonthlyMana } from "./divineMight.js";
+import { BUILDINGS } from "./buildings.js";
+import { advanceBuildingRequestMonth, tryStartBuildingRequest } from "./buildingRequests.js";
+import {
+  clearCaptiveFailedTraits,
+  getPeopleForFoodAndWinterMaterials,
+  processCaptiveActionRecovery
+} from "./captives.js";
 
 const OPENING_RAID_GRACE_YEAR = 1091;
 const OPENING_RAID_GRACE_LAST_MONTH = 6;
@@ -34,6 +42,7 @@ function resetMonthlySocialAttemptFlags(village) {
   (village.villagers || []).forEach(person => {
     person.socialAttemptedThisMonth = false;
   });
+  clearCaptiveFailedTraits(village);
 }
 
 function applySecurityBaselineDecay(village) {
@@ -130,8 +139,9 @@ function summerSolsticeFestival(v) {
 }
 
 function harvestFestival(v) {
+  const treasure = grantSecretTreasure(v, PINECONE_STAFF_SECRET_TREASURE_ID);
   showFestivalModal("harvest");
-  v.log("【収穫祭】全員体力+30,メンタル+10");
+  v.log(`【収穫祭】全員体力+30,メンタル+10${treasure ? `,${treasure.name}+1` : ""}`);
   v.villagers.forEach(p=>{
     p.hp=clampValue(p.hp+30,0,100);
     p.mp=clampValue(p.mp+10,0,100);
@@ -203,6 +213,7 @@ export function runMonthStartPhase(village) {
   handleBirthAndPostpartum(village);
   restoreRecoveredForcedActions(village);
   doRandomEventPre(village);
+  tryStartBuildingRequest(village, BUILDINGS);
   applyMonthStartRestrictions(village);
   runHeadmanElectionIfDue(village);
   doRaidStartCheck(village);
@@ -291,6 +302,8 @@ function applyFountainMonthlyHappiness(village) {
 // -------------------------
 export function endOfMonthProcess(v) {
   v.log("【月末処理】");
+  processCaptiveActionRecovery(v);
+  advanceBuildingRequestMonth(v);
 
   // 治安31以上で荒廃状態解除
   if (v.security > 30) {
@@ -305,7 +318,7 @@ export function endOfMonthProcess(v) {
   let totalMat=0;
   let isWinter = v.villageTraits.includes("冬");
 
-  v.villagers.forEach(p=>{
+  getPeopleForFoodAndWinterMaterials(v).forEach(p=>{
     totalF += getVillagerFoodConsumption(p);
 
     if (isWinter) {
@@ -343,7 +356,7 @@ export function endOfMonthProcess(v) {
   handlePregnancyChecks(v);
 
   // 狂乱・酩酊の解除処理
-  v.villagers.forEach(p => {
+  getPeopleForFoodAndWinterMaterials(v).forEach(p => {
     if (p.mindTraits.includes("狂乱")) {
       p.mindTraits = p.mindTraits.filter(t => t !== "狂乱");
       syncEffectiveStats(p);
@@ -492,7 +505,7 @@ export function doMonthStartProcess(v) {
   // 食料/資材0のペナルティ
   if (v.food<=0) {
     v.log("食料0→飢餓発生");
-    v.villagers.forEach(p=>{
+    getPeopleForFoodAndWinterMaterials(v).forEach(p=>{
       if (Array.isArray(p.bodyTraits) && p.bodyTraits.includes("光合成")) {
         v.log(`${p.name}は光合成により飢餓を免れた`);
         return;
@@ -511,7 +524,7 @@ export function doMonthStartProcess(v) {
   }
   if (v.villageTraits.includes("冬") && v.materials<=0) {
     v.log("冬なのに資材0→凍え");
-    v.villagers.forEach(p=>{
+    getPeopleForFoodAndWinterMaterials(v).forEach(p=>{
       if (p.bodyTraits.includes("モフモフ")) {
         v.log(`${p.name}はモフモフに守られて凍えを免れた`);
         return;

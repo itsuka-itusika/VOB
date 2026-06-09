@@ -169,6 +169,14 @@ button {
   text-align: center;
   white-space: nowrap;
 }
+#captivesTable td.action-cell {
+  width: 230px;
+  max-width: 230px;
+  padding-left: 3px;
+  padding-right: 1px;
+  text-align: center;
+  white-space: nowrap;
+}
 .assignment-lock-toggle {
   flex: 0 0 auto;
   width: 28px;
@@ -270,6 +278,12 @@ button {
   border-left: 3px solid #b8a36d;
   padding-left: 6px;
 }
+.message-item.request {
+  color: #5d3d12;
+  background: #f7f1e4;
+  border-left: 3px solid #9c7a39;
+  padding-left: 6px;
+}
 .message-empty {
   color: #666;
 }
@@ -294,12 +308,20 @@ table {
   width: max-content;
   min-width: 100%;
 }
+#captivesTable {
+  width: max-content;
+  min-width: 100%;
+}
 #villagersTable th,
 #villagersTable td,
 #visitorsTable th,
 #visitorsTable td,
 #raidEnemiesTable th,
 #raidEnemiesTable td {
+  white-space: nowrap;
+}
+#captivesTable th,
+#captivesTable td {
   white-space: nowrap;
 }
 th, td {
@@ -588,6 +610,10 @@ table.show-spirit-columns .spirit-column {
 #raidEnemiesTable td:nth-child(12) {
   background: inherit;
 }
+#captivesTable td:nth-child(11),
+#captivesTable td:nth-child(12) {
+  background: inherit;
+}
 #villagersTable td:nth-child(13),
 #villagersTable td:nth-child(14),
 #villagersTable td:nth-child(15),
@@ -606,6 +632,14 @@ table.show-spirit-columns .spirit-column {
 #raidEnemiesTable td:nth-child(16),
 #raidEnemiesTable td:nth-child(17),
 #raidEnemiesTable td:nth-child(18) {
+  background: #faf2d3;
+}
+#captivesTable td:nth-child(13),
+#captivesTable td:nth-child(14),
+#captivesTable td:nth-child(15),
+#captivesTable td:nth-child(16),
+#captivesTable td:nth-child(17),
+#captivesTable td:nth-child(18) {
   background: #faf2d3;
 }
 #villagersTable td:nth-child(19),
@@ -628,6 +662,14 @@ table.show-spirit-columns .spirit-column {
 #raidEnemiesTable td:nth-child(24) {
   background: #e2f9d8;
 }
+#captivesTable td:nth-child(19),
+#captivesTable td:nth-child(20),
+#captivesTable td:nth-child(21),
+#captivesTable td:nth-child(22),
+#captivesTable td:nth-child(23),
+#captivesTable td:nth-child(24) {
+  background: #e2f9d8;
+}
 
 /* 折りたたみ */
 #villagersTable td.happiness-cell.male-basic,
@@ -635,10 +677,16 @@ table.show-spirit-columns .spirit-column {
 #raidEnemiesTable td.happiness-cell.male-basic {
   background: #d8e9f9;
 }
+#captivesTable td.happiness-cell.male-basic {
+  background: #d8e9f9;
+}
 
 #villagersTable td.happiness-cell.female-basic,
 #visitorsTable td.happiness-cell.female-basic,
 #raidEnemiesTable td.happiness-cell.female-basic {
+  background: #f9d8e9;
+}
+#captivesTable td.happiness-cell.female-basic {
   background: #f9d8e9;
 }
 
@@ -1390,6 +1438,13 @@ section h2 {
   border-radius: 3px;
   font-size: 0.8em;
 }
+.building-request-mark {
+  background: #9c7a39;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 0.8em;
+}
 .building-desc {
   color: #666;
   margin-bottom: 10px;
@@ -1402,6 +1457,17 @@ section h2 {
   font-size: 0.9em;
   color: #555;
   margin-bottom: 10px;
+}
+.building-cost-original {
+  text-decoration: line-through;
+  color: #777;
+}
+.building-cost-arrow {
+  margin: 0 4px;
+  color: #9c7a39;
+}
+.building-cost-discounted {
+  color: #8a4b00;
 }
 .building-reason {
   color: #f44336;
@@ -1823,6 +1889,13 @@ section h2 {
   z-index: 2100;
 }
 
+#buildingRequestOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 2090;
+}
+
 #raidWarningModal {
   position: fixed;
   top: 50%;
@@ -1840,9 +1913,33 @@ section h2 {
   z-index: 2101;
 }
 
+#buildingRequestModal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  border: 2px solid #aaa;
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+  width: 600px;
+  max-width: 90%;
+  max-height: 90vh;
+  box-sizing: border-box;
+  padding: 20px;
+  overflow-y: auto;
+  z-index: 2091;
+}
+
 #raidWarningModal h2 {
   margin: 0 0 12px;
   color: #9d2b22;
+  font-size: 1.2rem;
+  letter-spacing: 0;
+}
+
+#buildingRequestModal h2 {
+  margin: 0 0 12px;
+  color: #6b4d19;
   font-size: 1.2rem;
   letter-spacing: 0;
 }
@@ -1852,7 +1949,21 @@ section h2 {
   line-height: 1.6;
 }
 
+#buildingRequestModal .building-request-text p {
+  margin: 0 0 12px;
+  line-height: 1.6;
+}
+
 #raidWarningModal .raid-warning-detail {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #ddd;
+  color: #555;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+#buildingRequestModal .building-request-detail {
   margin-top: 12px;
   padding-top: 8px;
   border-top: 1px solid #ddd;
@@ -1868,6 +1979,13 @@ section h2 {
   margin-top: 15px;
 }
 
+#buildingRequestModal .modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 15px;
+}
+
 #raidWarningModal .modal-buttons button {
   min-width: 104px;
   padding: 8px 12px;
@@ -1876,7 +1994,19 @@ section h2 {
   cursor: pointer;
 }
 
+#buildingRequestModal .modal-buttons button {
+  min-width: 104px;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  background-color: #f0f0f0;
+  cursor: pointer;
+}
+
 #raidWarningModal .modal-buttons button:hover:not(:disabled) {
+  background-color: #e0e0e0;
+}
+
+#buildingRequestModal .modal-buttons button:hover {
   background-color: #e0e0e0;
 }
 
@@ -2487,6 +2617,95 @@ body.mobile-mode #raidEnemiesTable select {
   min-height: 20px;
   font-size: 0.5rem;
 }
+body.mobile-mode #captivesTable {
+  width: 100%;
+  min-width: 0;
+  margin-bottom: 1px;
+  table-layout: fixed;
+  font-size: 0.48rem;
+}
+body.mobile-mode #captivesTable th,
+body.mobile-mode #captivesTable td {
+  padding: 1px 1px;
+  line-height: 1.05;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+body.mobile-mode #captivesTable td:nth-child(18),
+body.mobile-mode #captivesTable td:nth-child(24) {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.15;
+}
+body.mobile-mode #captivesTable th {
+  font-size: 0.48rem;
+  font-weight: bold;
+}
+body.mobile-mode #captivesTable th:nth-child(1),
+body.mobile-mode #captivesTable td:nth-child(1) {
+  width: 2.2%;
+}
+body.mobile-mode #captivesTable th:nth-child(2),
+body.mobile-mode #captivesTable td:nth-child(2),
+body.mobile-mode #captivesTable th:nth-child(3),
+body.mobile-mode #captivesTable td:nth-child(3) {
+  width: 4.7%;
+}
+body.mobile-mode #captivesTable th:nth-child(4),
+body.mobile-mode #captivesTable td:nth-child(4),
+body.mobile-mode #captivesTable th:nth-child(5),
+body.mobile-mode #captivesTable td:nth-child(5),
+body.mobile-mode #captivesTable th:nth-child(6),
+body.mobile-mode #captivesTable td:nth-child(6) {
+  width: 2.4%;
+}
+body.mobile-mode #captivesTable th:nth-child(7),
+body.mobile-mode #captivesTable td:nth-child(7),
+body.mobile-mode #captivesTable th:nth-child(8),
+body.mobile-mode #captivesTable td:nth-child(8) {
+  width: 3%;
+}
+body.mobile-mode #captivesTable th:nth-child(9),
+body.mobile-mode #captivesTable td:nth-child(9),
+body.mobile-mode #captivesTable th:nth-child(10),
+body.mobile-mode #captivesTable td:nth-child(10),
+body.mobile-mode #captivesTable th:nth-child(11),
+body.mobile-mode #captivesTable td:nth-child(11) {
+  width: 2.7%;
+}
+body.mobile-mode #captivesTable th:nth-child(12),
+body.mobile-mode #captivesTable td:nth-child(12) {
+  width: 8.8%;
+}
+body.mobile-mode #captivesTable th:nth-child(n+13):nth-child(-n+17),
+body.mobile-mode #captivesTable td:nth-child(n+13):nth-child(-n+17),
+body.mobile-mode #captivesTable th:nth-child(n+19):nth-child(-n+23),
+body.mobile-mode #captivesTable td:nth-child(n+19):nth-child(-n+23) {
+  width: 2.2%;
+}
+body.mobile-mode #captivesTable th:nth-child(18),
+body.mobile-mode #captivesTable td:nth-child(18),
+body.mobile-mode #captivesTable th:nth-child(24),
+body.mobile-mode #captivesTable td:nth-child(24) {
+  width: 4.5%;
+}
+body.mobile-mode #captivesTable th:nth-child(26),
+body.mobile-mode #captivesTable td:nth-child(26) {
+  width: 3.6%;
+}
+body.mobile-mode #captivesTable th:nth-child(25),
+body.mobile-mode #captivesTable td:nth-child(25) {
+  width: 3.4%;
+}
+body.mobile-mode #captivesTable select {
+  width: 100%;
+  min-height: 20px;
+  font-size: 0.5rem;
+}
 body.mobile-mode .action-cell-controls {
   gap: 2px;
   width: 100%;
@@ -2611,6 +2830,7 @@ body.mobile-mode #historyModal,
 body.mobile-mode #personalHistoryModal,
 body.mobile-mode #conversationModal,
 body.mobile-mode #raidWarningModal,
+body.mobile-mode #buildingRequestModal,
 body.mobile-mode #exchangeModal,
 body.mobile-mode #panFluteExchangeModal,
 body.mobile-mode #raidModal,

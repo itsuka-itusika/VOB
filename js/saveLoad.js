@@ -9,6 +9,8 @@ import { normalizeRelationships } from "./relationships.js";
 import { ensureTitleState, evaluateTitles } from "./titles.js";
 import { normalizeTutorialState } from "./tutorial.js";
 import { getInitialScaleStageIndex } from "./villageScale.js";
+import { normalizeCaptive } from "./captives.js";
+import { normalizeBuildingRequestState } from "./buildingRequests.js";
 
 function normalizeBodyTraitName(trait) {
   return trait === "幼児" || trait === "児童" ? "子供" : trait;
@@ -150,6 +152,7 @@ function convertVillageToObject(village) {
     popLimit: village.popLimit,
     villageTraits: [...village.villageTraits],
     secretTreasures: normalizeSecretTreasures(village),
+    buildingRequest: normalizeBuildingRequestState(village.buildingRequest),
     tutorial: normalizeTutorialState(village.tutorial),
     logs: [...village.logs],
     historyEvents: normalizeHistoryEvents(village.historyEvents),
@@ -180,7 +183,8 @@ function convertVillageToObject(village) {
       : [],
     
     // 訪問者情報を追加
-    visitors: village.visitors.map(vill => convertVillagerToObject(vill))
+    visitors: village.visitors.map(vill => convertVillagerToObject(vill)),
+    captives: (village.captives || []).map(vill => convertVillagerToObject(vill))
   };
 }
 
@@ -308,6 +312,7 @@ function convertObjectToVillage(dataObj) {
     v.villageTraits = [...dataObj.villageTraits];
   }
   v.secretTreasures = normalizeSecretTreasures(dataObj);
+  v.buildingRequest = normalizeBuildingRequestState(dataObj.buildingRequest);
   v.tutorial = normalizeTutorialState(dataObj.tutorial);
   v.logs = Array.isArray(dataObj.logs) ? [...dataObj.logs] : [];
   if (hasOwn(dataObj, "historyEvents")) {
@@ -362,6 +367,9 @@ function convertObjectToVillage(dataObj) {
   // 訪問者情報を復元
   if (Array.isArray(dataObj.visitors)) {
     v.visitors = dataObj.visitors.map(o => convertObjectToVillager(o));
+  }
+  if (Array.isArray(dataObj.captives)) {
+    v.captives = dataObj.captives.map(o => normalizeCaptive(convertObjectToVillager(o)));
   }
 
   return v;

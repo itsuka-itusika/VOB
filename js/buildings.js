@@ -2,6 +2,7 @@ import { refreshJobTable } from "./domain/jobTables.js";
 import { MAX_STOREHOUSES, getResourceStorageLimit } from "./domain/resourceLimits.js";
 import { completeTutorialTask } from "./tutorial.js";
 import { showVillageScaleMilestones } from "./villageScale.js";
+import { fulfillBuildingRequest, getBuildingCostForVillage } from "./buildingRequests.js";
 
 function ensureBuildingFlags(village) {
   if (!village.buildingFlags) village.buildingFlags = {};
@@ -37,10 +38,10 @@ function canBuildStorehouse(village) {
   );
 }
 
-function canBuildDefensiveWall(village) {
-  return !!(
-    village?.buildingFlags?.hasMoat ||
-    hasBuilt(village, "moat")
+function canBuildMoat(village) {
+  return isScaleAtLeast(village, 250) && !!(
+    village?.buildingFlags?.hasWoodenFence ||
+    hasBuilt(village, "woodenFence")
   );
 }
 
@@ -142,7 +143,8 @@ export const BUILDINGS = [
     materials: 50,
     funds: 100,
     tech: 300,
-    desc: "酒造施設。「醸造」解放。規模+40",
+    desc: "豊かな村で解放。酒造施設。「醸造」解放。規模+40",
+    isUnlocked: (village) => isScaleAtLeast(village, 180),
     effect: standardBuildingEffect({ scale: 40, flag: "hasBrewery", log: "醸造所建設完了: 「醸造」解放、規模+40" })
   },
   {
@@ -151,7 +153,8 @@ export const BUILDINGS = [
     materials: 50,
     funds: 100,
     tech: 200,
-    desc: "錬金施設。「錬金術」解放。規模+40",
+    desc: "豊かな村で解放。錬金施設。「錬金術」解放。規模+40",
+    isUnlocked: (village) => isScaleAtLeast(village, 180),
     effect: standardBuildingEffect({ scale: 40, flag: "hasAlchemy", log: "錬金工房建設完了: 「錬金術」解放、規模+40" })
   },
   {
@@ -160,7 +163,8 @@ export const BUILDINGS = [
     materials: 50,
     funds: 50,
     tech: 100,
-    desc: "織物施設。「機織り」解放。規模+20",
+    desc: "豊かな村で解放。織物施設。「機織り」解放。規模+20",
+    isUnlocked: (village) => isScaleAtLeast(village, 180),
     effect: standardBuildingEffect({ scale: 20, flag: "hasWeaving", log: "機織小屋建設完了: 「機織り」解放、規模+20" })
   },
   {
@@ -231,12 +235,24 @@ export const BUILDINGS = [
   {
     id: "watchtower",
     name: "櫓",
-    materials: 100,
+    materials: 50,
     funds: 50,
     tech: 50,
-    desc: "豊かな村で解放。見張り台を築く。規模+20",
+    desc: "豊かな村で解放。襲撃中の「射撃」解放、中衛枠+1。最大3つまで建設可能。規模+10",
+    allowMultiple: true,
+    maxCount: 3,
     isUnlocked: (village) => isScaleAtLeast(village, 180),
-    effect: standardBuildingEffect({ scale: 20, flag: "hasWatchtower", log: "櫓建設完了: 見張り台を築きました、規模+20" })
+    effect: standardBuildingEffect({ scale: 10, flag: "hasWatchtower", log: "櫓建設完了: 射撃の中衛枠+1、規模+10" })
+  },
+  {
+    id: "woodenFence",
+    name: "木柵",
+    materials: 100,
+    funds: 100,
+    tech: 0,
+    desc: "豊かな村で解放。襲撃中の「籠城」解放。規模+30",
+    isUnlocked: (village) => isScaleAtLeast(village, 180),
+    effect: standardBuildingEffect({ scale: 30, flag: "hasWoodenFence", log: "木柵建設完了: 籠城が可能になりました、規模+30" })
   },
   {
     id: "moat",
@@ -244,19 +260,9 @@ export const BUILDINGS = [
     materials: 50,
     funds: 50,
     tech: 100,
-    desc: "豊かな村で解放。村の周囲に濠を巡らせる。規模+30",
-    isUnlocked: (village) => isScaleAtLeast(village, 180),
-    effect: standardBuildingEffect({ scale: 30, flag: "hasMoat", log: "環濠建設完了: 村の周囲に濠を巡らせました、規模+30" })
-  },
-  {
-    id: "defensiveWall",
-    name: "防壁",
-    materials: 100,
-    funds: 50,
-    tech: 100,
-    desc: "環濠建設後に解放。襲撃中の「籠城」解放。規模+30",
-    isUnlocked: canBuildDefensiveWall,
-    effect: standardBuildingEffect({ scale: 30, flag: "hasDefensiveWall", log: "防壁建設完了: 籠城が可能になりました、規模+30" })
+    desc: "繁栄した郷村で解放。木柵建設後に建設可能。籠城時のダメージ軽減率を0.7にする。規模+30",
+    isUnlocked: canBuildMoat,
+    effect: standardBuildingEffect({ scale: 30, flag: "hasMoat", log: "環濠建設完了: 籠城時のダメージ軽減率が0.7になりました、規模+30" })
   },
   {
     id: "prison",
@@ -277,14 +283,21 @@ function getBuildingCounts(village) {
   }, {});
 }
 
-function getBuildBlockReason(building, village, { isBuilt = false, reachedLimit = false } = {}) {
+function getBuildBlockReason(building, village, { isBuilt = false, reachedLimit = false, costs = null } = {}) {
   if (isBuilt) return "建設済み";
   if (reachedLimit) return "建設上限";
+  const buildCosts = costs || getBuildingCostForVillage(building, village);
   const reasons = [];
-  if (village.materials < building.materials) reasons.push("資材不足");
-  if (village.funds < building.funds) reasons.push("資金不足");
-  if (village.tech < building.tech) reasons.push("技術不足");
+  if (village.materials < buildCosts.materials) reasons.push("資材不足");
+  if (village.funds < buildCosts.funds) reasons.push("資金不足");
+  if (village.tech < buildCosts.tech) reasons.push("技術不足");
   return reasons.join(", ");
+}
+
+function renderCostLine(label, originalCost, currentCost, isDiscounted) {
+  if (originalCost <= 0) return "";
+  if (!isDiscounted || originalCost === currentCost) return `<div>${label}: ${originalCost}</div>`;
+  return `<div>${label}: <span class="building-cost-original">${originalCost}</span><span class="building-cost-arrow">→</span><strong class="building-cost-discounted">${currentCost}</strong></div>`;
 }
 
 function renderBuiltBuildings(builtList, village) {
@@ -308,26 +321,28 @@ function createBuildingItem(building, village) {
   const builtCount = (village.buildings || []).filter(id => id === building.id).length;
   const isBuilt = !building.allowMultiple && builtCount > 0;
   const reachedLimit = Number.isFinite(building.maxCount) && builtCount >= building.maxCount;
+  const costs = getBuildingCostForVillage(building, village);
   const canBuild = !isBuilt && !reachedLimit &&
-    village.materials >= building.materials &&
-    village.funds >= building.funds &&
-    village.tech >= building.tech;
+    village.materials >= costs.materials &&
+    village.funds >= costs.funds &&
+    village.tech >= costs.tech;
   const countText = Number.isFinite(building.maxCount)
     ? `${builtCount}/${building.maxCount}`
     : builtCount;
-  const reasonText = getBuildBlockReason(building, village, { isBuilt, reachedLimit });
+  const reasonText = getBuildBlockReason(building, village, { isBuilt, reachedLimit, costs });
 
   div.innerHTML = `
     <div class="building-header">
       <h4>${building.name}</h4>
+      ${costs.isDiscounted ? '<span class="building-request-mark">要望 -20%</span>' : ""}
       ${isBuilt ? '<span class="built-mark">建設済</span>' : ""}
       ${(builtCount > 0 || Number.isFinite(building.maxCount)) ? `<span class="built-count">建設数: ${countText}</span>` : ""}
     </div>
     <div class="building-desc">${building.desc}</div>
     <div class="building-cost">
-      ${building.materials > 0 ? `<div>資材: ${building.materials}</div>` : ""}
-      ${building.funds > 0 ? `<div>資金: ${building.funds}</div>` : ""}
-      ${building.tech > 0 ? `<div>技術: ${building.tech}</div>` : ""}
+      ${renderCostLine("資材", costs.originalMaterials, costs.materials, costs.isDiscounted)}
+      ${renderCostLine("資金", costs.originalFunds, costs.funds, costs.isDiscounted)}
+      ${renderCostLine("技術", costs.originalTech, costs.tech, costs.isDiscounted)}
     </div>
     ${!canBuild && !isBuilt ? `<div class="building-reason">${reasonText}</div>` : ""}
   `;
@@ -387,13 +402,15 @@ export function closeBuildingModal() {
 }
 
 function constructBuilding(building, village) {
-  village.materials -= building.materials;
-  village.funds -= building.funds;
-  village.tech -= building.tech;
+  const costs = getBuildingCostForVillage(building, village);
+  village.materials -= costs.materials;
+  village.funds -= costs.funds;
+  village.tech -= costs.tech;
   if (!Array.isArray(village.buildings)) village.buildings = [];
   village.buildings.push(building.id);
 
   building.effect(village);
+  fulfillBuildingRequest(village, building.id);
   if (building.id === "barn") {
     completeTutorialTask(village, "build_barn");
   }

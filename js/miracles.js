@@ -14,8 +14,10 @@ import { resolveDialogueTone } from "./data/dialogue/toneProfiles.js";
 import { BODY_EXCHANGE_SOURCE_RACE_LINE_KEYS, BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
 import { getVisitorArrivalLine } from "./data/dialogue/visitorLines.js";
 import { completeTutorialTask } from "./tutorial.js";
+import { getCaptives } from "./captives.js";
 import {
   addDivineMight,
+  DIVINE_MIGHT_LEVELS,
   getDivineMightGainFromMiracleCost,
   getDivineMightStatus,
   getMiracleUnlockInfo,
@@ -51,6 +53,17 @@ export const MIRACLES = [
   {id:"17", name:"雷霆の奇跡(100)", cost:100, desc:"月1回。襲撃者1体の体力を60減らす。最低1で止まる"}
 ];
 
+const MIRACLE_UNLOCK_ORDER = DIVINE_MIGHT_LEVELS.flatMap(entry => entry.miracleIds);
+
+function getMiraclesForModal() {
+  const byId = new Map(MIRACLES.map(miracle => [miracle.id, miracle]));
+  const ordered = MIRACLE_UNLOCK_ORDER
+    .map(id => byId.get(id))
+    .filter(Boolean);
+  const listedIds = new Set(MIRACLE_UNLOCK_ORDER);
+  return ordered.concat(MIRACLES.filter(miracle => !listedIds.has(miracle.id)));
+}
+
 /**
  * 奇跡モーダルを開く
  */
@@ -65,7 +78,7 @@ export function openMiracleModal(village) {
   let sel = document.getElementById("miracleSelect");
   if (sel.parentElement) sel.parentElement.style.display = "none";
   sel.innerHTML="";
-  MIRACLES.forEach(m=>{
+  getMiraclesForModal().forEach(m=>{
     let op=document.createElement("option");
     op.value=m.id;
     op.textContent=m.name;
@@ -181,6 +194,7 @@ function getMiracleTargetOptions(mid) {
 function findMiracleTargetByName(name, village) {
   if (!name) return null;
   return village.villagers.find(x => x.name === name) ||
+    getCaptives(village).find(x => x.name === name) ||
     village.visitors.find(x => x.name === name) ||
     village.raidEnemies.find(x => x.name === name) ||
     null;
@@ -340,7 +354,8 @@ function createMiracleItem(miracle, village, selectedId) {
 function renderMiracleCards(village, selectedId = "12") {
   const content = document.getElementById("miracleOptions");
   if (!content) return;
-  const fallbackId = MIRACLES.find(m => getMiracleUnlockInfo(m.id, village).unlocked)?.id || "12";
+  const miraclesForModal = getMiraclesForModal();
+  const fallbackId = miraclesForModal.find(m => getMiracleUnlockInfo(m.id, village).unlocked)?.id || "12";
   const selectedMiracle = MIRACLES.find(m => m.id === selectedId);
   const currentId = selectedMiracle && getMiracleUnlockInfo(selectedMiracle.id, village).unlocked
     ? selectedId
@@ -368,7 +383,7 @@ function renderMiracleCards(village, selectedId = "12") {
   `;
 
   const grid = content.querySelector(".miracle-grid");
-  MIRACLES.forEach(miracle => grid.appendChild(createMiracleItem(miracle, village, currentId)));
+  miraclesForModal.forEach(miracle => grid.appendChild(createMiracleItem(miracle, village, currentId)));
 }
 
 function createVillagerSelect(id, village, options = {}) {
@@ -391,12 +406,27 @@ function createVillagerSelect(id, village, options = {}) {
     });
   }
 
+  if (!options.raidersOnly && options.normalExchangeOnly) {
+    getCaptives(village).forEach(vv=>{
+      let opp=document.createElement("option");
+      opp.value=vv.name;
+      opp.textContent=`${vv.name}(捕虜)`;
+      sel.appendChild(opp);
+    });
+  }
+
   if (options.normalExchangeOnly || options.villagersOnly) {
     return sel;
   }
 
   // 訪問者を追加
   if (!options.raidersOnly) {
+    getCaptives(village).forEach(vv=>{
+      let opp=document.createElement("option");
+      opp.value=vv.name;
+      opp.textContent=`${vv.name}(捕虜)`;
+      sel.appendChild(opp);
+    });
     village.visitors.forEach(vv=>{
       let opp=document.createElement("option");
       opp.value=vv.name;
@@ -419,7 +449,7 @@ function createVillagerSelect(id, village, options = {}) {
 }
 
 function isNormalExchangeCandidate(person, village) {
-  return village.villagers.includes(person);
+  return village.villagers.includes(person) || getCaptives(village).includes(person);
 }
 
 /**
@@ -465,14 +495,16 @@ export function performMiracle(village) {
   let vA=null;
   let vB=null;
   if (ta && ta.value) {
-    // 村人、訪問者、襲撃者から対象を検索
+    // 村人、捕虜、訪問者、襲撃者から対象を検索
     vA = village.villagers.find(x=>x.name===ta.value) ||
+         getCaptives(village).find(x=>x.name===ta.value) ||
          village.visitors.find(x=>x.name===ta.value) ||
          village.raidEnemies.find(x=>x.name===ta.value);
   }
   if (tb && tb.value) {
-    // 村人、訪問者、襲撃者から対象を検索
+    // 村人、捕虜、訪問者、襲撃者から対象を検索
     vB = village.villagers.find(x=>x.name===tb.value) ||
+         getCaptives(village).find(x=>x.name===tb.value) ||
          village.visitors.find(x=>x.name===tb.value) ||
          village.raidEnemies.find(x=>x.name===tb.value);
   }
@@ -603,7 +635,7 @@ export function performMiracle(village) {
           }
           // 通常の交換は村人同士のみ
           if (!isNormalExchangeCandidate(vA, village) || !isNormalExchangeCandidate(vB, village)) {
-            village.log("【交換の奇跡】村人以外は対象外です");
+            village.log("【交換の奇跡】村人・捕虜以外は対象外です");
             refundMiracleMana(village, cost);
             return;
           }

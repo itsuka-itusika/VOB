@@ -16,11 +16,13 @@ import {
   canFortifyInRaid,
   canDefendInRaid,
   canMakeTrapInRaid,
-  canPerformRaidAction,
   canShootInRaid,
+  getRaidReadiness,
+  getRaidShooterSlotCount,
   isRaidAction,
   isRaidActive
 } from "./raidRules.js";
+import { getCaptives } from "./captives.js";
 
 const JOB_NONE = ACTION_NONE;
 const JOB_REST = ACTION_REST;
@@ -121,16 +123,16 @@ function firstAvailable(candidates, table) {
 }
 
 function estimateMonthlyFoodCost(village) {
-  const villagers = Array.isArray(village.villagers) ? village.villagers : [];
-  return villagers.reduce((sum, person) => {
+  const people = (Array.isArray(village.villagers) ? village.villagers : []).concat(getCaptives(village));
+  return people.reduce((sum, person) => {
     return sum + getVillagerFoodConsumption(person);
   }, 0);
 }
 
 function estimateMonthlyMaterialCost(village) {
-  const villagers = Array.isArray(village.villagers) ? village.villagers : [];
+  const people = (Array.isArray(village.villagers) ? village.villagers : []).concat(getCaptives(village));
   return village.villageTraits.includes("\u51ac")
-    ? villagers.reduce((sum, person) => sum + getVillagerWinterMaterialConsumption(person), 0)
+    ? people.reduce((sum, person) => sum + getVillagerWinterMaterialConsumption(person), 0)
     : 0;
 }
 
@@ -513,6 +515,32 @@ function getMinimumFrontliners(village, profiles) {
   );
 }
 
+function chooseNonShooterRaidAssignment(profile) {
+  if (profile.canTrap) {
+    return { preferredAction: profile.fallback.preferredAction, action: ACTION_TRAP };
+  }
+  if (profile.canDefend) {
+    return { preferredAction: profile.fallback.preferredAction, action: ACTION_DEFEND };
+  }
+  if (profile.canFortify) {
+    return { preferredAction: profile.fallback.preferredAction, action: ACTION_FORTIFY };
+  }
+  return profile.fallback;
+}
+
+function enforceShooterSlots(village, profiles, assignments) {
+  const shooterSlots = getRaidShooterSlotCount(village);
+  if (!Number.isFinite(shooterSlots)) return;
+
+  const assignedShooters = profiles
+    .filter(profile => assignments.get(profile.person)?.action === ACTION_SHOOT)
+    .sort((a, b) => b.shooterScore - a.shooterScore);
+
+  assignedShooters.slice(shooterSlots).forEach(profile => {
+    assignments.set(profile.person, chooseNonShooterRaidAssignment(profile));
+  });
+}
+
 function buildRaidAssignments(village, targets) {
   const assignments = new Map();
   const profiles = targets.map(person => getRaidAssignmentProfile(person, village));
@@ -570,6 +598,8 @@ function buildRaidAssignments(village, targets) {
     assignments.set(profile.person, profile.fallback);
   });
 
+  enforceShooterSlots(village, profiles, assignments);
+
   return assignments;
 }
 
@@ -601,11 +631,6 @@ export function autoAssignRaidActions(village) {
   }
 
   let changed = 0;
-  let defenders = 0;
-  let fortifiers = 0;
-  let shooters = 0;
-  let trapMakers = 0;
-  let nonParticipants = 0;
   const targets = Array.isArray(village.villagers) ? village.villagers : [];
   const raidAssignments = buildRaidAssignments(village, targets);
 
@@ -620,13 +645,13 @@ export function autoAssignRaidActions(village) {
     }
     setPreferredAction(person, next.preferredAction);
     person.action = next.action;
-
-    if (person.action === ACTION_DEFEND && canPerformRaidAction(person, ACTION_DEFEND, village)) defenders++;
-    else if (person.action === ACTION_FORTIFY && canPerformRaidAction(person, ACTION_FORTIFY, village)) fortifiers++;
-    else if (person.action === ACTION_SHOOT && canPerformRaidAction(person, ACTION_SHOOT, village)) shooters++;
-    else if (person.action === ACTION_TRAP && canPerformRaidAction(person, ACTION_TRAP, village)) trapMakers++;
-    else nonParticipants++;
   });
 
+  const readiness = getRaidReadiness(village);
+  const defenders = readiness.defenders.length;
+  const fortifiers = readiness.fortifiers.length;
+  const shooters = readiness.shooters.length;
+  const trapMakers = readiness.trapMakers.length;
+  const nonParticipants = Math.max(0, targets.length - readiness.participantCount);
   village.log(`防衛割り振り: ${changed}人を更新しました。迎撃${defenders}人、籠城${fortifiers}人、射撃${shooters}人、罠作成${trapMakers}人、不参加${nonParticipants}人`);
 }

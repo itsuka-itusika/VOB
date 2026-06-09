@@ -43,9 +43,11 @@ import { combinedDictionaryData } from "./data/dictionaryData.js";
 import { getPortraitPath, getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "./util.js";
 import { openPersonalHistoryModal } from "./history.js";
 import { formatRelationshipsForDisplay, normalizeRelationship } from "./relationships.js";
+import { getCaptives } from "./captives.js";
 import { getTutorialWarnings } from "./tutorial.js";
 import { applyVillageScaleArtClass, getVillageScaleTitle } from "./villageScale.js";
 import { getDivineMightStatus } from "./divineMight.js";
+import { getBuildingRequestWarnings } from "./buildingRequests.js";
 
 
 function openConversationFor(person) {
@@ -130,7 +132,8 @@ function setDictionaryTerms(cell, terms, options = {}) {
 }
 
 function getMonthlyFoodCost(village) {
-  return village.villagers.reduce((sum, person) => {
+  const people = (village.villagers || []).concat(getCaptives(village));
+  return people.reduce((sum, person) => {
     return sum + getVillagerFoodConsumption(person);
   }, 0);
 }
@@ -147,12 +150,13 @@ function getWinterMonthsToPrepare(month) {
 function buildWarningMessages(village) {
   const warnings = [];
   const villagers = Array.isArray(village.villagers) ? village.villagers : [];
+  const peopleForConsumption = villagers.concat(getCaptives(village));
   const foodStorage = getResourceStorageStatus(village, "food");
   const materialStorage = getResourceStorageStatus(village, "materials");
   const storageWarningRatio = getResourceStorageWarningRatio(village);
   const foodCost = getMonthlyFoodCost(village);
   const monthsOfFood = foodCost > 0 ? village.food / foodCost : Infinity;
-  const winterNeed = villagers.reduce((sum, person) => sum + getVillagerWinterMaterialConsumption(person), 0) * getWinterMonthsToPrepare(village.month);
+  const winterNeed = peopleForConsumption.reduce((sum, person) => sum + getVillagerWinterMaterialConsumption(person), 0) * getWinterMonthsToPrepare(village.month);
   const lowHpCount = villagers.filter(person => Number(person.hp) <= 33).length;
   const lowMpCount = villagers.filter(person => Number(person.mp) <= 33).length;
   const noActionCount = villagers.filter(isUnassignedActionVillager).length;
@@ -254,6 +258,7 @@ function buildWarningMessages(village) {
     });
   }
 
+  warnings.push(...getBuildingRequestWarnings(village));
   warnings.push(...getTutorialWarnings(village));
 
   return warnings;
@@ -496,6 +501,9 @@ function getTaskEstimateParts(person, task, village) {
     case "療養":
       parts = [`体力+${Math.floor(20 * (hasTrait(person, "老人") ? 0.6 : hasTrait(person, "中年") ? 0.8 : 1))}`, `メンタル+${Math.floor(20 * (hasTrait(person, "老人") ? 0.6 : hasTrait(person, "中年") ? 0.8 : 1))}`];
       break;
+    case "虜囚":
+      parts = ["体力+10", "メンタル+10"];
+      break;
     case "農作業":
       gain = calculateFarmYield(person, village);
       parts = [`${resourceName(village, "食料")}+${gain}`, `体力-${jobBodyCost("農作業", person, village)}`, `メンタル-${jobMindCost("農作業", "ind", person, village)}`];
@@ -619,6 +627,7 @@ const ACTION_DESCRIPTIONS = {
   "休養": "体力の回復を優先する一時行動。",
   "余暇": "趣味や息抜きでメンタルを回復する一時行動。",
   "療養": "負傷・病気・産褥などで行動不能のときに固定される回復行動。",
+  "虜囚": "牢獄の捕虜として過ごす固定行動。",
   "臨終": "危篤状態の固定行動。通常の作業には参加できない。",
   "遊び": "幼い精神が遊びを通じて心身を整える成長段階の行動。",
   "お手伝い": "幼い精神が村の作業を少し手伝い、食料と資材を得る行動。",
@@ -998,6 +1007,10 @@ export function updateUI(v) {
 
   const tb = document.querySelector("#villagersTable tbody");
   renderPeopleTable(tb, v.villagers || [], v, { editable: true });
+
+  const captives = getCaptives(v);
+  setSectionVisible(document.getElementById("captivesSection"), captives.length > 0);
+  renderPeopleTable(document.querySelector("#captivesTable tbody"), captives, v);
 
   const visitors = Array.isArray(v.visitors) ? v.visitors : [];
   setSectionVisible(document.getElementById("visitorsSection"), visitors.length > 0);

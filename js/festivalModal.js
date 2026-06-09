@@ -25,7 +25,7 @@ const FESTIVAL_DATA = {
     month: "10月",
     image: "../images/festivals/harvest.jpg",
     flavor: "実りを分け合い、働いた身体に温かな食事と休息を与える。",
-    effect: "全村人の体力+30、メンタル+10。"
+    effect: "全村人の体力+30、メンタル+10。秘宝「松かさの杖」を1本入手。松かさの杖は交換の奇跡・強と同じく、村人・捕虜・訪問者・襲撃者から2名を選んで肉体交換できる。"
   },
   stars: {
     title: "星霜祭",

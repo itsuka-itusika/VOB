@@ -230,7 +230,7 @@ export const RAIDER_TYPES = [
       cou: [20, 25],
       sexdr: [10, 20]
     },
-    forcedBodyTraits: ["巨躯", "単眼"],
+    forcedBodyTraits: ["巨人", "単眼"],
     dialogues: [
       "ウオォォ！小さい人間ども、潰してやる！",
       "腹が減った...人間を食べる...！",

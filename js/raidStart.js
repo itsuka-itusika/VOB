@@ -13,6 +13,7 @@ import { MESSENGER_PASS_SECRET_TREASURE_ID } from "./data/tutorialData.js";
 import { updateUI } from "./ui.js";
 import { randChoice, randInt } from "./util.js";
 import { getVillageScaleStage } from "./villageScale.js";
+import { clearDefeatedRaidEnemies, getCaptives } from "./captives.js";
 
 const AVOIDANCE_RESOURCE_LABELS = {
   food: "食料",
@@ -333,6 +334,7 @@ function endRaidByAvoidance(village, raidDefinition, option) {
   village.raidPhase = "";
   village.currentRaid = null;
   village.raidEnemies = [];
+  clearDefeatedRaidEnemies(village);
 
   const raidTraitIndex = village.villageTraits.indexOf("襲撃中");
   if (raidTraitIndex >= 0) {
@@ -417,12 +419,14 @@ export function startRaidEvent(village, options = {}) {
   village.raidCooldown = 1;
   village.pendingRaid = null;
   village.raidEnemies = [];
+  clearDefeatedRaidEnemies(village);
   village.currentRaid = createRaidState(raidDefinition);
 
   getResolvedEnemyGroups(raidDefinition, pendingRaid).forEach(group => {
     for (let i = 0; i < group.count; i++) {
       const existingNames = [
         ...village.villagers.map(person => person.name),
+        ...getCaptives(village).map(person => person.name),
         ...village.raidEnemies.map(person => person.name)
       ];
       village.raidEnemies.push(createRaidEnemy(village, group.raiderType, existingNames));

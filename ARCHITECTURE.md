@@ -69,6 +69,8 @@
   - 肉体と精神の交換処理を扱う。
 - `js/buildings.js`
   - 建築データ、建築モーダル、建築効果を扱う。
+- `js/buildingRequests.js`
+  - 村人の建築要望、対象建築の割引、要望モーダル、期限切れ、達成報酬を扱う。
 - `js/headmanElection.js`
   - 集会所建設後の里長選挙、得票計算、里長特性の付け替えを扱う。
 - `js/raidStart.js`

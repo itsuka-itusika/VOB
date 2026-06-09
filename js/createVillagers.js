@@ -308,7 +308,7 @@ export function selectPortraitByCharacter(character) {
     // 1. まず特性による判定を行う
     if (bodyTraits.some(trait => [
       "巨漢", "怪力", "マッチョ", "筋骨隆々",
-      "巨躯"
+      "巨躯", "巨人"
     ].includes(trait))) {
       selectedGroup = MALE_PORTRAIT_FILES.GROUP_A;
     } 

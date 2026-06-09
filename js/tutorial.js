@@ -12,6 +12,7 @@ const PRIORITY_MODAL_SELECTORS = [
   "#festivalModal",
   "#randomEventModal",
   "#raidWarningModal",
+  "#buildingRequestModal",
   "#secretTreasureEventModal",
   ".effect-result-modal",
   "#recruitmentModal",

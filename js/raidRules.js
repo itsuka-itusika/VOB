@@ -49,12 +49,30 @@ function hasRaidUnlock(village, flag, buildingId) {
   );
 }
 
+function countBuilt(village, buildingId) {
+  if (!Array.isArray(village?.buildings)) return 0;
+  return village.buildings.filter(id => id === buildingId).length;
+}
+
+function sortRaidShootersByPriority(shooters) {
+  return [...shooters].sort((a, b) => {
+    const courageDiff = (Number(b?.cou) || 0) - (Number(a?.cou) || 0);
+    if (courageDiff !== 0) return courageDiff;
+    return (Number(b?.dex) || 0) - (Number(a?.dex) || 0);
+  });
+}
+
+export function getRaidShooterSlotCount(village = null) {
+  if (!village) return Number.POSITIVE_INFINITY;
+  return Math.min(3, countBuilt(village, "watchtower"));
+}
+
 export function canShootInRaid(person, village = null) {
-  return canDefendInRaid(person) && hasRaidUnlock(village, "hasWatchtower", "watchtower");
+  return canDefendInRaid(person) && getRaidShooterSlotCount(village) > 0;
 }
 
 export function canFortifyInRaid(person, village = null) {
-  return canDefendInRaid(person) && hasRaidUnlock(village, "hasDefensiveWall", "defensiveWall");
+  return canDefendInRaid(person) && hasRaidUnlock(village, "hasWoodenFence", "woodenFence");
 }
 
 export function isRaidAction(action) {
@@ -89,6 +107,17 @@ export function isRaidActive(village) {
     village.raidEnemies.length > 0;
 }
 
+export function getActiveRaidShooters(village) {
+  const villagers = Array.isArray(village?.villagers) ? village.villagers : [];
+  const shooters = villagers.filter(person => {
+    return person.action === ACTION_SHOOT && canPerformRaidAction(person, ACTION_SHOOT, village);
+  });
+  const slots = getRaidShooterSlotCount(village);
+  return Number.isFinite(slots)
+    ? sortRaidShootersByPriority(shooters).slice(0, slots)
+    : shooters;
+}
+
 export function getRaidReadiness(village) {
   const villagers = Array.isArray(village?.villagers) ? village.villagers : [];
   const defenders = villagers.filter(person => {
@@ -97,9 +126,7 @@ export function getRaidReadiness(village) {
   const fortifiers = villagers.filter(person => {
     return person.action === ACTION_FORTIFY && canPerformRaidAction(person, ACTION_FORTIFY, village);
   });
-  const shooters = villagers.filter(person => {
-    return person.action === ACTION_SHOOT && canPerformRaidAction(person, ACTION_SHOOT, village);
-  });
+  const shooters = getActiveRaidShooters(village);
   const trapMakers = villagers.filter(person => {
     return person.action === ACTION_TRAP && canPerformRaidAction(person, ACTION_TRAP, village);
   });
