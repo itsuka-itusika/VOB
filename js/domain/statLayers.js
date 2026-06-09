@@ -20,6 +20,7 @@ const PERMANENT_BODY_TRAIT_ADDS = Object.freeze({
   "月の加護": { dex: 5 },
   "太陽の加護": { str: 5 },
   "梟の加護": { mag: 5 },
+  "半人半馬": { str: 3, vit: 5 },
   "雷霆神の加護": Object.freeze(Object.fromEntries(PHYSICAL_ABILITY_STATS.map(stat => [stat, 3])))
 });
 

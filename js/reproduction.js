@@ -15,8 +15,8 @@ import { recordAdulthoodHistory, recordBirthHistory, recordPregnancyHistory } fr
 import { addRelationship, checkHasRelationship, getRelationshipTargetName, normalizeRelationship } from "./relationships.js";
 import { getDialogueLine } from "./dialogue/dialogueEngine.js";
 
-const HUMANOID_RACES = new Set(["人間", "ハーピー", "半神", "キュクロプス", "サイクロプス", "巨人", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド"]);
-const FEMALE_FIXED_RACES = new Set(["ハーピー", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド"]);
+const HUMANOID_RACES = new Set(["人間", "ハーピー", "半神", "キュクロプス", "サイクロプス", "巨人", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド", "エクイナ", "サテュロス", "メナド", "セントール"]);
+const FEMALE_FIXED_RACES = new Set(["ハーピー", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド", "エクイナ", "メナド"]);
 const LONG_LIVED_RACES = new Set(["ドライアド", "ネレイド", "アルセイド", "翼人"]);
 const RACE_BODY_TRAITS = {
   "翼人": ["飛行", "光輪"],
@@ -25,7 +25,11 @@ const RACE_BODY_TRAITS = {
   "ドライアド": ["緑の指", "光合成"],
   "アラクニド": ["糸吐き"],
   "キュクロプス": ["巨人", "単眼"],
-  "ハーピー": ["飛行", "澄んだ声"]
+  "ハーピー": ["飛行", "澄んだ声"],
+  "エクイナ": ["健脚"],
+  "サテュロス": ["山羊角", "通る声"],
+  "メナド": ["山羊角", "澄んだ声"],
+  "セントール": ["半人半馬"]
 };
 const PHYSICAL_STATS = ["str", "vit", "dex", "mag", "chr"];
 const MENTAL_STATS = ["int", "ind", "eth", "cou", "sexdr"];
@@ -247,6 +251,13 @@ function decideChildSex() {
 
 function decideChildRace(childSex, motherSnapshot, fatherSnapshot, explicitRace = null) {
   if (explicitRace) return normalizeChildRace(explicitRace);
+  const motherRace = normalizeChildRace(motherSnapshot?.race);
+  if (motherRace === "エクイナ") {
+    return childSex === "男" ? "セントール" : "エクイナ";
+  }
+  if (motherRace === "メナド") {
+    return childSex === "男" ? "サテュロス" : "メナド";
+  }
   if (childSex === "女") return normalizeChildRace(motherSnapshot?.race);
   if (childSex === "男" && isFemaleFixedRace(motherSnapshot?.race)) {
     return normalizeChildRace(fatherSnapshot?.race);

@@ -63,6 +63,12 @@ const NO_KILLING_BLOCKED_ACTIONS = new Set([
   "伐採",
   "醸造"
 ]);
+const HALF_HORSE_BLOCKED_ACTIONS = new Set([
+  "内職",
+  "写本",
+  "機織り",
+  "あんま"
+]);
 
 function traitList(person, key) {
   return Array.isArray(person?.[key]) ? person[key] : [];
@@ -133,6 +139,12 @@ function applyNoKillingFilter(person) {
   if (!traitList(person, "mindTraits").includes("不殺")) return;
   person.jobTable = person.jobTable.filter(action => !NO_KILLING_BLOCKED_ACTIONS.has(action));
   person.actionTable = person.actionTable.filter(action => !NO_KILLING_BLOCKED_ACTIONS.has(action));
+}
+
+function applyHalfHorseBodyFilter(person) {
+  if (!traitList(person, "bodyTraits").includes("半人半馬")) return;
+  person.jobTable = person.jobTable.filter(action => !HALF_HORSE_BLOCKED_ACTIONS.has(action));
+  person.actionTable = person.actionTable.filter(action => !HALF_HORSE_BLOCKED_ACTIONS.has(action));
 }
 
 function addRaidActionsIfAllowed(person, village) {
@@ -292,6 +304,7 @@ export function refreshJobTable(v, village = {}) {
     applyCivilizationAvoidanceFilter(v);
     applyNoKillingFilter(v);
     applyInfantBodyActionFilter(v);
+    applyHalfHorseBodyFilter(v);
     normalizePreferredForTable(v, v.jobTable, { defaultPreferred: "遊び" });
     addRaidActionsIfAllowed(v, village);
     normalizeCurrentAction(v);
@@ -304,6 +317,7 @@ export function refreshJobTable(v, village = {}) {
     applyCivilizationAvoidanceFilter(v);
     applyNoKillingFilter(v);
     applyInfantBodyActionFilter(v);
+    applyHalfHorseBodyFilter(v);
     normalizePreferredForTable(v, v.jobTable, { defaultPreferred: "遊び" });
     addRaidActionsIfAllowed(v, village);
     normalizeCurrentAction(v);
@@ -315,6 +329,7 @@ export function refreshJobTable(v, village = {}) {
   applyCivilizationAvoidanceFilter(v);
   applyNoKillingFilter(v);
   applyInfantBodyActionFilter(v);
+  applyHalfHorseBodyFilter(v);
   normalizePreferredForTable(v, v.jobTable);
   addRaidActionsIfAllowed(v, village);
   normalizeCurrentAction(v);
