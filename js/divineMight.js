@@ -171,6 +171,7 @@ function isDivineMightModalBlocked() {
     "#miracleModal",
     "#buildingModal",
     "#buildingRequestModal",
+    "#buildingRequestCompleteModal",
     "#raidModal",
     "#raidWarningModal",
     "#secretTreasureEventModal",

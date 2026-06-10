@@ -37,7 +37,7 @@ const CHILD_BODY_TRAITS = ["赤子", "子供", "少年", "少女"];
 const CHILD_MIND_TRAITS = ["無垢", "萌芽", "思春期"];
 const PREGNANCY_FULL_TERM_MONTHS = 10;
 const POSTPARTUM_MONTHS = 3;
-const THUNDER_BLESSING_TRAIT = "雷霆神の加護";
+const THUNDER_BLESSING_TRAIT = "雷霆の加護";
 const GENETIC_EXCLUDED_BODY_TRAITS = new Set([
   "火星の加護",
   "飢餓",
@@ -266,6 +266,9 @@ function decideChildRace(childSex, motherSnapshot, fatherSnapshot, explicitRace 
 }
 
 function decidePregnancyChildRace(childSex, motherSnapshot, fatherSnapshot, options = {}) {
+  if (options.femaleFixedMaleChildRace && childSex === "男" && isFemaleFixedRace(motherSnapshot?.race)) {
+    return normalizeChildRace(options.femaleFixedMaleChildRace);
+  }
   const raceFatherSnapshot = options.childRaceFatherSnapshot || fatherSnapshot;
   const childRace = decideChildRace(childSex, motherSnapshot, raceFatherSnapshot, options.childRace);
   if (options.humanChildRace && childRace === "人間") {
@@ -608,6 +611,7 @@ function processPendingGoldenRainPregnancies(village) {
       fatherSnapshot: VIRTUAL_THUNDER_FATHER,
       childRaceFatherSnapshot: { race: "人間" },
       humanChildRace: "半神",
+      femaleFixedMaleChildRace: "半神",
       inheritedBodyTraits: [THUNDER_BLESSING_TRAIT],
       geneticFatherUnknown: true
     });

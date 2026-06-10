@@ -1,8 +1,10 @@
 import {
+  BUILDING_REQUEST_COMPLETION_LINES,
   BUILDING_REQUEST_DEFINITIONS,
   BUILDING_REQUEST_DISCOUNT_RATE,
   BUILDING_REQUEST_DURATION_MONTHS
 } from "./data/buildingRequestData.js";
+import { getToneLookupKeys, resolveDialogueTone } from "./data/dialogue/toneProfiles.js";
 import { DEFAULT_PORTRAIT_KEY, getPortraitAssetPath } from "./data/portraitPaths.js";
 import { addDivineMight } from "./divineMight.js";
 import { getCaptives } from "./captives.js";
@@ -11,6 +13,8 @@ import { clampValue, getVillagerFoodConsumption, getVillagerWinterMaterialConsum
 const DEFAULT_PORTRAIT_PATH = getPortraitAssetPath(DEFAULT_PORTRAIT_KEY);
 const REQUEST_MODAL_ID = "buildingRequestModal";
 const REQUEST_OVERLAY_ID = "buildingRequestOverlay";
+const REQUEST_COMPLETE_MODAL_ID = "buildingRequestCompleteModal";
+const REQUEST_COMPLETE_OVERLAY_ID = "buildingRequestCompleteOverlay";
 const PRIORITY_MODAL_SELECTORS = [
   "#actionPhaseModal",
   "#seasonChangeDialog",
@@ -24,6 +28,7 @@ const PRIORITY_MODAL_SELECTORS = [
   "#merchantTradeModal",
   "#miracleModal",
   "#buildingModal",
+  "#buildingRequestCompleteModal",
   "#secretTreasureModal",
   "#conversationModal",
   "#exchangeModal",
@@ -41,6 +46,7 @@ const definitionByBuildingId = new Map(
 );
 
 let pendingRequestModal = null;
+let pendingRequestCompletionModal = null;
 let requestModalObserver = null;
 
 function normalizeOptionalNumber(value) {
@@ -95,7 +101,7 @@ export function tryStartBuildingRequest(village, buildings) {
   const match = randChoice(candidate.matches);
   if (!match) return null;
 
-  const line = randChoice(match.rule.lines) || `村に${candidate.definition.name}がほしいです。`;
+  const line = randChoice(getBuildingRequestRuleLines(match.rule, match.person)) || `村に${candidate.definition.name}がほしいです。`;
   const request = {
     buildingId: candidate.definition.buildingId,
     buildingName: candidate.definition.name,
@@ -161,12 +167,18 @@ export function fulfillBuildingRequest(village, buildingId) {
 
   const happinessText = requester ? `${request.requesterName}の幸福+30、` : "";
   village.log(`要望達成: ${request.buildingName}を建設しました。${happinessText}神威+10`);
+  showBuildingRequestCompleteModal(request, requester);
   return { request, requester };
 }
 
 function getDiscountedCost(cost) {
   if (cost <= 0) return 0;
   return Math.ceil(cost * (1 - BUILDING_REQUEST_DISCOUNT_RATE));
+}
+
+function getBuildingRequestRuleLines(rule, person) {
+  const sexKey = person?.spiritSex === "女" ? "female" : "male";
+  return rule?.linesBySpiritSex?.[sexKey] || rule?.lines || [];
 }
 
 function getBuildingRequestCandidates(village, buildings = []) {
@@ -344,8 +356,15 @@ function showBuildingRequestModal(request) {
   showBuildingRequestWhenReady();
 }
 
+function showBuildingRequestCompleteModal(request, requester) {
+  if (typeof document === "undefined") return;
+  pendingRequestCompletionModal = createBuildingRequestCompletionState(request, requester);
+  closeBuildingRequestCompleteModal();
+  showBuildingRequestWhenReady();
+}
+
 function showBuildingRequestWhenReady() {
-  if (!pendingRequestModal) {
+  if (!pendingRequestModal && !pendingRequestCompletionModal) {
     stopWaitingForPriorityModals();
     return;
   }
@@ -356,8 +375,15 @@ function showBuildingRequestWhenReady() {
 
   stopWaitingForPriorityModals();
   const request = pendingRequestModal;
-  pendingRequestModal = null;
-  renderBuildingRequestModal(request);
+  if (request) {
+    pendingRequestModal = null;
+    renderBuildingRequestModal(request);
+    return;
+  }
+
+  const completion = pendingRequestCompletionModal;
+  pendingRequestCompletionModal = null;
+  renderBuildingRequestCompleteModal(completion);
 }
 
 function isPriorityModalOpen() {
@@ -391,6 +417,36 @@ function stopWaitingForPriorityModals() {
   if (!requestModalObserver) return;
   requestModalObserver.disconnect();
   requestModalObserver = null;
+}
+
+function createBuildingRequestCompletionState(request, requester) {
+  const normalized = normalizeBuildingRequestState(request);
+  if (!normalized) return null;
+  const requesterBodyAge = normalizeOptionalNumber(requester?.bodyAge);
+  return {
+    ...normalized,
+    requesterName: requester?.name || normalized.requesterName || "要望者",
+    requesterRace: requester?.race || normalized.requesterRace || "村人",
+    requesterBodySex: requester?.bodySex || normalized.requesterBodySex || "不明",
+    requesterBodyAge: requesterBodyAge == null ? normalized.requesterBodyAge : requesterBodyAge,
+    requesterPortraitFile: requester?.portraitFile || normalized.requesterPortraitFile || DEFAULT_PORTRAIT_KEY,
+    completionLine: getBuildingRequestCompletionLine(normalized, requester)
+  };
+}
+
+function resolveCompletionLine(line, context) {
+  return typeof line === "function" ? line(context) : line;
+}
+
+function getBuildingRequestCompletionLine(request, requester = null) {
+  const buildingName = request?.buildingName || "願いの場所";
+  const context = { buildingName };
+  const keys = requester
+    ? getToneLookupKeys(resolveDialogueTone(requester), requester)
+    : ["default"];
+  const lines = keys.map(key => BUILDING_REQUEST_COMPLETION_LINES[key]).find(Boolean) ||
+    BUILDING_REQUEST_COMPLETION_LINES.default;
+  return resolveCompletionLine(randChoice(lines), context) || `${buildingName}を建ててくださってありがとうございます。`;
 }
 
 function renderBuildingRequestModal(request) {
@@ -463,9 +519,93 @@ function renderBuildingRequestModal(request) {
   closeButton.focus();
 }
 
+function renderBuildingRequestCompleteModal(completion) {
+  if (!completion) return;
+
+  const overlay = document.createElement("div");
+  overlay.id = REQUEST_COMPLETE_OVERLAY_ID;
+
+  const modal = document.createElement("div");
+  modal.id = REQUEST_COMPLETE_MODAL_ID;
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-modal", "true");
+  modal.setAttribute("aria-labelledby", "buildingRequestCompleteTitle");
+
+  const title = document.createElement("h2");
+  title.id = "buildingRequestCompleteTitle";
+  title.textContent = "要望達成";
+
+  const content = document.createElement("div");
+  content.className = "conversation-content";
+
+  const portraitArea = document.createElement("div");
+  portraitArea.className = "portrait-area";
+  const portrait = document.createElement("img");
+  portrait.src = getPortraitAssetPath(completion.requesterPortraitFile);
+  portrait.alt = "";
+  portrait.onerror = () => {
+    portrait.src = DEFAULT_PORTRAIT_PATH;
+  };
+  portraitArea.appendChild(portrait);
+
+  const dialogueArea = document.createElement("div");
+  dialogueArea.className = "dialogue-area";
+
+  const characterInfo = document.createElement("div");
+  characterInfo.className = "character-info";
+  const ageText = completion.requesterBodyAge == null ? "" : `｜${completion.requesterBodyAge}歳`;
+  characterInfo.textContent = `${completion.requesterName}｜${completion.requesterRace || "村人"}｜${completion.requesterBodySex || "不明"}${ageText}`;
+
+  const text = document.createElement("div");
+  text.className = "building-request-text";
+  const line = document.createElement("p");
+  line.textContent = completion.completionLine;
+  text.appendChild(line);
+
+  const detail = document.createElement("div");
+  detail.className = "building-request-detail";
+  const achieved = document.createElement("div");
+  achieved.textContent = `${completion.buildingName}を建設し、要望が達成されました。`;
+  const happiness = document.createElement("div");
+  happiness.textContent = `${completion.requesterName}の幸福度+30`;
+  const divineMight = document.createElement("div");
+  divineMight.textContent = "神威+10";
+  detail.appendChild(achieved);
+  detail.appendChild(happiness);
+  detail.appendChild(divineMight);
+
+  dialogueArea.appendChild(characterInfo);
+  dialogueArea.appendChild(text);
+  dialogueArea.appendChild(detail);
+  content.appendChild(portraitArea);
+  content.appendChild(dialogueArea);
+
+  const buttons = document.createElement("div");
+  buttons.className = "modal-buttons";
+  const closeButton = document.createElement("button");
+  closeButton.type = "button";
+  closeButton.textContent = "閉じる";
+  closeButton.addEventListener("click", closeBuildingRequestCompleteModal);
+  buttons.appendChild(closeButton);
+
+  modal.appendChild(title);
+  modal.appendChild(content);
+  modal.appendChild(buttons);
+  document.body.appendChild(overlay);
+  document.body.appendChild(modal);
+  closeButton.focus();
+}
+
 function closeBuildingRequestModal() {
   const overlay = document.getElementById(REQUEST_OVERLAY_ID);
   const modal = document.getElementById(REQUEST_MODAL_ID);
+  if (overlay) overlay.remove();
+  if (modal) modal.remove();
+}
+
+function closeBuildingRequestCompleteModal() {
+  const overlay = document.getElementById(REQUEST_COMPLETE_OVERLAY_ID);
+  const modal = document.getElementById(REQUEST_COMPLETE_MODAL_ID);
   if (overlay) overlay.remove();
   if (modal) modal.remove();
 }

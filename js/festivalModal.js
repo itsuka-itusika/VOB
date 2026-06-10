@@ -44,6 +44,7 @@ const POST_FESTIVAL_MODAL_SELECTORS = [
   ".effect-result-modal",
   "#randomEventModal",
   "#secretTreasureEventModal",
+  "#pineconeStaffIntroModal",
   "#headmanElectionModal"
 ];
 let isShowing = false;
@@ -65,6 +66,49 @@ export function runAfterFestivalModals(callback) {
     return;
   }
   afterFestivalQueue.push(callback);
+}
+
+export function showPineconeStaffIntroModal() {
+  if (typeof document === "undefined") return;
+  document.getElementById("pineconeStaffIntroOverlay")?.remove();
+  document.getElementById("pineconeStaffIntroModal")?.remove();
+
+  const overlay = document.createElement("div");
+  overlay.id = "pineconeStaffIntroOverlay";
+  overlay.className = "event-modal-overlay";
+
+  const modal = document.createElement("div");
+  modal.id = "pineconeStaffIntroModal";
+  modal.className = "event-modal pinecone-staff-intro-modal";
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-modal", "true");
+  modal.innerHTML = `
+    <img class="event-modal-image" src="${new URL("../images/events/pinecone-staff.png", import.meta.url).href}" alt="">
+    <div class="event-modal-body">
+      <h3>秘宝「松かさの杖」を入手</h3>
+      <p>収穫祭の供物の中から、松かさを戴いた古い杖が見つかりました。杖には身体と魂の境を揺らす魔素が宿っています。</p>
+      <p class="event-modal-reward">入手した秘宝: 松かさの杖</p>
+      <ul class="pinecone-staff-effect-list">
+        <li>交換の奇跡・強と同じ効果。</li>
+        <li>村人・捕虜・訪問者・襲撃者から2名を選び、肉体を交換する。</li>
+        <li>秘宝画面から対象2名を選んで使用できる。</li>
+      </ul>
+      <div class="event-modal-buttons">
+        <button type="button" data-close-pinecone-staff-intro>閉じる</button>
+      </div>
+    </div>
+  `;
+
+  const close = () => {
+    overlay.remove();
+    modal.remove();
+  };
+  overlay.addEventListener("click", close);
+  modal.querySelector("[data-close-pinecone-staff-intro]")?.addEventListener("click", close);
+
+  document.body.appendChild(overlay);
+  document.body.appendChild(modal);
+  modal.querySelector("[data-close-pinecone-staff-intro]")?.focus();
 }
 
 function isVisibleElement(element) {

@@ -2,7 +2,7 @@ import { doExchange } from "./exchange.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { recordMarriageHistory } from "./history.js";
 import { openExchangeModal, openPanFluteExchangeModal, showMarriageMiracleModal, showMiracleResultModal } from "./miracles.js";
-import { startRaidEvent } from "./raidStart.js";
+import { avoidCurrentRaidWithMessengerPass, canAvoidCurrentRaidWithMessengerPass, startRaidEvent } from "./raidStart.js";
 import { addRelationship, removeRelationship, addSpouseRelationships } from "./relationships.js";
 import { updateChildGrowthStage } from "./reproduction.js";
 import { clampValue, round3 } from "./util.js";
@@ -300,8 +300,9 @@ export const SECRET_TREASURES = [
     name: "伝令神の手形",
     desc: "襲撃発生時に使用できる。使用すると、その襲撃をなかったことにする。",
     sellPrice: SECRET_TREASURE_SELL_PRICES[MESSENGER_PASS_SECRET_TREASURE_ID],
-    canUse: () => false,
-    blockedReason: "襲撃発生モーダルで使用できます"
+    canUse: canAvoidCurrentRaidWithMessengerPass,
+    blockedReason: "襲撃発生中のみ使用できます",
+    use: (village) => avoidCurrentRaidWithMessengerPass(village, { consumeTreasure: false })
   },
   {
     id: "ambrosia",
@@ -670,7 +671,8 @@ export function useSelectedSecretTreasure(village) {
   }
 
   if (!window.confirm(`${definition.name}を使いますか？`)) return;
-  definition.use(village, target);
+  const result = definition.use(village, target);
+  if (result === false) return;
   secretTreasures.splice(index, 1);
   village.secretTreasures = secretTreasures;
   renderSecretTreasureModal(village);

@@ -86,12 +86,12 @@ export function getBodyCostMultiplier(person, village) {
 }
 
 export function getMindCostMultiplier(person, village) {
+  if (hasMindTrait(person, WORKAHOLIC_TRAIT)) {
+    return 0;
+  }
   let mul = 1;
   if (hasMindTrait(person, COLD_SENSITIVE_TRAIT) && hasVillageTrait(village, WINTER_TRAIT)) {
     mul *= SEASONAL_COST_MULTIPLIER;
-  }
-  if (hasMindTrait(person, WORKAHOLIC_TRAIT)) {
-    mul *= 0.5;
   }
   return mul;
 }

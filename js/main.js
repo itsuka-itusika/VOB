@@ -33,6 +33,7 @@ const TURN_BLOCKING_MODAL_SELECTORS = [
   "#seasonChangeDialog",
   "#raidWarningModal",
   "#buildingRequestModal",
+  "#buildingRequestCompleteModal",
   "#secretTreasureEventModal",
   ".effect-result-modal",
   "#recruitmentModal",

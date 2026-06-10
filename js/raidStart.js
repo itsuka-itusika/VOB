@@ -8,7 +8,7 @@ import {
 } from "./data/raidData.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
-import { showRaidWarningModal } from "./raidWarningModal.js";
+import { clearRaidWarningModal, showRaidWarningModal } from "./raidWarningModal.js";
 import { MESSENGER_PASS_SECRET_TREASURE_ID } from "./data/tutorialData.js";
 import { updateUI } from "./ui.js";
 import { randChoice, randInt } from "./util.js";
@@ -302,6 +302,41 @@ function createRaidAvoidanceOptions(village, avoidance) {
   ].filter(Boolean);
 }
 
+function isRaidActive(village) {
+  return Array.isArray(village?.villageTraits) &&
+    village.villageTraits.includes("襲撃中") &&
+    Array.isArray(village.raidEnemies) &&
+    village.raidEnemies.length > 0;
+}
+
+function getActiveRaidDefinition(village) {
+  const currentRaid = village?.currentRaid || {};
+  const raidId = currentRaid.id || currentRaid.raidId;
+  return getRaidModuleById(raidId) || { name: currentRaid.name || "襲撃" };
+}
+
+export function canAvoidCurrentRaidWithMessengerPass(village) {
+  return isRaidActive(village) &&
+    hasMessengerPass(village);
+}
+
+export function avoidCurrentRaidWithMessengerPass(village, { consumeTreasure = true } = {}) {
+  if (!isRaidActive(village)) {
+    village?.log?.("【秘宝】伝令神の手形は襲撃発生中のみ使用できます。");
+    return false;
+  }
+
+  const option = createMessengerPassAvoidanceOption(village);
+  if (!option) {
+    village?.log?.("【秘宝】伝令神の手形を所持していません。");
+    return false;
+  }
+
+  if (consumeTreasure && !consumeMessengerPass(village)) return false;
+  endRaidByAvoidance(village, getActiveRaidDefinition(village), option);
+  return true;
+}
+
 function resetRaidUiAfterAvoidance() {
   if (typeof document === "undefined") return;
 
@@ -348,6 +383,7 @@ function endRaidByAvoidance(village, raidDefinition, option) {
     village.log(`${raidDefinition.name}: ${option.resourceLabel}${option.amount}を支払い、襲撃者は去っていった。`);
   }
 
+  clearRaidWarningModal();
   resetRaidUiAfterAvoidance();
   updateUI(village);
 }

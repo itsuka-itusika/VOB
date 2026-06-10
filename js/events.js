@@ -7,7 +7,7 @@ import { processRaidScheduleAtMonthStart } from "./raidSchedule.js";
 import { RandomEvents } from "./RandomEvents.js";
 import { recordCriticalHistory, recordVillagerDeathHistory } from "./history.js";
 import { handleBirthAndPostpartum, handlePregnancyChecks, updateChildGrowthStage } from "./reproduction.js";
-import { showFestivalModal } from "./festivalModal.js";
+import { runAfterFestivalModals, showFestivalModal, showPineconeStaffIntroModal } from "./festivalModal.js";
 import { runHeadmanElectionIfDue } from "./headmanElection.js";
 import { grantSecretTreasure, PINECONE_STAFF_SECRET_TREASURE_ID } from "./secretTreasures.js";
 import {
@@ -141,6 +141,11 @@ function summerSolsticeFestival(v) {
 function harvestFestival(v) {
   const treasure = grantSecretTreasure(v, PINECONE_STAFF_SECRET_TREASURE_ID);
   showFestivalModal("harvest");
+  if (treasure && !v.festivalFlags?.pineconeStaffIntroShown) {
+    if (!v.festivalFlags) v.festivalFlags = {};
+    v.festivalFlags.pineconeStaffIntroShown = true;
+    runAfterFestivalModals(showPineconeStaffIntroModal);
+  }
   v.log(`【収穫祭】全員体力+30,メンタル+10${treasure ? `,${treasure.name}+1` : ""}`);
   v.villagers.forEach(p=>{
     p.hp=clampValue(p.hp+30,0,100);

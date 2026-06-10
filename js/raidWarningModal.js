@@ -13,6 +13,7 @@ const PRIORITY_MODAL_SELECTORS = [
   "#festivalModal",
   "#randomEventModal",
   "#buildingRequestModal",
+  "#buildingRequestCompleteModal",
   ".effect-result-modal",
   "#secretTreasureEventModal"
 ];
@@ -190,6 +191,12 @@ export function closeRaidWarningModal() {
   const modal = document.getElementById(MODAL_ID);
   if (overlay) overlay.remove();
   if (modal) modal.remove();
+}
+
+export function clearRaidWarningModal() {
+  pendingRaidWarning = null;
+  closeRaidWarningModal();
+  stopWaitingForPriorityModals();
 }
 
 function getRaidWarningLine({ representative, introDialogues, raidName }) {

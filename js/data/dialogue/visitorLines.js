@@ -72,11 +72,11 @@ export const VISITOR_LINES = {
       "この村の緑はまだ若いですね。傷つけずに育つ道を探したいです。"
     ],
     "サテュロス": [
-      "笛の音につられて道を外れたら、この村に着きました。",
-      "山羊角が戸口に当たらぬよう気をつけます。",
-      "酒と歌の気配がありますね。祈りの場も悪くない。",
-      "この体は少し勝手が違いますが、声はまだよく通ります。",
-      "巡礼でも流浪でも、歌があれば道は続きます。"
+      "いやあ、笛の音に誘われて迷い込んじまった。せっかくだ、少し飲ませてくれよ。",
+      "この身はやけに軽いが、歌と酒の勘は鈍っちゃいないぜ。",
+      "祭の匂いがするな。退屈させないから、しばらく置いてくれよ。",
+      "祈りの場ってのも悪くない。堅い顔ばかりじゃ、神さまも眠っちまうだろ？",
+      "角も声も借り物みたいなもんだが、俺の調子は上々だ。"
     ],
     "メナド": [
       "祭の火の匂いを追ってきました。しばらく踊りを休ませてください。",
@@ -104,9 +104,9 @@ export const VISITOR_LINES = {
 
 export const VISITOR_ARRIVAL_LINES = {
     "サテュロス": [
-      "笛と巡礼の足音が、村の門先で止まりました。",
-      "山羊角を持つ旅の歌い手が、少し首をかしげて訪れました。",
-      "祈りと酒の匂いをたどって、サテュロスが村へ来ました。"
+      "祭の匂いにつられた軽い足取りの旅人が、笑いながら門をくぐりました。",
+      "メナドの身にサテュロスの魂を宿した旅人が、笛を鳴らして現れました。",
+      "笛と酒の気配をまとった軽い調子の巡礼者が、村へふらりと立ち寄りました。"
     ],
     "メナド": [
       "祭の熱をまとった旅人が、静かな声で村へ入りました。",
@@ -140,7 +140,7 @@ function pickVisitorLine(lines) {
   return lines[Math.floor(Math.random() * lines.length)] || "";
 }
 
-function getVisitorLineKey(visitor, table) {
+export function getVisitorLineKey(visitor, table) {
   if (!visitor || !table) return null;
   if (visitor.rareVisitorType && table[visitor.rareVisitorType]) return visitor.rareVisitorType;
   if (visitor.race && visitor.race !== "人間" && table[visitor.race]) return visitor.race;

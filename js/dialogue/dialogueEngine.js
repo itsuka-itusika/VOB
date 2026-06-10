@@ -11,7 +11,7 @@ import { SEASONAL_LINES } from "../data/dialogue/seasonLines.js";
 import { CONDITION_LINES } from "../data/dialogue/conditionLines.js";
 import { JOB_LINES } from "../data/dialogue/jobLines.js";
 import { REPRODUCTION_LINES } from "../data/dialogue/reproductionLines.js";
-import { VISITOR_GENERIC_LINES, VISITOR_LINES } from "../data/dialogue/visitorLines.js";
+import { getVisitorLineKey, VISITOR_GENERIC_LINES, VISITOR_LINES } from "../data/dialogue/visitorLines.js";
 import {
   BUDDING_EVENT_LINES,
   EVENT_LINES_BY_SPEECH_TYPE,
@@ -252,10 +252,7 @@ function getCurrentSeason(village) {
 }
 
 function getVisitorType(visitor) {
-  if (VISITOR_LINES[visitor?.rareVisitorType]) return visitor.rareVisitorType;
-  if (visitor?.race !== "人間" && VISITOR_LINES[visitor?.race]) return visitor.race;
-  const match = visitor?.name?.match(/^(.+)の/);
-  return match ? match[1] : null;
+  return getVisitorLineKey(visitor, VISITOR_LINES);
 }
 
 export function collectConversationCandidates({ character, village, context = {} }) {

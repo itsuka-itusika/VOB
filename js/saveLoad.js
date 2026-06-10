@@ -12,8 +12,14 @@ import { getInitialScaleStageIndex } from "./villageScale.js";
 import { normalizeCaptive } from "./captives.js";
 import { normalizeBuildingRequestState } from "./buildingRequests.js";
 
+const BODY_TRAIT_RENAMES = {
+  "幼児": "子供",
+  "児童": "子供",
+  "雷霆神の加護": "雷霆の加護"
+};
+
 function normalizeBodyTraitName(trait) {
-  return trait === "幼児" || trait === "児童" ? "子供" : trait;
+  return BODY_TRAIT_RENAMES[trait] || trait;
 }
 
 function normalizeBodyTraitList(traits) {
@@ -27,6 +33,21 @@ function cloneNullableObject(value) {
 
 function cloneNullableDeepObject(value) {
   return value == null ? null : JSON.parse(JSON.stringify(value));
+}
+
+function normalizePregnancyState(pregnancy) {
+  if (!pregnancy) return null;
+  const next = JSON.parse(JSON.stringify(pregnancy));
+  if (Array.isArray(next.inheritedBodyTraits)) {
+    next.inheritedBodyTraits = normalizeBodyTraitList(next.inheritedBodyTraits);
+  }
+  if (next.motherSnapshot && Array.isArray(next.motherSnapshot.bodyTraits)) {
+    next.motherSnapshot.bodyTraits = normalizeBodyTraitList(next.motherSnapshot.bodyTraits);
+  }
+  if (next.fatherSnapshot && Array.isArray(next.fatherSnapshot.bodyTraits)) {
+    next.fatherSnapshot.bodyTraits = normalizeBodyTraitList(next.fatherSnapshot.bodyTraits);
+  }
+  return next;
 }
 
 function hasOwn(obj, key) {
@@ -54,6 +75,12 @@ function normalizeSecretTreasures(source) {
   if (Array.isArray(source?.secretTreasures)) return cloneArray(source.secretTreasures);
   if (Array.isArray(source?.treasures)) return cloneArray(source.treasures);
   return [];
+}
+
+function normalizeFestivalFlags(source) {
+  const flags = source && typeof source === "object" ? { ...source } : {};
+  flags.pineconeStaffIntroShown = !!flags.pineconeStaffIntroShown;
+  return flags;
 }
 
 function migratePreferredAction(obj) {
@@ -153,6 +180,7 @@ function convertVillageToObject(village) {
     villageTraits: [...village.villageTraits],
     secretTreasures: normalizeSecretTreasures(village),
     buildingRequest: normalizeBuildingRequestState(village.buildingRequest),
+    festivalFlags: normalizeFestivalFlags(village.festivalFlags),
     tutorial: normalizeTutorialState(village.tutorial),
     logs: [...village.logs],
     historyEvents: normalizeHistoryEvents(village.historyEvents),
@@ -250,7 +278,7 @@ function convertVillagerToObject(vill) {
     portraitFile: normalizePortraitFile(vill.portraitFile),
     ...(vill.rareVisitorType ? { rareVisitorType: vill.rareVisitorType } : {}),
     merchantStock: vill.merchantStock ? { ...vill.merchantStock } : undefined,
-    pregnancy: vill.pregnancy ? JSON.parse(JSON.stringify(vill.pregnancy)) : null,
+    pregnancy: normalizePregnancyState(vill.pregnancy),
     postpartumMonths: vill.postpartumMonths || 0,
     ares: normalizeFiniteNumber(vill.ares, 0),
     nikeMonths: normalizeFiniteNumber(vill.nikeMonths, 0),
@@ -314,6 +342,7 @@ function convertObjectToVillage(dataObj) {
   }
   v.secretTreasures = normalizeSecretTreasures(dataObj);
   v.buildingRequest = normalizeBuildingRequestState(dataObj.buildingRequest);
+  v.festivalFlags = normalizeFestivalFlags(dataObj.festivalFlags);
   v.tutorial = normalizeTutorialState(dataObj.tutorial);
   v.logs = Array.isArray(dataObj.logs) ? [...dataObj.logs] : [];
   if (hasOwn(dataObj, "historyEvents")) {
@@ -443,7 +472,7 @@ function convertObjectToVillager(obj) {
   if (obj.merchantStock) {
     vill.merchantStock = { ...obj.merchantStock };
   }
-  vill.pregnancy = obj.pregnancy ? JSON.parse(JSON.stringify(obj.pregnancy)) : null;
+  vill.pregnancy = normalizePregnancyState(obj.pregnancy);
   vill.postpartumMonths = obj.postpartumMonths || 0;
   vill.ares = normalizeFiniteNumber(obj.ares, 0);
   vill.nikeMonths = normalizeFiniteNumber(obj.nikeMonths, 0);

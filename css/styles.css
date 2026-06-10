@@ -832,8 +832,9 @@ table.show-spirit-columns .spirit-column {
   background: #f1e6cf;
 }
 #raidModal tr.is-leaving td {
-  background: #fff0ea;
-  color: #8a3529;
+  background: #e8e8e8;
+  color: #4d4d4d;
+  box-shadow: inset 3px 0 0 #8a8a8a;
 }
 #raidModal tr.is-retreating td {
   background: #eef7ff;
@@ -1321,6 +1322,19 @@ section h2 {
 .event-modal-buttons {
   margin-top: 14px;
   text-align: right;
+}
+
+.pinecone-staff-intro-modal .event-modal-image {
+  aspect-ratio: 4 / 5;
+  max-height: min(56vh, 520px);
+  object-fit: contain;
+  background: #1f1a14;
+}
+
+.pinecone-staff-effect-list {
+  margin: 0 0 10px;
+  padding-left: 1.4rem;
+  line-height: 1.65;
 }
 .tutorial-completion-overlay {
   position: fixed;
@@ -1896,6 +1910,13 @@ section h2 {
   z-index: 2090;
 }
 
+#buildingRequestCompleteOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 2090;
+}
+
 #raidWarningModal {
   position: fixed;
   top: 50%;
@@ -1913,7 +1934,8 @@ section h2 {
   z-index: 2101;
 }
 
-#buildingRequestModal {
+#buildingRequestModal,
+#buildingRequestCompleteModal {
   position: fixed;
   top: 50%;
   left: 50%;
@@ -1937,7 +1959,8 @@ section h2 {
   letter-spacing: 0;
 }
 
-#buildingRequestModal h2 {
+#buildingRequestModal h2,
+#buildingRequestCompleteModal h2 {
   margin: 0 0 12px;
   color: #6b4d19;
   font-size: 1.2rem;
@@ -1949,7 +1972,8 @@ section h2 {
   line-height: 1.6;
 }
 
-#buildingRequestModal .building-request-text p {
+#buildingRequestModal .building-request-text p,
+#buildingRequestCompleteModal .building-request-text p {
   margin: 0 0 12px;
   line-height: 1.6;
 }
@@ -1963,7 +1987,8 @@ section h2 {
   line-height: 1.5;
 }
 
-#buildingRequestModal .building-request-detail {
+#buildingRequestModal .building-request-detail,
+#buildingRequestCompleteModal .building-request-detail {
   margin-top: 12px;
   padding-top: 8px;
   border-top: 1px solid #ddd;
@@ -1979,7 +2004,8 @@ section h2 {
   margin-top: 15px;
 }
 
-#buildingRequestModal .modal-buttons {
+#buildingRequestModal .modal-buttons,
+#buildingRequestCompleteModal .modal-buttons {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
@@ -1994,7 +2020,8 @@ section h2 {
   cursor: pointer;
 }
 
-#buildingRequestModal .modal-buttons button {
+#buildingRequestModal .modal-buttons button,
+#buildingRequestCompleteModal .modal-buttons button {
   min-width: 104px;
   padding: 8px 12px;
   border: 1px solid #ccc;
@@ -2006,7 +2033,8 @@ section h2 {
   background-color: #e0e0e0;
 }
 
-#buildingRequestModal .modal-buttons button:hover {
+#buildingRequestModal .modal-buttons button:hover,
+#buildingRequestCompleteModal .modal-buttons button:hover {
   background-color: #e0e0e0;
 }
 
@@ -2831,6 +2859,7 @@ body.mobile-mode #personalHistoryModal,
 body.mobile-mode #conversationModal,
 body.mobile-mode #raidWarningModal,
 body.mobile-mode #buildingRequestModal,
+body.mobile-mode #buildingRequestCompleteModal,
 body.mobile-mode #exchangeModal,
 body.mobile-mode #panFluteExchangeModal,
 body.mobile-mode #raidModal,

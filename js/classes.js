@@ -33,6 +33,9 @@ export class Village {
     this.villageTraits = ["春"];
     this.secretTreasures = [];
     this.buildingRequest = null;
+    this.festivalFlags = {
+      pineconeStaffIntroShown: false
+    };
     this.tutorial = {
       completed: {},
       complete: false
