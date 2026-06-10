@@ -46,6 +46,10 @@ const NUMBERED_PORTRAIT_LIMITS = new Map([
   ["CENTAUR", 9],
   ["MINOTAUR", 4],
   ["NOMAD", 20],
+<<<<<<< HEAD
+=======
+  ["ELITE_NOMAD", 20],
+>>>>>>> 57521f491a994b63cbadc522872d1b46b29d0dfc
   ["KNIGHT", 26],
   ["ELITE_NOMAD", 20],
   ["ELITE", 22],
@@ -85,6 +89,10 @@ const PORTRAIT_GROUP_FOLDERS = new Map([
   ["CENTAUR", "centaur"],
   ["MINOTAUR", "minotaur"],
   ["NOMAD", "nomad"],
+<<<<<<< HEAD
+=======
+  ["ELITE_NOMAD", "elite_nomad"],
+>>>>>>> 57521f491a994b63cbadc522872d1b46b29d0dfc
   ["KNIGHT", "knight"],
   ["ELITE_NOMAD", "elite_nomad"],
   ["ELITE", "elite"],
@@ -134,7 +142,11 @@ function getNumberedPortraitParts(key) {
     };
   }
 
+<<<<<<< HEAD
   const match = key.match(/^(ANGEL_FIGHTER|HOLY_KNIGHT|ELITE_NOMAD|ARCHANGEL|MINOTAUR|CENTAUR|ARACHNID|CYCLOPS|KNIGHT|ALSEID|EQUINA|SATYR|MAENAD|NEREID|DRYAD|SAINT|ELITE|HARPY|ANGEL|NOMAD|BAN|GOB|WOLF|GG|MA|MB|MC|MD|ME|BB|A|C|D)(\d+)\.png$/i);
+=======
+  const match = key.match(/^(ANGEL_FIGHTER|HOLY_KNIGHT|ELITE_NOMAD|ARCHANGEL|MINOTAUR|CENTAUR|ARACHNID|CYCLOPS|KNIGHT|ALSEID|EQUINA|SATYR|MAENAD|NEREID|DRYAD|SAINT|ELITE|NOMAD|HARPY|ANGEL|BAN|GOB|WOLF|GG|MA|MB|MC|MD|ME|BB|A|C|D)(\d+)\.png$/i);
+>>>>>>> 57521f491a994b63cbadc522872d1b46b29d0dfc
   if (!match) return null;
 
   return {
