@@ -213,9 +213,9 @@ export const RAIDER_TYPES = [
     weight: 10,
     minCount: 1,
     maxCount: 1,
-    race: "巨人",
+    race: "キュクロプス",
     forcedSex: "男",
-    ageRange: { min: 30, max: 60 },  // 成熟～老齢の巨人
+    ageRange: { min: 30, max: 60 },  // 成熟～老齢のキュクロプス
     params: {
       job: "キュクロプス",
       action: "襲撃"

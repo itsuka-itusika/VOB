@@ -27,6 +27,11 @@ function normalizeBodyTraitList(traits) {
   return traits.map(normalizeBodyTraitName);
 }
 
+function normalizeRaceName(race) {
+  if (race === "巨人" || race === "サイクロプス") return "キュクロプス";
+  return race || "人間";
+}
+
 function cloneNullableObject(value) {
   return value == null ? null : { ...value };
 }
@@ -46,6 +51,15 @@ function normalizePregnancyState(pregnancy) {
   }
   if (next.fatherSnapshot && Array.isArray(next.fatherSnapshot.bodyTraits)) {
     next.fatherSnapshot.bodyTraits = normalizeBodyTraitList(next.fatherSnapshot.bodyTraits);
+  }
+  if (next.motherSnapshot) {
+    next.motherSnapshot.race = normalizeRaceName(next.motherSnapshot.race);
+  }
+  if (next.fatherSnapshot) {
+    next.fatherSnapshot.race = normalizeRaceName(next.fatherSnapshot.race);
+  }
+  if (next.childRaceFatherSnapshot) {
+    next.childRaceFatherSnapshot.race = normalizeRaceName(next.childRaceFatherSnapshot.race);
   }
   return next;
 }
@@ -236,7 +250,7 @@ function convertVillagerToObject(vill) {
     hp: vill.hp,
     mp: vill.mp,
     happiness: vill.happiness,
-    race: vill.race,
+    race: normalizeRaceName(vill.race),
 
     str: vill.str,
     vit: vill.vit,
@@ -465,7 +479,7 @@ function convertObjectToVillager(obj) {
   vill.portraitFile = normalizePortraitFile(obj.portraitFile);
   
   // 種族情報を復元
-  vill.race = obj.race || "人間";
+  vill.race = normalizeRaceName(obj.race);
   if (obj.rareVisitorType) {
     vill.rareVisitorType = obj.rareVisitorType;
   }

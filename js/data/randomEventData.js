@@ -14,7 +14,7 @@ export const EVENT_POOLS = {
   good: ["cat", "gold", "strangeRain", "fireworks", "hotSpring", "bathPerk", "hobbyFriends", "menFriendship", "lover", "yuri", "tattoo", "fashion", "muscle", "selfPleasure"],
   bad: ["storm", "downpour", "heat", "fire", "thief", "rats", "lightning1", "lightning2", "snow", "fight", "drunk", "epidemic"]
 };
-export const GOLDEN_RAIN_RACES = new Set(["人間", "ハーピー", "半神", "キュクロプス", "サイクロプス", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド"]);
+export const GOLDEN_RAIN_RACES = new Set(["人間", "ハーピー", "半神", "キュクロプス", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド"]);
 
 export const EVENT_SUBJECTS = {
   "狩猟神": "狩女神の祝福",

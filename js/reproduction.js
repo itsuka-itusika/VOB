@@ -15,7 +15,7 @@ import { recordAdulthoodHistory, recordBirthHistory, recordPregnancyHistory } fr
 import { addRelationship, checkHasRelationship, getRelationshipTargetName, normalizeRelationship } from "./relationships.js";
 import { getDialogueLine } from "./dialogue/dialogueEngine.js";
 
-const HUMANOID_RACES = new Set(["人間", "ハーピー", "半神", "キュクロプス", "サイクロプス", "巨人", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド", "エクイナ", "サテュロス", "メナド", "セントール"]);
+const HUMANOID_RACES = new Set(["人間", "ハーピー", "半神", "キュクロプス", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド", "エクイナ", "サテュロス", "メナド", "セントール"]);
 const FEMALE_FIXED_RACES = new Set(["ハーピー", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド", "エクイナ", "メナド"]);
 const LONG_LIVED_RACES = new Set(["ドライアド", "ネレイド", "アルセイド", "翼人"]);
 const RACE_BODY_TRAITS = {
@@ -84,7 +84,7 @@ function removeTraits(list, traits) {
 }
 
 function isHumanoid(person) {
-  return HUMANOID_RACES.has(person?.race || "人間");
+  return HUMANOID_RACES.has(normalizeChildRace(person?.race));
 }
 
 function normalizeChildRace(race) {
