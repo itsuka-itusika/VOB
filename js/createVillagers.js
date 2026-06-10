@@ -682,7 +682,7 @@ export function generateRandomName(sex, options = {}) {
   let nameList = sex === "男" ? maleNames : femaleNames;
   if (options.race === "エクイナ") {
     nameList = steppeFemaleNames;
-  } else if (options.race === "セントール" || options.job === "セントール" || options.job === "遊牧民") {
+  } else if (options.race === "セントール" || options.job === "セントール" || options.job === "遊牧民" || options.job === "騎馬兵団") {
     nameList = steppeMaleNames;
   }
   

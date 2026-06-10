@@ -28,7 +28,7 @@ import {
 
 const DEFAULT_PORTRAIT_PATH = getPortraitAssetPath(DEFAULT_PORTRAIT_KEY);
 const AUTONOMOUS_SETTLEMENT_SCALE = 350;
-const THUNDERBOLT_MIRACLE_DAMAGE = 60;
+const THUNDERBOLT_MIRACLE_DAMAGE = 80;
 let pendingExchangeResultVillage = null;
 /**
  * 奇跡リスト
@@ -44,13 +44,13 @@ export const MIRACLES = [
   {id:"6",  name:"癒しの奇跡(80)", cost:80, desc:"1人の負傷/疫病/疲労等回復,体力+50"},
   {id:"16", name:"酒杯の奇跡(50)", cost:50, desc:"1人の心労/抑鬱回復,メンタル+50,幸福+30,酩酊付与"},
   {id:"7",  name:"戦神の奇跡(80)", cost:80, desc:"1人に火星の加護(3ヶ月,筋力/耐久/勇気+7,魔力/知力/勤勉/倫理*0.2)"},
-  {id:"8",  name:"竈女神の奇跡(60)", cost:60, desc:"恋人を結婚100%(いなければ30返還)"},
+  {id:"8",  name:"竈女神の奇跡(40)", cost:40, desc:"恋人を結婚100%(対象なしなら使用不可)"},
   {id:"9",  name:"常春の奇跡(300)", cost:300,desc:"村特性→春に固定。次の季節まで継続"},
   {id:"10", name:"旅人の奇跡(60)", cost:60, desc:"ランダム来訪者(訪問者付与)"},
   {id:"11", name:"出立の奇跡(50)", cost:50, desc:"1人離脱→幸福度分の魔素獲得"},
   {id:"14", name:"ミダスの奇跡(100)", cost:100, desc:"1ヶ月間、食料を得る代わりに資金を得る"},
-  {id:"15", name:"市場の奇跡(150)", cost:150, desc:"行商人の訪問者を3人生成"},
-  {id:"17", name:"雷霆の奇跡(100)", cost:100, desc:"月1回。襲撃者1体の体力を60減らす。最低1で止まる"}
+  {id:"15", name:"市場の奇跡(100)", cost:100, desc:"行商人の訪問者を3人生成"},
+  {id:"17", name:"雷霆の奇跡(150)", cost:150, desc:"月1回。襲撃者1体の体力を80減らす。最低1で止まる"}
 ];
 
 const MIRACLE_UNLOCK_ORDER = DIVINE_MIGHT_LEVELS.flatMap(entry => entry.miracleIds);
@@ -142,6 +142,7 @@ function getMiracleBlockReason(costInfo, village, miracleId = "") {
   if (unlockReason) reasons.push(unlockReason);
   if (village.mana < costInfo.mana) reasons.push("魔素不足");
   if (village.funds < costInfo.funds) reasons.push("資金不足");
+  if (miracleId === "8" && !hasHearthMiracleTarget(village)) reasons.push("対象村人なし");
   if (miracleId === "17" && hasUsedThunderboltMiracleThisMonth(village)) reasons.push("今月は使用済み");
   return reasons.join(", ");
 }
@@ -176,6 +177,25 @@ function getVillageMonthKey(village) {
 
 function hasUsedThunderboltMiracleThisMonth(village) {
   return village?.lastThunderboltMiracleMonth === getVillageMonthKey(village);
+}
+
+function getHearthMiraclePairs(village) {
+  const pairs = [];
+  const done = new Set();
+  village.villagers.forEach(a => {
+    if (done.has(a) || !checkHasRelationship(a, "恋人") || checkHasRelationship(a, "既婚")) return;
+    const bName = getRelationshipTargetName(a, "恋人");
+    const b = bName ? village.villagers.find(person => person.name === bName) : null;
+    if (!b || done.has(b) || checkHasRelationship(b, "既婚")) return;
+    pairs.push([a, b]);
+    done.add(a);
+    done.add(b);
+  });
+  return pairs;
+}
+
+function hasHearthMiracleTarget(village) {
+  return getHearthMiraclePairs(village).length > 0;
 }
 
 function getMiracleTargetCount(mid) {
@@ -509,6 +529,11 @@ export function performMiracle(village) {
          village.raidEnemies.find(x=>x.name===tb.value);
   }
 
+  if (mid === "8" && !hasHearthMiracleTarget(village)) {
+    village.log("【竈女神の奇跡】対象村人なし");
+    return;
+  }
+
   // 実行
   switch(mid) {
     case "4": // 宴会
@@ -767,42 +792,25 @@ function thunderboltMiracle(target, village) {
 
 /** 竈女神(恋人を結婚100%) */
 function hearthMiracle(v) {
-  let c=v.villagers.filter(x=> checkHasRelationship(x,"恋人") && !checkHasRelationship(x,"既婚"));
-  if (c.length===0) {
-    v.log("【竈女神の奇跡】結婚すべき恋人なし→30魔素返還");
-    refundMiracleMana(v, 30);
+  const pairs = getHearthMiraclePairs(v);
+  if (pairs.length===0) {
+    v.log("【竈女神の奇跡】対象村人なし");
     return;
   }
-  let done=[];
-  c.forEach(a=>{
-    if (!done.includes(a)) {
-      let bName=getRelationshipTargetName(a,"恋人");
-      if (bName) {
-        let b=v.villagers.find(xx=>xx.name===bName);
-        if (b && !done.includes(b) && !checkHasRelationship(a,"既婚") && !checkHasRelationship(b,"既婚")) {
-          removeRelationship(a,`恋人:${b.name}`);
-          removeRelationship(b,`恋人:${a.name}`);
-          addRelationship(a,"既婚");
-          addRelationship(b,"既婚");
-          a.happiness=clampValue(a.happiness+50,0,100);
-          b.happiness=clampValue(b.happiness+50,0,100);
+  pairs.forEach(([a, b]) => {
+    removeRelationship(a,`恋人:${b.name}`);
+    removeRelationship(b,`恋人:${a.name}`);
+    addRelationship(a,"既婚");
+    addRelationship(b,"既婚");
+    a.happiness=clampValue(a.happiness+50,0,100);
+    b.happiness=clampValue(b.happiness+50,0,100);
 
-          addSpouseRelationships(a, b);
-          recordMarriageHistory(v, a, b, { source: "竈女神の奇跡" });
+    addSpouseRelationships(a, b);
+    recordMarriageHistory(v, a, b, { source: "竈女神の奇跡" });
 
-          v.log(`【竈女神の奇跡】${a.name}と${b.name}結婚100%`);
-          done.push(a,b);
-        }
-      }
-    }
+    v.log(`【竈女神の奇跡】${a.name}と${b.name}結婚100%`);
   });
-  if (done.length > 0) {
-    const pairs = [];
-    for (let i = 0; i < done.length; i += 2) {
-      pairs.push([done[i], done[i + 1]]);
-    }
-    showMarriageMiracleModal(v, "竈女神の奇跡", pairs);
-  }
+  showMarriageMiracleModal(v, "竈女神の奇跡", pairs);
 }
 
 /** 旅人の奇跡(1名来訪) */
