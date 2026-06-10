@@ -349,7 +349,7 @@ export const RAIDER_TYPES = [
       action: "襲撃"
     },
     raidPosition: "front",
-    portraits: numberedPortraits("KNIGHT", 26),
+    portraits: numberedPortraits("NOMAD", 20),
     ranges: {
       hp: [75, 95],
       str: [22, 28],
@@ -384,7 +384,7 @@ export const RAIDER_TYPES = [
       action: "襲撃"
     },
     raidPosition: "front",
-    portraits: numberedPortraits("KNIGHT", 26),
+    portraits: numberedPortraits("ELITE_NOMAD", 20),
     ranges: {
       hp: [90, 115],
       str: [26, 34],
