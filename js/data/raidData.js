@@ -519,7 +519,7 @@ export const RAIDER_TYPES = [
       action: "襲撃"
     },
     raidPosition: "front",
-    portraits: numberedPortraits("MINOTAUR", 4),
+    portraits: numberedPortraits("ARMORED", 8),
     ranges: {
       hp: [105, 135],
       str: [26, 34],
