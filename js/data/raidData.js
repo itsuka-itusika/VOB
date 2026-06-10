@@ -1,3 +1,7 @@
+function numberedPortraits(prefix, count) {
+  return Array.from({ length: count }, (_, index) => `${prefix}${index + 1}.png`);
+}
+
 export const RAIDER_TYPES = [
   {
     type: "野盗",
@@ -331,6 +335,455 @@ export const RAIDER_TYPES = [
       "この村の一番きれいなものを、私の巣へ運びなさい！",
       "さあ、群れの力を見せてあげるわ！"
     ]
+  },
+  {
+    type: "遊牧民",
+    weight: 0,
+    minCount: 3,
+    maxCount: 4,
+    race: "人間",
+    forcedSex: "男",
+    ageRange: { min: 18, max: 42 },
+    params: {
+      job: "遊牧民",
+      action: "襲撃"
+    },
+    raidPosition: "front",
+    portraits: numberedPortraits("KNIGHT", 26),
+    ranges: {
+      hp: [75, 95],
+      str: [22, 28],
+      vit: [16, 26],
+      dex: [20, 28],
+      mag: [5, 12],
+      chr: [8, 18],
+      int: [9, 18],
+      ind: [10, 20],
+      eth: [4, 13],
+      cou: [21, 29],
+      sexdr: [10, 22]
+    },
+    dialogues: [
+      "馬を止めるな。食料を奪えば、まだ氏族は冬を越せる。",
+      "弱い村だ。だが油断するな、囲んで崩す。",
+      "恨みはない。腹を満たすものを置いていけ。",
+      "道を空けろ。草原を追われた者にも牙は残っている。"
+    ]
+  },
+  {
+    type: "強遊牧民",
+    displayType: "遊牧民",
+    weight: 0,
+    minCount: 4,
+    maxCount: 5,
+    race: "人間",
+    forcedSex: "男",
+    ageRange: { min: 20, max: 45 },
+    params: {
+      job: "遊牧民",
+      action: "襲撃"
+    },
+    raidPosition: "front",
+    portraits: numberedPortraits("KNIGHT", 26),
+    ranges: {
+      hp: [90, 115],
+      str: [26, 34],
+      vit: [20, 30],
+      dex: [25, 34],
+      mag: [5, 14],
+      chr: [10, 20],
+      int: [12, 22],
+      ind: [14, 24],
+      eth: [3, 12],
+      cou: [27, 36],
+      sexdr: [10, 22]
+    },
+    mindTraits: ["歴戦"],
+    dialogues: [
+      "富も食料も置いていけ。草原の蹄は二度同じ村を踏む。",
+      "射手は左右へ回れ。逃げる者から落とせ。",
+      "貢ぎ物で済ませるなら急げ。こちらの馬は待たぬ。",
+      "この村の蓄えは、我らの次の戦の糧になる。"
+    ]
+  },
+  {
+    type: "セントール",
+    weight: 0,
+    minCount: 1,
+    maxCount: 1,
+    race: "セントール",
+    forcedSex: "男",
+    ageRange: { min: 18, max: 38 },
+    params: {
+      job: "セントール",
+      action: "襲撃"
+    },
+    raidPosition: "front",
+    portraits: numberedPortraits("CENTAUR", 9),
+    ranges: {
+      hp: [95, 125],
+      str: [28, 36],
+      vit: [24, 34],
+      dex: [18, 28],
+      mag: [5, 14],
+      chr: [10, 20],
+      int: [8, 18],
+      ind: [10, 22],
+      eth: [5, 15],
+      cou: [26, 36],
+      sexdr: [10, 22]
+    },
+    forcedBodyTraits: ["半人半馬"],
+    dialogues: [
+      "蹄の音を聞け。逃げ足で我らに勝てると思うな。",
+      "人の柵など、草原の脚には低すぎる。",
+      "食料を差し出せ。馬腹を満たせば血は少なくて済む。"
+    ]
+  },
+  {
+    type: "傭兵",
+    weight: 0,
+    minCount: 2,
+    maxCount: 3,
+    race: "人間",
+    forcedSex: "男",
+    ageRange: { min: 18, max: 42 },
+    params: {
+      job: "傭兵",
+      action: "襲撃"
+    },
+    raidPosition: "front",
+    portraits: numberedPortraits("BAN", 21),
+    ranges: {
+      hp: [60, 80],
+      str: [18, 24],
+      vit: [12, 22],
+      dex: [12, 22],
+      mag: [5, 12],
+      chr: [5, 15],
+      int: [8, 16],
+      ind: [8, 18],
+      eth: [2, 10],
+      cou: [16, 24],
+      sexdr: [10, 22]
+    },
+    dialogues: [
+      "税だろうが略奪だろうが、払われるなら同じ仕事だ。",
+      "騎士様の後ろで楽をしたいが、村が逆らうなら前に出る。",
+      "金の匂いがする。抵抗するなら取り分が増えるだけだ。"
+    ]
+  },
+  {
+    type: "下級騎士",
+    weight: 0,
+    minCount: 2,
+    maxCount: 3,
+    race: "人間",
+    forcedSex: "男",
+    ageRange: { min: 18, max: 40 },
+    params: {
+      job: "下級騎士",
+      action: "襲撃"
+    },
+    raidPosition: "front",
+    portraits: numberedPortraits("KNIGHT", 26),
+    ranges: {
+      hp: [75, 95],
+      str: [21, 29],
+      vit: [18, 28],
+      dex: [12, 22],
+      mag: [5, 13],
+      chr: [10, 20],
+      int: [10, 20],
+      ind: [12, 22],
+      eth: [8, 18],
+      cou: [20, 30],
+      sexdr: [6, 18]
+    },
+    dialogues: [
+      "領主の命である。納めるものを納めよ。",
+      "拒むなら、徴税は討伐に変わる。",
+      "村の蓄えを調べる。門を開けよ。"
+    ]
+  },
+  {
+    type: "重装兵",
+    weight: 0,
+    minCount: 1,
+    maxCount: 2,
+    race: "人間",
+    forcedSex: "男",
+    ageRange: { min: 22, max: 45 },
+    params: {
+      job: "重装兵",
+      action: "襲撃"
+    },
+    raidPosition: "front",
+    portraits: numberedPortraits("MINOTAUR", 4),
+    ranges: {
+      hp: [105, 135],
+      str: [26, 34],
+      vit: [30, 40],
+      dex: [8, 16],
+      mag: [5, 12],
+      chr: [6, 16],
+      int: [8, 18],
+      ind: [16, 26],
+      eth: [6, 18],
+      cou: [24, 34],
+      sexdr: [5, 18]
+    },
+    dialogues: [
+      "盾を上げろ。前へ進む。",
+      "この鎧を抜ける刃があるなら試してみよ。",
+      "道を開けぬなら、押し潰すまでだ。"
+    ]
+  },
+  {
+    type: "上級騎士",
+    weight: 0,
+    minCount: 1,
+    maxCount: 1,
+    race: "人間",
+    forcedSex: "男",
+    ageRange: { min: 25, max: 48 },
+    params: {
+      job: "上級騎士",
+      action: "襲撃"
+    },
+    raidPosition: "front",
+    portraits: numberedPortraits("ELITE", 22),
+    ranges: {
+      hp: [100, 130],
+      str: [28, 36],
+      vit: [24, 34],
+      dex: [18, 28],
+      mag: [7, 16],
+      chr: [18, 28],
+      int: [15, 25],
+      ind: [18, 28],
+      eth: [12, 24],
+      cou: [28, 38],
+      sexdr: [5, 16]
+    },
+    mindTraits: ["歴戦"],
+    dialogues: [
+      "整列せよ。正規の戦で、この村を屈服させる。",
+      "寄進を惜しむ者に、巡礼の道を妨げる資格はない。",
+      "剣を抜かせるな。抜けば慈悲は薄くなる。"
+    ]
+  },
+  {
+    type: "聖騎士",
+    weight: 0,
+    minCount: 1,
+    maxCount: 1,
+    race: "人間",
+    forcedSex: "男",
+    ageRange: { min: 24, max: 45 },
+    params: {
+      job: "聖騎士",
+      action: "襲撃"
+    },
+    raidPosition: "front",
+    portraits: numberedPortraits("HOLY_KNIGHT", 8),
+    ranges: {
+      hp: [115, 145],
+      str: [30, 40],
+      vit: [28, 38],
+      dex: [18, 28],
+      mag: [18, 28],
+      chr: [18, 28],
+      int: [16, 26],
+      ind: [18, 30],
+      eth: [22, 32],
+      cou: [30, 40],
+      sexdr: [3, 12]
+    },
+    mindTraits: ["歴戦"],
+    dialogues: [
+      "異端の村よ。剣の前に悔い改めよ。",
+      "古き神の奇跡は、ここで断つ。",
+      "新しき神の名において、汝らを討つ。"
+    ]
+  },
+  {
+    type: "聖女",
+    weight: 0,
+    minCount: 1,
+    maxCount: 1,
+    race: "人間",
+    forcedSex: "女",
+    ageRange: { min: 18, max: 30 },
+    params: {
+      job: "聖女",
+      action: "襲撃"
+    },
+    raidPosition: "middle",
+    raidTargeting: "frontMiddleRandom",
+    portraits: numberedPortraits("SAINT", 21),
+    ranges: {
+      hp: [80, 105],
+      str: [10, 18],
+      vit: [14, 24],
+      dex: [12, 22],
+      mag: [28, 38],
+      chr: [28, 40],
+      int: [20, 32],
+      ind: [18, 30],
+      eth: [28, 40],
+      cou: [20, 30],
+      sexdr: [3, 10]
+    },
+    forcedBodyTraits: ["聖女の輝き"],
+    mindTraits: ["神聖"],
+    dialogues: [
+      "祈りましょう。拒む者にも、痛みを通じて道は開かれます。",
+      "寄進を惜しむ心こそ、剣より深い罪です。",
+      "不信心を悔いるなら、今ここで膝をつきなさい。"
+    ]
+  },
+  {
+    type: "スフィンクス",
+    weight: 0,
+    minCount: 1,
+    maxCount: 1,
+    race: "スフィンクス",
+    forcedSex: "女",
+    ageRange: { min: 30, max: 120 },
+    params: {
+      job: "スフィンクス",
+      action: "襲撃"
+    },
+    raidPosition: "front",
+    portraits: numberedPortraits("MINOTAUR", 4),
+    ranges: {
+      hp: [160, 200],
+      str: [32, 44],
+      vit: [30, 42],
+      dex: [18, 28],
+      mag: [34, 46],
+      chr: [26, 38],
+      int: [34, 46],
+      ind: [18, 30],
+      eth: [5, 18],
+      cou: [28, 40],
+      sexdr: [5, 16]
+    },
+    forcedBodyTraits: ["人面獣身"],
+    dialogues: [
+      "問いに答えよ。沈黙もまた答えとして扱おう。",
+      "知恵のない村は、砂に埋もれるだけです。",
+      "私の機嫌を損ねるなら、家も畑も同じ塵になります。"
+    ]
+  },
+  {
+    type: "翼人兵",
+    weight: 0,
+    minCount: 3,
+    maxCount: 5,
+    race: "翼人",
+    forcedSex: "女",
+    ageRange: { min: 18, max: 32 },
+    params: {
+      job: "翼人兵",
+      action: "襲撃"
+    },
+    raidPosition: "middle",
+    raidTargeting: "frontMiddleRandom",
+    portraits: numberedPortraits("ANGEL_FIGHTER", 16),
+    ranges: {
+      hp: [85, 110],
+      str: [18, 28],
+      vit: [18, 28],
+      dex: [24, 34],
+      mag: [24, 34],
+      chr: [20, 30],
+      int: [16, 26],
+      ind: [16, 28],
+      eth: [24, 36],
+      cou: [24, 34],
+      sexdr: [3, 10]
+    },
+    forcedBodyTraits: ["飛行", "光輪"],
+    mindTraits: ["神聖"],
+    dialogues: [
+      "古き神に膝を折る村へ、神罰を。",
+      "翼を見上げよ。裁きは空から降る。",
+      "魔に近い者、罪深き者から焼き払う。"
+    ]
+  },
+  {
+    type: "上位翼人",
+    weight: 0,
+    minCount: 1,
+    maxCount: 1,
+    race: "翼人",
+    forcedSex: "女",
+    ageRange: { min: 25, max: 60 },
+    params: {
+      job: "上位翼人",
+      action: "襲撃"
+    },
+    raidPosition: "middle",
+    raidTargeting: "frontMiddleRandom",
+    portraits: numberedPortraits("ARCHANGEL", 13),
+    ranges: {
+      hp: [140, 175],
+      str: [28, 38],
+      vit: [26, 36],
+      dex: [30, 42],
+      mag: [36, 50],
+      chr: [30, 44],
+      int: [28, 40],
+      ind: [24, 36],
+      eth: [32, 45],
+      cou: [32, 44],
+      sexdr: [3, 10]
+    },
+    forcedBodyTraits: ["飛行", "光輪"],
+    mindTraits: ["神聖", "歴戦"],
+    dialogues: [
+      "幾重の翼の下で裁きを受けよ。",
+      "この村は記録された。異端の火は、ここで絶える。",
+      "聖騎士たちよ、地を塞げ。空から私が断つ。"
+    ]
+  },
+  {
+    type: "騎馬兵団兵",
+    displayType: "騎馬兵",
+    weight: 0,
+    minCount: 4,
+    maxCount: 6,
+    race: "人間",
+    forcedSex: "男",
+    ageRange: { min: 20, max: 45 },
+    params: {
+      job: "騎馬兵団",
+      action: "襲撃"
+    },
+    raidPosition: "middle",
+    raidTargeting: "frontMiddleRandom",
+    portraits: numberedPortraits("KNIGHT", 26),
+    ranges: {
+      hp: [105, 135],
+      str: [30, 40],
+      vit: [25, 35],
+      dex: [32, 44],
+      mag: [5, 14],
+      chr: [12, 24],
+      int: [18, 30],
+      ind: [22, 34],
+      eth: [4, 14],
+      cou: [34, 45],
+      sexdr: [8, 20]
+    },
+    mindTraits: ["歴戦"],
+    dialogues: [
+      "第一列、射て。第二列、回り込め。",
+      "一度退いても終わりではない。次の波が来る。",
+      "この村は兵站に使える。焼きすぎるな、奪い尽くせ。"
+    ]
   }
 
 ];
@@ -392,11 +845,15 @@ function createCompositeRaiderRaid({
   name,
   warningName,
   weight,
-  enemyGroups,
+  enemyGroups = [],
+  enemyGroupVariants = null,
   disableScaleWeightBonus = false,
   avoidance = null,
   representative = null,
-  introDialogues = []
+  introDialogues = [],
+  defense = null,
+  successRewards = null,
+  failurePenalty = null
 }) {
   return {
     id,
@@ -407,10 +864,20 @@ function createCompositeRaiderRaid({
     avoidance,
     representative,
     introDialogues,
-    defense: cloneRaidRules(DEFAULT_RAID_DEFENSE),
+    defense: {
+      ...cloneRaidRules(DEFAULT_RAID_DEFENSE),
+      ...(defense || {})
+    },
     enemyGroups,
-    successRewards: cloneRaidRules(DEFAULT_RAID_SUCCESS_REWARDS),
-    failurePenalty: cloneRaidRules(DEFAULT_RAID_FAILURE_PENALTY)
+    enemyGroupVariants,
+    successRewards: {
+      ...cloneRaidRules(DEFAULT_RAID_SUCCESS_REWARDS),
+      ...(successRewards || {})
+    },
+    failurePenalty: {
+      ...cloneRaidRules(DEFAULT_RAID_FAILURE_PENALTY),
+      ...(failurePenalty || {})
+    }
   };
 }
 
@@ -474,6 +941,249 @@ export const RAID_MODULES = [
     enemyGroups: [
       { raiderType: "キュクロプス", minCount: 2, maxCount: 3 }
     ]
+  }),
+  createCompositeRaiderRaid({
+    id: "grassland-people",
+    name: "草原の民の襲撃",
+    warningName: "草原の民",
+    weight: 14,
+    avoidance: {
+      type: "resourcePayment",
+      resource: "food",
+      label: "食料を渡す",
+      rate: 0.3,
+      minAmount: 80
+    },
+    representative: { raiderType: "遊牧民" },
+    enemyGroupVariants: [
+      {
+        weight: 85,
+        enemyGroups: [
+          { raiderType: "遊牧民", minCount: 3, maxCount: 4 }
+        ]
+      },
+      {
+        weight: 15,
+        enemyGroups: [
+          { raiderType: "遊牧民", minCount: 3, maxCount: 4 },
+          { raiderType: "セントール", minCount: 1, maxCount: 1 }
+        ]
+      }
+    ],
+    introDialogues: [
+      "争いに敗れた氏族だ。食料を渡せば、ここで血を流す理由はない。",
+      "弱った氏族でも、馬上の刃は鈍っていない。蓄えを出せ。",
+      "冬を越す食料が要る。拒むなら、村から奪っていく。"
+    ]
+  }),
+  createCompositeRaiderRaid({
+    id: "tax-collector-visit",
+    name: "徴税官の来訪",
+    warningName: "徴税官",
+    weight: 12,
+    avoidance: {
+      type: "resourcePayment",
+      label: "税を納める",
+      resources: [
+        { resource: "food", rate: 0.25, minAmount: 80 },
+        { resource: "funds", rate: 0.3, minAmount: 150 }
+      ]
+    },
+    representative: { raiderType: "下級騎士" },
+    enemyGroups: [
+      { raiderType: "下級騎士", minCount: 2, maxCount: 3 },
+      { raiderType: "傭兵", minCount: 2, maxCount: 3 }
+    ],
+    introDialogues: [
+      "近隣の領主より徴税に来た。食料と資金を納めよ。",
+      "義理がないと言うなら、こちらも徴発に移るだけだ。",
+      "税を拒む村には、領主の暴力が向かう。"
+    ]
+  }),
+  createCompositeRaiderRaid({
+    id: "horse-nomad-raid",
+    name: "騎馬民族の襲撃",
+    warningName: "騎馬民族",
+    weight: 12,
+    avoidance: {
+      type: "resourcePayment",
+      label: "貢納を差し出す",
+      resources: [
+        { resource: "food", rate: 0.45, minAmount: 180 },
+        { resource: "funds", rate: 0.45, minAmount: 300 }
+      ]
+    },
+    representative: { raiderType: "強遊牧民" },
+    enemyGroups: [
+      { raiderType: "強遊牧民", minCount: 3, maxCount: 5 },
+      { raiderType: "セントール", minCount: 1, maxCount: 3 }
+    ],
+    introDialogues: [
+      "食料も富も差し出せ。拒む村は、蹄で踏み荒らす。",
+      "我らは敗残ではない。狙って来た獲物を逃がさぬ。",
+      "重い貢納で済ませるか、戦でさらに失うか。選べ。"
+    ]
+  }),
+  createCompositeRaiderRaid({
+    id: "pilgrimage-knights",
+    name: "巡礼騎士団の来襲",
+    warningName: "巡礼騎士団",
+    weight: 10,
+    avoidance: {
+      type: "resourcePayment",
+      resource: "funds",
+      label: "巡礼の寄付を払う",
+      rate: 0.55,
+      minAmount: 500
+    },
+    representative: [
+      { raiderType: "聖女" },
+      { raiderType: "上級騎士" }
+    ],
+    enemyGroupVariants: [
+      {
+        weight: 80,
+        enemyGroups: [
+          { raiderType: "下級騎士", minCount: 2, maxCount: 3 },
+          { raiderType: "重装兵", minCount: 1, maxCount: 2 },
+          { raiderType: "上級騎士", minCount: 1, maxCount: 1 }
+        ]
+      },
+      {
+        weight: 20,
+        enemyGroups: [
+          { raiderType: "下級騎士", minCount: 1, maxCount: 2 },
+          { raiderType: "重装兵", minCount: 1, maxCount: 2 },
+          { raiderType: "上級騎士", minCount: 1, maxCount: 1 },
+          { raiderType: "聖女", minCount: 1, maxCount: 1 }
+        ]
+      }
+    ],
+    introDialogues: [
+      "聖地への道には寄進が要る。協力すれば剣は収めよう。",
+      "巡礼の名を軽んじるなら、不信心者として扱う。",
+      "志の高い者も、飢えた者もいる。だが装備と隊列は本物だ。"
+    ]
+  }),
+  createCompositeRaiderRaid({
+    id: "sphinx-visit",
+    name: "スフィンクスの来襲",
+    warningName: "スフィンクス",
+    weight: 5,
+    representative: { raiderType: "スフィンクス" },
+    enemyGroups: [
+      { raiderType: "スフィンクス", minCount: 1, maxCount: 1 }
+    ],
+    failurePenalty: {
+      foodRate: 0.35,
+      materialsRate: 0.35,
+      fundsRate: 0.35,
+      security: 18,
+      villagerHpRange: [12, 28],
+      villagerHappiness: 45
+    },
+    introDialogues: [
+      "問いを持って降り立ちました。答えられぬ村には、爪で続きを刻みましょう。",
+      "知恵を示しなさい。機嫌を損ねる答えなら、畑も屋根も残りません。",
+      "私の問答は気まぐれです。けれど、拒絶への報いは確かです。"
+    ]
+  }),
+  createCompositeRaiderRaid({
+    id: "winged-punishment",
+    name: "翼持つ者の襲撃",
+    warningName: "翼持つ者",
+    weight: 12,
+    representative: { raiderType: "翼人兵" },
+    enemyGroups: [
+      { raiderType: "翼人兵", minCount: 3, maxCount: 5 }
+    ],
+    introDialogues: [
+      "白き翼は、異端の村を見逃さない。",
+      "古き神の祭をやめよ。拒むなら神罰を受けよ。",
+      "光輪の下に、村の罪は記された。"
+    ]
+  }),
+  createCompositeRaiderRaid({
+    id: "holy-crusade",
+    name: "聖征騎士団の襲撃",
+    warningName: "聖征騎士団",
+    weight: 8,
+    representative: [
+      { raiderType: "聖騎士" },
+      { raiderType: "聖女" }
+    ],
+    enemyGroups: [
+      { raiderType: "重装兵", minCount: 2, maxCount: 3 },
+      { raiderType: "上級騎士", minCount: 1, maxCount: 2 },
+      { raiderType: "聖騎士", minCount: 1, maxCount: 1 },
+      { raiderType: "聖女", minCount: 1, maxCount: 1 }
+    ],
+    failurePenalty: {
+      foodRate: 0.3,
+      materialsRate: 0.3,
+      fundsRate: 0.3,
+      security: 18,
+      villagerHpRange: [10, 25],
+      villagerHappiness: 40
+    },
+    introDialogues: [
+      "これは巡礼ではない。異端討伐である。",
+      "聖征の旗の下、古き神の村を砕く。",
+      "悔い改める機会は過ぎた。剣で答える。"
+    ]
+  }),
+  createCompositeRaiderRaid({
+    id: "upper-apostle-raid",
+    name: "上級使途の襲撃",
+    warningName: "上級使途",
+    weight: 5,
+    representative: { raiderType: "上位翼人" },
+    enemyGroups: [
+      { raiderType: "上位翼人", minCount: 1, maxCount: 1 },
+      { raiderType: "翼人兵", minCount: 2, maxCount: 3 },
+      { raiderType: "聖騎士", minCount: 1, maxCount: 1 },
+      { raiderType: "聖女", minCount: 1, maxCount: 1 }
+    ],
+    defense: { surviveTurns: 6 },
+    failurePenalty: {
+      foodRate: 0.35,
+      materialsRate: 0.35,
+      fundsRate: 0.35,
+      security: 22,
+      villagerHpRange: [12, 30],
+      villagerHappiness: 50
+    },
+    introDialogues: [
+      "幾重の翼が降りる時、下位の裁きは終わる。",
+      "聖騎士たちよ、地を囲め。空は私が支配する。",
+      "新しき神の最高戦力の一端を、異端の村に示す。"
+    ]
+  }),
+  createCompositeRaiderRaid({
+    id: "cavalry-corps",
+    name: "騎馬兵団の襲撃",
+    warningName: "騎馬兵団",
+    weight: 6,
+    representative: { raiderType: "騎馬兵団兵" },
+    enemyGroups: [
+      { raiderType: "騎馬兵団兵", minCount: 4, maxCount: 6 },
+      { raiderType: "強遊牧民", minCount: 2, maxCount: 3 },
+      { raiderType: "セントール", minCount: 1, maxCount: 2 }
+    ],
+    defense: { surviveTurns: 7 },
+    failurePenalty: {
+      foodRate: 0.45,
+      materialsRate: 0.35,
+      fundsRate: 0.45,
+      security: 25,
+      villagerHpRange: [15, 35],
+      villagerHappiness: 55
+    },
+    introDialogues: [
+      "偵察は終わった。ここからは兵団の戦だ。",
+      "一波を退けても次が来る。兵站の整った軍を侮るな。",
+      "高い士気と馬上の弓で、この村を包囲する。"
+    ]
   })
 ];
 
@@ -499,7 +1209,9 @@ export const RAID_SCALE_TABLES = [
       { raidId: "goblin", weight: 22 },
       { raidId: "harpy", weight: 14 },
       { raidId: "cyclops", weight: 8 },
-      { raidId: "mercenary-band", weight: 16 }
+      { raidId: "mercenary-band", weight: 16 },
+      { raidId: "grassland-people", weight: 12 },
+      { raidId: "tax-collector-visit", weight: 10 }
     ]
   },
   {
@@ -511,7 +1223,13 @@ export const RAID_SCALE_TABLES = [
       { raidId: "cyclops", weight: 10 },
       { raidId: "harpy-swarm", weight: 14 },
       { raidId: "starving-wolves", weight: 18 },
-      { raidId: "goblin", weight: 8 }
+      { raidId: "goblin", weight: 8 },
+      { raidId: "grassland-people", weight: 10 },
+      { raidId: "tax-collector-visit", weight: 10 },
+      { raidId: "pilgrimage-knights", weight: 8 },
+      { raidId: "sphinx-visit", weight: 4 },
+      { raidId: "winged-punishment", weight: 8, minHeresy: 100 },
+      { raidId: "holy-crusade", weight: 5, minHeresy: 100 }
     ]
   },
   {
@@ -524,7 +1242,14 @@ export const RAID_SCALE_TABLES = [
       { raidId: "cyclops", weight: 10 },
       { raidId: "cyclops-band", weight: 6 },
       { raidId: "harpy", weight: 6 },
-      { raidId: "goblin", weight: 6 }
+      { raidId: "goblin", weight: 6 },
+      { raidId: "horse-nomad-raid", weight: 12 },
+      { raidId: "pilgrimage-knights", weight: 10 },
+      { raidId: "sphinx-visit", weight: 5 },
+      { raidId: "winged-punishment", weight: 10, minHeresy: 100 },
+      { raidId: "holy-crusade", weight: 8, minHeresy: 100 },
+      { raidId: "upper-apostle-raid", weight: 5, minHeresy: 100, minScaleStageIndex: 6 },
+      { raidId: "cavalry-corps", weight: 6, minDivineMight: 300 }
     ]
   }
 ];

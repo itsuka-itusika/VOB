@@ -24,8 +24,12 @@ const AVOIDANCE_RESOURCE_LABELS = {
   tech: "技術"
 };
 
+function getVillageScaleStageIndex(village) {
+  return getVillageScaleStage(village.building).index;
+}
+
 function getRaidTableForVillage(village) {
-  const stageIndex = getVillageScaleStage(village.building).index;
+  const stageIndex = getVillageScaleStageIndex(village);
   return RAID_SCALE_TABLES.find(table => {
     if (Array.isArray(table.scaleStageIndexes)) {
       return table.scaleStageIndexes.includes(stageIndex);
@@ -36,14 +40,67 @@ function getRaidTableForVillage(village) {
   }) || RAID_SCALE_TABLES[0];
 }
 
+function getVariantEnemyGroups(variant) {
+  if (Array.isArray(variant?.enemyGroups)) return variant.enemyGroups;
+  if (Array.isArray(variant?.groups)) return variant.groups;
+  return [];
+}
+
+function getAllRaidEnemyGroups(raidDefinition) {
+  const groups = Array.isArray(raidDefinition?.enemyGroups)
+    ? [...raidDefinition.enemyGroups]
+    : [];
+  if (Array.isArray(raidDefinition?.enemyGroupVariants)) {
+    raidDefinition.enemyGroupVariants.forEach(variant => {
+      groups.push(...getVariantEnemyGroups(variant));
+    });
+  }
+  return groups;
+}
+
+function selectRaidEnemyGroups(raidDefinition) {
+  const variants = Array.isArray(raidDefinition?.enemyGroupVariants)
+    ? raidDefinition.enemyGroupVariants.filter(variant => getVariantEnemyGroups(variant).length > 0)
+    : [];
+  if (variants.length === 0) {
+    return Array.isArray(raidDefinition?.enemyGroups) ? raidDefinition.enemyGroups : [];
+  }
+
+  const totalWeight = variants.reduce((sum, variant) => {
+    return sum + Math.max(0, Number(variant.weight) || 0);
+  }, 0);
+  if (totalWeight <= 0) return getVariantEnemyGroups(variants[0]);
+
+  let random = Math.random() * totalWeight;
+  for (const variant of variants) {
+    random -= Math.max(0, Number(variant.weight) || 0);
+    if (random <= 0) return getVariantEnemyGroups(variant);
+  }
+  return getVariantEnemyGroups(variants[0]);
+}
+
 function raidIncludesRaiderType(raidDefinition, raiderTypeName) {
-  return Array.isArray(raidDefinition.enemyGroups) &&
-    raidDefinition.enemyGroups.some(group => group.raiderType === raiderTypeName);
+  return getAllRaidEnemyGroups(raidDefinition).some(group => group.raiderType === raiderTypeName);
 }
 
 function hasValidEnemyGroup(raidDefinition) {
-  return Array.isArray(raidDefinition.enemyGroups) &&
-    raidDefinition.enemyGroups.some(group => getRaiderTypeByType(group.raiderType));
+  return getAllRaidEnemyGroups(raidDefinition).some(group => getRaiderTypeByType(group.raiderType));
+}
+
+function matchesRaidEntryConditions(village, entry, stageIndex) {
+  const minScaleStageIndex = Number(entry.minScaleStageIndex);
+  if (Number.isFinite(minScaleStageIndex) && stageIndex < minScaleStageIndex) return false;
+
+  const maxScaleStageIndex = Number(entry.maxScaleStageIndex);
+  if (Number.isFinite(maxScaleStageIndex) && stageIndex > maxScaleStageIndex) return false;
+
+  const minHeresy = Number(entry.minHeresy);
+  if (Number.isFinite(minHeresy) && (Number(village.heresy) || 0) < minHeresy) return false;
+
+  const minDivineMight = Number(entry.minDivineMight);
+  if (Number.isFinite(minDivineMight) && (Number(village.divineMight) || 0) < minDivineMight) return false;
+
+  return true;
 }
 
 function getAdjustedRaidWeight(village, tableEntry, raidDefinition) {
@@ -70,7 +127,9 @@ function getAdjustedRaidWeight(village, tableEntry, raidDefinition) {
 
 function selectRaidDefinition(village) {
   const raidTable = getRaidTableForVillage(village);
+  const stageIndex = getVillageScaleStageIndex(village);
   const candidates = raidTable.entries
+    .filter(entry => matchesRaidEntryConditions(village, entry, stageIndex))
     .map(entry => {
       const raidDefinition = getRaidModuleById(entry.raidId);
       if (!raidDefinition || !hasValidEnemyGroup(raidDefinition)) return null;
@@ -104,7 +163,7 @@ function createRaidState(raidDefinition) {
 }
 
 function createPendingRaidEnemyGroups(raidDefinition) {
-  return raidDefinition.enemyGroups.map(group => {
+  return selectRaidEnemyGroups(raidDefinition).map(group => {
     const raiderType = getRaiderTypeByType(group.raiderType);
     if (!raiderType) return null;
 
@@ -146,7 +205,7 @@ function getResolvedEnemyGroups(raidDefinition, pendingRaid = null) {
       .filter(Boolean);
   }
 
-  return raidDefinition.enemyGroups
+  return selectRaidEnemyGroups(raidDefinition)
     .map(group => {
       const raiderType = getRaiderTypeByType(group.raiderType);
       if (!raiderType) return null;
@@ -246,42 +305,69 @@ function createRaidEnemy(village, raiderType, existingNames) {
   e.raidTargeting = raiderType.raidTargeting || "frontFirst";
   e.name = `${displayType}の${e.name}`;
 
-  // ニート特性は不要なので削除
-  if (e.mindTraits.includes("ニート")) {
-    e.mindTraits = e.mindTraits.filter(trait => trait !== "ニート");
-  }
+  // 襲撃者として矛盾するランダム精神特性は外す。
+  e.mindTraits = e.mindTraits.filter(trait => trait !== "ニート" && trait !== "非戦主義");
 
   syncEffectiveStats(e);
   return e;
 }
 
-function calculateAvoidanceAmount(village, avoidance) {
-  const resource = avoidance?.resource;
+function getAvoidanceResourceRequests(avoidance) {
+  if (Array.isArray(avoidance?.resources)) {
+    return avoidance.resources.filter(request => request?.resource);
+  }
+  return avoidance?.resource ? [avoidance] : [];
+}
+
+function calculateAvoidanceAmount(village, request) {
+  const resource = request?.resource;
   if (!resource) return 0;
 
   const currentAmount = Number(village[resource]) || 0;
-  const rateAmount = Math.ceil(currentAmount * (Number(avoidance.rate) || 0));
-  const minAmount = Math.floor(Number(avoidance.minAmount) || 0);
+  const rateAmount = Math.ceil(currentAmount * (Number(request.rate) || 0));
+  const minAmount = Math.floor(Number(request.minAmount) || 0);
   return Math.max(minAmount, rateAmount);
 }
 
 function createAvoidanceOption(village, avoidance) {
-  if (!avoidance || avoidance.type !== "resourcePayment" || !avoidance.resource) return null;
+  if (!avoidance || avoidance.type !== "resourcePayment") return null;
 
-  const resource = avoidance.resource;
-  const resourceLabel = AVOIDANCE_RESOURCE_LABELS[resource] || resource;
-  const currentAmount = Math.floor(Number(village[resource]) || 0);
-  const amount = calculateAvoidanceAmount(village, avoidance);
-  const disabled = currentAmount < amount;
+  const payments = getAvoidanceResourceRequests(avoidance).map(request => {
+    const resource = request.resource;
+    const resourceLabel = request.resourceLabel || AVOIDANCE_RESOURCE_LABELS[resource] || resource;
+    const currentAmount = Math.floor(Number(village[resource]) || 0);
+    const amount = calculateAvoidanceAmount(village, request);
+    return {
+      amount,
+      currentAmount,
+      resource,
+      resourceLabel
+    };
+  });
+  if (payments.length === 0) return null;
+
+  const disabledPayments = payments.filter(payment => payment.currentAmount < payment.amount);
+  const disabled = disabledPayments.length > 0;
+  const paymentText = payments
+    .map(payment => `${payment.resourceLabel}${payment.amount}`)
+    .join(" / ");
+  const currentText = payments
+    .map(payment => `${payment.resourceLabel}${payment.currentAmount}`)
+    .join(" / ");
+  const disabledText = disabledPayments
+    .map(payment => payment.resourceLabel)
+    .join("、");
+  const firstPayment = payments[0];
 
   return {
-    label: avoidance.label || `${resourceLabel}を払う`,
-    detail: `要求額: ${resourceLabel}${amount}（所持 ${currentAmount}）`,
+    label: avoidance.label || `${paymentText}を払う`,
+    detail: `要求: ${paymentText}（所持 ${currentText}）`,
     disabled,
-    disabledReason: disabled ? `${resourceLabel}が不足しています` : "",
-    amount,
-    resource,
-    resourceLabel
+    disabledReason: disabled ? `${disabledText}が不足しています` : "",
+    amount: firstPayment.amount,
+    resource: firstPayment.resource,
+    resourceLabel: firstPayment.resourceLabel,
+    resourcePayments: payments
   };
 }
 
@@ -360,6 +446,15 @@ function resetRaidUiAfterAvoidance() {
   }
 }
 
+function formatAvoidancePaidResources(option) {
+  const payments = Array.isArray(option?.resourcePayments) && option.resourcePayments.length > 0
+    ? option.resourcePayments
+    : [{ resourceLabel: option?.resourceLabel || "", amount: option?.amount || 0 }];
+  return payments
+    .map(payment => `${payment.resourceLabel}${payment.amount}`)
+    .join(" / ");
+}
+
 function endRaidByAvoidance(village, raidDefinition, option) {
   village.isRaidProcessDone = true;
   village.isRaidFinalizing = false;
@@ -380,7 +475,7 @@ function endRaidByAvoidance(village, raidDefinition, option) {
   if (option.type === "messengerPass") {
     village.log(`【秘宝】伝令神の手形を使い、${raidDefinition.name}の襲撃をなかったことにしました。`);
   } else {
-    village.log(`${raidDefinition.name}: ${option.resourceLabel}${option.amount}を支払い、襲撃者は去っていった。`);
+    village.log(`${raidDefinition.name}: ${formatAvoidancePaidResources(option)}を支払い、襲撃者は去っていった。`);
   }
 
   clearRaidWarningModal();
@@ -398,8 +493,13 @@ function executeRaidAvoidance(village, raidDefinition, option = null) {
   if (option.type === "messengerPass") {
     if (!consumeMessengerPass(village)) return false;
   } else {
-    const currentAmount = Number(village[option.resource]) || 0;
-    village[option.resource] = Math.max(0, currentAmount - option.amount);
+    const payments = Array.isArray(option.resourcePayments) && option.resourcePayments.length > 0
+      ? option.resourcePayments
+      : [option];
+    payments.forEach(payment => {
+      const currentAmount = Number(village[payment.resource]) || 0;
+      village[payment.resource] = Math.max(0, currentAmount - payment.amount);
+    });
   }
   endRaidByAvoidance(village, raidDefinition, option);
   return true;
