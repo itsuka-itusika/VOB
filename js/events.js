@@ -5,7 +5,7 @@ import { doLoverCheck, doMarriageCheck, clearRelationshipsForDepartedVillager } 
 import { createRandomVillager, createRandomVisitor } from "./createVillagers.js";
 import { processRaidScheduleAtMonthStart } from "./raidSchedule.js";
 import { RandomEvents } from "./RandomEvents.js";
-import { recordCriticalHistory, recordVillagerDeathHistory } from "./history.js";
+import { recordCriticalHistory, recordVillagerDeathHistory, recordVillagerLeaveHistory } from "./history.js";
 import { handleBirthAndPostpartum, handlePregnancyChecks, updateChildGrowthStage } from "./reproduction.js";
 import { runAfterFestivalModals, showFestivalModal, showPineconeStaffIntroModal } from "./festivalModal.js";
 import { runHeadmanElectionIfDue } from "./headmanElection.js";
@@ -24,6 +24,13 @@ import {
 } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
+import {
+  addDisappointmentState,
+  clearDisappointmentIfHappinessRecovered,
+  hasDespairState,
+  hasHopeLossState,
+  promoteDisappointmentToDespair
+} from "./domain/despair.js";
 import { getVisitorArrivalLine } from "./data/dialogue/visitorLines.js";
 import { addDivineMight, getDivineMightGainFromMonthlyMana } from "./divineMight.js";
 import { BUILDINGS } from "./buildings.js";
@@ -210,6 +217,7 @@ export function runMonthStartPhase(village) {
     ? updateSeason(village, { showDialog: false, logChange: false })
     : "";
   doMonthStartProcess(village);
+  if (village.gameOver) return;
   if (monthStartSeason) {
     showSeasonChangeDialog(monthStartSeason);
     village.log(`${monthStartSeason}が訪れた`);
@@ -295,11 +303,75 @@ function hasFountain(village) {
 
 function applyFountainMonthlyHappiness(village) {
   if (!hasFountain(village)) return;
+  let affectedCount = 0;
+  let blockedCount = 0;
   village.villagers.forEach(person => {
+    if (hasHopeLossState(person)) {
+      blockedCount++;
+      return;
+    }
     const gain = randInt(1, 2);
     person.happiness = clampValue(person.happiness + gain, 0, 100);
+    affectedCount++;
   });
-  village.log("噴水:全員幸福度+1〜2");
+  if (affectedCount === 0 && blockedCount > 0) {
+    village.log(`噴水:失望・絶望${blockedCount}人は効果なし`);
+    return;
+  }
+  const blockedText = blockedCount > 0 ? `、失望・絶望${blockedCount}人は効果なし` : "";
+  village.log(`噴水:対象者幸福度+1〜2${blockedText}`);
+}
+
+function leaveVillageByDespair(village, person) {
+  recordVillagerLeaveHistory(village, person, { source: "絶望" });
+  village.log(`${person.name}は絶望のまま村を去りました`);
+  const index = village.villagers.indexOf(person);
+  if (index >= 0) {
+    clearRelationshipsForDepartedVillager(village, person);
+    village.villagers.splice(index, 1);
+  }
+}
+
+function processHopeLossAtMonthStart(village) {
+  const leavingPeople = [];
+
+  village.villagers.forEach(person => {
+    person.mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
+
+    if (hasDespairState(person)) {
+      leavingPeople.push(person);
+      return;
+    }
+
+    const recovered = clearDisappointmentIfHappinessRecovered(person);
+    if (recovered.length > 0) {
+      syncEffectiveStats(person);
+      refreshJobTable(person, village);
+      village.log(`${person.name}の失望が和らいだ`);
+      return;
+    }
+
+    if ((Number(person.happiness) || 0) > 0) return;
+
+    if (promoteDisappointmentToDespair(person)) {
+      syncEffectiveStats(person);
+      refreshJobTable(person, village);
+      village.log(`${person.name}は絶望した`);
+      return;
+    }
+
+    if (addDisappointmentState(person)) {
+      syncEffectiveStats(person);
+      refreshJobTable(person, village);
+      village.log(`${person.name}は失望した`);
+    }
+  });
+
+  leavingPeople.forEach(person => leaveVillageByDespair(village, person));
+  if (village.villagers.length === 0) {
+    village.log("村人ゼロ→バッカスは眠りに...(GameOver)");
+    village.gameOver = true;
+  }
 }
 
 // -------------------------
@@ -593,6 +665,8 @@ export function doMonthStartProcess(v) {
 
   applyPublicBathMonthlyRecovery(v);
   applyWatermillMonthlyFood(v);
+  processHopeLossAtMonthStart(v);
+  if (v.gameOver) return;
   applyFountainMonthlyHappiness(v);
 
   // 幸福度調整

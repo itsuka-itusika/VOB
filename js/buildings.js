@@ -183,8 +183,8 @@ export const BUILDINGS = [
     materials: 20,
     funds: 30,
     tech: 0,
-    desc: "公共施設。毎月、村人全員の幸福度+1〜2。規模+10",
-    effect: standardBuildingEffect({ scale: 10, flag: "hasFountain", log: "噴水建設完了: 毎月、村人全員の幸福度+1〜2、規模+10" })
+    desc: "公共施設。毎月、失望・絶望でない村人全員の幸福度+1〜2。規模+10",
+    effect: standardBuildingEffect({ scale: 10, flag: "hasFountain", log: "噴水建設完了: 毎月、失望・絶望でない村人全員の幸福度+1〜2、規模+10" })
   },
   {
     id: "huntingLodge",

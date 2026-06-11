@@ -10,6 +10,7 @@ import { updateUI } from "./ui.js";
 import { addAcquiredStat, syncEffectiveStats } from "./domain/statLayers.js";
 import { MESSENGER_PASS_SECRET_TREASURE_ID } from "./data/tutorialData.js";
 import { getCaptives } from "./captives.js";
+import { DESPAIR_TRAIT, DISAPPOINTMENT_TRAIT } from "./domain/despair.js";
 
 const SEASON_TRAITS_TO_REMOVE = ["夏", "秋", "冬", "冷夏", "飛蝗", "厳冬", "疫病流行"];
 const BAD_BODY_TRAITS = ["負傷", "疲労", "過労", "飢餓", "凍え", "病気", "疫病", "産褥", "危篤"];
@@ -349,11 +350,13 @@ export const SECRET_TREASURES = [
   {
     id: "serpent_staff",
     name: "蛇の巻き付いた杖",
-    desc: "指定した村人1名の負傷・産褥・疫病・危篤などの状態異常を解除し、体力・メンタルが33以下なら34まで回復する。",
+    desc: "指定した村人1名の負傷・産褥・疫病・危篤・失望・絶望などの状態異常を解除し、体力・メンタルが33以下なら34まで回復する。",
     sellPrice: SECRET_TREASURE_SELL_PRICES.serpent_staff,
     target: "villager",
     use: (village, target) => {
-      const recovered = restoreBadStatus(target, village);
+      const recovered = restoreBadStatus(target, village, {
+        includeMindTraits: ["心労", "抑鬱", DISAPPOINTMENT_TRAIT, DESPAIR_TRAIT]
+      });
       const vitalRecovered = restoreLowVitals(target);
       if (vitalRecovered.length) refreshJobTable(target, village);
       const details = [

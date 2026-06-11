@@ -10,6 +10,7 @@ import { handleAllVillagerJobs } from "./jobs.js";
 import { recordGameStartHistory } from "./history.js";
 import { isUnassignedActionVillager } from "./domain/rules.js";
 import { getRaidReadiness } from "./raidRules.js";
+import { hasDespairState } from "./domain/despair.js";
 
 // Villageインスタンスを生成
 export const theVillage = new Village();
@@ -74,6 +75,19 @@ function isTurnBlockingModalOpen() {
   });
 }
 
+function formatPersonNamesForConfirm(people) {
+  const visibleNames = people.slice(0, 5).map(person => person.name).join("、");
+  return people.length > 5 ? `${visibleNames} ほか${people.length - 5}人` : visibleNames;
+}
+
+function confirmDespairingVillagersBeforeTurn(village) {
+  const despairingVillagers = village.villagers.filter(hasDespairState);
+  if (despairingVillagers.length === 0 || typeof window === "undefined") return true;
+
+  const names = formatPersonNamesForConfirm(despairingVillagers);
+  return window.confirm(`絶望している村人がいます。\n${names}\n解除しないまま次の月を迎えると村を去ります。\nこのまま月を進めますか？`);
+}
+
 /**
  * 「次の月へ」ボタン
  */
@@ -103,6 +117,8 @@ export function onNextTurn() {
     });
     return;
   }
+
+  if (!confirmDespairingVillagersBeforeTurn(theVillage)) return;
 
   applyTurnStartRestrictions(theVillage);
 

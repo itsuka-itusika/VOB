@@ -48,6 +48,7 @@ import { getTutorialWarnings } from "./tutorial.js";
 import { applyVillageScaleArtClass, getVillageScaleTitle } from "./villageScale.js";
 import { getDivineMightStatus } from "./divineMight.js";
 import { getBuildingRequestWarnings } from "./buildingRequests.js";
+import { hasDespairState, hasDisappointmentState } from "./domain/despair.js";
 
 
 function openConversationFor(person) {
@@ -147,6 +148,11 @@ function getWinterMonthsToPrepare(month) {
   return 3;
 }
 
+function formatWarningNames(people) {
+  const names = people.slice(0, 4).map(person => person.name).join("、");
+  return people.length > 4 ? `${names}ほか${people.length - 4}人` : names;
+}
+
 function buildWarningMessages(village) {
   const warnings = [];
   const villagers = Array.isArray(village.villagers) ? village.villagers : [];
@@ -159,6 +165,10 @@ function buildWarningMessages(village) {
   const winterNeed = peopleForConsumption.reduce((sum, person) => sum + getVillagerWinterMaterialConsumption(person), 0) * getWinterMonthsToPrepare(village.month);
   const lowHpCount = villagers.filter(person => Number(person.hp) <= 33).length;
   const lowMpCount = villagers.filter(person => Number(person.mp) <= 33).length;
+  const despairingVillagers = villagers.filter(hasDespairState);
+  const disappointedVillagers = villagers.filter(person =>
+    hasDisappointmentState(person) && !hasDespairState(person) && (Number(person.happiness) || 0) <= 0
+  );
   const noActionCount = villagers.filter(isUnassignedActionVillager).length;
   const assemblyHallBuilt = !!(
     village.buildingFlags?.hasAssemblyHall ||
@@ -226,6 +236,20 @@ function buildWarningMessages(village) {
     warnings.push({
       level: lowHpCount + lowMpCount >= Math.max(2, Math.ceil(villagers.length / 3)) ? "danger" : "warning",
       text: `消耗している村人がいます。体力低下${lowHpCount}人、メンタル低下${lowMpCount}人。`
+    });
+  }
+
+  if (despairingVillagers.length > 0) {
+    warnings.push({
+      level: "danger",
+      text: `${formatWarningNames(despairingVillagers)}が絶望しています。酒杯・宴会・狂宴・蛇の巻き付いた杖で解除しないまま次の月を迎えると村を去ります。`
+    });
+  }
+
+  if (disappointedVillagers.length > 0) {
+    warnings.push({
+      level: "warning",
+      text: `${formatWarningNames(disappointedVillagers)}が失望しています。幸福度を回復しないまま次の月を迎えると絶望します。`
     });
   }
 

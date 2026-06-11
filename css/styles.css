@@ -1027,6 +1027,10 @@ table.show-spirit-columns .spirit-column {
   min-height: 34px;
   padding: 5px 12px;
 }
+.raid-buttons .raid-retreat-button {
+  border-color: #b35c5c;
+  color: #8d2525;
+}
 
 /* 追加: ヘッダー内の h1 のフォントサイズを指定 */
 header h1 {

@@ -12,7 +12,7 @@ import {
   openMiracleModal,
   performMiracle
 } from "./miracles.js";
-import { proceedRaidAction } from "./raid.js";
+import { proceedRaidAction, retreatRaid } from "./raid.js";
 import { startRaidEvent } from "./raidStart.js";
 import {
   loadVillageFromJsonFile,
@@ -268,6 +268,7 @@ function bindGlobalHandlers() {
     onSelectMiracleChange: () => onSelectMiracleChange(theVillage),
     performMiracle: () => performMiracle(theVillage),
     proceedRaidAction: () => proceedRaidAction(theVillage),
+    retreatRaid: () => retreatRaid(theVillage),
     onSaveAsJsonFile: () => saveVillageToJsonFile(theVillage),
     onSaveToLocalStorage: () => saveVillageToLocalStorage(theVillage),
     onLoadFromJsonFile: openJsonLoadDialog,

@@ -10,6 +10,7 @@ import { addStoredResource } from "./domain/resourceLimits.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
 import { recordMarriageHistory, recordVillagerLeaveHistory } from "./history.js";
 import { DEFAULT_PORTRAIT_KEY, getPortraitAssetPath } from "./data/portraitPaths.js";
+import { clearHopeLossTraits, DESPAIR_TRAIT, DISAPPOINTMENT_TRAIT } from "./domain/despair.js";
 import { resolveDialogueTone } from "./data/dialogue/toneProfiles.js";
 import { BODY_EXCHANGE_SOURCE_RACE_LINE_KEYS, BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
 import { getVisitorArrivalLine } from "./data/dialogue/visitorLines.js";
@@ -39,10 +40,10 @@ export const MIRACLES = [
   {id:"1",  name:"豊穣の奇跡(100)", cost:100, desc:"今月のみ、農作業・伐採・狩猟・漁・採集の成果と醸造の食料獲得2倍"},
   {id:"2",  name:"マナの奇跡(40)",  cost:40,  desc:"食料+80"},
   {id:"3",  name:"クピドの奇跡(80)", cost:80, desc:"2人を強制結婚(条件無視)"},
-  {id:"4",  name:"宴会の奇跡(人数×15)", cost:-1, desc:"全員体力/メンタル+20,幸福+20 (資金×人数分も要)"},
-  {id:"5",  name:"狂宴の奇跡(人数×30)", cost:-2, desc:"全員体力/メンタル+60,幸福+50,倫理↓,好色+15"},
+  {id:"4",  name:"宴会の奇跡(人数×15)", cost:-1, desc:"全員体力/メンタル+20,幸福+20,失望/絶望解除 (資金×人数分も要)"},
+  {id:"5",  name:"狂宴の奇跡(人数×30)", cost:-2, desc:"全員体力/メンタル+60,幸福+50,失望/絶望解除,倫理↓,好色+15"},
   {id:"6",  name:"癒しの奇跡(80)", cost:80, desc:"1人の負傷/疫病/疲労等回復,体力+50"},
-  {id:"16", name:"酒杯の奇跡(50)", cost:50, desc:"1人の心労/抑鬱回復,メンタル+50,幸福+30,酩酊付与"},
+  {id:"16", name:"酒杯の奇跡(50)", cost:50, desc:"1人の心労/抑鬱/失望/絶望回復,メンタル+50,幸福+30,酩酊付与"},
   {id:"7",  name:"戦神の奇跡(80)", cost:80, desc:"1人に火星の加護(3ヶ月,筋力/耐久/勇気+7,魔力/知力/勤勉/倫理*0.2)"},
   {id:"8",  name:"竈女神の奇跡(40)", cost:40, desc:"恋人を結婚100%(対象なしなら使用不可)"},
   {id:"9",  name:"常春の奇跡(300)", cost:300,desc:"村特性→春に固定。次の季節まで継続"},
@@ -169,6 +170,15 @@ function refundMiracleMana(village, cost) {
     99999
   );
   subtractDivineMight(village, getDivineMightGainFromMiracleCost(cost));
+}
+
+function clearHopeLossByMiracle(person, village) {
+  const recovered = clearHopeLossTraits(person);
+  if (recovered.length > 0) {
+    syncEffectiveStats(person);
+    refreshJobTable(person, village);
+  }
+  return recovered;
 }
 
 function getVillageMonthKey(village) {
@@ -539,29 +549,33 @@ export function performMiracle(village) {
     case "4": // 宴会
       spendMiracleMana(village, cost);
       village.funds-=cost;
+      let feastRecoveredCount = 0;
       village.villagers.forEach(p=>{
         p.hp=clampValue(p.hp+20,0,100);
         p.mp=clampValue(p.mp+20,0,100);
         p.happiness=clampValue(p.happiness+20,0,100);
+        if (clearHopeLossByMiracle(p, village).length > 0) feastRecoveredCount++;
       });
-      village.log(`【宴会】全員体力/メンタル+20,幸福+20(費用:${cost})`);
+      village.log(`【宴会】全員体力/メンタル+20,幸福+20(費用:${cost})${feastRecoveredCount > 0 ? `,失望・絶望${feastRecoveredCount}人解除` : ""}`);
       showMiracleResultModal(village, "宴会の奇跡", "村中に賑やかな宴が開かれました。", village.villagers);
       break;
 
     case "5": // 狂宴
       spendMiracleMana(village, cost);
       village.funds-=cost;
+      let revelRecoveredCount = 0;
       village.villagers.forEach(p=>{
         p.hp=clampValue(p.hp+60,0,100);
         p.mp=clampValue(p.mp+60,0,100);
         p.happiness=clampValue(p.happiness+50,0,100);
+        if (clearHopeLossByMiracle(p, village).length > 0) revelRecoveredCount++;
         // 狂乱特性を付与（まだ持っていない場合のみ）
         if (!p.mindTraits.includes("狂乱")) {
           p.mindTraits.push("狂乱");
           syncEffectiveStats(p);
         }
       });
-      village.log(`【狂宴】全員体力/メンタル+60,幸福+50,狂乱付与(倫理*0.2,好色+15)`);
+      village.log(`【狂宴】全員体力/メンタル+60,幸福+50,狂乱付与(倫理*0.2,好色+15)${revelRecoveredCount > 0 ? `,失望・絶望${revelRecoveredCount}人解除` : ""}`);
       showMiracleResultModal(village, "狂宴の奇跡", "理性を揺らす熱気が村を満たしました。", village.villagers);
       break;
 
@@ -745,7 +759,7 @@ function healMiracle(p,v) {
 function gobletMiracle(p,v) {
   const recoveredTraits = [];
 
-  ["心労","抑鬱"].forEach(trait => {
+  ["心労","抑鬱", DISAPPOINTMENT_TRAIT, DESPAIR_TRAIT].forEach(trait => {
     if (p.mindTraits.includes(trait)) {
       recoveredTraits.push(trait);
       p.mindTraits = p.mindTraits.filter(t => t !== trait);
