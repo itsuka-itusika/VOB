@@ -847,7 +847,6 @@ function createCompositeRaiderRaid({
   weight,
   enemyGroups = [],
   enemyGroupVariants = null,
-  disableScaleWeightBonus = false,
   avoidance = null,
   representative = null,
   introDialogues = [],
@@ -860,7 +859,6 @@ function createCompositeRaiderRaid({
     name,
     warningName,
     weight,
-    disableScaleWeightBonus,
     avoidance,
     representative,
     introDialogues,
@@ -916,7 +914,6 @@ export const RAID_MODULES = [
     name: "ハーピーの大群",
     warningName: "ハーピーの大群",
     weight: 14,
-    disableScaleWeightBonus: true,
     representative: { raiderType: "ハーピーの長", role: "leader" },
     enemyGroups: [
       { raiderType: "ハーピー", minCount: 3, maxCount: 4 },
@@ -937,7 +934,6 @@ export const RAID_MODULES = [
     name: "キュクロプス団",
     warningName: "キュクロプス団",
     weight: 6,
-    disableScaleWeightBonus: true,
     enemyGroups: [
       { raiderType: "キュクロプス", minCount: 2, maxCount: 3 }
     ]

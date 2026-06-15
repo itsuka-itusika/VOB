@@ -79,10 +79,6 @@ function selectRaidEnemyGroups(raidDefinition) {
   return getVariantEnemyGroups(variants[0]);
 }
 
-function raidIncludesRaiderType(raidDefinition, raiderTypeName) {
-  return getAllRaidEnemyGroups(raidDefinition).some(group => group.raiderType === raiderTypeName);
-}
-
 function hasValidEnemyGroup(raidDefinition) {
   return getAllRaidEnemyGroups(raidDefinition).some(group => getRaiderTypeByType(group.raiderType));
 }
@@ -103,28 +99,6 @@ function matchesRaidEntryConditions(village, entry, stageIndex) {
   return true;
 }
 
-function getAdjustedRaidWeight(village, tableEntry, raidDefinition) {
-  const baseWeight = Number(tableEntry.weight ?? raidDefinition.weight) || 0;
-  if (tableEntry.disableScaleWeightBonus || raidDefinition.disableScaleWeightBonus) {
-    return baseWeight;
-  }
-
-  const population = Array.isArray(village.villagers) ? village.villagers.length : 0;
-  const scale = Number(village.building) || 0;
-
-  if (raidIncludesRaiderType(raidDefinition, "ハーピー")) {
-    const bonus = Math.min(10, Math.floor(population / 3) + Math.floor(scale / 40));
-    return baseWeight + bonus;
-  }
-
-  if (raidIncludesRaiderType(raidDefinition, "キュクロプス")) {
-    const bonus = Math.min(12, Math.floor(population / 4) + Math.floor(scale / 25));
-    return baseWeight + bonus;
-  }
-
-  return baseWeight;
-}
-
 function selectRaidDefinition(village) {
   const raidTable = getRaidTableForVillage(village);
   const stageIndex = getVillageScaleStageIndex(village);
@@ -136,7 +110,7 @@ function selectRaidDefinition(village) {
       return {
         entry,
         raidDefinition,
-        weight: getAdjustedRaidWeight(village, entry, raidDefinition)
+        weight: Number(entry.weight ?? raidDefinition.weight) || 0
       };
     })
     .filter(candidate => candidate && candidate.weight > 0);

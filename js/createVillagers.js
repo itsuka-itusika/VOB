@@ -69,8 +69,8 @@ const VISITOR_TABLES_BY_SCALE = [
       { type: "学者", weight: 15 },
       { type: "レア種族", weight: 10 },
       { type: "エクイナ", weight: 10 },
-      { type: "サテュロス", weight: 10 },
-      { type: "メナド", weight: 10 }
+      { type: "サテュロス", weight: 5 },
+      { type: "メナド", weight: 5 }
     ]
   }
 ];
