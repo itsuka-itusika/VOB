@@ -148,27 +148,13 @@ function getMiracleBlockReason(costInfo, village, miracleId = "") {
   return reasons.join(", ");
 }
 
-function getHeresyIncreaseForManaCost(cost) {
-  return Math.floor((Number(cost) || 0) / 10);
-}
-
 function spendMiracleMana(village, cost) {
   village.mana = clampValue(village.mana - cost, 0, 99999);
-  village.heresy = clampValue(
-    (Number(village.heresy) || 0) + getHeresyIncreaseForManaCost(cost),
-    0,
-    99999
-  );
   addDivineMight(village, getDivineMightGainFromMiracleCost(cost));
 }
 
 function refundMiracleMana(village, cost) {
   village.mana = clampValue(village.mana + cost, 0, 99999);
-  village.heresy = clampValue(
-    (Number(village.heresy) || 0) - getHeresyIncreaseForManaCost(cost),
-    0,
-    99999
-  );
   subtractDivineMight(village, getDivineMightGainFromMiracleCost(cost));
 }
 
@@ -401,7 +387,6 @@ function renderMiracleCards(village, selectedId = "12") {
     <div class="miracle-resources">
       <div>魔素: ${village.mana}</div>
       <div>資金: ${village.funds}</div>
-      <div>異端: ${village.heresy || 0}</div>
       <div>神威: Lv${divineStatus.level} / ${divineStatus.amountLabel}</div>
       <div>${nextDivineText}</div>
       <div>村人: ${village.villagers.length}</div>

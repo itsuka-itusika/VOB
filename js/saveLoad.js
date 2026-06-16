@@ -178,7 +178,6 @@ function convertVillageToObject(village) {
     tech: village.tech,
     security: village.security,
     building: village.building,
-    heresy: normalizeFiniteNumber(village.heresy, 0),
     divineMight: normalizeFiniteNumber(village.divineMight, 0),
     scaleTitleStage: Number.isInteger(village.scaleTitleStage)
       ? village.scaleTitleStage
@@ -338,8 +337,9 @@ function convertObjectToVillage(dataObj) {
   v.tech = dataObj.tech;
   v.security = dataObj.security;
   v.building = dataObj.building;
-  v.heresy = normalizeFiniteNumber(dataObj.heresy, 0);
-  v.divineMight = normalizeFiniteNumber(dataObj.divineMight, 0);
+  v.divineMight = hasOwn(dataObj, "divineMight")
+    ? normalizeFiniteNumber(dataObj.divineMight, 0)
+    : normalizeFiniteNumber(dataObj.heresy, 0);
   v.scaleTitleStage = Number.isInteger(dataObj.scaleTitleStage)
     ? dataObj.scaleTitleStage
     : getInitialScaleStageIndex(v.building);

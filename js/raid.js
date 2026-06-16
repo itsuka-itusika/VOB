@@ -704,14 +704,11 @@ function doOneCombatAction(action, village) {
     return result;
   }
 
-  const actorIsEnemy = isEnemyUnit(actor, village);
   const isRanged = getCombatPosition(actor, village) === RAID_POSITION_MIDDLE;
   const attackResult = isRanged ? calcRangedDamage(actor, target) : calcAttackDamage(actor, target, false);
   const label = getAttackLogLabel(actor, village, isRanged);
   let dmg = attackResult.damage;
-  if (!actorIsEnemy) {
-    dmg = applyOffensiveTraitModifiers(actor, dmg, label, result);
-  }
+  dmg = applyOffensiveTraitModifiers(actor, dmg, label, result);
   dmg = applyIncomingDamageModifiers(dmg, target, village);
 
   const atkTypeText = attackResult.isMagic ? "魔法攻撃" : attackResult.attackText;
@@ -757,6 +754,9 @@ function applyOffensiveTraitModifiers(actor, damage, label, result) {
   if (hasTrait(actor, "歴戦")) {
     nextDamage = Math.floor(nextDamage * 1.2);
     addRaidActionLog(result, `${label}${actor.name}は歴戦の経験で強力な攻撃！`);
+  } else if (hasTrait(actor, "戦慣れ")) {
+    nextDamage = Math.floor(nextDamage * 1.1);
+    addRaidActionLog(result, `${label}${actor.name}は戦慣れした動きで攻め込む！`);
   }
 
   if (hasTrait(actor, "非戦主義")) {

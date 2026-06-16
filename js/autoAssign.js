@@ -375,6 +375,7 @@ function getExpectedDefenderDamage(person) {
   const magical = ((Number(person.mag) || 0) * (Number(person.cou) || 0) / 400) * 25;
   let traitMultiplier = 1;
   if (mindTraits.includes("歴戦")) traitMultiplier *= 1.2;
+  else if (mindTraits.includes("戦慣れ")) traitMultiplier *= 1.1;
   return Math.max(physical, magical) * traitMultiplier;
 }
 

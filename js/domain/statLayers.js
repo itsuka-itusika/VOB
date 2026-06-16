@@ -9,7 +9,7 @@ const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成"]);
 
 const PERMANENT_BODY_TRAIT_ADDS = Object.freeze({
   "巨躯": { str: 10 },
-  "巨人": { str: 10 },
+  "巨人": { str: 5, vit: 5 },
   "聖女の輝き": { mag: 10, chr: 10 },
   "大地の巫女": { vit: 10, chr: 10 },
   "月の巫女": { dex: 10, chr: 10 },
@@ -26,6 +26,9 @@ const PERMANENT_BODY_TRAIT_ADDS = Object.freeze({
 
 const PERMANENT_MIND_TRAIT_ADDS = Object.freeze({
   "ニート": { ind: -2 },
+  "狂信": { cou: 10 },
+  "秘蹟：剣": { str: 10 },
+  "秘蹟：盾": { vit: 10 },
   "里長": { ind: 3, eth: 3, cou: 3 }
 });
 

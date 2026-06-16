@@ -317,6 +317,7 @@ const GOAT_PAIR_VISITOR_TYPES = new Map([
 // 使用済みの名前を追跡する Set を追加
 const usedNames = new Set();
 const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成"]);
+const NO_AGING_RACES = new Set(["翼人", "アルセイド", "ネレイド", "ドライアド"]);
 
 export function registerUsedName(name) {
   const normalized = String(name || "").trim();
@@ -360,7 +361,8 @@ function getPortraitGroupKeyFromFile(portraitFile) {
 }
 
 function hasNoAgingBodyTrait(v) {
-  return Array.isArray(v?.bodyTraits) && v.bodyTraits.some(trait => NO_AGING_BODY_TRAITS.has(trait));
+  return NO_AGING_RACES.has(v?.race)
+    || (Array.isArray(v?.bodyTraits) && v.bodyTraits.some(trait => NO_AGING_BODY_TRAITS.has(trait)));
 }
 
 function getFallbackToddlerPortraitGroup(character) {

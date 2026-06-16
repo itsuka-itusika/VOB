@@ -90,9 +90,6 @@ function matchesRaidEntryConditions(village, entry, stageIndex) {
   const maxScaleStageIndex = Number(entry.maxScaleStageIndex);
   if (Number.isFinite(maxScaleStageIndex) && stageIndex > maxScaleStageIndex) return false;
 
-  const minHeresy = Number(entry.minHeresy);
-  if (Number.isFinite(minHeresy) && (Number(village.heresy) || 0) < minHeresy) return false;
-
   const minDivineMight = Number(entry.minDivineMight);
   if (Number.isFinite(minDivineMight) && (Number(village.divineMight) || 0) < minDivineMight) return false;
 

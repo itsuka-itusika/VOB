@@ -1001,7 +1001,6 @@ export function updateUI(v) {
     <div class="resource-box"><span class="resource-label">技術</span><span class="resource-value">${v.tech}</span></div>
     <div class="resource-box"><span class="resource-label">治安</span><span class="resource-value">${v.security}</span></div>
     <div class="resource-box"><span class="resource-label">規模</span><span class="resource-value">${v.building}</span></div>
-    <div class="resource-box"><span class="resource-label">異端</span><span class="resource-value">${v.heresy || 0}</span></div>
     <div class="resource-box"><span class="resource-label">人口/上限</span><span class="resource-value">${v.villagers.length}/${v.popLimit}</span></div>
     <div class="resource-box resource-traits"><span class="resource-label">村特性</span><span class="resource-value" id="villageTraitsTerms"></span></div>
   `;

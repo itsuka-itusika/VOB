@@ -2,11 +2,11 @@ import { clampValue } from "./util.js";
 
 export const DIVINE_MIGHT_LEVELS = [
   { level: 0, threshold: 0, miracleIds: ["12", "2", "16", "6", "11"] },
-  { level: 1, threshold: 20, miracleIds: ["4", "10", "8"] },
-  { level: 2, threshold: 60, miracleIds: ["1", "15", "3"] },
-  { level: 3, threshold: 120, miracleIds: ["5", "7", "14"] },
-  { level: 4, threshold: 200, miracleIds: ["9", "17"] },
-  { level: 5, threshold: 300, miracleIds: ["13"] }
+  { level: 1, threshold: 30, miracleIds: ["4", "10", "8"] },
+  { level: 2, threshold: 90, miracleIds: ["1", "15", "3"] },
+  { level: 3, threshold: 180, miracleIds: ["5", "7", "14"] },
+  { level: 4, threshold: 320, miracleIds: ["9", "17"] },
+  { level: 5, threshold: 500, miracleIds: ["13"] }
 ];
 
 const DIVINE_MIGHT_MAX = 99999;

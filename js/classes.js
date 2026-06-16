@@ -20,7 +20,6 @@ export class Village {
     this.tech = 0;
     this.security = 60;
     this.building = 0;
-    this.heresy = 0;
     this.divineMight = 0;
     this.scaleTitleStage = 0;
     this.lastHeadmanElectionYear = null;

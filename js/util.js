@@ -104,6 +104,7 @@ export function getVillagerFoodConsumption(character) {
   else if (mindTraits.includes("大食い")) cost = 12;
   else if (mindTraits.includes("小食")) cost = 8;
   if (bodyTraits.includes("巨人")) cost += 5;
+  if (bodyTraits.includes("半人半馬")) cost += 2;
   return cost;
 }
 
