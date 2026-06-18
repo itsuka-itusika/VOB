@@ -11,6 +11,7 @@ import { recordVillagerJoinHistory } from "./history.js";
 import { MERCHANT_SECRET_TREASURE_LINES } from "./data/dialogue/visitorLines.js";
 import { getCaptiveConversationLines } from "./data/dialogue/captiveLines.js";
 import { incrementTitleCounter, TITLE_COUNTER_KEYS } from "./titles.js";
+import { initializeNewVillagerFriendships } from "./relationships.js";
 import {
   CAPTIVE_FAILED_TRAIT,
   CAPTIVE_SOCIAL_COEFFICIENT,
@@ -662,6 +663,7 @@ function handleCaptiveSocialSuccess(captive, actor, successRate, source) {
   captive.jobTable = [];
   captive.actionTable = [];
   theVillage.villagers.push(captive);
+  initializeNewVillagerFriendships(theVillage, captive, actor, { actorValue: 20, otherValue: 0 });
   incrementTitleCounter(
     actor,
     source === "誘惑" ? TITLE_COUNTER_KEYS.SEDUCTION_SUCCESS : TITLE_COUNTER_KEYS.RECRUITMENT_SUCCESS,
@@ -935,6 +937,7 @@ function handleRecruitmentSuccess(visitor, recruiter, successRate = 0, source = 
   // 訪問者リストから削除し、村人リストに追加
   theVillage.visitors = theVillage.visitors.filter(v => v !== originalVisitor);
   theVillage.villagers.push(visitor);
+  initializeNewVillagerFriendships(theVillage, visitor, recruiter, { actorValue: 30, otherValue: 20 });
   incrementTitleCounter(
     recruiter,
     source === "誘惑" ? TITLE_COUNTER_KEYS.SEDUCTION_SUCCESS : TITLE_COUNTER_KEYS.RECRUITMENT_SUCCESS,

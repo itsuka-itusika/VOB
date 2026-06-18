@@ -664,9 +664,17 @@ function renderPersonalHistorySummary(person) {
     { label: "精神", value: `${person.spiritAge ?? "?"}歳/${person.spiritSex || "不明"}`, className: "is-spirit" },
     { label: "趣味", value: person.hobby || "なし", className: "is-hobby" }
   ];
+  const familyRelations = formatRelationshipCategory(person, "family");
+  const socialRelations = formatRelationshipCategory(person, "social");
   const relationshipFields = [
-    { label: "家族関係", value: formatRelationshipCategory(person, "family") },
-    { label: "人間関係", value: formatRelationshipCategory(person, "social") }
+    { label: "家族関係", value: familyRelations },
+    {
+      label: "人間関係",
+      valueHtml: `
+        <span class="personal-history-relationship-text">${escapeHtml(socialRelations)}</span>
+        <button type="button" class="personal-history-detail-button" data-open-friendship-detail>詳細</button>
+      `
+    }
   ];
   const detailFields = [
     ...relationshipFields,
@@ -715,6 +723,10 @@ export function openPersonalHistoryModal(village, person, options = {}) {
       ? `<div class="history-list">${events.map(event => renderHistoryEntry(event, { personName: person.name })).join("")}</div>`
       : `<div class="history-empty">この人物の歩みは、まだ村の帳面には記されていない。</div>`}
   `;
+  content.querySelector("[data-open-friendship-detail]")?.addEventListener("click", async () => {
+    const { openFriendshipDetailModal } = await import("./relationships.js");
+    openFriendshipDetailModal(village, person);
+  });
 
   overlay.style.display = "block";
   modal.style.display = "block";

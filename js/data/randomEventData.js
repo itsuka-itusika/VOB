@@ -12,7 +12,7 @@ export const EVENT_KIND_TITLES = {
 
 export const EVENT_POOLS = {
   good: ["cat", "gold", "strangeRain", "fireworks", "hotSpring", "bathPerk", "hobbyFriends", "menFriendship", "lover", "yuri", "tattoo", "fashion", "muscle", "selfPleasure"],
-  bad: ["storm", "downpour", "heat", "fire", "thief", "rats", "lightning1", "lightning2", "snow", "fight", "drunk", "epidemic"]
+  bad: ["storm", "downpour", "heat", "fire", "thief", "rats", "lightning1", "lightning2", "snow", "fight", "argument", "drunk", "epidemic"]
 };
 export const GOLDEN_RAIN_RACES = new Set(["人間", "ハーピー", "半神", "キュクロプス", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド"]);
 
@@ -47,6 +47,7 @@ export const EVENT_SUBJECTS = {
   lightning2: "落雷による肉体交換",
   snow: "大雪",
   fight: "喧嘩",
+  argument: "言い争い",
   drunk: "飲酒騒ぎ",
   epidemic: "疫病の流行"
 };
@@ -82,6 +83,7 @@ export const EVENT_MOODS = {
   lightning2: "shock",
   snow: "hardship",
   fight: "conflict",
+  argument: "conflict",
   drunk: "conflict",
   epidemic: "hardship"
 };
@@ -314,6 +316,7 @@ export const EVENT_SECOND_LINE_BASES = {
   lightning2: "手足の感覚が自分のものではない",
   snow: "雪が深くて一歩進むだけでも骨が折れる",
   fight: "これ以上言われっぱなしではいられない",
+  argument: "言葉が刺さって、しばらく顔を合わせづらい",
   drunk: "酒が回って、声も気分も大きくなっている",
   epidemic: "熱とだるさが体の奥まで染みている"
 };

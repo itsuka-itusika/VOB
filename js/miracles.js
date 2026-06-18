@@ -1,7 +1,7 @@
 // miracles.js
 
 import { clampValue, getPortraitPath } from "./util.js";
-import { addRelationship, removeRelationship, checkHasRelationship, getRelationshipTargetName, clearRelationshipsForDepartedVillager, addSpouseRelationships } from "./relationships.js";
+import { addRelationship, removeRelationship, checkHasRelationship, getRelationshipTargetName, clearRelationshipsForDepartedVillager, addSpouseRelationships, raiseMutualFriendshipTo } from "./relationships.js";
 import { updateUI } from "./ui.js";  // 実行後にUIを更新する
 import { doExchange } from "./exchange.js";
 import { createRandomVisitor, createRandomVisitorOfType, determineSpeechType } from "./createVillagers.js";
@@ -708,6 +708,7 @@ function forceMarriage(a,b,v) {
   addRelationship(b,"既婚");
   a.happiness=clampValue(a.happiness+50,0,100);
   b.happiness=clampValue(b.happiness+50,0,100);
+  raiseMutualFriendshipTo(a, b, 50);
 
   addSpouseRelationships(a, b);
   recordMarriageHistory(v, a, b, { source: "クピドの奇跡" });

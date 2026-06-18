@@ -45,6 +45,7 @@ const TURN_BLOCKING_MODAL_SELECTORS = [
   "#secretTreasureModal",
   "#historyModal",
   "#personalHistoryModal",
+  "#friendshipDetailModal",
   "#conversationModal",
   "#exchangeModal",
   "#panFluteExchangeModal",

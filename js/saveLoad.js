@@ -5,7 +5,7 @@ import { ACTION_NONE, isPreferredActionCandidate, refreshJobTable, setPreferredA
 import { getPermanentStat, hydrateStatLayersFromObject, syncEffectiveStats } from "./domain/statLayers.js";
 import { createArchiveGapHistoryEvent, normalizeHistoryEvents } from "./history.js";
 import { normalizePortraitKey } from "./data/portraitPaths.js";
-import { normalizeRelationships } from "./relationships.js";
+import { ensureVillageFriendships, normalizeFriendshipState, normalizeRelationships } from "./relationships.js";
 import { ensureTitleState, evaluateTitles } from "./titles.js";
 import { normalizeTutorialState } from "./tutorial.js";
 import { getInitialScaleStageIndex } from "./villageScale.js";
@@ -236,6 +236,7 @@ function convertVillagerToObject(vill) {
   syncEffectiveStats(vill);
   const bodyTraits = normalizeBodyTraitList(vill.bodyTraits);
   const mindTraits = Array.isArray(vill.mindTraits) ? [...vill.mindTraits] : [];
+  normalizeFriendshipState(vill);
   if (bodyTraits.includes("火星の加護")) {
     bodyTraits.splice(bodyTraits.indexOf("火星の加護"), 1);
     if (!mindTraits.includes("火星の加護")) {
@@ -274,6 +275,11 @@ function convertVillagerToObject(vill) {
     mindTraits,
     hobby: vill.hobby,
     relationships: [...normalizeRelationships(vill)],
+    friendships: { ...vill.friendships },
+    friendshipStats: {
+      workTogether: { ...vill.friendshipStats.workTogether },
+      frontRaidTogether: { ...vill.friendshipStats.frontRaidTogether }
+    },
     socialAttemptedThisMonth: !!vill.socialAttemptedThisMonth,
     titleIds: Array.isArray(vill.titleIds) ? [...vill.titleIds] : [],
     titleStats: vill.titleStats ? { ...vill.titleStats } : {},
@@ -402,6 +408,8 @@ function convertObjectToVillage(dataObj) {
   // villagers
   if (Array.isArray(dataObj.villagers)) {
     v.villagers = dataObj.villagers.map(o => convertObjectToVillager(o));
+    const hasFriendshipData = dataObj.villagers.some(o => o && hasOwn(o, "friendships"));
+    ensureVillageFriendships(v, hasFriendshipData ? 0 : 30);
     // 全村人の行動テーブルを更新
     v.villagers.forEach(villager => {
       refreshJobTable(villager, v);
@@ -459,6 +467,13 @@ function convertObjectToVillager(obj) {
   }
   vill.relationships = Array.isArray(obj.relationships) ? [...obj.relationships] : [];
   normalizeRelationships(vill);
+  vill.friendships = obj.friendships && typeof obj.friendships === "object" && !Array.isArray(obj.friendships)
+    ? { ...obj.friendships }
+    : {};
+  vill.friendshipStats = obj.friendshipStats && typeof obj.friendshipStats === "object" && !Array.isArray(obj.friendshipStats)
+    ? JSON.parse(JSON.stringify(obj.friendshipStats))
+    : {};
+  normalizeFriendshipState(vill);
   vill.socialAttemptedThisMonth = !!obj.socialAttemptedThisMonth;
   vill.titleIds = Array.isArray(obj.titleIds) ? [...obj.titleIds] : [];
   vill.titleStats = obj.titleStats && typeof obj.titleStats === "object" ? { ...obj.titleStats } : {};

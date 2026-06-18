@@ -1,7 +1,7 @@
 // RandomEvents.js
 
 import { randInt, clampValue, round3 } from "./util.js";
-import { doLoverCheck, addRelationship as addCategorizedRelationship, hasNonEnemyRelationship, normalizeRelationship, parseRelationship } from "./relationships.js";
+import { adjustMutualFriendship, doLoverCheck, addRelationship as addCategorizedRelationship, getFriendshipScore, hasNonEnemyRelationship, normalizeRelationship, parseRelationship } from "./relationships.js";
 import { doExchange } from "./exchange.js";
 import { showRandomEventModal } from "./randomEventModal.js";
 import { matureBodyToAdultOnly, scheduleGoldenRainPregnancy } from "./reproduction.js";
@@ -30,7 +30,7 @@ import {
 const VILLAGER_STATE_KEYS = [
   "hp", "mp", "happiness",
   "str", "vit", "dex", "mag", "chr", "int", "ind", "eth", "cou", "sexdr",
-  "bodyTraits", "mindTraits", "relationships", "hobby",
+  "bodyTraits", "mindTraits", "relationships", "friendships", "friendshipStats", "hobby",
   "bodySex", "bodyAge", "bodyOwner", "race", "portraitFile"
 ];
 const YURI_BLOCKING_RELATION_PREFIXES = ["天敵", "母", "父", "子", "夫", "妻", "恋人"];
@@ -375,6 +375,7 @@ export class RandomEvents {
             if (a.hobby !== b.hobby) return;
             const relA = `${a.hobby}仲間:${b.name}`;
             const relB = `${b.hobby}仲間:${a.name}`;
+            if (getFriendshipScore(a, b) < 0) return;
             if (this.hasPairRelationship(a, b, ["天敵", `${a.hobby}仲間`])) return;
             pairs.push({ a, b, hobby: a.hobby, relA, relB });
           });
@@ -384,6 +385,7 @@ export class RandomEvents {
           const pair = this.randChoice(pairs);
           pair.a.happiness = clampValue(pair.a.happiness + 10, 0, 100);
           pair.b.happiness = clampValue(pair.b.happiness + 10, 0, 100);
+          adjustMutualFriendship(pair.a, pair.b, 20);
           this.addRelationship(pair.a, pair.relA);
           this.addRelationship(pair.b, pair.relB);
           recordSocialRelationHistory(v, pair.a, pair.b, "趣味仲間", { hobby: pair.hobby });
@@ -398,7 +400,7 @@ export class RandomEvents {
         const pairs = [];
         men.forEach((a, index) => {
           men.slice(index + 1).forEach(b => {
-            if (!this.hasPairRelationship(a, b, ["天敵", "親友"])) pairs.push([a, b]);
+            if (getFriendshipScore(a, b) >= 10 && !this.hasPairRelationship(a, b, ["天敵", "親友"])) pairs.push([a, b]);
           });
         });
         if (pairs.length > 0) {
@@ -406,10 +408,13 @@ export class RandomEvents {
           let incc = randInt(10, 15);
           m1.happiness = clampValue(m1.happiness + incc, 0, 100);
           m2.happiness = clampValue(m2.happiness + incc, 0, 100);
-          this.addRelationship(m1, `親友:${m2.name}`);
-          this.addRelationship(m2, `親友:${m1.name}`);
-          recordSocialRelationHistory(v, m1, m2, "親友");
-          v.log(`男の友情:${m1.name}と${m2.name}は夜通し語り合い、友情を深めた。幸福+${incc}`);
+          const friendship = adjustMutualFriendship(m1, m2, 20);
+          if (friendship >= 50) {
+            this.addRelationship(m1, `親友:${m2.name}`);
+            this.addRelationship(m2, `親友:${m1.name}`);
+            recordSocialRelationHistory(v, m1, m2, "親友");
+          }
+          v.log(`男の友情:${m1.name}と${m2.name}は夜通し語り合い、友情を深めた。幸福+${incc},友好度+20`);
         } else {
           return null;
         }
@@ -435,7 +440,7 @@ export class RandomEvents {
           const pairs = [];
           candidates.forEach((a, index) => {
             candidates.slice(index + 1).forEach(b => {
-              if (!this.hasPairRelationship(a, b, YURI_BLOCKING_RELATION_PREFIXES)) pairs.push([a, b]);
+              if (getFriendshipScore(a, b) >= 20 && !this.hasPairRelationship(a, b, YURI_BLOCKING_RELATION_PREFIXES)) pairs.push([a, b]);
             });
           });
 
@@ -447,6 +452,7 @@ export class RandomEvents {
 
           a.happiness = clampValue(a.happiness + 50, 0, 100);
           b.happiness = clampValue(b.happiness + 50, 0, 100);
+          adjustMutualFriendship(a, b, 30);
 
           this.addRelationship(a, `恋人:${b.name}`);
           this.addRelationship(b, `恋人:${a.name}`);
@@ -696,7 +702,7 @@ export class RandomEvents {
         const pairs = [];
         candidates.forEach((a, index) => {
           candidates.slice(index + 1).forEach(b => {
-            if (!this.hasMutualRelationship(a, b, "天敵")) pairs.push([a, b]);
+            if (getFriendshipScore(a, b) <= 19 && !this.hasMutualRelationship(a, b, "天敵")) pairs.push([a, b]);
           });
         });
 
@@ -708,14 +714,37 @@ export class RandomEvents {
 
           v.security = clampValue(v.security - 12, 0, 100);
 
-          this.addRelationship(a, `天敵:${b.name}`);
-          this.addRelationship(b, `天敵:${a.name}`);
-          recordSocialRelationHistory(v, a, b, "天敵");
+          const friendship = adjustMutualFriendship(a, b, -20);
+          if (friendship <= -31) {
+            this.addRelationship(a, `天敵:${b.name}`);
+            this.addRelationship(b, `天敵:${a.name}`);
+            recordSocialRelationHistory(v, a, b, "天敵");
+          }
 
-          v.log(`喧嘩イベント:${a.name}と${b.name}は殴り合いの大喧嘩をした！ 体力-20,治安-12`);
+          v.log(`喧嘩イベント:${a.name}と${b.name}は殴り合いの大喧嘩をした！ 体力-20,治安-12,友好度-20`);
         } else {
           return null;
         }
+        break;
+      }
+      case "argument": {
+        const pairs = [];
+        v.villagers.forEach((a, index) => {
+          v.villagers.slice(index + 1).forEach(b => {
+            pairs.push([a, b]);
+          });
+        });
+        if (pairs.length === 0) {
+          return null;
+        }
+
+        const [a, b] = this.randChoice(pairs);
+        adjustMutualFriendship(a, b, -20);
+        a.happiness = clampValue(a.happiness - 10, 0, 100);
+        b.happiness = clampValue(b.happiness - 10, 0, 100);
+        this.addForcedSpeaker(a);
+        this.addForcedSpeaker(b);
+        v.log(`言い争い:${a.name}と${b.name}は言葉をぶつけ合った。友好度-20,幸福-10`);
         break;
       }
       case "drunk": {

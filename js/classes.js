@@ -145,6 +145,11 @@ export class Villager {
 
     /** 人間関係(文字列格納) */
     this.relationships = [];
+    this.friendships = {};
+    this.friendshipStats = {
+      workTogether: {},
+      frontRaidTogether: {}
+    };
     this.socialAttemptedThisMonth = false;
     this.titleIds = [];
     this.titleStats = {};

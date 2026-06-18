@@ -1206,6 +1206,103 @@ section h2 {
 .personal-history-profile-field.is-detail strong {
   line-height: 1.55;
 }
+.personal-history-relationship-text {
+  display: inline;
+}
+.personal-history-detail-button {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border: 1px solid #9b875d;
+  background: #f4ead5;
+  color: #2f2618;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  cursor: pointer;
+}
+.personal-history-detail-button:hover,
+.personal-history-detail-button:focus {
+  background: #ead9b8;
+}
+.friendship-detail-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 1200;
+}
+.friendship-detail-modal {
+  box-sizing: border-box;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(880px, calc(100vw - 32px));
+  max-height: min(88vh, 760px);
+  display: flex;
+  flex-direction: column;
+  padding: 18px;
+  background: #f7f0e3;
+  border: 1px solid #9b875d;
+  box-shadow: 0 18px 48px rgba(28, 20, 10, 0.38);
+  color: #2f2618;
+  z-index: 1201;
+}
+.friendship-detail-modal .modal-header {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 3px double #bba575;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+  font-size: 1.12rem;
+  font-weight: bold;
+}
+.friendship-detail-content {
+  overflow: auto;
+  border: 1px solid #e0d1ad;
+  background: #fbf6ea;
+}
+.friendship-detail-table {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+  font-family: "Yu Gothic", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+  font-size: 0.9rem;
+}
+.friendship-detail-table th,
+.friendship-detail-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #e5d8b8;
+  text-align: left;
+  vertical-align: middle;
+}
+.friendship-detail-table th {
+  position: sticky;
+  top: 0;
+  background: #ead9b8;
+  color: #3d321f;
+  white-space: nowrap;
+  z-index: 1;
+}
+.friendship-detail-person {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  min-width: 130px;
+}
+.friendship-detail-person img {
+  width: 42px;
+  height: 42px;
+  object-fit: cover;
+  border: 1px solid #bda978;
+  background: #e8dfcb;
+}
+.friendship-detail-empty {
+  text-align: center;
+  color: #73654b;
+}
+.friendship-detail-modal .modal-buttons {
+  margin-top: 12px;
+  text-align: right;
+}
 .personal-history-note {
   margin: 0 0 14px;
   padding: 8px 0;
@@ -2849,6 +2946,32 @@ body.mobile-mode .personal-history-profile-field span {
 }
 body.mobile-mode .personal-history-profile-field strong {
   font-size: 0.75rem;
+}
+body.mobile-mode .personal-history-detail-button {
+  display: inline-block;
+  margin: 4px 0 0;
+  padding: 2px 7px;
+  font-size: 0.7rem;
+}
+body.mobile-mode .friendship-detail-modal {
+  width: calc(100vw - 18px);
+  max-height: 88vh;
+  padding: 12px;
+}
+body.mobile-mode .friendship-detail-table {
+  min-width: 620px;
+  font-size: 0.78rem;
+}
+body.mobile-mode .friendship-detail-table th,
+body.mobile-mode .friendship-detail-table td {
+  padding: 7px 8px;
+}
+body.mobile-mode .friendship-detail-person {
+  grid-template-columns: 36px minmax(0, 1fr);
+}
+body.mobile-mode .friendship-detail-person img {
+  width: 36px;
+  height: 36px;
 }
 body.mobile-mode .history-record-line {
   grid-template-columns: 5.8em minmax(0, 1fr);

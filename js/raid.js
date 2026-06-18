@@ -20,6 +20,7 @@ import {
   isRaidCombatAction
 } from "./raidRules.js";
 import { updateUI } from "./ui.js";
+import { applyRaidFriendshipResults, recordRaidFriendshipDamage, startRaidFriendshipTracking } from "./relationships.js";
 
 const RAID_CLOSE_DELAY_MS = 700;
 const RAID_ACTION_SETTLE_DELAY_MS = 780;
@@ -504,6 +505,15 @@ export function openRaidModal(village) {
 
   let trapMakers = getTrapMakers(village);
   let combatants = getVillageCombatants(village);
+  const frontliners = village.villagers.filter(p =>
+    p.hp > 0 &&
+    (p.action === ACTION_DEFEND || p.action === ACTION_FORTIFY) &&
+    canPerformRaidAction(p, p.action, village)
+  );
+  startRaidFriendshipTracking(village, {
+    participants: trapMakers.concat(combatants),
+    frontliners
+  });
 
   if (trapMakers.length===0 && combatants.length===0) {
     rlog.innerHTML+=`<br>戦闘に参加する者がいません！ → 自動的に襲撃成功(敵側)。`;
@@ -629,6 +639,7 @@ function doOneTrapAction(action, village) {
   }
   let dmg = Math.floor((p.dex*p.int/400)*30);
   e.hp = clampValue(e.hp - dmg, 0, 100);
+  recordRaidFriendshipDamage(village, p, dmg);
   addRaidDamageAnimation(result, p, e, dmg, false, "罠発動");
   addRaidActionLog(result, `【罠作成】${p.name}→${e.name}に${dmg}ダメージ`);
   if (e.hp<=0) {
@@ -713,6 +724,9 @@ function doOneCombatAction(action, village) {
 
   const atkTypeText = attackResult.isMagic ? "魔法攻撃" : attackResult.attackText;
   target.hp = clampValue(target.hp - dmg, 0, 100);
+  if (!isEnemyUnit(actor, village)) {
+    recordRaidFriendshipDamage(village, actor, dmg);
+  }
   addRaidDamageAnimation(result, actor, target, dmg, false, getAttackActionPopLabel(attackResult, isRanged));
   addRaidActionLog(result, `${label}${actor.name}の${atkTypeText}→${target.name}に ${dmg}ダメージ`);
 
@@ -990,6 +1004,7 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
       village.log(`迎撃失敗:${penaltyLog}`);
     }
 
+    applyRaidFriendshipResults(village);
     village.isRaidProcessDone=true;
     village.currentRaid = null;
 

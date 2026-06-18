@@ -14,6 +14,7 @@ import {
 import { applyGenerationBaseTraitBonuses, setBaseStatsFromEffective, syncEffectiveStats } from "./domain/statLayers.js";
 import { PHYSICAL_ABILITY_STATS } from "./domain/personSchema.js";
 import { getVillageScaleStage } from "./villageScale.js";
+import { initializeFoundingFriendships } from "./relationships.js";
 import {
   FEMALE_PORTRAIT_FILES,
   MALE_PORTRAIT_FILES,
@@ -563,6 +564,7 @@ export function createInitialVillagers() {
     }
   }
 
+  initializeFoundingFriendships(villagers);
   return villagers;
 }
 

@@ -3,7 +3,7 @@ import { refreshJobTable } from "./domain/jobTables.js";
 import { recordMarriageHistory } from "./history.js";
 import { openExchangeModal, openPanFluteExchangeModal, showMarriageMiracleModal, showMiracleResultModal } from "./miracles.js";
 import { avoidCurrentRaidWithMessengerPass, canAvoidCurrentRaidWithMessengerPass, startRaidEvent } from "./raidStart.js";
-import { addRelationship, removeRelationship, addSpouseRelationships } from "./relationships.js";
+import { addRelationship, removeRelationship, addSpouseRelationships, raiseMutualFriendshipTo } from "./relationships.js";
 import { updateChildGrowthStage } from "./reproduction.js";
 import { clampValue, round3 } from "./util.js";
 import { updateUI } from "./ui.js";
@@ -104,6 +104,7 @@ function forceMarriage(a, b, village) {
   recordMarriageHistory(village, a, b, { source: "秘宝" });
   a.happiness = clampValue(a.happiness + 50, 0, 100);
   b.happiness = clampValue(b.happiness + 50, 0, 100);
+  raiseMutualFriendshipTo(a, b, 50);
   village.log(`【秘宝】黄金の矢により${a.name}と${b.name}が結ばれました`);
 }
 
