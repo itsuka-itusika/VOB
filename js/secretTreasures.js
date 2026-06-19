@@ -35,7 +35,11 @@ const SECRET_TREASURE_SELL_PRICES = {
   blue_stone_tablet: 150,
   [MESSENGER_PASS_SECRET_TREASURE_ID]: 50
 };
-const DISABLED_RANDOM_SECRET_TREASURE_IDS = new Set(["blue_stone_tablet", MESSENGER_PASS_SECRET_TREASURE_ID]);
+const DISABLED_RANDOM_SECRET_TREASURE_IDS = new Set([
+  "blue_stone_tablet",
+  MESSENGER_PASS_SECRET_TREASURE_ID,
+  PINECONE_STAFF_SECRET_TREASURE_ID
+]);
 
 function getVillagers(village) {
   return Array.isArray(village.villagers) ? village.villagers : [];

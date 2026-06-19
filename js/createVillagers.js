@@ -233,7 +233,7 @@ const EQUINA_VISITOR_TYPE = {
   ],
   useDisplayTypeAsJob: true,
   forcedSex: "女",
-  ageRange: { min: 18, max: 35 },
+  ageRange: { min: 18, max: 25 },
   params: {
     job: "旅人",
     action: "訪問",
