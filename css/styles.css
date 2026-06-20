@@ -1207,10 +1207,13 @@ section h2 {
   line-height: 1.55;
 }
 .personal-history-relationship-text {
-  display: inline;
+  display: block;
+}
+.personal-history-detail-row {
+  display: block;
+  margin-top: 5px;
 }
 .personal-history-detail-button {
-  margin-left: 8px;
   padding: 2px 8px;
   border: 1px solid #9b875d;
   background: #f4ead5;
@@ -1263,8 +1266,18 @@ section h2 {
   width: 100%;
   min-width: 680px;
   border-collapse: collapse;
+  table-layout: fixed;
   font-family: "Yu Gothic", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
   font-size: 0.9rem;
+}
+.friendship-detail-col-person {
+  width: 220px;
+}
+.friendship-detail-col-score {
+  width: 92px;
+}
+.friendship-detail-col-relation {
+  width: auto;
 }
 .friendship-detail-table th,
 .friendship-detail-table td {
@@ -1286,9 +1299,23 @@ section h2 {
   grid-template-columns: 42px minmax(0, 1fr);
   gap: 8px;
   align-items: center;
-  min-width: 130px;
+}
+.friendship-detail-portrait-button {
+  display: block;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.friendship-detail-portrait-button:hover img,
+.friendship-detail-portrait-button:focus img {
+  border-color: #8b6d31;
+  box-shadow: 0 0 0 2px rgba(139, 109, 49, 0.24);
 }
 .friendship-detail-person img {
+  display: block;
   width: 42px;
   height: 42px;
   object-fit: cover;
@@ -2959,8 +2986,14 @@ body.mobile-mode .friendship-detail-modal {
   padding: 12px;
 }
 body.mobile-mode .friendship-detail-table {
-  min-width: 620px;
+  min-width: 100%;
   font-size: 0.78rem;
+}
+body.mobile-mode .friendship-detail-col-person {
+  width: 142px;
+}
+body.mobile-mode .friendship-detail-col-score {
+  width: 54px;
 }
 body.mobile-mode .friendship-detail-table th,
 body.mobile-mode .friendship-detail-table td {
@@ -2968,6 +3001,10 @@ body.mobile-mode .friendship-detail-table td {
 }
 body.mobile-mode .friendship-detail-person {
   grid-template-columns: 36px minmax(0, 1fr);
+}
+body.mobile-mode .friendship-detail-portrait-button {
+  width: 36px;
+  height: 36px;
 }
 body.mobile-mode .friendship-detail-person img {
   width: 36px;

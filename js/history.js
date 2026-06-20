@@ -643,7 +643,7 @@ function formatRelationshipCategory(person, category) {
   const relationships = Array.isArray(person.relationships) ? person.relationships : [];
   const labels = relationships
     .map(parsePersonalRelationship)
-    .filter(item => item?.category === category)
+    .filter(item => item?.category === category && !item.label.startsWith("村設立の同志："))
     .map(item => item.label);
   return labels.length > 0 ? [...new Set(labels)].join("、") : "なし";
 }
@@ -672,7 +672,9 @@ function renderPersonalHistorySummary(person) {
       label: "人間関係",
       valueHtml: `
         <span class="personal-history-relationship-text">${escapeHtml(socialRelations)}</span>
-        <button type="button" class="personal-history-detail-button" data-open-friendship-detail>詳細</button>
+        <span class="personal-history-detail-row">
+          <button type="button" class="personal-history-detail-button" data-open-friendship-detail>詳細</button>
+        </span>
       `
     }
   ];

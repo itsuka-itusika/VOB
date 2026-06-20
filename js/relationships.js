@@ -814,8 +814,8 @@ function collectRelationshipLabels(village, person, other) {
 }
 
 function collectExchangeLabels(person, other) {
+  if (person.bodyOwner === other.name && other.bodyOwner === person.name) return ["入れ替わり関係"];
   const labels = [];
-  if (person.bodyOwner === other.name && other.bodyOwner === person.name) labels.push("入れ替わり関係");
   if (person.bodyOwner === other.name) labels.push("身体の元の持ち主");
   if (other.bodyOwner === person.name) labels.push("かつての身体");
   return [...new Set(labels)];
@@ -837,21 +837,22 @@ export function openFriendshipDetailModal(village, person) {
   document.getElementById("friendshipDetailModal")?.remove();
 
   const others = (Array.isArray(village.villagers) ? village.villagers : []).filter(other => other !== person);
-  const rows = others.map(other => {
+  const rows = others.map((other, index) => {
     const score = getFriendshipScore(person, other);
-    const relationLabels = collectRelationshipLabels(village, person, other).join(" / ");
-    const exchangeLabels = collectExchangeLabels(person, other).join(" / ") || "なし";
+    const relationLabels = collectRelationshipLabels(village, person, other);
+    const exchangeLabels = collectExchangeLabels(person, other);
     const friendshipLabel = getFriendshipLabel(score);
+    const labels = [...relationLabels, ...exchangeLabels, friendshipLabel].join(" / ");
     return `
       <tr>
         <td class="friendship-detail-person">
-          <img src="${escapeHtml(getPortraitPath(other))}" alt="${escapeHtml(other.name)}">
+          <button type="button" class="friendship-detail-portrait-button" data-open-friendship-person="${index}" aria-label="${escapeHtml(other.name)}の個人記録を見る">
+            <img src="${escapeHtml(getPortraitPath(other))}" alt="${escapeHtml(other.name)}">
+          </button>
           <span>${escapeHtml(other.name)}</span>
         </td>
         <td>${escapeHtml(String(score))}</td>
-        <td>${escapeHtml(relationLabels)}</td>
-        <td>${escapeHtml(exchangeLabels)}</td>
-        <td>${escapeHtml(friendshipLabel)}</td>
+        <td>${escapeHtml(labels)}</td>
       </tr>
     `;
   }).join("");
@@ -866,17 +867,20 @@ export function openFriendshipDetailModal(village, person) {
     <div class="modal-header">${escapeHtml(person.name)}の友好度</div>
     <div class="friendship-detail-content">
       <table class="friendship-detail-table">
+        <colgroup>
+          <col class="friendship-detail-col-person">
+          <col class="friendship-detail-col-score">
+          <col class="friendship-detail-col-relation">
+        </colgroup>
         <thead>
           <tr>
             <th>相手</th>
             <th>友好度</th>
-            <th>関係性</th>
-            <th>入れ替わり</th>
-            <th>友好度ラベル</th>
+            <th>関係</th>
           </tr>
         </thead>
         <tbody>
-          ${rows || `<tr><td colspan="5" class="friendship-detail-empty">表示できる相手がいません。</td></tr>`}
+          ${rows || `<tr><td colspan="3" class="friendship-detail-empty">表示できる相手がいません。</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -891,6 +895,15 @@ export function openFriendshipDetailModal(village, person) {
     overlay.remove();
     modal.remove();
   };
+  modal.querySelectorAll("[data-open-friendship-person]").forEach(button => {
+    button.addEventListener("click", async () => {
+      const target = others[Number(button.dataset.openFriendshipPerson)];
+      if (!target) return;
+      const { openPersonalHistoryModal } = await import("./history.js");
+      close();
+      openPersonalHistoryModal(village, target);
+    });
+  });
   modal.querySelector("[data-close-friendship-detail]").addEventListener("click", close);
   overlay.addEventListener("click", close);
 }
