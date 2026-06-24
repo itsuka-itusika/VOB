@@ -7,6 +7,7 @@ import { showRandomEventModal } from "./randomEventModal.js";
 import { matureBodyToAdultOnly, scheduleGoldenRainPregnancy } from "./reproduction.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
+import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { addAcquiredStat, syncEffectiveStats } from "./domain/statLayers.js";
 import { recordHobbyAwakeningHistory, recordMythicEventHistory, recordSocialRelationHistory } from "./history.js";
 import {
@@ -79,10 +80,7 @@ export class RandomEvents {
   }
 
   static hasBuilding(village, flagName, buildingId) {
-    return !!(
-      (village?.buildingFlags && village.buildingFlags[flagName]) ||
-      (Array.isArray(village?.buildings) && village.buildings.includes(buildingId))
-    );
+    return hasActiveBuildingFlag(village, flagName, buildingId);
   }
 
   static getSpeechType(character) {

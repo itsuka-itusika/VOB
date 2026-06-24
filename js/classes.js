@@ -71,6 +71,8 @@ export class Village {
     this.buildings = [];
     // 建築物フラグを追加
     this.buildingFlags = {};
+    this.damagedBuildings = [];
+    this.nonHousePopLimitBonus = 0;
 
     // ソート状態の保存
     this.tableSort = {

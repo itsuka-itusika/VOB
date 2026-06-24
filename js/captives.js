@@ -1,14 +1,33 @@
 import { clampValue } from "./util.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
+import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 
 export const ACTION_CAPTIVE = "虜囚";
 export const CAPTIVE_TRAIT = "捕虜";
 export const CAPTIVE_FAILED_TRAIT = "懐柔失敗";
 export const CAPTIVE_SOCIAL_COEFFICIENT = 0.1;
 export const MAX_CAPTIVES = 3;
+export const HOLDING_CELL_MAX_CAPTIVES = 1;
+export const CAPTIVE_RELEASE_MONTHS = 6;
 
 const BEAST_RAIDER_RACES = new Set(["狼"]);
 const BEAST_RAIDER_TYPES = new Set(["狼", "餓狼"]);
+
+function getMonthIndex(year, month) {
+  return (Number(year) || 0) * 12 + Math.max(0, (Number(month) || 1) - 1);
+}
+
+function getVillageMonthIndex(village) {
+  return getMonthIndex(village?.year, village?.month);
+}
+
+function monthIndexToDate(monthIndex) {
+  const index = Math.max(0, Math.floor(Number(monthIndex) || 0));
+  return {
+    year: Math.floor(index / 12),
+    month: (index % 12) + 1
+  };
+}
 
 export function getCaptives(village) {
   if (!village) return [];
@@ -19,14 +38,17 @@ export function getCaptives(village) {
 }
 
 export function hasPrison(village) {
-  return !!(
-    village?.buildingFlags?.hasPrison ||
-    (Array.isArray(village?.buildings) && village.buildings.includes("prison"))
-  );
+  return getCaptiveLimit(village) > 0;
+}
+
+export function getCaptiveLimit(village) {
+  if (hasActiveBuildingFlag(village, "hasPrison", "prison")) return MAX_CAPTIVES;
+  if (hasActiveBuildingFlag(village, "hasHoldingCell", "holdingCell")) return HOLDING_CELL_MAX_CAPTIVES;
+  return 0;
 }
 
 export function canHoldMoreCaptives(village) {
-  return getCaptives(village).length < MAX_CAPTIVES;
+  return getCaptives(village).length < getCaptiveLimit(village);
 }
 
 export function isCaptive(person, village) {
@@ -83,6 +105,55 @@ export function releaseCaptive(village, captive) {
   }
 }
 
+export function setCaptiveReleaseDeadline(village, captive) {
+  if (!village || !captive) return captive;
+  captive.capturedYear = Number(village.year) || 0;
+  captive.capturedMonth = Number(village.month) || 1;
+  captive.releaseMonthIndex = getVillageMonthIndex(village) + CAPTIVE_RELEASE_MONTHS;
+  return captive;
+}
+
+export function ensureCaptiveReleaseDeadline(village, captive) {
+  if (!village || !captive) return captive;
+  const releaseIndex = Math.floor(Number(captive.releaseMonthIndex));
+  if (Number.isFinite(releaseIndex) && releaseIndex > 0) return captive;
+  const capturedYear = Number(captive.capturedYear);
+  const capturedMonth = Number(captive.capturedMonth);
+  const baseIndex = Number.isFinite(capturedYear) && Number.isFinite(capturedMonth)
+    ? getMonthIndex(capturedYear, capturedMonth)
+    : getVillageMonthIndex(village);
+  captive.releaseMonthIndex = baseIndex + CAPTIVE_RELEASE_MONTHS;
+  if (!Number.isFinite(capturedYear)) captive.capturedYear = Number(village.year) || 0;
+  if (!Number.isFinite(capturedMonth)) captive.capturedMonth = Number(village.month) || 1;
+  return captive;
+}
+
+export function getCaptiveMonthsUntilRelease(village, captive) {
+  ensureCaptiveReleaseDeadline(village, captive);
+  return Math.max(0, Math.floor(Number(captive.releaseMonthIndex) || 0) - getVillageMonthIndex(village));
+}
+
+export function formatCaptiveReleaseDeadline(village, captive) {
+  ensureCaptiveReleaseDeadline(village, captive);
+  const releaseDate = monthIndexToDate(captive.releaseMonthIndex);
+  const monthsLeft = getCaptiveMonthsUntilRelease(village, captive);
+  const remainingText = monthsLeft <= 0 ? "今月解放" : `残り${monthsLeft}ヶ月`;
+  return `解放期限: ${releaseDate.year}年${releaseDate.month}月（${remainingText}）`;
+}
+
+export function processCaptiveReleaseDeadlines(village) {
+  const currentMonthIndex = getVillageMonthIndex(village);
+  const dueCaptives = getCaptives(village).filter(captive => {
+    ensureCaptiveReleaseDeadline(village, captive);
+    return Math.floor(Number(captive.releaseMonthIndex) || 0) <= currentMonthIndex;
+  });
+  dueCaptives.forEach(captive => {
+    releaseCaptive(village, captive);
+    village.log(`${captive.name}は収監期限を終えたため解放されました`);
+  });
+  return dueCaptives;
+}
+
 export function isCapturableRaider(person) {
   if (!person) return false;
   const raiderType = String(person.raiderType || person.job || "");
@@ -104,7 +175,7 @@ export function recordDefeatedRaidEnemy(village, enemy) {
 export function tryCaptureRaidPrisoner(village) {
   if (!hasPrison(village)) return null;
   if (!canHoldMoreCaptives(village)) {
-    village.log(`牢獄は満員です。捕虜は最大${MAX_CAPTIVES}名までです`);
+    village.log(`捕虜の収容施設は満員です。捕虜は最大${getCaptiveLimit(village)}名までです`);
     return null;
   }
 
@@ -131,8 +202,9 @@ export function tryCaptureRaidPrisoner(village) {
   captive.hp = clampValue(Math.max(1, Number(captive.hp) || 0), 0, 100);
   captive.mp = clampValue(Number(captive.mp) || 0, 0, 100);
   normalizeCaptive(captive);
+  setCaptiveReleaseDeadline(village, captive);
   getCaptives(village).push(captive);
-  village.log(`牢獄に${captive.name}を捕虜として収容しました`);
+  village.log(`収容施設に${captive.name}を捕虜として収容しました`);
   return captive;
 }
 

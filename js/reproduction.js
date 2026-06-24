@@ -9,6 +9,7 @@ import {
   selectToddlerPortraitByCharacter
 } from "./createVillagers.js";
 import { refreshJobTable } from "./domain/jobTables.js";
+import { addNonHousePopLimitBonus } from "./domain/buildingState.js";
 import { BABY_FEMALE_PORTRAIT_KEY, BABY_MALE_PORTRAIT_KEY } from "./data/portraitPaths.js";
 import { getBaseStat, setBaseStat, setBaseStatsFromEffective, syncEffectiveStats } from "./domain/statLayers.js";
 import { recordAdulthoodHistory, recordBirthHistory, recordPregnancyHistory } from "./history.js";
@@ -715,7 +716,7 @@ function giveBirth(village, mother) {
   }
 
   mother.pregnancy = null;
-  village.popLimit = (Number(village.popLimit) || 0) + 1;
+  addNonHousePopLimitBonus(village, 1);
   village.villagers.push(child);
   recordBirthHistory(village, mother, child, {
     spouse,

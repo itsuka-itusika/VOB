@@ -37,6 +37,7 @@ import {
   refreshJobTable
 } from "./domain/jobTables.js";
 import { getResourceStorageStatus, getResourceStorageWarningRatio } from "./domain/resourceLimits.js";
+import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { isUnassignedActionVillager } from "./domain/rules.js";
 import { showDictionaryEntry } from "./dictionary.js";
 import { combinedDictionaryData } from "./data/dictionaryData.js";
@@ -170,10 +171,7 @@ function buildWarningMessages(village) {
     hasDisappointmentState(person) && !hasDespairState(person) && (Number(person.happiness) || 0) <= 0
   );
   const noActionCount = villagers.filter(isUnassignedActionVillager).length;
-  const assemblyHallBuilt = !!(
-    village.buildingFlags?.hasAssemblyHall ||
-    (Array.isArray(village.buildings) && village.buildings.includes("assemblyHall"))
-  );
+  const assemblyHallBuilt = hasActiveBuildingFlag(village, "hasAssemblyHall", "assemblyHall");
 
   if (foodCost > 0 && monthsOfFood <= 3) {
     warnings.push({
@@ -260,10 +258,10 @@ function buildWarningMessages(village) {
     });
   }
 
-  if ((Number(village.building) || 0) >= 120 && !assemblyHallBuilt) {
+  if ((Number(village.building) || 0) >= 70 && !assemblyHallBuilt) {
     warnings.push({
       level: "warning",
-      text: "旅人が足を止める規模になりました。村の声を一つに束ねる集会所を建てれば、里長を選べるようになります。"
+      text: "辺境の村として認められる規模になりました。村の声を一つに束ねる集会所を建てれば、里長を選べるようになります。"
     });
   }
 
@@ -485,10 +483,10 @@ function getTaskEstimateParts(person, task, village) {
   const sexdr = Number(person.sexdr) || 0;
   const str = Number(person.str) || 0;
   const vit = Number(person.vit) || 0;
-  const church = village.buildingFlags && village.buildingFlags.hasChurch;
-  const clinic = village.buildingFlags && village.buildingFlags.hasClinic;
-  const library = village.buildingFlags && village.buildingFlags.hasLibrary;
-  const tavern = village.buildingFlags && village.buildingFlags.hasTavern;
+  const church = hasActiveBuildingFlag(village, "hasChurch", "church");
+  const clinic = hasActiveBuildingFlag(village, "hasClinic", "clinic");
+  const library = hasActiveBuildingFlag(village, "hasLibrary", "library");
+  const tavern = hasActiveBuildingFlag(village, "hasTavern", "tavern");
   const voice = hasTrait(person, "澄んだ声") || hasTrait(person, "通る声");
   const affectedMen = village.villagers.filter(v => v.spiritSex === "男").length;
   const affectedWomen = village.villagers.filter(v => v.spiritSex === "女").length;

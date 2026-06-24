@@ -2,6 +2,8 @@
 
 import { randInt, randChoice, clampValue, shuffleArray, getPortraitPath } from "./util.js";
 import { getRaidRulesById } from "./data/raidData.js";
+import { damageRandomBuilding } from "./buildings.js";
+import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { endOfMonthProcess, doFixedEventPost, doAgingProcess, runMonthStartPhase } from "./events.js";
 import { handleAllVillagerJobs } from "./jobs.js";
 import { addDivineMight } from "./divineMight.js";
@@ -337,10 +339,7 @@ function hasTrait(person, trait) {
 }
 
 function hasMoatDefense(village) {
-  return !!(
-    village?.buildingFlags?.hasMoat ||
-    (Array.isArray(village?.buildings) && village.buildings.includes("moat"))
-  );
+  return hasActiveBuildingFlag(village, "hasMoat", "moat");
 }
 
 function normalizeEnemyPosition(position) {
@@ -1002,6 +1001,7 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
         `幸福-${penalty.happinessLoss}`
       ].filter(Boolean).join(",");
       village.log(`迎撃失敗:${penaltyLog}`);
+      damageRandomBuilding(village);
     }
 
     applyRaidFriendshipResults(village);

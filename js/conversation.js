@@ -15,6 +15,7 @@ import { initializeNewVillagerFriendships } from "./relationships.js";
 import {
   CAPTIVE_FAILED_TRAIT,
   CAPTIVE_SOCIAL_COEFFICIENT,
+  formatCaptiveReleaseDeadline,
   isCaptive,
   normalizeFormerCaptive,
   releaseCaptive
@@ -56,7 +57,10 @@ function getCaptiveConversationLine(captive) {
 
 function createConversationStatusHtml(character) {
   if (isCaptive(character, theVillage)) {
-    return `<p><strong>捕虜:</strong> ${getCaptiveConversationLine(character)}</p>`;
+    return `
+      <p><strong>捕虜:</strong> ${getCaptiveConversationLine(character)}</p>
+      <p class="captive-release-deadline">${formatCaptiveReleaseDeadline(theVillage, character)}</p>
+    `;
   }
   if (isMerchantVisitor(character)) {
     const stock = ensureMerchantStock(character);

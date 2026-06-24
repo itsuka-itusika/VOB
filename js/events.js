@@ -23,6 +23,7 @@ import {
   applyForcedActionRestriction
 } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
+import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
 import {
   addDisappointmentState,
@@ -38,7 +39,8 @@ import { advanceBuildingRequestMonth, tryStartBuildingRequest } from "./building
 import {
   clearCaptiveFailedTraits,
   getPeopleForFoodAndWinterMaterials,
-  processCaptiveActionRecovery
+  processCaptiveActionRecovery,
+  processCaptiveReleaseDeadlines
 } from "./captives.js";
 
 const OPENING_RAID_GRACE_YEAR = 1091;
@@ -233,15 +235,14 @@ export function runMonthStartPhase(village) {
 }
 
 function getVisitorLimit(village) {
-  const savedLimit = Number(village.visitorLimit) || 1;
-  const baseLimit = village.buildingFlags && village.buildingFlags.hasTavern ? 2 : 1;
+  const baseLimit = hasActiveBuildingFlag(village, "hasTavern", "tavern") ? 2 : 1;
   const prosperityBonus = (Number(village.building) || 0) >= 250 ? 1 : 0;
-  return Math.max(1, savedLimit, baseLimit + prosperityBonus);
+  return Math.max(1, baseLimit + prosperityBonus);
 }
 
 function getPublicBathMonthlyRecovery(person, village) {
   const flags = village.buildingFlags || {};
-  if (!flags.hasPublicBath) return 0;
+  if (!hasActiveBuildingFlag(village, "hasPublicBath", "publicBath")) return 0;
   if (isPublicBathRecoveryBlocked(person)) return 0;
   const traitBonus = Array.isArray(person.mindTraits) && person.mindTraits.includes("風呂好き") ? 2 : 0;
   return 5 + (Number(flags.publicBathRecoveryBonus) || 0) + traitBonus;
@@ -254,9 +255,9 @@ function isPublicBathRecoveryBlocked(person) {
 }
 
 function applyPublicBathMonthlyRecovery(village) {
-  if (!(village.buildingFlags && village.buildingFlags.hasPublicBath)) return;
+  if (!hasActiveBuildingFlag(village, "hasPublicBath", "publicBath")) return;
 
-  const baseRecovery = 5 + (Number(village.buildingFlags.publicBathRecoveryBonus) || 0);
+  const baseRecovery = 5 + (Number(village.buildingFlags?.publicBathRecoveryBonus) || 0);
   let bathLoverCount = 0;
   let recoveredCount = 0;
   let blockedCount = 0;
@@ -282,10 +283,7 @@ function applyPublicBathMonthlyRecovery(village) {
 }
 
 function hasWatermill(village) {
-  return !!(
-    (village.buildingFlags && village.buildingFlags.hasWatermill) ||
-    (Array.isArray(village.buildings) && village.buildings.includes("watermill"))
-  );
+  return hasActiveBuildingFlag(village, "hasWatermill", "watermill");
 }
 
 function applyWatermillMonthlyFood(village) {
@@ -295,10 +293,7 @@ function applyWatermillMonthlyFood(village) {
 }
 
 function hasFountain(village) {
-  return !!(
-    (village.buildingFlags && village.buildingFlags.hasFountain) ||
-    (Array.isArray(village.buildings) && village.buildings.includes("fountain"))
-  );
+  return hasActiveBuildingFlag(village, "hasFountain", "fountain");
 }
 
 function applyFountainMonthlyHappiness(village) {
@@ -547,6 +542,7 @@ export function endOfMonthProcess(v) {
 export function doMonthStartProcess(v) {
   v.log("【月初処理】");
   resetMonthlySocialAttemptFlags(v);
+  processCaptiveReleaseDeadlines(v);
 
   // 治安30以下で荒廃状態に
   if (v.security <= 30 && !v.villageTraits.includes("荒廃")) {

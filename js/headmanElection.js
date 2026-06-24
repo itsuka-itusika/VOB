@@ -1,4 +1,5 @@
 import { getPermanentStat, syncEffectiveStats } from "./domain/statLayers.js";
+import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { HISTORY_EVENT_TYPES, recordHeadmanElectionHistory } from "./history.js";
 import { parseRelationship, normalizeRelationships } from "./relationships.js";
 import { grantTitle, incrementTitleCounter, TITLE_COUNTER_KEYS } from "./titles.js";
@@ -24,10 +25,7 @@ let pendingElectionMessage = null;
 let modalObserver = null;
 
 function hasAssemblyHall(village) {
-  return !!(
-    village?.buildingFlags?.hasAssemblyHall ||
-    (Array.isArray(village?.buildings) && village.buildings.includes(ASSEMBLY_HALL_ID))
-  );
+  return hasActiveBuildingFlag(village, "hasAssemblyHall", ASSEMBLY_HALL_ID);
 }
 
 function hasMindTrait(person, trait) {

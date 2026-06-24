@@ -1,4 +1,5 @@
 import { isForcedHealingAction } from "../util.js";
+import { hasActiveBuildingFlag } from "./buildingState.js";
 import {
   ACTION_DEFEND,
   ACTION_FORTIFY,
@@ -251,7 +252,6 @@ export function applyForcedActionRestriction(person) {
 }
 
 function buildAdultPersistentActions(person, village) {
-  const buildingFlags = village?.buildingFlags || {};
   const common = [
     "農作業", "狩猟", "漁",
     "伐採",
@@ -259,18 +259,18 @@ function buildAdultPersistentActions(person, village) {
     "研究", "警備", "看護"
   ];
 
-  if (buildingFlags.hasClinic) common.push("あんま");
-  if (buildingFlags.hasLibrary) common.push("写本");
-  if (buildingFlags.hasBrewery) common.push("醸造");
-  if (buildingFlags.hasAlchemy) common.push("錬金術");
-  if (buildingFlags.hasWeaving) common.push("機織り");
+  if (hasActiveBuildingFlag(village, "hasClinic", "clinic")) common.push("あんま");
+  if (hasActiveBuildingFlag(village, "hasLibrary", "library")) common.push("写本");
+  if (hasActiveBuildingFlag(village, "hasBrewery", "brewery")) common.push("醸造");
+  if (hasActiveBuildingFlag(village, "hasAlchemy", "alchemy")) common.push("錬金術");
+  if (hasActiveBuildingFlag(village, "hasWeaving", "weaving")) common.push("機織り");
 
   const actions = person.bodySex === "男"
     ? [...common, "詩人", "神官"]
     : [...common, "踊り子", "シスター"];
   if (person.bodySex !== "男") {
-    if (buildingFlags.hasTavern) actions.push("バニー");
-    if (buildingFlags.hasChurch) actions.push("巫女");
+    if (hasActiveBuildingFlag(village, "hasTavern", "tavern")) actions.push("バニー");
+    if (hasActiveBuildingFlag(village, "hasChurch", "church")) actions.push("巫女");
   }
 
   if (!traitList(person, "mindTraits").includes("神聖")) return actions;

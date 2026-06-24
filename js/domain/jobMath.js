@@ -1,3 +1,5 @@
+import { hasActiveBuildingFlag } from "./buildingState.js";
+
 const SWEATY_TRAIT = "汗かき";
 const COLD_SENSITIVE_TRAIT = "寒がり";
 const WORKAHOLIC_TRAIT = "ワーカホリック";
@@ -164,9 +166,8 @@ export function calculateLumberYield(person, village) {
 }
 
 function getExpectedHarvestBase(job, village) {
-  const flags = village?.buildingFlags || {};
-  if (job === "狩猟" && flags.hasHuntingLodge) return IMPROVED_HARVEST_EXPECTED_BASE;
-  if (job === "漁" && flags.hasDock) return IMPROVED_HARVEST_EXPECTED_BASE;
+  if (job === "狩猟" && hasActiveBuildingFlag(village, "hasHuntingLodge", "huntingLodge")) return IMPROVED_HARVEST_EXPECTED_BASE;
+  if (job === "漁" && hasActiveBuildingFlag(village, "hasDock", "dock")) return IMPROVED_HARVEST_EXPECTED_BASE;
   return RANDOM_HARVEST_EXPECTED_BASE;
 }
 
@@ -197,7 +198,7 @@ export function calculateHandiworkYield(person, village) {
 }
 
 export function calculateResearchYield(person, village, job = "研究") {
-  const libraryMultiplier = village?.buildingFlags?.hasLibrary ? 1.2 : 1;
+  const libraryMultiplier = hasActiveBuildingFlag(village, "hasLibrary", "library") ? 1.2 : 1;
   return Math.round((30 * statProduct(person, "int", "mag")) * libraryMultiplier * getLaborYieldMultiplier(job, person, village));
 }
 
@@ -231,7 +232,7 @@ function calculateTradingLikeYield(person, job, baseValue) {
 
 export function calculateNurseHeal(person, village) {
   let amount = Math.round(25 * statProduct(person, "mag", "eth"));
-  if (village?.buildingFlags?.hasClinic) {
+  if (hasActiveBuildingFlag(village, "hasClinic", "clinic")) {
     amount = Math.round(amount * 1.2);
   }
   return amount;
@@ -239,7 +240,7 @@ export function calculateNurseHeal(person, village) {
 
 export function calculatePriestMindHeal(person, village) {
   let amount = Math.round(8 * statProduct(person, "chr", "eth"));
-  if (village?.buildingFlags?.hasChurch) {
+  if (hasActiveBuildingFlag(village, "hasChurch", "church")) {
     amount = Math.round(amount * 1.2);
   }
   if (hasBodyTrait(person, "澄んだ声") || hasBodyTrait(person, "通る声")) {
@@ -250,7 +251,7 @@ export function calculatePriestMindHeal(person, village) {
 
 export function calculateDancerHappiness(person, village) {
   let amount = Math.round(10 * statProduct(person, "chr", "sexdr"));
-  if (village?.buildingFlags?.hasTavern) {
+  if (hasActiveBuildingFlag(village, "hasTavern", "tavern")) {
     amount = Math.round(amount * 1.2);
   }
   if (hasBodyTrait(person, "澄んだ声") || hasBodyTrait(person, "通る声")) {
@@ -264,7 +265,7 @@ export function calculateDancerHappiness(person, village) {
 
 export function calculatePoetHappiness(person, village) {
   let amount = Math.round(10 * statProduct(person, "chr", "int"));
-  if (village?.buildingFlags?.hasTavern) {
+  if (hasActiveBuildingFlag(village, "hasTavern", "tavern")) {
     amount = Math.round(amount * 1.2);
   }
   if (hasBodyTrait(person, "澄んだ声") || hasBodyTrait(person, "通る声")) {

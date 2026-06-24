@@ -8,6 +8,7 @@ import { updateChildGrowthStage } from "./reproduction.js";
 import { clampValue, round3 } from "./util.js";
 import { updateUI } from "./ui.js";
 import { addAcquiredStat, syncEffectiveStats } from "./domain/statLayers.js";
+import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { MESSENGER_PASS_SECRET_TREASURE_ID } from "./data/tutorialData.js";
 import { getCaptives } from "./captives.js";
 import { DESPAIR_TRAIT, DISAPPOINTMENT_TRAIT } from "./domain/despair.js";
@@ -248,6 +249,10 @@ function hasUsedOldPriestStatue(village) {
   return Boolean(flags.usedOldPriestStatue) || (Number(flags.publicBathRecoveryBonus) || 0) > 0;
 }
 
+function hasActivePublicBath(village) {
+  return hasActiveBuildingFlag(village, "hasPublicBath", "publicBath");
+}
+
 export const SECRET_TREASURES = [
   {
     id: "persephone_statue",
@@ -395,9 +400,9 @@ export const SECRET_TREASURES = [
     name: "老神官の石像",
     desc: "公衆浴場がある時に1回だけ使用可能。公衆浴場の毎月の体力・メンタル回復をそれぞれ+1する。",
     sellPrice: SECRET_TREASURE_SELL_PRICES.old_priest_statue,
-    canUse: (village) => !!(village.buildingFlags && village.buildingFlags.hasPublicBath) && !hasUsedOldPriestStatue(village),
+    canUse: (village) => hasActivePublicBath(village) && !hasUsedOldPriestStatue(village),
     blockedReason: (village) => {
-      if (!(village.buildingFlags && village.buildingFlags.hasPublicBath)) return "公衆浴場が必要です";
+      if (!hasActivePublicBath(village)) return "公衆浴場が必要です";
       if (hasUsedOldPriestStatue(village)) return "老神官の石像は使用済みです";
       return "使用条件を満たしていません";
     },

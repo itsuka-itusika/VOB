@@ -1580,6 +1580,13 @@ section h2 {
   border-radius: 3px;
   font-size: 0.8em;
 }
+.damaged-mark {
+  background: #b94a48;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 0.8em;
+}
 .building-request-mark {
   background: #9c7a39;
   color: white;
@@ -1599,6 +1606,12 @@ section h2 {
   font-size: 0.9em;
   color: #555;
   margin-bottom: 10px;
+}
+.building-status,
+.building-repair-cost {
+  font-size: 0.9em;
+  color: #555;
+  margin-bottom: 8px;
 }
 .building-cost-original {
   text-decoration: line-through;
@@ -1639,6 +1652,15 @@ section h2 {
   background: #4CAF50;
   color: white;
 }
+.building-button.repair {
+  margin-top: 8px;
+}
+.building-button.repair:not(:disabled) {
+  background: #9c7a39;
+}
+.building-button.repair:not(:disabled):hover {
+  background: #7a5f2d;
+}
 .built-list {
   display: flex;
   flex-wrap: wrap;
@@ -1651,6 +1673,9 @@ section h2 {
   padding: 5px 10px;
   border-radius: 4px;
   font-size: 0.9em;
+}
+.built-item.damaged {
+  background: #b94a48;
 }
 .building-resources {
   display: flex;

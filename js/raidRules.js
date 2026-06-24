@@ -1,4 +1,5 @@
 import { isForcedHealingAction } from "./util.js";
+import { countActiveBuildings, hasActiveBuildingFlag } from "./domain/buildingState.js";
 
 export const ACTION_DEFEND = "迎撃";
 export const ACTION_TRAP = "罠作成";
@@ -43,15 +44,7 @@ export function canMakeTrapInRaid(person) {
 
 function hasRaidUnlock(village, flag, buildingId) {
   if (!village) return true;
-  return !!(
-    village.buildingFlags?.[flag] ||
-    (Array.isArray(village.buildings) && village.buildings.includes(buildingId))
-  );
-}
-
-function countBuilt(village, buildingId) {
-  if (!Array.isArray(village?.buildings)) return 0;
-  return village.buildings.filter(id => id === buildingId).length;
+  return hasActiveBuildingFlag(village, flag, buildingId);
 }
 
 function sortRaidShootersByPriority(shooters) {
@@ -64,7 +57,7 @@ function sortRaidShootersByPriority(shooters) {
 
 export function getRaidShooterSlotCount(village = null) {
   if (!village) return Number.POSITIVE_INFINITY;
-  return Math.min(3, countBuilt(village, "watchtower"));
+  return Math.min(3, countActiveBuildings(village, "watchtower"));
 }
 
 export function canShootInRaid(person, village = null) {

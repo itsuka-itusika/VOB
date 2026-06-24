@@ -31,6 +31,7 @@ import {
 } from "./domain/jobMath.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
+import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { addAcquiredStat, getPermanentStat, syncEffectiveStats } from "./domain/statLayers.js";
 import { rollSecretTreasureJobEvents, showSecretTreasureEventModals } from "./secretTreasureEvents.js";
 import { completeTutorialTask } from "./tutorial.js";
@@ -545,8 +546,9 @@ function doHunt(p, v) {
   let r = randInt(1,100);
   let x = 0;
   let result = "";
-  const failureThreshold = v.buildingFlags?.hasHuntingLodge ? 10 : 20;
-  const successThreshold = v.buildingFlags?.hasHuntingLodge ? 80 : 80;
+  const hasHuntingLodge = hasActiveBuildingFlag(v, "hasHuntingLodge", "huntingLodge");
+  const failureThreshold = hasHuntingLodge ? 10 : 20;
+  const successThreshold = hasHuntingLodge ? 80 : 80;
   if (r <= failureThreshold) {
     x = 0;
     result = "失敗";
@@ -606,8 +608,9 @@ function doFish(p, v) {
   let r = randInt(1,100);
   let x = 0;
   let result = "";
-  const failureThreshold = v.buildingFlags?.hasDock ? 10 : 20;
-  const successThreshold = v.buildingFlags?.hasDock ? 80 : 80;
+  const hasDock = hasActiveBuildingFlag(v, "hasDock", "dock");
+  const failureThreshold = hasDock ? 10 : 20;
+  const successThreshold = hasDock ? 80 : 80;
   if (r <= failureThreshold) {
     x = 0;
     result = "失敗";
@@ -1018,7 +1021,7 @@ function doTradingLike(p, v, jobName, calculateYield) {
   let x = 0;
   let result = "";
   const receivesMarketBonus = jobName === "行商" || jobName === "丁稚";
-  const failureThreshold = receivesMarketBonus && v.buildingFlags?.hasMarket ? 10 : 20;
+  const failureThreshold = receivesMarketBonus && hasActiveBuildingFlag(v, "hasMarket", "market") ? 10 : 20;
   const successThreshold = 80;
   if (r <= failureThreshold) {
     x = 0;

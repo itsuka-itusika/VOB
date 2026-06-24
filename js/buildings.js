@@ -1,5 +1,15 @@
 import { refreshJobTable } from "./domain/jobTables.js";
-import { MAX_STOREHOUSES, getResourceStorageLimit } from "./domain/resourceLimits.js";
+import { MAX_STOREHOUSES, clampStoredResources, getResourceStorageLimit } from "./domain/resourceLimits.js";
+import {
+  countActiveBuildings,
+  countBuiltBuildings,
+  countDamagedBuildings,
+  damageBuilding,
+  getActiveBuildingIds,
+  hasActiveBuilding,
+  recalculateBuildingDerivedState,
+  repairDamagedBuilding
+} from "./domain/buildingState.js";
 import { completeTutorialTask } from "./tutorial.js";
 import { showVillageScaleMilestones } from "./villageScale.js";
 import { fulfillBuildingRequest, getBuildingCostForVillage } from "./buildingRequests.js";
@@ -26,23 +36,26 @@ function isScaleAtLeast(village, threshold) {
   return (Number(village?.building) || 0) >= threshold;
 }
 
-function hasBuilt(village, buildingId) {
-  return Array.isArray(village?.buildings) && village.buildings.includes(buildingId);
+function canBuildStorehouse(village) {
+  if (countBuiltBuildings(village, "barn") > 0) {
+    return hasActiveBuilding(village, "barn");
+  }
+  return !!(
+    village?.buildingFlags?.hasBarn ||
+    village?.buildingFlags?.canBuildStorehouse
+  );
 }
 
-function canBuildStorehouse(village) {
-  return !!(
-    village?.buildingFlags?.canBuildStorehouse ||
-    village?.buildingFlags?.hasBarn ||
-    hasBuilt(village, "barn")
-  );
+function canBuildHoldingCell(village) {
+  return isScaleAtLeast(village, 70) && hasActiveBuilding(village, "barn");
 }
 
 function canBuildMoat(village) {
-  return isScaleAtLeast(village, 250) && !!(
-    village?.buildingFlags?.hasWoodenFence ||
-    hasBuilt(village, "woodenFence")
-  );
+  return isScaleAtLeast(village, 180) && hasActiveBuilding(village, "woodenFence");
+}
+
+function canBuildPrison(village) {
+  return isScaleAtLeast(village, 250) && hasActiveBuilding(village, "holdingCell");
 }
 
 /** 建築物の定義 */
@@ -55,8 +68,8 @@ export const BUILDINGS = [
     tech: 0,
     desc: "村の上限人口が2人増える。最大6つまで建設可能。規模+15",
     effect: (village) => {
-      village.popLimit += 2;
       village.building += 15;
+      recalculateBuildingDerivedState(village);
       village.log(`家屋建設: 人口上限+2 (現在${village.popLimit}人), 規模+15`);
     },
     allowMultiple: true,
@@ -219,9 +232,19 @@ export const BUILDINGS = [
     materials: 50,
     funds: 50,
     tech: 50,
-    desc: "旅人の立ち寄る村で解放。7月に里長選挙を行う。規模+20",
-    isUnlocked: (village) => isScaleAtLeast(village, 120),
+    desc: "辺境の村で解放。7月に里長選挙を行う。規模+20",
+    isUnlocked: (village) => isScaleAtLeast(village, 70),
     effect: standardBuildingEffect({ scale: 20, flag: "hasAssemblyHall", log: "集会所建設完了: 村人たちが集まり、里長を選ぶ場が整いました、規模+20" })
+  },
+  {
+    id: "holdingCell",
+    name: "営倉",
+    materials: 50,
+    funds: 20,
+    tech: 0,
+    desc: "辺境の村で解放。納屋建設後に建設可能。捕虜を最大1名まで収容できる。規模+10",
+    isUnlocked: canBuildHoldingCell,
+    effect: standardBuildingEffect({ scale: 10, flag: "hasHoldingCell", log: "営倉建設完了: 捕虜を最大1名まで収容可能、規模+10" })
   },
   {
     id: "publicBath",
@@ -239,10 +262,10 @@ export const BUILDINGS = [
     materials: 50,
     funds: 50,
     tech: 50,
-    desc: "豊かな村で解放。襲撃中の「射撃」解放、中衛枠+1。最大3つまで建設可能。規模+10",
+    desc: "旅人の立ち寄る村で解放。襲撃中の「射撃」解放、中衛枠+1。最大3つまで建設可能。規模+10",
     allowMultiple: true,
     maxCount: 3,
-    isUnlocked: (village) => isScaleAtLeast(village, 180),
+    isUnlocked: (village) => isScaleAtLeast(village, 120),
     effect: standardBuildingEffect({ scale: 10, flag: "hasWatchtower", log: "櫓建設完了: 射撃の中衛枠+1、規模+10" })
   },
   {
@@ -251,8 +274,8 @@ export const BUILDINGS = [
     materials: 100,
     funds: 100,
     tech: 0,
-    desc: "豊かな村で解放。襲撃中の「籠城」解放。規模+30",
-    isUnlocked: (village) => isScaleAtLeast(village, 180),
+    desc: "旅人の立ち寄る村で解放。襲撃中の「籠城」解放。規模+30",
+    isUnlocked: (village) => isScaleAtLeast(village, 120),
     effect: standardBuildingEffect({ scale: 30, flag: "hasWoodenFence", log: "木柵建設完了: 籠城が可能になりました、規模+30" })
   },
   {
@@ -261,7 +284,7 @@ export const BUILDINGS = [
     materials: 50,
     funds: 50,
     tech: 100,
-    desc: "繁栄した郷村で解放。木柵建設後に建設可能。籠城時のダメージ軽減率を0.7にする。規模+30",
+    desc: "豊かな村で解放。木柵建設後に建設可能。籠城時のダメージ軽減率を0.7にする。規模+30",
     isUnlocked: canBuildMoat,
     effect: standardBuildingEffect({ scale: 30, flag: "hasMoat", log: "環濠建設完了: 籠城時のダメージ軽減率が0.7になりました、規模+30" })
   },
@@ -271,9 +294,9 @@ export const BUILDINGS = [
     materials: 50,
     funds: 50,
     tech: 0,
-    desc: "繁栄した郷村で解放。罪人や捕虜を閉じ込める施設。規模+20",
-    isUnlocked: (village) => isScaleAtLeast(village, 250),
-    effect: standardBuildingEffect({ scale: 20, flag: "hasPrison", log: "牢獄建設完了: 牢獄を築きました、規模+20" })
+    desc: "繁栄した郷村で解放。営倉建設後に建設可能。捕虜を最大3名まで収容できる。規模+20",
+    isUnlocked: canBuildPrison,
+    effect: standardBuildingEffect({ scale: 20, flag: "hasPrison", log: "牢獄建設完了: 捕虜を最大3名まで収容可能、規模+20" })
   }
 ];
 
@@ -301,6 +324,36 @@ function renderCostLine(label, originalCost, currentCost, isDiscounted) {
   return `<div>${label}: <span class="building-cost-original">${originalCost}</span><span class="building-cost-arrow">→</span><strong class="building-cost-discounted">${currentCost}</strong></div>`;
 }
 
+function getBuildingRepairCosts(building) {
+  return {
+    materials: Math.ceil((Number(building.materials) || 0) / 2),
+    funds: Math.ceil((Number(building.funds) || 0) / 2),
+    tech: Math.ceil((Number(building.tech) || 0) / 2)
+  };
+}
+
+function canAffordRepair(village, costs) {
+  return village.materials >= costs.materials &&
+    village.funds >= costs.funds &&
+    village.tech >= costs.tech;
+}
+
+function getRepairBlockReason(village, costs) {
+  const reasons = [];
+  if (village.materials < costs.materials) reasons.push("資材不足");
+  if (village.funds < costs.funds) reasons.push("資金不足");
+  if (village.tech < costs.tech) reasons.push("技術不足");
+  return reasons.join(", ");
+}
+
+function renderRepairCost(costs) {
+  return [
+    costs.materials > 0 ? `資材:${costs.materials}` : "",
+    costs.funds > 0 ? `資金:${costs.funds}` : "",
+    costs.tech > 0 ? `技術:${costs.tech}` : ""
+  ].filter(Boolean).join(" / ") || "費用なし";
+}
+
 function renderBuiltBuildings(builtList, village) {
   const buildings = village.buildings || [];
   if (buildings.length === 0) {
@@ -311,7 +364,10 @@ function renderBuiltBuildings(builtList, village) {
   const buildingCounts = getBuildingCounts(village);
   builtList.innerHTML = Object.entries(buildingCounts).map(([id, count]) => {
     const building = BUILDINGS.find(item => item.id === id);
-    return `<div class="built-item">${building?.name || id}${count > 1 ? ` x${count}` : ""}</div>`;
+    const damagedCount = countDamagedBuildings(village, id);
+    const damageText = damagedCount > 0 ? ` / 損壊${damagedCount}` : "";
+    const className = damagedCount > 0 ? "built-item damaged" : "built-item";
+    return `<div class="${className}">${building?.name || id}${count > 1 ? ` x${count}` : ""}${damageText}</div>`;
   }).join("");
 }
 
@@ -319,10 +375,14 @@ function createBuildingItem(building, village) {
   const div = document.createElement("div");
   div.className = "building-item";
 
-  const builtCount = (village.buildings || []).filter(id => id === building.id).length;
+  const builtCount = countBuiltBuildings(village, building.id);
+  const activeCount = countActiveBuildings(village, building.id);
+  const damagedCount = countDamagedBuildings(village, building.id);
   const isBuilt = !building.allowMultiple && builtCount > 0;
   const reachedLimit = Number.isFinite(building.maxCount) && builtCount >= building.maxCount;
   const costs = getBuildingCostForVillage(building, village);
+  const repairCosts = getBuildingRepairCosts(building);
+  const canRepair = damagedCount > 0 && canAffordRepair(village, repairCosts);
   const canBuild = !isBuilt && !reachedLimit &&
     village.materials >= costs.materials &&
     village.funds >= costs.funds &&
@@ -331,21 +391,26 @@ function createBuildingItem(building, village) {
     ? `${builtCount}/${building.maxCount}`
     : builtCount;
   const reasonText = getBuildBlockReason(building, village, { isBuilt, reachedLimit, costs });
+  const repairReasonText = getRepairBlockReason(village, repairCosts);
 
   div.innerHTML = `
     <div class="building-header">
       <h4>${building.name}</h4>
       ${costs.isDiscounted ? '<span class="building-request-mark">要望 -20%</span>' : ""}
       ${isBuilt ? '<span class="built-mark">建設済</span>' : ""}
+      ${damagedCount > 0 ? `<span class="damaged-mark">損壊中: ${damagedCount}</span>` : ""}
       ${(builtCount > 0 || Number.isFinite(building.maxCount)) ? `<span class="built-count">建設数: ${countText}</span>` : ""}
     </div>
     <div class="building-desc">${building.desc}</div>
+    ${builtCount > 0 ? `<div class="building-status">有効数: ${activeCount}${damagedCount > 0 ? ` / 損壊: ${damagedCount}` : ""}</div>` : ""}
     <div class="building-cost">
       ${renderCostLine("資材", costs.originalMaterials, costs.materials, costs.isDiscounted)}
       ${renderCostLine("資金", costs.originalFunds, costs.funds, costs.isDiscounted)}
       ${renderCostLine("技術", costs.originalTech, costs.tech, costs.isDiscounted)}
     </div>
     ${!canBuild && !isBuilt ? `<div class="building-reason">${reasonText}</div>` : ""}
+    ${damagedCount > 0 ? `<div class="building-repair-cost">修繕費: ${renderRepairCost(repairCosts)}</div>` : ""}
+    ${damagedCount > 0 && !canRepair ? `<div class="building-reason">${repairReasonText}</div>` : ""}
   `;
 
   const button = document.createElement("button");
@@ -358,6 +423,19 @@ function createBuildingItem(building, village) {
     };
   }
   div.appendChild(button);
+
+  if (damagedCount > 0) {
+    const repairButton = document.createElement("button");
+    repairButton.className = "building-button repair";
+    repairButton.textContent = canRepair ? "修繕" : "修繕不可";
+    repairButton.disabled = !canRepair;
+    if (canRepair) {
+      repairButton.onclick = () => {
+        if (confirm(`${building.name}を修繕しますか？`)) repairBuilding(building, village);
+      };
+    }
+    div.appendChild(repairButton);
+  }
   return div;
 }
 
@@ -367,6 +445,7 @@ export function openBuildingModal(village) {
     village.log("ゲームオーバー→建築不可");
     return;
   }
+  recalculateBuildingDerivedState(village);
 
   document.getElementById("buildingOverlay").style.display = "block";
   document.getElementById("buildingModal").style.display = "block";
@@ -392,7 +471,7 @@ export function openBuildingModal(village) {
   renderBuiltBuildings(content.querySelector(".built-list"), village);
   const grid = content.querySelector(".building-grid");
   BUILDINGS
-    .filter(building => !building.isUnlocked || building.isUnlocked(village))
+    .filter(building => countBuiltBuildings(village, building.id) > 0 || !building.isUnlocked || building.isUnlocked(village))
     .forEach(building => grid.appendChild(createBuildingItem(building, village)));
 }
 
@@ -400,6 +479,27 @@ export function openBuildingModal(village) {
 export function closeBuildingModal() {
   document.getElementById("buildingOverlay").style.display = "none";
   document.getElementById("buildingModal").style.display = "none";
+}
+
+function refreshAfterBuildingStateChange(village) {
+  recalculateBuildingDerivedState(village);
+  clampStoredResources(village);
+  refreshVillageJobTables(village);
+}
+
+function repairBuilding(building, village) {
+  const costs = getBuildingRepairCosts(building);
+  if (!canAffordRepair(village, costs)) return;
+  if (!repairDamagedBuilding(village, building.id)) return;
+
+  village.materials -= costs.materials;
+  village.funds -= costs.funds;
+  village.tech -= costs.tech;
+
+  refreshAfterBuildingStateChange(village);
+  village.log(`${building.name}を修繕しました。建築効果が復旧しました`);
+  import("./ui.js").then(module => module.updateUI(village));
+  openBuildingModal(village);
 }
 
 function constructBuilding(building, village) {
@@ -415,9 +515,27 @@ function constructBuilding(building, village) {
   if (building.id === "barn") {
     completeTutorialTask(village, "build_barn");
   }
+  recalculateBuildingDerivedState(village);
   refreshVillageJobTables(village);
   showVillageScaleMilestones(village);
 
   import("./ui.js").then(module => module.updateUI(village));
   closeBuildingModal();
+}
+
+export function damageRandomBuilding(village) {
+  const candidates = getActiveBuildingIds(village);
+  if (candidates.length === 0) {
+    village.log("損壊する建築物はありませんでした");
+    return null;
+  }
+
+  const buildingId = candidates[Math.floor(Math.random() * candidates.length)];
+  if (!damageBuilding(village, buildingId)) return null;
+
+  refreshAfterBuildingStateChange(village);
+  const building = BUILDINGS.find(item => item.id === buildingId);
+  const name = building?.name || buildingId;
+  village.log(`建築損壊:${name}の効果が失われました。建築画面から修繕できます`);
+  return buildingId;
 }

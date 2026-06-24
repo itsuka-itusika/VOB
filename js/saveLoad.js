@@ -9,8 +9,9 @@ import { ensureVillageFriendships, normalizeFriendshipState, normalizeRelationsh
 import { ensureTitleState, evaluateTitles } from "./titles.js";
 import { normalizeTutorialState } from "./tutorial.js";
 import { getInitialScaleStageIndex } from "./villageScale.js";
-import { normalizeCaptive } from "./captives.js";
+import { ensureCaptiveReleaseDeadline, normalizeCaptive } from "./captives.js";
 import { normalizeBuildingRequestState } from "./buildingRequests.js";
+import { hasActiveBuildingFlag, normalizeDamagedBuildings, recalculateBuildingDerivedState } from "./domain/buildingState.js";
 
 const BODY_TRAIT_RENAMES = {
   "幼児": "子供",
@@ -205,6 +206,8 @@ function convertVillageToObject(village) {
     // 建築物関連のデータを追加
     buildings: [...village.buildings],
     buildingFlags: { ...village.buildingFlags },
+    damagedBuildings: normalizeDamagedBuildings(village),
+    nonHousePopLimitBonus: normalizeFiniteNumber(village.nonHousePopLimitBonus, 0),
 
     // 襲撃系
     isRaidProcessDone: village.isRaidProcessDone,
@@ -318,6 +321,9 @@ function convertVillagerToObject(vill) {
     ...(vill.raiderRole ? { raiderRole: vill.raiderRole } : {}),
     ...(vill.raidPosition ? { raidPosition: vill.raidPosition } : {}),
     ...(vill.raidTargeting ? { raidTargeting: vill.raidTargeting } : {}),
+    capturedYear: Number.isFinite(Number(vill.capturedYear)) ? Number(vill.capturedYear) : undefined,
+    capturedMonth: Number.isFinite(Number(vill.capturedMonth)) ? Number(vill.capturedMonth) : undefined,
+    releaseMonthIndex: Number.isFinite(Number(vill.releaseMonthIndex)) ? Number(vill.releaseMonthIndex) : undefined,
     adultBodyReached: vill.adultBodyReached !== undefined
       ? !!vill.adultBodyReached
       : !!(vill.potentialStats && Number(vill.bodyAge) >= 16),
@@ -382,13 +388,15 @@ function convertObjectToVillage(dataObj) {
   if (dataObj.buildingFlags) {
     v.buildingFlags = { ...dataObj.buildingFlags };
   }
-  if (v.buildingFlags.hasTavern || v.buildings.includes("tavern")) {
-    v.visitorLimit = Math.max(v.visitorLimit, 2);
-  }
-  if ((Number(v.building) || 0) >= 250) {
-    const baseLimit = (v.buildingFlags.hasTavern || v.buildings.includes("tavern")) ? 2 : 1;
-    v.visitorLimit = Math.max(v.visitorLimit, baseLimit + 1);
-  }
+  v.damagedBuildings = Array.isArray(dataObj.damagedBuildings) ? [...dataObj.damagedBuildings] : [];
+  v.nonHousePopLimitBonus = hasOwn(dataObj, "nonHousePopLimitBonus")
+    ? normalizeFiniteNumber(dataObj.nonHousePopLimitBonus, 0)
+    : undefined;
+  normalizeDamagedBuildings(v);
+  recalculateBuildingDerivedState(v);
+  const baseVisitorLimit = hasActiveBuildingFlag(v, "hasTavern", "tavern") ? 2 : 1;
+  const prosperityVisitorBonus = (Number(v.building) || 0) >= 250 ? 1 : 0;
+  v.visitorLimit = Math.max(1, baseVisitorLimit + prosperityVisitorBonus);
   v.pendingGoldenRainPregnancies = Array.isArray(dataObj.pendingGoldenRainPregnancies)
     ? JSON.parse(JSON.stringify(dataObj.pendingGoldenRainPregnancies))
     : [];
@@ -422,6 +430,7 @@ function convertObjectToVillage(dataObj) {
   }
   if (Array.isArray(dataObj.captives)) {
     v.captives = dataObj.captives.map(o => normalizeCaptive(convertObjectToVillager(o)));
+    v.captives.forEach(captive => ensureCaptiveReleaseDeadline(v, captive));
   }
 
   return v;
@@ -451,6 +460,9 @@ function convertObjectToVillager(obj) {
   // 精神側の識別子は肉体側とは別に復元する。旧セーブで欠けている場合だけ初期値として肉体側を使う。
   vill.spiritAge = obj.spiritAge ?? obj.bodyAge;
   vill.spiritSex = obj.spiritSex ?? obj.bodySex;
+  if (Number.isFinite(Number(obj.capturedYear))) vill.capturedYear = Number(obj.capturedYear);
+  if (Number.isFinite(Number(obj.capturedMonth))) vill.capturedMonth = Number(obj.capturedMonth);
+  if (Number.isFinite(Number(obj.releaseMonthIndex))) vill.releaseMonthIndex = Number(obj.releaseMonthIndex);
 
   vill.bodyTraits = normalizeBodyTraitList(obj.bodyTraits);
   vill.mindTraits = Array.isArray(obj.mindTraits) ? [...obj.mindTraits] : [];
