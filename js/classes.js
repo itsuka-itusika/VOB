@@ -179,6 +179,7 @@ export class Villager {
 
     /** 顔グラフィックのファイル名 */
     this.portraitFile = "default.png";
+    this.pastPortraitFiles = [];
 
     /** 口調タイプ */
     this.speechType = "";

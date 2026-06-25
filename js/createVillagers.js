@@ -3,6 +3,7 @@
 import { Villager } from "./classes.js";
 import { randInt, randChoice, randNormalInRange } from "./util.js";
 import { ACTION_NONE, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
+import { isOriginalBodyPortrait, rememberCurrentPortrait } from "./domain/portraitHistory.js";
 import {
   ARACHNID_PORTRAIT_FILES,
   EQUINA_PORTRAIT_FILES,
@@ -1260,6 +1261,18 @@ function markGeneratedBodyExchange(person, fromRace, toRace) {
 function exchangeGeneratedVisitorBodies(a, b) {
   const sourceRaceA = a.race || "人間";
   const sourceRaceB = b.race || "人間";
+  if (a.portraitFile !== b.portraitFile) {
+    const isOriginalBodyA = isOriginalBodyPortrait(a);
+    const isOriginalBodyB = isOriginalBodyPortrait(b);
+    rememberCurrentPortrait(a, "生成時交換", {
+      caption: isOriginalBodyA ? "元の身体" : "過去の姿",
+      isOriginalBody: isOriginalBodyA
+    });
+    rememberCurrentPortrait(b, "生成時交換", {
+      caption: isOriginalBodyB ? "元の身体" : "過去の姿",
+      isOriginalBody: isOriginalBodyB
+    });
+  }
   const body = {
     bodySex: a.bodySex,
     bodyAge: a.bodyAge,

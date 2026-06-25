@@ -25,6 +25,7 @@ import {
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
+import { isWolf, OLD_WOLF_TRAIT, syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
 import {
   addDisappointmentState,
   clearDisappointmentIfHappinessRecovered,
@@ -550,9 +551,9 @@ export function doMonthStartProcess(v) {
     v.log("治安悪化により村が荒廃状態になった！");
   }
 
-  // 老人の危篤化判定（5%）
+  // 老人・老狼の危篤化判定（5%）
   v.villagers.forEach(p => {
-    if (p.bodyTraits.includes("老人") && !p.bodyTraits.includes("危篤")) {
+    if ((p.bodyTraits.includes("老人") || p.bodyTraits.includes(OLD_WOLF_TRAIT)) && !p.bodyTraits.includes("危篤")) {
       if (Math.random() < 0.05) {  // 5%の確率
         p.bodyTraits.push("危篤");
         recordCriticalHistory(v, p, { reason: "老衰" });
@@ -599,8 +600,8 @@ export function doMonthStartProcess(v) {
   if (v.villageTraits.includes("冬") && v.materials<=0) {
     v.log("冬なのに資材0→凍え");
     getPeopleForFoodAndWinterMaterials(v).forEach(p=>{
-      if (p.bodyTraits.includes("モフモフ")) {
-        v.log(`${p.name}はモフモフに守られて凍えを免れた`);
+      if (isWolf(p)) {
+        v.log(`${p.name}は狼の耐寒性で凍えを免れた`);
         return;
       }
 
@@ -789,7 +790,14 @@ export function doAgingProcess(v) {
   v.villagers.forEach(p=>{
     p.bodyAge++;
     p.spiritAge++;
-    if (p.bodyTraits.some(trait => NO_AGING_BODY_TRAITS.has(trait))) {
+    if (isWolf(p)) {
+      const wasOldWolf = p.bodyTraits.includes(OLD_WOLF_TRAIT);
+      const changed = syncWolfSpeciesTraits(p);
+      if (!wasOldWolf && p.bodyTraits.includes(OLD_WOLF_TRAIT)) {
+        v.log(`${p.name}は老狼になった`);
+      }
+      if (changed) syncEffectiveStats(p);
+    } else if (p.bodyTraits.some(trait => NO_AGING_BODY_TRAITS.has(trait))) {
       syncEffectiveStats(p);
     } else if (!p.bodyTraits.includes("老人")) {
       if (p.bodyAge>=60) {
@@ -869,7 +877,8 @@ function showSeasonChangeDialog(season) {
       accent: "#d5e8ff",
       tips: [
         "農作業の生産量が0.5倍、狩猟の生産量が1.2倍になります。",
-        "月末に村人1人あたり資材10を消費します。資材0だと凍えが発生します。"
+        "月末に村人1人あたり資材10を消費します。資材0だと凍えが発生します。",
+        "狼は冬の資材消費が0で、凍えが発生しません。"
       ]
     }
   };

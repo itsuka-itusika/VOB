@@ -1112,7 +1112,7 @@ section h2 {
 }
 .personal-history-summary {
   display: grid;
-  grid-template-columns: 96px minmax(0, 1fr);
+  grid-template-columns: 200px minmax(0, 1fr);
   gap: 14px;
   align-items: start;
   margin: 0 0 16px;
@@ -1122,18 +1122,78 @@ section h2 {
   color: #2f2618;
   font-family: "Yu Gothic", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
 }
+.personal-history-portrait-area {
+  display: grid;
+  gap: 6px;
+  width: 200px;
+}
 .personal-history-portrait-frame {
-  width: 96px;
+  display: grid;
+  place-items: center;
+  width: 200px;
   aspect-ratio: 1;
   background: #e8dfcb;
   border: 1px solid #bda978;
   overflow: hidden;
 }
 .personal-history-portrait-frame img {
+  grid-area: 1 / 1;
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+.personal-history-portrait-frame.is-unknown {
+  background: #f4ead6;
+}
+.personal-history-portrait-unknown {
+  grid-area: 1 / 1;
+  color: #6b5432;
+  font-weight: bold;
+  letter-spacing: 0;
+}
+.personal-history-portrait-controls {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+.personal-history-portrait-nav-button {
+  appearance: none;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: #5f4320;
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.personal-history-portrait-nav-button[data-portrait-step="older"] {
+  justify-self: start;
+}
+.personal-history-portrait-nav-button[data-portrait-step="newer"] {
+  justify-self: end;
+}
+.personal-history-portrait-nav-button:hover,
+.personal-history-portrait-nav-button:focus {
+  color: #2f2618;
+}
+.personal-history-portrait-nav-button:disabled {
+  color: #9b8b74;
+  cursor: default;
+  opacity: 0.45;
+  text-decoration: none;
+}
+.personal-history-portrait-caption {
+  justify-self: center;
+  color: #5f4320;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  text-align: center;
+  white-space: nowrap;
 }
 .personal-history-profile {
   min-width: 0;
@@ -1150,7 +1210,7 @@ section h2 {
 }
 .personal-history-profile-table {
   display: grid;
-  grid-template-columns: 6em max-content max-content max-content max-content;
+  grid-template-columns: 6em max-content max-content max-content max-content max-content;
   justify-content: start;
   gap: 3px 10px;
   align-items: baseline;
@@ -1172,9 +1232,11 @@ section h2 {
 }
 .personal-history-profile-label.is-body,
 .personal-history-profile-label.is-spirit,
+.personal-history-profile-label.is-personality,
 .personal-history-profile-label.is-hobby,
 .personal-history-profile-value.is-body,
 .personal-history-profile-value.is-spirit,
+.personal-history-profile-value.is-personality,
 .personal-history-profile-value.is-hobby {
   margin-left: 10px;
 }
@@ -2953,12 +3015,15 @@ body.mobile-mode .person-history-button {
   line-height: 1.2;
 }
 body.mobile-mode .personal-history-summary {
-  grid-template-columns: 64px minmax(0, 1fr);
+  grid-template-columns: 128px minmax(0, 1fr);
   gap: 8px;
   padding: 0;
 }
+body.mobile-mode .personal-history-portrait-area {
+  width: 128px;
+}
 body.mobile-mode .personal-history-portrait-frame {
-  width: 64px;
+  width: 128px;
 }
 body.mobile-mode .personal-history-profile-name {
   margin-bottom: 5px;
@@ -2968,7 +3033,7 @@ body.mobile-mode .personal-history-profile-grid {
   gap: 5px;
 }
 body.mobile-mode .personal-history-profile-table {
-  grid-template-columns: 3.2em max-content max-content max-content max-content;
+  grid-template-columns: 3.2em max-content max-content max-content max-content max-content;
   gap: 2px;
   padding-bottom: 5px;
 }
@@ -2987,9 +3052,11 @@ body.mobile-mode .personal-history-profile-value {
 }
 body.mobile-mode .personal-history-profile-label.is-body,
 body.mobile-mode .personal-history-profile-label.is-spirit,
+body.mobile-mode .personal-history-profile-label.is-personality,
 body.mobile-mode .personal-history-profile-label.is-hobby,
 body.mobile-mode .personal-history-profile-value.is-body,
 body.mobile-mode .personal-history-profile-value.is-spirit,
+body.mobile-mode .personal-history-profile-value.is-personality,
 body.mobile-mode .personal-history-profile-value.is-hobby {
   margin-left: 0;
 }

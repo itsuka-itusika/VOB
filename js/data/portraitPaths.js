@@ -146,7 +146,7 @@ function getNumberedPortraitParts(key) {
   };
 }
 
-function isKnownPortraitKey(key) {
+export function isKnownPortraitKey(key) {
   if (SYSTEM_PORTRAIT_KEYS.has(key) || BABY_PORTRAIT_KEYS.has(key)) return true;
 
   const parts = getNumberedPortraitParts(key);

@@ -3,6 +3,9 @@ import {
   ACTION_NONE,
   ACTION_REST,
   ACTION_LEISURE,
+  ACTION_MASSAGE_FEMALE,
+  ACTION_MASSAGE_MALE,
+  MASSAGE_ACTIONS,
   isTemporaryAction,
   refreshJobTable,
   setPreferredAction
@@ -59,14 +62,14 @@ const JOB_FUNDS_SET = new Set([
 ]);
 const JOB_RECOVERY_SET = new Set([
   "\u770b\u8b77",
-  "\u3042\u3093\u307e"
+  ...MASSAGE_ACTIONS
 ]);
 const RECOVERY_ASSIGNMENT_SET = new Set([
   "\u7642\u990a",
   "\u4f11\u990a",
   "\u4f59\u6687",
   "\u770b\u8b77",
-  "\u3042\u3093\u307e"
+  ...MASSAGE_ACTIONS
 ]);
 
 const JOB_WEIGHTS = {
@@ -87,6 +90,8 @@ const JOB_WEIGHTS = {
   "\u884c\u5546": { chr: 2, int: 2 },
   "\u4e01\u7a1a": { chr: 2, int: 2 },
   "\u3042\u3093\u307e": { str: 1, dex: 1, chr: 1, sexdr: 1 },
+  [ACTION_MASSAGE_MALE]: { str: 2, int: 2 },
+  [ACTION_MASSAGE_FEMALE]: { chr: 2, sexdr: 2 },
   "\u5deb\u5973": { chr: 1.5, mag: 1.5, sexdr: 1.5 },
   "\u30d0\u30cb\u30fc": { chr: 2, sexdr: 2 },
   "\u932c\u91d1\u8853": { int: 2, mag: 2 },
@@ -115,6 +120,8 @@ const JOB_BASE_SCORES = {
   "\u8e0a\u308a\u5b50": -8,
   "\u30b7\u30b9\u30bf\u30fc": -8,
   "\u3042\u3093\u307e": 8,
+  [ACTION_MASSAGE_MALE]: 8,
+  [ACTION_MASSAGE_FEMALE]: 8,
   "\u30d0\u30cb\u30fc": 8
 };
 
@@ -229,6 +236,9 @@ function getJobTraitMultiplier(person, job, village) {
   if (hasTrait(person, "月の巫女") && job === "狩猟") mul *= 1.5;
   if (hasTrait(person, "月の加護") && job === "狩猟") mul *= 1.2;
   if (hasTrait(person, "夜目") && ["警備", "狩猟"].includes(job)) mul *= 1.2;
+  if (hasTrait(person, "嗅覚鋭敏") && job === "警備") mul *= 1.5;
+  if (hasTrait(person, "嗅覚鋭敏") && job === "採集") mul *= 1.5;
+  if (hasTrait(person, "嗅覚鋭敏") && job === "狩猟") mul *= 1.2;
   if (hasTrait(person, "水中呼吸") && job === "漁") mul *= 2;
   if (hasTrait(person, "森の知恵") && job === "採集") mul *= 1.2;
   if (hasTrait(person, "海の知恵") && job === "漁") mul *= 1.2;
@@ -238,6 +248,8 @@ function getJobTraitMultiplier(person, job, village) {
 }
 
 function getJobWeights(person, job) {
+  if (job === ACTION_MASSAGE_MALE) return { str: 2, int: 2 };
+  if (job === ACTION_MASSAGE_FEMALE) return { chr: 2, sexdr: 2 };
   if (job === "\u3042\u3093\u307e") {
     if (person.bodySex === "\u7537") return { str: 2, int: 2 };
     if (person.bodySex === "\u5973") return { chr: 2, sexdr: 2 };

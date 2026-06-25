@@ -1,5 +1,8 @@
 import { getPortraitPath } from "./util.js";
+import { getPastPortraitFiles, isOriginalBodyOwner } from "./domain/portraitHistory.js";
+import { DEFAULT_PORTRAIT_KEY, isKnownPortraitKey, normalizePortraitKey } from "./data/portraitPaths.js";
 import { getPersonTitles } from "./titles.js";
+import { SPEECH_TYPE_MAPPING } from "./data/villagerData.js";
 
 export const HISTORY_EVENT_TYPES = Object.freeze({
   ARCHIVE_GAP: "archiveGap",
@@ -656,12 +659,171 @@ function renderPersonalTitleSummary(person) {
   )).join("、");
 }
 
+function getPersonalityTrait(person) {
+  const mindTraits = Array.isArray(person?.mindTraits) ? person.mindTraits : [];
+  return mindTraits.find(trait => Object.prototype.hasOwnProperty.call(SPEECH_TYPE_MAPPING, trait)) || "特徴なし";
+}
+
+const BODY_EXCHANGE_PORTRAIT_SOURCES = new Set(["奇跡", "落雷", "秘宝", "生成時交換"]);
+
+function hasPortraitImage(portraitFile) {
+  const portraitKey = normalizePortraitKey(portraitFile);
+  return portraitKey !== DEFAULT_PORTRAIT_KEY && isKnownPortraitKey(portraitKey);
+}
+
+function isLegacyOriginalBodyEntry(entry) {
+  if (typeof entry.isOriginalBody === "boolean" || entry.bodyOwner) return false;
+  return entry.caption === "元の身体" || (!entry.caption && BODY_EXCHANGE_PORTRAIT_SOURCES.has(entry.source));
+}
+
+function getPastPortraitCaption(entry, person, index, legacyOriginalBodyIndex) {
+  if (entry.isOriginalBody === true) return "元の身体";
+  if (entry.isOriginalBody === false) return entry.caption && entry.caption !== "元の身体" ? entry.caption : "過去の姿";
+  if (entry.bodyOwner) {
+    return isOriginalBodyOwner(person?.name, entry.bodyOwner) ? "元の身体" : "過去の姿";
+  }
+  if (isLegacyOriginalBodyEntry(entry)) {
+    return index === legacyOriginalBodyIndex ? "元の身体" : "過去の姿";
+  }
+  if (entry.caption) return entry.caption;
+  return "過去の姿";
+}
+
+function makePortraitStep(portraitFile, caption) {
+  return {
+    path: getPortraitPath({ portraitFile }),
+    hasImage: hasPortraitImage(portraitFile),
+    caption
+  };
+}
+
+function makeCurrentPortraitStep(person) {
+  return makePortraitStep(person?.portraitFile, "現在の姿");
+}
+
+function getPastPortraitSequence(person) {
+  const currentPath = makeCurrentPortraitStep(person).path;
+  const entries = getPastPortraitFiles(person);
+  const legacyOriginalBodyIndex = entries.findIndex(isLegacyOriginalBodyEntry);
+  const pastPortraits = entries
+    .map((entry, index) => makePortraitStep(
+      entry.portraitFile,
+      getPastPortraitCaption(entry, person, index, legacyOriginalBodyIndex)
+    ));
+  return pastPortraits.some(step => step.path !== currentPath) ? pastPortraits.reverse() : [];
+}
+
+function renderPastPortraitControls(person) {
+  const currentPortrait = makeCurrentPortraitStep(person);
+  const pastPortraits = getPastPortraitSequence(person);
+  if (pastPortraits.length === 0) return "";
+
+  return `
+    <div
+      class="personal-history-portrait-controls"
+      data-portrait-controls
+      data-current-portrait="${escapeHtml(JSON.stringify(currentPortrait))}"
+      data-past-portraits="${escapeHtml(JSON.stringify(pastPortraits))}"
+    >
+      <button type="button" class="personal-history-portrait-nav-button" data-portrait-step="older" aria-label="過去の肖像へ">&lt;&lt;</button>
+      <span class="personal-history-portrait-caption" data-portrait-caption>${escapeHtml(currentPortrait.caption)}</span>
+      <button type="button" class="personal-history-portrait-nav-button" data-portrait-step="newer" aria-label="現在に近い肖像へ">&gt;&gt;</button>
+    </div>
+  `;
+}
+
+function renderPortraitFrame(person) {
+  const currentPortrait = makeCurrentPortraitStep(person);
+  const hiddenAttr = currentPortrait.hasImage ? "" : " hidden";
+  const unknownHiddenAttr = currentPortrait.hasImage ? " hidden" : "";
+  const unknownClass = currentPortrait.hasImage ? "" : " is-unknown";
+  return `
+    <div class="personal-history-portrait-frame${unknownClass}" data-personal-history-portrait-frame>
+      <img data-personal-history-portrait src="${escapeHtml(currentPortrait.path)}" alt="${escapeHtml(person.name)}"${hiddenAttr}>
+      <span class="personal-history-portrait-unknown" data-personal-history-portrait-unknown${unknownHiddenAttr}>不明</span>
+    </div>
+  `;
+}
+
+function setPersonalHistoryPortrait(frame, portrait, unknown, step) {
+  if (!frame || !portrait || !unknown || !step) return;
+  if (!step.hasImage) {
+    portrait.hidden = true;
+    unknown.hidden = false;
+    frame.classList.add("is-unknown");
+    return;
+  }
+  frame.classList.remove("is-unknown");
+  unknown.hidden = true;
+  portrait.hidden = false;
+  portrait.src = step.path;
+}
+
+function bindPersonalHistoryPortraitFallback(content) {
+  const frame = content.querySelector("[data-personal-history-portrait-frame]");
+  const portrait = content.querySelector("[data-personal-history-portrait]");
+  const unknown = content.querySelector("[data-personal-history-portrait-unknown]");
+  if (!frame || !portrait || !unknown) return;
+
+  portrait.addEventListener("error", () => {
+    portrait.hidden = true;
+    unknown.hidden = false;
+    frame.classList.add("is-unknown");
+  });
+}
+
+function bindPastPortraitControls(content) {
+  const controls = content.querySelector("[data-portrait-controls]");
+  const portrait = content.querySelector("[data-personal-history-portrait]");
+  const frame = content.querySelector("[data-personal-history-portrait-frame]");
+  const unknown = content.querySelector("[data-personal-history-portrait-unknown]");
+  const caption = content.querySelector("[data-portrait-caption]");
+  const olderButton = content.querySelector('[data-portrait-step="older"]');
+  const newerButton = content.querySelector('[data-portrait-step="newer"]');
+  if (!controls || !portrait || !frame || !unknown || !caption || !olderButton || !newerButton) return;
+
+  let currentPortrait = null;
+  let pastPortraits = [];
+  try {
+    currentPortrait = JSON.parse(controls.dataset.currentPortrait || "null");
+    pastPortraits = JSON.parse(controls.dataset.pastPortraits || "[]");
+  } catch (error) {
+    currentPortrait = null;
+    pastPortraits = [];
+  }
+  if (!currentPortrait?.path) return;
+  pastPortraits = pastPortraits.filter(step => step?.path);
+
+  const portraitSteps = [currentPortrait, ...pastPortraits];
+  let portraitIndex = 0;
+  const renderPortraitStep = () => {
+    const step = portraitSteps[portraitIndex];
+    setPersonalHistoryPortrait(frame, portrait, unknown, step);
+    caption.textContent = step.caption || (portraitIndex === 0 ? "現在の姿" : "過去の姿");
+    olderButton.disabled = portraitIndex >= portraitSteps.length - 1;
+    newerButton.disabled = portraitIndex <= 0;
+  };
+
+  olderButton.addEventListener("click", () => {
+    if (portraitIndex >= portraitSteps.length - 1) return;
+    portraitIndex += 1;
+    renderPortraitStep();
+  });
+  newerButton.addEventListener("click", () => {
+    if (portraitIndex <= 0) return;
+    portraitIndex -= 1;
+    renderPortraitStep();
+  });
+  renderPortraitStep();
+}
+
 function renderPersonalHistorySummary(person) {
   const profileFields = [
     { label: "名前", value: person.name || "不明", className: "is-name" },
     { label: "種族", value: person.race || "人間", className: "is-race" },
     { label: "肉体", value: `${person.bodyAge ?? "?"}歳/${person.bodySex || "不明"}`, className: "is-body" },
     { label: "精神", value: `${person.spiritAge ?? "?"}歳/${person.spiritSex || "不明"}`, className: "is-spirit" },
+    { label: "性格", value: getPersonalityTrait(person), className: "is-personality" },
     { label: "趣味", value: person.hobby || "なし", className: "is-hobby" }
   ];
   const familyRelations = formatRelationshipCategory(person, "family");
@@ -684,8 +846,9 @@ function renderPersonalHistorySummary(person) {
   ];
   return `
     <section class="personal-history-summary">
-      <div class="personal-history-portrait-frame">
-        <img src="${escapeHtml(getPortraitPath(person))}" alt="${escapeHtml(person.name)}">
+      <div class="personal-history-portrait-area">
+        ${renderPortraitFrame(person)}
+        ${renderPastPortraitControls(person)}
       </div>
       <div class="personal-history-profile">
         <div class="personal-history-profile-grid">
@@ -725,6 +888,8 @@ export function openPersonalHistoryModal(village, person, options = {}) {
       ? `<div class="history-list">${events.map(event => renderHistoryEntry(event, { personName: person.name })).join("")}</div>`
       : `<div class="history-empty">この人物の歩みは、まだ村の帳面には記されていない。</div>`}
   `;
+  bindPersonalHistoryPortraitFallback(content);
+  bindPastPortraitControls(content);
   content.querySelector("[data-open-friendship-detail]")?.addEventListener("click", async () => {
     const { openFriendshipDetailModal } = await import("./relationships.js");
     openFriendshipDetailModal(village, person);

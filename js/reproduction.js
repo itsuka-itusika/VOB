@@ -12,6 +12,7 @@ import { refreshJobTable } from "./domain/jobTables.js";
 import { addNonHousePopLimitBonus } from "./domain/buildingState.js";
 import { BABY_FEMALE_PORTRAIT_KEY, BABY_MALE_PORTRAIT_KEY } from "./data/portraitPaths.js";
 import { getBaseStat, setBaseStat, setBaseStatsFromEffective, syncEffectiveStats } from "./domain/statLayers.js";
+import { OLD_WOLF_TRAIT, syncWolfSpeciesTraits, YOUNG_WOLF_TRAIT } from "./domain/speciesTraits.js";
 import { recordAdulthoodHistory, recordBirthHistory, recordPregnancyHistory } from "./history.js";
 import { addRelationship, checkHasRelationship, getRelationshipTargetName, normalizeRelationship } from "./relationships.js";
 import { getDialogueLine } from "./dialogue/dialogueEngine.js";
@@ -48,7 +49,9 @@ const GENETIC_EXCLUDED_BODY_TRAITS = new Set([
   "疫病",
   "産褥",
   "中年",
-  "老人"
+  "老人",
+  YOUNG_WOLF_TRAIT,
+  OLD_WOLF_TRAIT
 ]);
 const VIRTUAL_THUNDER_FATHER = {
   name: "不明",
@@ -165,6 +168,7 @@ function applyInheritedBodyTraits(child, traits) {
 function applyRaceBodyTraits(character) {
   (RACE_BODY_TRAITS[normalizeChildRace(character?.race)] || [])
     .forEach(trait => addUnique(character.bodyTraits, trait));
+  syncWolfSpeciesTraits(character);
   syncEffectiveStats(character);
 }
 
@@ -478,6 +482,7 @@ export function updateChildGrowthStage(child, village, { announce = false } = {}
   }
 
   child.speechType = determineSpeechType(child);
+  syncWolfSpeciesTraits(child);
   syncEffectiveStats(child);
   setChildPortrait(child);
   refreshJobTable(child, village);
@@ -516,6 +521,7 @@ export function matureBodyToAdultOnly(character, village) {
 
   const currentBodyTraits = removeTraits(character.bodyTraits, CHILD_BODY_TRAITS);
   character.bodyTraits = [...new Set([...(character.adultBodyTraits || []), ...currentBodyTraits])];
+  syncWolfSpeciesTraits(character);
   syncEffectiveStats(character);
 
   if (!character.adultPortraitFile) {

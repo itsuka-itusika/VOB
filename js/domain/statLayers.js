@@ -1,6 +1,7 @@
 import { clampValue, round3 } from "../util.js";
 import { ABILITY_STATS, PHYSICAL_ABILITY_STATS } from "./personSchema.js";
 import { evaluateTitles } from "../titles.js";
+import { OLD_WOLF_TRAIT, YOUNG_WOLF_TRAIT } from "./speciesTraits.js";
 
 export const STAT_LAYER_VERSION = 2;
 
@@ -39,7 +40,8 @@ const TEMP_BODY_TRAIT_EFFECTS = Object.freeze({
   "過労": { mul: { str: 0.25, vit: 0.25, dex: 0.25 } },
   "疫病": { mul: { str: 0.5, vit: 0.5, dex: 0.5 } },
   "臨月": { mul: { str: 0.5, vit: 0.5 } },
-  "産褥": { mul: { str: 0.5, vit: 0.5 } }
+  "産褥": { mul: { str: 0.5, vit: 0.5 } },
+  [YOUNG_WOLF_TRAIT]: { mul: Object.freeze(Object.fromEntries(ABILITY_STATS.map(stat => [stat, 0.25]))) }
 });
 
 const TEMP_MIND_TRAIT_EFFECTS = Object.freeze({
@@ -121,7 +123,7 @@ function getAgeMultiplier(person, stat) {
   if (!["str", "vit", "chr"].includes(stat)) return 1;
   const bodyTraits = Array.isArray(person?.bodyTraits) ? person.bodyTraits : [];
   if (bodyTraits.some(trait => NO_AGING_BODY_TRAITS.has(trait))) return 1;
-  if (bodyTraits.includes("老人")) return 0.375;
+  if (bodyTraits.includes("老人") || bodyTraits.includes(OLD_WOLF_TRAIT)) return 0.375;
   if (bodyTraits.includes("中年")) return 0.75;
   return 1;
 }

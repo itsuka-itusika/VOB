@@ -1,5 +1,8 @@
 import { hasActiveBuildingFlag } from "./buildingState.js";
+import { SENSITIVE_NOSE_TRAIT } from "./speciesTraits.js";
 
+const ACTION_MASSAGE_MALE = "あんま男";
+const ACTION_MASSAGE_FEMALE = "あんま女";
 const SWEATY_TRAIT = "汗かき";
 const COLD_SENSITIVE_TRAIT = "寒がり";
 const WORKAHOLIC_TRAIT = "ワーカホリック";
@@ -35,6 +38,8 @@ export const JOB_COST_TYPES = {
   "神官": WORK_COST_TYPES.MENTAL,
   "行商": WORK_COST_TYPES.BALANCED,
   "あんま": WORK_COST_TYPES.BALANCED,
+  "あんま男": WORK_COST_TYPES.BALANCED,
+  "あんま女": WORK_COST_TYPES.BALANCED,
   "巫女": WORK_COST_TYPES.BALANCED,
   "バニー": WORK_COST_TYPES.BALANCED,
   "錬金術": WORK_COST_TYPES.BALANCED,
@@ -144,6 +149,8 @@ export function getLaborYieldMultiplier(job, person = null, village = null) {
   if (hasBodyTrait(person, "月の巫女") && job === "狩猟") mul *= 1.5;
   if (hasBodyTrait(person, "月の加護") && job === "狩猟") mul *= 1.2;
   if (hasBodyTrait(person, "夜目") && job === "狩猟") mul *= 1.2;
+  if (hasBodyTrait(person, SENSITIVE_NOSE_TRAIT) && job === "採集") mul *= 1.5;
+  if (hasBodyTrait(person, SENSITIVE_NOSE_TRAIT) && job === "狩猟") mul *= 1.2;
   if (hasBodyTrait(person, "大地の加護") && job === "農作業") mul *= 1.2;
   if (hasBodyTrait(person, "水中呼吸") && job === "漁") mul *= 2;
   if (hasBodyTrait(person, "健脚") && SWIFT_LEGS_JOBS.includes(job)) mul *= 1.2;
@@ -209,6 +216,9 @@ export function calculateGuardYield(person) {
   }
   if (hasBodyTrait(person, "半人半馬")) {
     amount = Math.round(amount * 1.2);
+  }
+  if (hasBodyTrait(person, SENSITIVE_NOSE_TRAIT)) {
+    amount = Math.round(amount * 1.5);
   }
   return Math.max(1, amount);
 }
@@ -280,8 +290,19 @@ export function calculatePoetHappiness(person, village) {
   return amount;
 }
 
-export function calculateMassageHeal(person) {
-  return person?.bodySex === "男"
+function isMaleMassageAction(action, person) {
+  const value = String(action || "").trim();
+  if (value === ACTION_MASSAGE_MALE) return true;
+  if (value === ACTION_MASSAGE_FEMALE) return false;
+  return person?.bodySex === "男";
+}
+
+export function getMassageMindStat(person, action = person?.action) {
+  return isMaleMassageAction(action, person) ? "int" : "sexdr";
+}
+
+export function calculateMassageHeal(person, action = person?.action) {
+  return isMaleMassageAction(action, person)
     ? Math.round(30 * statProduct(person, "str", "int"))
     : Math.round(30 * statProduct(person, "chr", "sexdr"));
 }

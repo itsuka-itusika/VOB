@@ -3,6 +3,8 @@ import { Village, Villager } from "./classes.js";
 import { determineSpeechType, registerUsedName } from "./createVillagers.js";
 import { ACTION_NONE, isPreferredActionCandidate, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
 import { getPermanentStat, hydrateStatLayersFromObject, syncEffectiveStats } from "./domain/statLayers.js";
+import { syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
+import { normalizePastPortraitFiles } from "./domain/portraitHistory.js";
 import { createArchiveGapHistoryEvent, normalizeHistoryEvents } from "./history.js";
 import { normalizePortraitKey } from "./data/portraitPaths.js";
 import { ensureVillageFriendships, normalizeFriendshipState, normalizeRelationships } from "./relationships.js";
@@ -236,6 +238,7 @@ function convertVillageToObject(village) {
  * villager(Villager) → object
  */
 function convertVillagerToObject(vill) {
+  syncWolfSpeciesTraits(vill);
   syncEffectiveStats(vill);
   const bodyTraits = normalizeBodyTraitList(vill.bodyTraits);
   const mindTraits = Array.isArray(vill.mindTraits) ? [...vill.mindTraits] : [];
@@ -298,6 +301,7 @@ function convertVillagerToObject(vill) {
     // 口調タイプと顔グラフィック情報を追加
     speechType: vill.speechType,
     portraitFile: normalizePortraitFile(vill.portraitFile),
+    pastPortraitFiles: normalizePastPortraitFiles(vill.pastPortraitFiles),
     ...(vill.rareVisitorType ? { rareVisitorType: vill.rareVisitorType } : {}),
     merchantStock: vill.merchantStock ? { ...vill.merchantStock } : undefined,
     pregnancy: normalizePregnancyState(vill.pregnancy),
@@ -504,6 +508,7 @@ function convertObjectToVillager(obj) {
   
   // 顔グラフィックのファイル名を復元
   vill.portraitFile = normalizePortraitFile(obj.portraitFile);
+  vill.pastPortraitFiles = normalizePastPortraitFiles(obj.pastPortraitFiles);
   
   // 種族情報を復元
   vill.race = normalizeRaceName(obj.race);
@@ -557,6 +562,9 @@ function convertObjectToVillager(obj) {
   vill.adultModalShown = !!obj.adultModalShown;
 
   hydrateStatLayersFromObject(vill, obj);
+  if (syncWolfSpeciesTraits(vill)) {
+    syncEffectiveStats(vill);
+  }
   if (migrateBodyAresToMind && !vill.mindTraits.includes("火星の加護")) {
     vill.mindTraits.push("火星の加護");
     syncEffectiveStats(vill);

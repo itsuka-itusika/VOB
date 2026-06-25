@@ -3,6 +3,7 @@
 import { refreshJobTable } from "./domain/jobTables.js";
 import { PHYSICAL_ABILITY_STATS } from "./domain/personSchema.js";
 import { ensureStatLayers, getPermanentStat, syncEffectiveStats } from "./domain/statLayers.js";
+import { isOriginalBodyPortrait, rememberCurrentPortrait } from "./domain/portraitHistory.js";
 import { recordBodyExchangeHistory } from "./history.js";
 import { evaluateTitles } from "./titles.js";
 import { isCaptive, normalizeCaptive } from "./captives.js";
@@ -89,6 +90,19 @@ export function doExchange(a, b, v, isLightning = false, historySource = null) {
   ensureStatLayers(b);
   const sourceRaceA = a.race || "人間";
   const sourceRaceB = b.race || "人間";
+  const exchangeSource = historySource || (isLightning ? "落雷" : "奇跡");
+  if (a.portraitFile !== b.portraitFile) {
+    const isOriginalBodyA = isOriginalBodyPortrait(a);
+    const isOriginalBodyB = isOriginalBodyPortrait(b);
+    rememberCurrentPortrait(a, exchangeSource, {
+      caption: isOriginalBodyA ? "元の身体" : "過去の姿",
+      isOriginalBody: isOriginalBodyA
+    });
+    rememberCurrentPortrait(b, exchangeSource, {
+      caption: isOriginalBodyB ? "元の身体" : "過去の姿",
+      isOriginalBody: isOriginalBodyB
+    });
+  }
   const exchangeParams = {
     bodySex: a.bodySex,
     bodyAge: a.bodyAge,
@@ -163,5 +177,5 @@ export function doExchange(a, b, v, isLightning = false, historySource = null) {
   if (!isLightning) {
     v.log(`【交換の奇跡】${a.name}と${b.name}の肉体を交換しました`);
   }
-  recordBodyExchangeHistory(v, a, b, { source: historySource || (isLightning ? "落雷" : "奇跡") });
+  recordBodyExchangeHistory(v, a, b, { source: exchangeSource });
 }

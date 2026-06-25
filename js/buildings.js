@@ -139,8 +139,8 @@ export const BUILDINGS = [
     materials: 50,
     funds: 0,
     tech: 100,
-    desc: "医療施設。看護の効果1.2倍、「あんま」解放。規模+20",
-    effect: standardBuildingEffect({ scale: 20, flag: "hasClinic", log: "診療所建設完了: 看護の効果1.2倍、「あんま」解放、規模+20" })
+    desc: "医療施設。看護の効果1.2倍、「あんま男」「あんま女」解放。規模+20",
+    effect: standardBuildingEffect({ scale: 20, flag: "hasClinic", log: "診療所建設完了: 看護の効果1.2倍、「あんま男」「あんま女」解放、規模+20" })
   },
   {
     id: "library",

@@ -8,6 +8,7 @@ import {
 } from "./data/raidData.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
+import { syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
 import { clearRaidWarningModal, showRaidWarningModal } from "./raidWarningModal.js";
 import { MESSENGER_PASS_SECRET_TREASURE_ID } from "./data/tutorialData.js";
 import { updateUI } from "./ui.js";
@@ -279,6 +280,7 @@ function createRaidEnemy(village, raiderType, existingNames) {
   // 襲撃者として矛盾するランダム精神特性は外す。
   e.mindTraits = e.mindTraits.filter(trait => trait !== "ニート" && trait !== "非戦主義");
 
+  syncWolfSpeciesTraits(e);
   syncEffectiveStats(e);
   return e;
 }

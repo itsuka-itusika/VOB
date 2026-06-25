@@ -1,5 +1,6 @@
 import { isForcedHealingAction } from "./util.js";
 import { countActiveBuildings, hasActiveBuildingFlag } from "./domain/buildingState.js";
+import { FOUR_LEGGED_TRAIT, WILD_MIND_TRAIT, YOUNG_WOLF_TRAIT } from "./domain/speciesTraits.js";
 
 export const ACTION_DEFEND = "迎撃";
 export const ACTION_TRAP = "罠作成";
@@ -9,7 +10,7 @@ export const TRAIT_UNDER_RAID = "襲撃中";
 export const RAID_ACTIONS = [ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT, ACTION_TRAP];
 export const RAID_COMBAT_ACTIONS = [ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT];
 
-const RAID_COMMON_UNABLE_BODY_TRAITS = ["赤子", "危篤"];
+const RAID_COMMON_UNABLE_BODY_TRAITS = ["赤子", "危篤", YOUNG_WOLF_TRAIT];
 const RAID_COMMON_UNABLE_MIND_TRAITS = ["無垢", "萌芽", "襲撃者", "訪問者"];
 const RAID_DEFEND_UNABLE_MIND_TRAITS = [...RAID_COMMON_UNABLE_MIND_TRAITS, "思春期"];
 
@@ -39,7 +40,9 @@ export function canDefendInRaid(person) {
 }
 
 export function canMakeTrapInRaid(person) {
-  return !hasCommonRaidBlockingCondition(person);
+  if (hasCommonRaidBlockingCondition(person)) return false;
+  return !traitList(person, "bodyTraits").includes(FOUR_LEGGED_TRAIT) &&
+    !traitList(person, "mindTraits").includes(WILD_MIND_TRAIT);
 }
 
 function hasRaidUnlock(village, flag, buildingId) {
@@ -61,11 +64,16 @@ export function getRaidShooterSlotCount(village = null) {
 }
 
 export function canShootInRaid(person, village = null) {
-  return canDefendInRaid(person) && getRaidShooterSlotCount(village) > 0;
+  return canDefendInRaid(person) &&
+    getRaidShooterSlotCount(village) > 0 &&
+    !traitList(person, "bodyTraits").includes(FOUR_LEGGED_TRAIT) &&
+    !traitList(person, "mindTraits").includes(WILD_MIND_TRAIT);
 }
 
 export function canFortifyInRaid(person, village = null) {
-  return canDefendInRaid(person) && hasRaidUnlock(village, "hasWoodenFence", "woodenFence");
+  return canDefendInRaid(person) &&
+    !traitList(person, "mindTraits").includes(WILD_MIND_TRAIT) &&
+    hasRaidUnlock(village, "hasWoodenFence", "woodenFence");
 }
 
 export function isRaidAction(action) {

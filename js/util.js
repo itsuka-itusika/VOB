@@ -1,6 +1,7 @@
 // util.js
 
 import { getPortraitAssetPath } from "./data/portraitPaths.js";
+import { isWolf } from "./domain/speciesTraits.js";
 
 /** 乱数系/Clamp/シャッフルなどのユーティリティ */
 
@@ -96,6 +97,7 @@ export function isForcedHealingAction(character) {
 export function getVillagerFoodConsumption(character) {
   const bodyTraits = Array.isArray(character?.bodyTraits) ? character.bodyTraits : [];
   const mindTraits = Array.isArray(character?.mindTraits) ? character.mindTraits : [];
+  if (isWolf(character)) return 4;
   if (bodyTraits.includes("光合成")) return 0;
   let cost = 10;
   if (bodyTraits.includes("赤子")) cost = 2;
@@ -110,6 +112,7 @@ export function getVillagerFoodConsumption(character) {
 
 export function getVillagerWinterMaterialConsumption(character) {
   const bodyTraits = Array.isArray(character?.bodyTraits) ? character.bodyTraits : [];
+  if (isWolf(character)) return 0;
   if (bodyTraits.includes("赤子")) return 2;
   if (bodyTraits.includes("子供")) return 6;
   if (bodyTraits.includes("少年") || bodyTraits.includes("少女")) return 8;

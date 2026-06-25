@@ -25,14 +25,18 @@ import {
   calculateWeavingYield,
   estimateBodyCost,
   estimateMindCost,
+  getMassageMindStat,
   getJobCostType,
 } from "./domain/jobMath.js";
 import {
   ACTION_CRADLE,
   ACTION_HEAL,
   ACTION_LAST_MOMENTS,
+  ACTION_MASSAGE_FEMALE,
+  ACTION_MASSAGE_MALE,
   ACTION_NONE,
   isPreferredActionCandidate,
+  normalizeActionForPerson,
   setPreferredAction,
   refreshJobTable
 } from "./domain/jobTables.js";
@@ -326,6 +330,7 @@ function getDebuffedStats(person) {
   if (hasTrait(person, "凍え")) add("str", "vit", "dex");
   if (hasTrait(person, "疲労")) add("str", "vit", "dex");
   if (hasTrait(person, "過労")) add("str", "vit", "dex");
+  if (hasTrait(person, "幼狼")) add("str", "vit", "dex", "mag", "chr", "int", "ind", "eth", "cou", "sexdr");
   if (hasTrait(person, "臨月")) add("str", "vit");
   if (hasTrait(person, "産褥")) add("str", "vit");
   if (hasTrait(person, "心労")) add("int", "ind", "eth", "cou", "sexdr");
@@ -368,7 +373,7 @@ function jobMindCost(job, stat, person, village) {
 }
 
 function ageRestMultiplier(person) {
-  if (hasTrait(person, "老人")) return 0.7;
+  if (hasTrait(person, "老人") || hasTrait(person, "老狼")) return 0.7;
   if (hasTrait(person, "中年")) return 0.9;
   return 1;
 }
@@ -521,7 +526,7 @@ function getTaskEstimateParts(person, task, village) {
       parts = ["食料+3〜6", "資材+3〜6", `体力-${bodyCost(10, person, village)}`];
       break;
     case "療養":
-      parts = [`体力+${Math.floor(20 * (hasTrait(person, "老人") ? 0.6 : hasTrait(person, "中年") ? 0.8 : 1))}`, `メンタル+${Math.floor(20 * (hasTrait(person, "老人") ? 0.6 : hasTrait(person, "中年") ? 0.8 : 1))}`];
+      parts = [`体力+${Math.floor(20 * ((hasTrait(person, "老人") || hasTrait(person, "老狼")) ? 0.6 : hasTrait(person, "中年") ? 0.8 : 1))}`, `メンタル+${Math.floor(20 * ((hasTrait(person, "老人") || hasTrait(person, "老狼")) ? 0.6 : hasTrait(person, "中年") ? 0.8 : 1))}`];
       break;
     case "虜囚":
       parts = ["体力+10", "メンタル+10"];
@@ -569,10 +574,15 @@ function getTaskEstimateParts(person, task, village) {
       gain = calculateNurseHeal(person, village);
       parts = [`体力回復+${gain}`, `体力-${jobBodyCost("看護", person, village)}`, `メンタル-${jobMindCost("看護", "eth", person, village)}`];
       break;
-    case "あんま":
-      gain = calculateMassageHeal(person);
-      parts = [`体力回復+${gain}`, `体力-${jobBodyCost("あんま", person, village)}`, `メンタル-${jobMindCost("あんま", person.bodySex === "男" ? "int" : "sexdr", person, village)}`];
+    case ACTION_MASSAGE_MALE:
+    case ACTION_MASSAGE_FEMALE:
+    case "あんま": {
+      const jobName = normalizeActionForPerson(task, person);
+      const mindStat = getMassageMindStat(person, jobName);
+      gain = calculateMassageHeal(person, jobName);
+      parts = [`体力回復+${gain}`, `体力-${jobBodyCost(jobName, person, village)}`, `メンタル-${jobMindCost(jobName, mindStat, person, village)}`];
       break;
+    }
     case "シスター":
     case "神官":
       gain = calculatePriestMindHeal(person, village);
@@ -666,6 +676,8 @@ const ACTION_DESCRIPTIONS = {
   "警備": "村を見回り、治安を支える防衛行動。",
   "看護": "負傷者や消耗した村人を支える回復行動。",
   "あんま": "身体感覚や対人能力を活かして村人の体力回復を支える行動。",
+  [ACTION_MASSAGE_MALE]: "筋力と知力を活かして村人の体力回復を支える行動。",
+  [ACTION_MASSAGE_FEMALE]: "魅力と好色を活かして村人の体力回復を支える行動。",
   "シスター": "村人の心を支える信仰系の回復行動。",
   "神官": "村人の心を支える信仰系の回復行動。",
   "踊り子": "娯楽を通じて村人の幸福を高める行動。",
@@ -715,6 +727,8 @@ const JOB_KEY_STATS = {
   "行商": "魅力×知力",
   "丁稚": "魅力×知力",
   "あんま": "男性:筋力×知力/女性:魅力×好色",
+  [ACTION_MASSAGE_MALE]: "筋力×知力",
+  [ACTION_MASSAGE_FEMALE]: "魅力×好色",
   "巫女": "魅力×魔力×好色",
   "バニー": "魅力×好色",
   "錬金術": "魔力×知力",
@@ -887,9 +901,13 @@ function appendActionCell(row, person, village, editable) {
   row.appendChild(cell);
 }
 
-function appendPersonalHistoryCell(row, person, village) {
+function appendPersonalHistoryCell(row, person, village, showPersonalHistory = true) {
   const cell = document.createElement("td");
   cell.classList.add("foldable-info");
+  if (!showPersonalHistory) {
+    row.appendChild(cell);
+    return;
+  }
 
   const button = document.createElement("button");
   button.type = "button";
@@ -904,13 +922,13 @@ function appendPersonalHistoryCell(row, person, village) {
   row.appendChild(cell);
 }
 
-function appendStatCells(row, person, village) {
+function appendStatCells(row, person, village, { showPersonalHistory = true } = {}) {
   ["str", "vit", "dex", "mag", "chr"].forEach(stat => appendNumberCell(row, person[stat]));
   appendDictionaryCell(row, person.bodyTraits, { category: "trait" });
   ["int", "ind", "eth", "cou", "sexdr"].forEach(stat => appendNumberCell(row, person[stat]));
   appendDictionaryCell(row, person.mindTraits, { category: "trait" });
   appendDictionaryCell(row, [person.hobby], { category: "hobby" });
-  appendPersonalHistoryCell(row, person, village);
+  appendPersonalHistoryCell(row, person, village, showPersonalHistory);
 }
 
 function applyPersonRowStyle(row, person) {
@@ -933,14 +951,14 @@ function applyPersonRowStyle(row, person) {
   applyStatusHighlights(row, person);
 }
 
-function createPersonRow(person, village, { editable = false } = {}) {
+function createPersonRow(person, village, { editable = false, showPersonalHistory = true } = {}) {
   const row = document.createElement("tr");
   if (editable) {
     refreshJobTable(person, village);
   }
   appendIdentityCells(row, person);
   appendActionCell(row, person, village, editable);
-  appendStatCells(row, person, village);
+  appendStatCells(row, person, village, { showPersonalHistory });
   applyPersonRowStyle(row, person);
   return row;
 }
@@ -1031,16 +1049,16 @@ export function updateUI(v) {
 
   const captives = getCaptives(v);
   setSectionVisible(document.getElementById("captivesSection"), captives.length > 0);
-  renderPeopleTable(document.querySelector("#captivesTable tbody"), captives, v);
+  renderPeopleTable(document.querySelector("#captivesTable tbody"), captives, v, { showPersonalHistory: false });
 
   const visitors = Array.isArray(v.visitors) ? v.visitors : [];
   setSectionVisible(document.getElementById("visitorsSection"), visitors.length > 0);
-  renderPeopleTable(document.querySelector("#visitorsTable tbody"), visitors, v);
+  renderPeopleTable(document.querySelector("#visitorsTable tbody"), visitors, v, { showPersonalHistory: false });
 
   const raidEnemies = Array.isArray(v.raidEnemies) ? v.raidEnemies : [];
   const showRaidEnemies = v.villageTraits.includes("襲撃中") && raidEnemies.length > 0;
   setSectionVisible(document.getElementById("raidEnemiesSection"), showRaidEnemies);
-  renderPeopleTable(document.querySelector("#raidEnemiesTable tbody"), showRaidEnemies ? raidEnemies : [], v);
+  renderPeopleTable(document.querySelector("#raidEnemiesTable tbody"), showRaidEnemies ? raidEnemies : [], v, { showPersonalHistory: false });
 
   // テーブル更新後にソート機能をセットアップ
   setupTableSort();

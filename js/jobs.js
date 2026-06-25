@@ -25,11 +25,17 @@ import {
   calculateResearchYield,
   calculateTradingYield,
   calculateWeavingYield,
+  getMassageMindStat,
   getJobCostType,
   rollBodyCost,
   rollMindCost,
 } from "./domain/jobMath.js";
-import { refreshJobTable } from "./domain/jobTables.js";
+import {
+  ACTION_MASSAGE_FEMALE,
+  ACTION_MASSAGE_MALE,
+  normalizeActionForPerson,
+  refreshJobTable
+} from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { addAcquiredStat, getPermanentStat, syncEffectiveStats } from "./domain/statLayers.js";
@@ -233,7 +239,7 @@ function doSabori(p, v) {
 }
 
 function doJobAction(p, v, secretTreasureFlags = null) {
-  switch(p.action) {
+  switch(normalizeActionForPerson(p.action, p)) {
     case "なし":
       v.log(`${p.name}は行動がない`);
       break;
@@ -308,6 +314,8 @@ function doJobAction(p, v, secretTreasureFlags = null) {
     case "行商":
       doTrading(p, v);
       break;
+    case ACTION_MASSAGE_MALE:
+    case ACTION_MASSAGE_FEMALE:
     case "あんま":
       doMassage(p, v);
       break;
@@ -388,7 +396,7 @@ function doRestJob(p, v) {
   }
   // 中年/老人で効率補正
   let multi=1;
-  if (p.bodyTraits.includes("老人")) multi=0.7;
+  if (p.bodyTraits.includes("老人") || p.bodyTraits.includes("老狼")) multi=0.7;
   else if (p.bodyTraits.includes("中年")) multi=0.9;
 
   hpG=Math.floor(hpG*multi);
@@ -797,7 +805,7 @@ function doHealingJob(p, v) {
   if (p.bodyTraits.includes("中年")) {
     hpG = Math.floor(hpG * 0.8);
     mpG = Math.floor(mpG * 0.8);
-  } else if (p.bodyTraits.includes("老人")) {
+  } else if (p.bodyTraits.includes("老人") || p.bodyTraits.includes("老狼")) {
     hpG = Math.floor(hpG * 0.6);
     mpG = Math.floor(mpG * 0.6);
   }
@@ -1057,15 +1065,14 @@ function doTradingLike(p, v, jobName, calculateYield) {
 }
 
 function doMassage(p, v) {
-  let tc = calcJobBodyCost("あんま", p, v);
-  let mc;
-  let heal;
-  let logMsg;
+  const jobName = normalizeActionForPerson(p.action, p);
+  const tc = calcJobBodyCost(jobName, p, v);
+  const mindStat = getMassageMindStat(p, jobName);
+  const mc = calcJobMindCost(jobName, p[mindStat], p, v);
+  const heal = calculateMassageHeal(p, jobName);
+  let logMsg = `${p.name}${jobName}:体力-${tc},メンタル-${mc}`;
 
-  if (p.bodySex === "男") {
-    mc = calcJobMindCost("あんま", p.int, p, v);
-    heal = calculateMassageHeal(p);
-    logMsg = `${p.name}あんま:体力-${tc},メンタル-${mc}`;
+  if (jobName === ACTION_MASSAGE_MALE) {
     
     // ステータス上昇判定
     if (rollJobStatGrowth(p, "str")) {
@@ -1077,10 +1084,6 @@ function doMassage(p, v) {
       logMsg += ",知力+1";
     }
   } else {
-    mc = calcJobMindCost("あんま", p.sexdr, p, v);
-    heal = calculateMassageHeal(p);
-    logMsg = `${p.name}あんま:体力-${tc},メンタル-${mc}`;
-    
     // ステータス上昇判定
     if (rollJobStatGrowth(p, "chr")) {
       addAcquiredStat(p, "chr", 1);

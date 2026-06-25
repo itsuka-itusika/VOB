@@ -150,7 +150,8 @@ export const RAIDER_TYPES = [
       sexdr: [10, 20]
     },
     bodyTraits: ["筋肉質", "毛艶がいい", "精悍", "痩せぎす", "細身", "強面"],
-    forcedBodyTraits: ["モフモフ"],
+    forcedBodyTraits: ["四足歩行", "嗅覚鋭敏"],
+    mindTraits: ["野生"],
     hobbies: ["散歩", "狩り", "毛づくろい", "繁殖", "子育て", "喧嘩", "日光浴"],
     dialogues: [
       "グルルル...（獲物を見つけたようだ）",
@@ -192,8 +193,8 @@ export const RAIDER_TYPES = [
       sexdr: [10, 20]
     },
     bodyTraits: ["筋肉質", "毛艶がいい", "精悍", "痩せぎす", "細身", "強面"],
-    forcedBodyTraits: ["モフモフ"],
-    mindTraits: ["餓狼"],
+    forcedBodyTraits: ["四足歩行", "嗅覚鋭敏"],
+    mindTraits: ["餓狼", "野生"],
     hobbies: ["散歩", "狩り", "毛づくろい", "繁殖", "子育て", "喧嘩", "日光浴"],
     dialogues: [
       "グルルル...（飢えた群れが村へにじり寄る）",
