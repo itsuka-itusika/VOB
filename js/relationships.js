@@ -816,7 +816,7 @@ function collectRelationshipLabels(village, person, other) {
 function collectExchangeLabels(person, other) {
   if (person.bodyOwner === other.name && other.bodyOwner === person.name) return ["入れ替わり関係"];
   const labels = [];
-  if (person.bodyOwner === other.name) labels.push("身体の元の持ち主");
+  if (person.bodyOwner === other.name) labels.push("体の本来の持ち主");
   if (other.bodyOwner === person.name) labels.push("かつての身体");
   return [...new Set(labels)];
 }
