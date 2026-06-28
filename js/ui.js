@@ -506,8 +506,8 @@ function getTaskEstimateParts(person, task, village) {
       parts = ["体力+30", "メンタル+30", "幸福+30"];
       break;
     case "休養": {
-      let hp = person.mindTraits.includes("ワーカホリック") ? 30 : 54;
-      let mp = person.mindTraits.includes("ワーカホリック") ? -10 : 21;
+      let hp = person.mindTraits.includes("ワーカホリック") ? 30 : (clinic ? 53 : 52);
+      let mp = person.mindTraits.includes("ワーカホリック") ? -10 : (clinic ? 21 : 20);
       hp = Math.floor(hp * ageRestMultiplier(person));
       mp = Math.floor(mp * ageRestMultiplier(person));
       parts = [`体力+${hp}`, `メンタル${mp >= 0 ? "+" : ""}${mp}`];

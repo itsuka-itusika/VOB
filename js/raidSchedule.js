@@ -2,7 +2,7 @@ import { showRandomEventModal } from "./randomEventModal.js";
 import { createPendingRaidReservation, startRaidEvent } from "./raidStart.js";
 
 export const RAID_BASE_RESERVATION_CHANCE = 0.10;
-export const RAID_RESERVATION_GROWTH = 1.45;
+export const RAID_RESERVATION_GROWTH = 1.8;
 export const RAID_MAX_RESERVATION_CHANCE = 0.75;
 export const RAID_RUINED_RESERVATION_MULTIPLIER = 2;
 export const RAID_RUINED_MAX_RESERVATION_CHANCE = 1;

@@ -50,7 +50,7 @@ const INFANT_BODY_ALLOWED_ACTIONS = new Set([
   "研究",
   "研究助手"
 ]);
-const SACRED_BLOCKED_ADULT_ACTIONS = new Set(["踊り子", "バニー", ...MASSAGE_ACTIONS, "巫女"]);
+const SACRED_BLOCKED_ADULT_ACTIONS = new Set(["踊り子", "バニー", ACTION_MASSAGE_FEMALE, "巫女"]);
 const CIVILIZATION_AVOIDANT_BLOCKED_ACTIONS = new Set([
   "内職",
   "行商",

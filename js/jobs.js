@@ -387,12 +387,12 @@ function doRestJob(p, v) {
     hpG = 30; 
     mpG = -10; 
     msg = "(ワーカホリック)";
-  } else if (r<=30) {
+  } else if (r<=20) {
     hpG = 70; mpG=30; msg="大成功";
-  } else if (r<=90) {
+  } else if (r <= (hasActiveBuildingFlag(v, "hasClinic", "clinic") ? 90 : 80)) {
     hpG = 50; mpG=20; msg="成功";
   } else {
-    hpG = 30; mpG=0; msg="失敗";
+    hpG = 40; mpG=10; msg="失敗";
   }
   // 中年/老人で効率補正
   let multi=1;
