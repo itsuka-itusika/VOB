@@ -2,6 +2,7 @@ import { clampValue, round3 } from "../util.js";
 import { ABILITY_STATS, PHYSICAL_ABILITY_STATS } from "./personSchema.js";
 import { evaluateTitles } from "../titles.js";
 import { OLD_WOLF_TRAIT, YOUNG_WOLF_TRAIT } from "./speciesTraits.js";
+import { VILLAGE_ROLE_HEADMAN, getVillageRole } from "./villageRoles.js";
 
 export const STAT_LAYER_VERSION = 2;
 
@@ -29,8 +30,11 @@ const PERMANENT_MIND_TRAIT_ADDS = Object.freeze({
   "ニート": { ind: -2 },
   "狂信": { cou: 10 },
   "秘蹟：剣": { str: 10 },
-  "秘蹟：盾": { vit: 10 },
-  "里長": { ind: 3, eth: 3, cou: 3 }
+  "秘蹟：盾": { vit: 10 }
+});
+
+const VILLAGE_ROLE_ADDS = Object.freeze({
+  [VILLAGE_ROLE_HEADMAN]: { ind: 3, eth: 3, cou: 3 }
 });
 
 const TEMP_BODY_TRAIT_EFFECTS = Object.freeze({
@@ -94,6 +98,7 @@ function getTraitAdditions(person) {
 
   [...new Set(bodyTraits)].forEach(trait => addStats(additions, PERMANENT_BODY_TRAIT_ADDS[trait]));
   [...new Set(mindTraits)].forEach(trait => addStats(additions, PERMANENT_MIND_TRAIT_ADDS[trait]));
+  addStats(additions, VILLAGE_ROLE_ADDS[getVillageRole(person)]);
   return additions;
 }
 

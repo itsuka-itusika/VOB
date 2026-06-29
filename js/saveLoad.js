@@ -14,6 +14,7 @@ import { getInitialScaleStageIndex } from "./villageScale.js";
 import { ensureCaptiveReleaseDeadline, normalizeCaptive } from "./captives.js";
 import { normalizeBuildingRequestState } from "./buildingRequests.js";
 import { hasActiveBuildingFlag, normalizeDamagedBuildings, recalculateBuildingDerivedState } from "./domain/buildingState.js";
+import { normalizeVillageRoleForPerson, normalizeVillageRoles } from "./domain/villageRoles.js";
 
 const BODY_TRAIT_RENAMES = {
   "幼児": "子供",
@@ -196,6 +197,7 @@ function convertVillageToObject(village) {
     villageTraits: [...village.villageTraits],
     secretTreasures: normalizeSecretTreasures(village),
     buildingRequest: normalizeBuildingRequestState(village.buildingRequest),
+    hasStartedBuildingRequest: !!village.hasStartedBuildingRequest || !!normalizeBuildingRequestState(village.buildingRequest),
     festivalFlags: normalizeFestivalFlags(village.festivalFlags),
     tutorial: normalizeTutorialState(village.tutorial),
     logs: [...village.logs],
@@ -239,6 +241,7 @@ function convertVillageToObject(village) {
  */
 function convertVillagerToObject(vill) {
   syncWolfSpeciesTraits(vill);
+  normalizeVillageRoleForPerson(vill);
   syncEffectiveStats(vill);
   const bodyTraits = normalizeBodyTraitList(vill.bodyTraits);
   const mindTraits = Array.isArray(vill.mindTraits) ? [...vill.mindTraits] : [];
@@ -296,6 +299,7 @@ function convertVillagerToObject(vill) {
     assignmentLocked: !!vill.assignmentLocked,
     action: vill.action,
     actionTable: [...vill.actionTable],
+    villageRole: normalizeVillageRoleForPerson(vill),
     bodyOwner: vill.bodyOwner,
     
     // 口調タイプと顔グラフィック情報を追加
@@ -372,6 +376,7 @@ function convertObjectToVillage(dataObj) {
   }
   v.secretTreasures = normalizeSecretTreasures(dataObj);
   v.buildingRequest = normalizeBuildingRequestState(dataObj.buildingRequest);
+  v.hasStartedBuildingRequest = !!dataObj.hasStartedBuildingRequest || !!v.buildingRequest;
   v.festivalFlags = normalizeFestivalFlags(dataObj.festivalFlags);
   v.tutorial = normalizeTutorialState(dataObj.tutorial);
   v.logs = Array.isArray(dataObj.logs) ? [...dataObj.logs] : [];
@@ -436,6 +441,7 @@ function convertObjectToVillage(dataObj) {
     v.captives = dataObj.captives.map(o => normalizeCaptive(convertObjectToVillager(o)));
     v.captives.forEach(captive => ensureCaptiveReleaseDeadline(v, captive));
   }
+  normalizeVillageRoles(v);
 
   return v;
 }
@@ -470,6 +476,8 @@ function convertObjectToVillager(obj) {
 
   vill.bodyTraits = normalizeBodyTraitList(obj.bodyTraits);
   vill.mindTraits = Array.isArray(obj.mindTraits) ? [...obj.mindTraits] : [];
+  vill.villageRole = obj.villageRole;
+  normalizeVillageRoleForPerson(vill);
   const migrateBodyAresToMind = vill.bodyTraits.includes("火星の加護");
   if (vill.bodyTraits.includes("火星の加護")) {
     vill.bodyTraits = vill.bodyTraits.filter(trait => trait !== "火星の加護");

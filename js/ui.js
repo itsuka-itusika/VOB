@@ -35,6 +35,7 @@ import {
   ACTION_MASSAGE_FEMALE,
   ACTION_MASSAGE_MALE,
   ACTION_NONE,
+  getActionDisplayName,
   isPreferredActionCandidate,
   normalizeActionForPerson,
   setPreferredAction,
@@ -54,6 +55,18 @@ import { applyVillageScaleArtClass, getVillageScaleTitle } from "./villageScale.
 import { getDivineMightStatus } from "./divineMight.js";
 import { getBuildingRequestWarnings } from "./buildingRequests.js";
 import { hasDespairState, hasDisappointmentState } from "./domain/despair.js";
+import {
+  VILLAGE_ROLE_DOCTOR,
+  VILLAGE_ROLE_HEADMAN,
+  VILLAGE_ROLE_LIBRARIAN,
+  VILLAGE_ROLE_NONE,
+  VILLAGE_ROLE_PRIEST,
+  assignVillageRole,
+  canAssignVillageRole,
+  getUnlockedVillageRoles,
+  isAdultMindForVillageRole,
+  normalizeVillageRoleForPerson
+} from "./domain/villageRoles.js";
 
 
 function openConversationFor(person) {
@@ -310,16 +323,16 @@ function hasTrait(person, trait) {
 }
 
 const STAT_CELL_INDEXES = {
-  str: 12,
-  vit: 13,
-  dex: 14,
-  mag: 15,
-  chr: 16,
-  int: 18,
-  ind: 19,
-  eth: 20,
-  cou: 21,
-  sexdr: 22
+  str: 13,
+  vit: 14,
+  dex: 15,
+  mag: 16,
+  chr: 17,
+  int: 19,
+  ind: 20,
+  eth: 21,
+  cou: 22,
+  sexdr: 23
 };
 
 function getDebuffedStats(person) {
@@ -488,11 +501,7 @@ function getTaskEstimateParts(person, task, village) {
   const sexdr = Number(person.sexdr) || 0;
   const str = Number(person.str) || 0;
   const vit = Number(person.vit) || 0;
-  const church = hasActiveBuildingFlag(village, "hasChurch", "church");
   const clinic = hasActiveBuildingFlag(village, "hasClinic", "clinic");
-  const library = hasActiveBuildingFlag(village, "hasLibrary", "library");
-  const tavern = hasActiveBuildingFlag(village, "hasTavern", "tavern");
-  const voice = hasTrait(person, "澄んだ声") || hasTrait(person, "通る声");
   const affectedMen = village.villagers.filter(v => v.spiritSex === "男").length;
   const affectedWomen = village.villagers.filter(v => v.spiritSex === "女").length;
   const affectedAll = village.villagers.length;
@@ -695,7 +704,7 @@ const ACTION_DESCRIPTIONS = {
 };
 
 function getActionDescription(action) {
-  return ACTION_DESCRIPTIONS[action] || "この行動を実行します。";
+  return ACTION_DESCRIPTIONS[getActionDisplayName(action)] || ACTION_DESCRIPTIONS[action] || "この行動を実行します。";
 }
 
 function getActionOptionTitle(person, action, village) {
@@ -742,9 +751,10 @@ const JOB_KEY_STATS = {
 };
 
 function getJobLabel(job, compact = false) {
-  if (!JOB_KEY_STATS[job]) return job;
+  const label = getActionDisplayName(job);
+  if (!JOB_KEY_STATS[job]) return label;
   const stats = compact ? compactStatText(JOB_KEY_STATS[job]) : JOB_KEY_STATS[job];
-  return compact ? `${job}(${stats})` : `${job}（${stats}）`;
+  return compact ? `${label}(${stats})` : `${label}（${stats}）`;
 }
 
 function getActionRewardLabel(person, action, village) {
@@ -752,6 +762,7 @@ function getActionRewardLabel(person, action, village) {
 }
 
 function getActionOptionLabel(person, action, village) {
+  const label = getActionDisplayName(action);
   const statLabel = getJobLabel(action, true);
   const reward = getActionRewardLabel(person, action, village);
   const compactReward = reward ? compactEstimateText(reward) : "";
@@ -759,8 +770,8 @@ function getActionOptionLabel(person, action, village) {
     return `${statLabel} ${compactReward}`;
   }
   if (statLabel !== action) return statLabel;
-  if (compactReward) return `${action} ${compactReward}`;
-  return action;
+  if (compactReward) return `${label} ${compactReward}`;
+  return label;
 }
 
 function appendTextCell(row, value, className = "") {
@@ -829,8 +840,8 @@ function appendActionCell(row, person, village, editable) {
   const cell = document.createElement("td");
   cell.classList.add("action-cell");
   if (!editable) {
-    cell.textContent = person.action;
-    cell.title = person.action || "";
+    cell.textContent = getActionDisplayName(person.action);
+    cell.title = getActionDisplayName(person.action) || "";
     row.appendChild(cell);
     return;
   }
@@ -875,7 +886,7 @@ function appendActionCell(row, person, village, editable) {
     if (isPreferredActionCandidate(newAction)) {
       setPreferredAction(person, newAction);
     }
-    showDictionaryEntry(newAction);
+    showDictionaryEntry(getActionDisplayName(newAction));
     refreshJobTable(person, village);
     updateUI(village);
   };
@@ -898,6 +909,89 @@ function appendActionCell(row, person, village, editable) {
   wrapper.appendChild(select);
   wrapper.appendChild(lockButton);
   cell.appendChild(wrapper);
+  row.appendChild(cell);
+}
+
+function getVillageRoleDescription(role) {
+  switch (role) {
+    case VILLAGE_ROLE_HEADMAN:
+      return "里長選挙で選ばれた固定役職。勤勉・勇気・倫理+3。";
+    case VILLAGE_ROLE_LIBRARIAN:
+      return "図書館建設で選べる役職。研究・写本の成果1.2倍。";
+    case VILLAGE_ROLE_PRIEST:
+      return "礼拝堂建設で選べる役職。神官・シスター・巫女の成果1.2倍。巫女の神威獲得には補正しません。";
+    case VILLAGE_ROLE_DOCTOR:
+      return "診療所建設で選べる役職。看護・あんまの回復量1.2倍。";
+    default:
+      return "";
+  }
+}
+
+function getVillageRoleSelectTitle(person, currentRole, roles) {
+  if (currentRole !== VILLAGE_ROLE_NONE) return getVillageRoleDescription(currentRole);
+  return "";
+}
+
+function getVillageRoleOptions(person, village, currentRole) {
+  if (currentRole === VILLAGE_ROLE_HEADMAN) return [VILLAGE_ROLE_HEADMAN];
+
+  const roles = [VILLAGE_ROLE_NONE];
+  getUnlockedVillageRoles(village).forEach(role => {
+    if (role === currentRole || canAssignVillageRole(village, person, role)) {
+      roles.push(role);
+    }
+  });
+  if (currentRole !== VILLAGE_ROLE_NONE && !roles.includes(currentRole)) {
+    roles.push(currentRole);
+  }
+  return roles;
+}
+
+function appendVillageRoleCell(row, person, village, editable) {
+  const cell = document.createElement("td");
+  cell.classList.add("village-role-cell");
+  const currentRole = normalizeVillageRoleForPerson(person);
+
+  if (!editable) {
+    cell.title = getVillageRoleDescription(currentRole);
+    if (currentRole === VILLAGE_ROLE_NONE) {
+      cell.textContent = VILLAGE_ROLE_NONE;
+    } else {
+      appendDictionaryTerm(cell, currentRole);
+    }
+    row.appendChild(cell);
+    return;
+  }
+
+  const select = document.createElement("select");
+  select.className = "village-role-select";
+  const roles = getVillageRoleOptions(person, village, currentRole);
+
+  roles.forEach(role => {
+    const option = document.createElement("option");
+    option.value = role;
+    option.textContent = role;
+    const title = getVillageRoleDescription(role);
+    if (title) option.title = title;
+    if (role === currentRole) option.selected = true;
+    select.appendChild(option);
+  });
+
+  select.disabled = currentRole === VILLAGE_ROLE_HEADMAN ||
+    (!isAdultMindForVillageRole(person) && currentRole === VILLAGE_ROLE_NONE);
+  select.title = getVillageRoleSelectTitle(person, currentRole, roles);
+  cell.title = select.title;
+  select.onchange = () => {
+    const nextRole = select.value;
+    if (assignVillageRole(village, person, nextRole)) {
+      if (nextRole !== VILLAGE_ROLE_NONE) showDictionaryEntry(nextRole);
+      updateUI(village);
+      return;
+    }
+    updateUI(village);
+  };
+
+  cell.appendChild(select);
   row.appendChild(cell);
 }
 
@@ -932,7 +1026,7 @@ function appendStatCells(row, person, village, { showPersonalHistory = true } = 
 }
 
 function applyPersonRowStyle(row, person) {
-  for (let i = 0; i <= 13; i++) {
+  for (let i = 0; i <= 14; i++) {
     const cell = row.cells[i];
     if (!cell) continue;
     cell.classList.add(person.bodySex === "男" ? "male-basic" : "female-basic");
@@ -958,6 +1052,7 @@ function createPersonRow(person, village, { editable = false, showPersonalHistor
   }
   appendIdentityCells(row, person);
   appendActionCell(row, person, village, editable);
+  appendVillageRoleCell(row, person, village, editable);
   appendStatCells(row, person, village, { showPersonalHistory });
   applyPersonRowStyle(row, person);
   return row;

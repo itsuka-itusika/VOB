@@ -34,7 +34,7 @@ import {
   promoteDisappointmentToDespair
 } from "./domain/despair.js";
 import { getVisitorArrivalLine } from "./data/dialogue/visitorLines.js";
-import { addDivineMight, getDivineMightGainFromMonthlyMana } from "./divineMight.js";
+import { addDivineMight, getDivineMightGainFromMonthlyMana, runAfterPendingDivineMightLevelUp } from "./divineMight.js";
 import { BUILDINGS } from "./buildings.js";
 import { advanceBuildingRequestMonth, tryStartBuildingRequest } from "./buildingRequests.js";
 import {
@@ -151,9 +151,7 @@ function summerSolsticeFestival(v) {
 function harvestFestival(v) {
   const treasure = grantSecretTreasure(v, PINECONE_STAFF_SECRET_TREASURE_ID);
   showFestivalModal("harvest");
-  if (treasure && !v.festivalFlags?.pineconeStaffIntroShown) {
-    if (!v.festivalFlags) v.festivalFlags = {};
-    v.festivalFlags.pineconeStaffIntroShown = true;
+  if (treasure) {
     runAfterFestivalModals(showPineconeStaffIntroModal);
   }
   v.log(`【収穫祭】全員体力+30,メンタル+10${treasure ? `,${treasure.name}+1` : ""}`);
@@ -179,7 +177,13 @@ export function doRandomEventPost(village) {
   // 後ランダムイベントは廃止。ランダムイベントは行動前のみ発生する。
 }
 
-export function doRaidStartCheck(village) {
+export function doRaidStartCheck(village, options = {}) {
+  if (!options.skipDivineMightDelay && runAfterPendingDivineMightLevelUp(village, () => {
+    doRaidStartCheck(village, { skipDivineMightDelay: true });
+  })) {
+    return;
+  }
+
   processRaidScheduleAtMonthStart(village, {
     suspendReservation: isOpeningRaidGraceActive(village)
   });

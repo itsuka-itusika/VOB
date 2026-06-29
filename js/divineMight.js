@@ -11,6 +11,7 @@ export const DIVINE_MIGHT_LEVELS = [
 
 const DIVINE_MIGHT_MAX = 99999;
 const scheduledLevelUpVillages = new WeakSet();
+const levelUpAfterCloseCallbacks = new WeakMap();
 
 const MIRACLE_SHORT_NAMES = {
   "1": "豊穣",
@@ -151,6 +152,28 @@ function scheduleDivineMightLevelUpModal(village) {
   setTimeout(attempt, 0);
 }
 
+function queueDivineMightLevelUpAfterClose(village, callback) {
+  if (!village || typeof callback !== "function") return;
+  const callbacks = levelUpAfterCloseCallbacks.get(village) || [];
+  callbacks.push(callback);
+  levelUpAfterCloseCallbacks.set(village, callbacks);
+}
+
+function runDivineMightLevelUpAfterClose(village, afterClose) {
+  const callbacks = levelUpAfterCloseCallbacks.get(village) || [];
+  levelUpAfterCloseCallbacks.delete(village);
+  [...callbacks, afterClose].forEach(callback => {
+    if (typeof callback === "function") callback();
+  });
+}
+
+export function runAfterPendingDivineMightLevelUp(village, callback) {
+  if (typeof document === "undefined" || !village?.pendingDivineMightLevelUp) return false;
+  queueDivineMightLevelUpAfterClose(village, callback);
+  scheduleDivineMightLevelUpModal(village);
+  return true;
+}
+
 function isVisibleElement(element) {
   if (!element || !element.isConnected || typeof window === "undefined") return false;
   let current = element;
@@ -261,7 +284,7 @@ export function showPendingDivineMightLevelUpModal(village, afterClose = null) {
       showPendingDivineMightLevelUpModal(village, afterClose);
       return;
     }
-    if (typeof afterClose === "function") afterClose();
+    runDivineMightLevelUpAfterClose(village, afterClose);
   };
   overlay.onclick = close;
   modal.querySelector("[data-close-divine-might-level-up]").onclick = close;

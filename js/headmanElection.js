@@ -3,8 +3,15 @@ import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { HISTORY_EVENT_TYPES, recordHeadmanElectionHistory } from "./history.js";
 import { parseRelationship, normalizeRelationships } from "./relationships.js";
 import { grantTitle, incrementTitleCounter, TITLE_COUNTER_KEYS } from "./titles.js";
+import {
+  VILLAGE_ROLE_HEADMAN,
+  VILLAGE_ROLE_NONE,
+  clearLegacyHeadmanTrait,
+  getVillageRole,
+  isHeadman,
+  setVillageRole
+} from "./domain/villageRoles.js";
 
-const HEADMAN_TRAIT = "里長";
 const ELECTION_MONTH = 7;
 const ELECTION_INTERVAL_YEARS = 3;
 const ASSEMBLY_HALL_ID = "assemblyHall";
@@ -28,20 +35,16 @@ function hasAssemblyHall(village) {
   return hasActiveBuildingFlag(village, "hasAssemblyHall", ASSEMBLY_HALL_ID);
 }
 
-function hasMindTrait(person, trait) {
-  return Array.isArray(person?.mindTraits) && person.mindTraits.includes(trait);
-}
-
 function isAdultMind(person) {
   return (Number(person?.spiritAge) || 0) >= 16;
 }
 
 function getCurrentHeadmen(village) {
-  return (village.villagers || []).filter(person => hasMindTrait(person, HEADMAN_TRAIT));
+  return (village.villagers || []).filter(isHeadman);
 }
 
 function getCandidates(village) {
-  return (village.villagers || []).filter(person => isAdultMind(person) && !hasMindTrait(person, HEADMAN_TRAIT));
+  return (village.villagers || []).filter(person => isAdultMind(person) && !isHeadman(person));
 }
 
 function getVoters(village) {
@@ -170,12 +173,13 @@ function formatVoteCounts(candidates, voteCounts) {
 function appointHeadman(village, headman) {
   (village.villagers || []).forEach(person => {
     person.mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
+    clearLegacyHeadmanTrait(person);
+    if (getVillageRole(person) === VILLAGE_ROLE_HEADMAN) {
+      setVillageRole(person, VILLAGE_ROLE_NONE);
+    }
     syncEffectiveStats(person);
   });
-  (village.villagers || []).forEach(person => {
-    person.mindTraits = person.mindTraits.filter(trait => trait !== HEADMAN_TRAIT);
-  });
-  headman.mindTraits.push(HEADMAN_TRAIT);
+  setVillageRole(headman, VILLAGE_ROLE_HEADMAN);
   (village.villagers || []).forEach(syncEffectiveStats);
 }
 

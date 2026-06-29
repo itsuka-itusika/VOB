@@ -127,6 +127,11 @@ export function normalizeActionForPerson(action, person) {
   return value === "あんま" ? getMassageActionForPerson(person) : value;
 }
 
+export function getActionDisplayName(action) {
+  const value = String(action || "").trim();
+  return MASSAGE_ACTIONS.includes(value) ? "あんま" : value;
+}
+
 function hasInfantMind(person) {
   const mindTraits = traitList(person, "mindTraits");
   return mindTraits.includes("無垢") || (Number(person?.spiritAge) || 0) <= 3;

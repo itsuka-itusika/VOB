@@ -112,12 +112,12 @@ export const BUILDINGS = [
     materials: 50,
     funds: 50,
     tech: 0,
-    desc: "娯楽施設。詩人・踊り子の効果1.2倍、毎月の訪問者判定枠が最大2人、女性限定「バニー」解放。規模+20",
+    desc: "娯楽施設。毎月の訪問者判定枠が最大2人、女性限定行動「バニー」解放。規模+20",
     effect: standardBuildingEffect({
       scale: 20,
       flag: "hasTavern",
       after: (village) => { village.visitorLimit = 2; },
-      log: "酒場建設完了: 詩人・踊り子の効果1.2倍、毎月の訪問者判定枠が最大2人、女性限定「バニー」解放、規模+20"
+      log: "酒場建設完了: 毎月の訪問者判定枠が最大2人、女性限定行動「バニー」解放、規模+20"
     })
   },
   {
@@ -126,11 +126,11 @@ export const BUILDINGS = [
     materials: 50,
     funds: 50,
     tech: 0,
-    desc: "信仰施設。シスター・神官の効果1.2倍、女性限定「巫女」解放。規模+30",
+    desc: "信仰施設。役職「司祭」解放、女性限定行動「巫女」解放。規模+30",
     effect: standardBuildingEffect({
       scale: 30,
       flag: "hasChurch",
-      log: "礼拝堂建設完了: シスター・神官の効果1.2倍、女性限定「巫女」解放、規模+30"
+      log: "礼拝堂建設完了: 役職「司祭」解放、女性限定行動「巫女」解放、規模+30"
     })
   },
   {
@@ -139,8 +139,8 @@ export const BUILDINGS = [
     materials: 50,
     funds: 0,
     tech: 100,
-    desc: "医療施設。休養の成功率改善、看護の効果1.2倍、「あんま男」「あんま女」解放。規模+20",
-    effect: standardBuildingEffect({ scale: 20, flag: "hasClinic", log: "診療所建設完了: 休養の成功率改善、看護の効果1.2倍、「あんま男」「あんま女」解放、規模+20" })
+    desc: "医療施設。休養の失敗率-10%、成功率+10%、役職「村医」解放、行動「あんま」解放。規模+20",
+    effect: standardBuildingEffect({ scale: 20, flag: "hasClinic", log: "診療所建設完了: 休養の失敗率-10%、成功率+10%、役職「村医」解放、行動「あんま」解放、規模+20" })
   },
   {
     id: "library",
@@ -148,8 +148,8 @@ export const BUILDINGS = [
     materials: 50,
     funds: 50,
     tech: 100,
-    desc: "教育施設。研究の効果1.2倍、「写本」解放。規模+30",
-    effect: standardBuildingEffect({ scale: 30, flag: "hasLibrary", log: "図書館建設完了: 研究の効果1.2倍、「写本」解放、規模+30" })
+    desc: "教育施設。役職「司書」解放、行動「写本」解放。規模+30",
+    effect: standardBuildingEffect({ scale: 30, flag: "hasLibrary", log: "図書館建設完了: 役職「司書」解放、行動「写本」解放、規模+30" })
   },
   {
     id: "brewery",

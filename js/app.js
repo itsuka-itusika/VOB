@@ -302,6 +302,23 @@ function bindGlobalHandlers() {
   });
 }
 
+function bindOverlayClickClose(overlayId, close) {
+  const overlay = document.getElementById(overlayId);
+  if (!overlay) return;
+  overlay.addEventListener("click", event => {
+    if (event.target === overlay) close();
+  });
+}
+
+function bindModalOverlayClickClose() {
+  bindOverlayClickClose("modalOverlay", closeMiracleModal);
+  bindOverlayClickClose("buildingOverlay", closeBuildingModal);
+  bindOverlayClickClose("secretTreasureOverlay", closeSecretTreasureModal);
+  bindOverlayClickClose("historyOverlay", closeHistoryModal);
+  bindOverlayClickClose("personalHistoryOverlay", closePersonalHistoryModal);
+}
+
 bindGlobalHandlers();
+bindModalOverlayClickClose();
 bindDebugTitleActions();
 initViewMode();

@@ -1,5 +1,11 @@
 import { hasActiveBuildingFlag } from "./buildingState.js";
 import { SENSITIVE_NOSE_TRAIT } from "./speciesTraits.js";
+import {
+  VILLAGE_ROLE_DOCTOR,
+  VILLAGE_ROLE_LIBRARIAN,
+  VILLAGE_ROLE_PRIEST,
+  getVillageRoleMultiplier
+} from "./villageRoles.js";
 
 const ACTION_MASSAGE_MALE = "あんま男";
 const ACTION_MASSAGE_FEMALE = "あんま女";
@@ -71,6 +77,10 @@ function statProduct(person, left, right) {
 
 function statTripleProduct(person, first, second, third) {
   return statProduct(person, first, second) * ((Number(person?.[third]) || 0) / 20);
+}
+
+function applyVillageRoleMultiplier(amount, person, role) {
+  return Math.round(amount * getVillageRoleMultiplier(person, role));
 }
 
 export function hasVillageTrait(village, trait) {
@@ -205,8 +215,11 @@ export function calculateHandiworkYield(person, village) {
 }
 
 export function calculateResearchYield(person, village, job = "研究") {
-  const libraryMultiplier = hasActiveBuildingFlag(village, "hasLibrary", "library") ? 1.2 : 1;
-  return Math.round((30 * statProduct(person, "int", "mag")) * libraryMultiplier * getLaborYieldMultiplier(job, person, village));
+  let amount = Math.round((30 * statProduct(person, "int", "mag")) * getLaborYieldMultiplier(job, person, village));
+  if (job === "研究") {
+    amount = applyVillageRoleMultiplier(amount, person, VILLAGE_ROLE_LIBRARIAN);
+  }
+  return amount;
 }
 
 export function calculateGuardYield(person) {
@@ -242,17 +255,12 @@ function calculateTradingLikeYield(person, job, baseValue) {
 
 export function calculateNurseHeal(person, village) {
   let amount = Math.round(25 * statProduct(person, "mag", "eth"));
-  if (hasActiveBuildingFlag(village, "hasClinic", "clinic")) {
-    amount = Math.round(amount * 1.2);
-  }
-  return amount;
+  return applyVillageRoleMultiplier(amount, person, VILLAGE_ROLE_DOCTOR);
 }
 
 export function calculatePriestMindHeal(person, village) {
   let amount = Math.round(8 * statProduct(person, "chr", "eth"));
-  if (hasActiveBuildingFlag(village, "hasChurch", "church")) {
-    amount = Math.round(amount * 1.2);
-  }
+  amount = applyVillageRoleMultiplier(amount, person, VILLAGE_ROLE_PRIEST);
   if (hasBodyTrait(person, "澄んだ声") || hasBodyTrait(person, "通る声")) {
     amount = Math.round(amount * 1.2);
   }
@@ -261,9 +269,6 @@ export function calculatePriestMindHeal(person, village) {
 
 export function calculateDancerHappiness(person, village) {
   let amount = Math.round(10 * statProduct(person, "chr", "sexdr"));
-  if (hasActiveBuildingFlag(village, "hasTavern", "tavern")) {
-    amount = Math.round(amount * 1.2);
-  }
   if (hasBodyTrait(person, "澄んだ声") || hasBodyTrait(person, "通る声")) {
     amount = Math.round(amount * 1.2);
   }
@@ -275,9 +280,6 @@ export function calculateDancerHappiness(person, village) {
 
 export function calculatePoetHappiness(person, village) {
   let amount = Math.round(10 * statProduct(person, "chr", "int"));
-  if (hasActiveBuildingFlag(village, "hasTavern", "tavern")) {
-    amount = Math.round(amount * 1.2);
-  }
   if (hasBodyTrait(person, "澄んだ声") || hasBodyTrait(person, "通る声")) {
     amount = Math.round(amount * 1.2);
   }
@@ -302,13 +304,15 @@ export function getMassageMindStat(person, action = person?.action) {
 }
 
 export function calculateMassageHeal(person, action = person?.action) {
-  return isMaleMassageAction(action, person)
-    ? Math.round(30 * statProduct(person, "str", "int"))
-    : Math.round(30 * statProduct(person, "chr", "sexdr"));
+  const amount = isMaleMassageAction(action, person)
+    ? Math.round(25 * statProduct(person, "str", "int"))
+    : Math.round(25 * statProduct(person, "chr", "sexdr"));
+  return applyVillageRoleMultiplier(amount, person, VILLAGE_ROLE_DOCTOR);
 }
 
 export function calculateMikoMana(person) {
-  return Math.round(12 * statTripleProduct(person, "chr", "mag", "sexdr"));
+  const amount = Math.round(12 * statTripleProduct(person, "chr", "mag", "sexdr"));
+  return applyVillageRoleMultiplier(amount, person, VILLAGE_ROLE_PRIEST);
 }
 
 export function calculateBunnySupport(person) {
@@ -324,7 +328,8 @@ export function calculateAlchemyYield(person) {
 }
 
 export function calculateCopyBookYield(person) {
-  return Math.round(20 * statProduct(person, "vit", "int"));
+  const amount = Math.round(20 * statProduct(person, "vit", "int"));
+  return applyVillageRoleMultiplier(amount, person, VILLAGE_ROLE_LIBRARIAN);
 }
 
 export function calculateWeavingYield(person) {

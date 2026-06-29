@@ -314,6 +314,11 @@ export function getFriendshipLabel(score) {
   return item ? item.label : "普通";
 }
 
+function formatFriendshipScore(score) {
+  const value = normalizeFriendshipValue(score);
+  return `${getFriendshipLabel(value)}(${value})`;
+}
+
 export function getFriendshipScore(a, b, fallback = 0) {
   if (!a || !b || a === b || !a.name || !b.name) return 0;
   const mapA = ensureFriendshipMap(a);
@@ -953,8 +958,9 @@ export function openFriendshipDetailModal(village, person) {
     const relationLabels = collectRelationshipLabels(village, person, other);
     const specialLabels = collectSpecialRelationshipLabels(person, other);
     const exchangeLabels = collectExchangeLabels(person, other);
-    const friendshipLabel = getFriendshipLabel(score);
-    const labels = [...relationLabels, ...specialLabels, ...exchangeLabels].join(" / ") || "なし";
+    const friendshipLabel = formatFriendshipScore(score);
+    const fixedRelationLabels = relationLabels.length > 0 ? relationLabels : ["村の一員"];
+    const labels = [...fixedRelationLabels, ...specialLabels, ...exchangeLabels].join(" / ");
     return `
       <tr>
         <td class="friendship-detail-person">

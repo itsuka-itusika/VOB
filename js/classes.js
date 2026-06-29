@@ -32,6 +32,7 @@ export class Village {
     this.villageTraits = ["春"];
     this.secretTreasures = [];
     this.buildingRequest = null;
+    this.hasStartedBuildingRequest = false;
     this.festivalFlags = {
       pineconeStaffIntroShown: false
     };
@@ -166,6 +167,7 @@ export class Villager {
     /** 今月実行する行動 */
     this.action = "なし";
     this.actionTable = [];
+    this.villageRole = "なし";
 
     /** この肉体の元の持ち主 */
     this.bodyOwner = name;

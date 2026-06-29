@@ -33,6 +33,7 @@ import {
 import {
   ACTION_MASSAGE_FEMALE,
   ACTION_MASSAGE_MALE,
+  getActionDisplayName,
   normalizeActionForPerson,
   refreshJobTable
 } from "./domain/jobTables.js";
@@ -1070,7 +1071,7 @@ function doMassage(p, v) {
   const mindStat = getMassageMindStat(p, jobName);
   const mc = calcJobMindCost(jobName, p[mindStat], p, v);
   const heal = calculateMassageHeal(p, jobName);
-  let logMsg = `${p.name}${jobName}:体力-${tc},メンタル-${mc}`;
+  let logMsg = `${p.name}${getActionDisplayName(jobName)}:体力-${tc},メンタル-${mc}`;
 
   if (jobName === ACTION_MASSAGE_MALE) {
     

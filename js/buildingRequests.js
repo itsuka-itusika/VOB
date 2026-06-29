@@ -15,6 +15,7 @@ const REQUEST_MODAL_ID = "buildingRequestModal";
 const REQUEST_OVERLAY_ID = "buildingRequestOverlay";
 const REQUEST_COMPLETE_MODAL_ID = "buildingRequestCompleteModal";
 const REQUEST_COMPLETE_OVERLAY_ID = "buildingRequestCompleteOverlay";
+const FIRST_BUILDING_REQUEST_IDS = new Set(["tavern", "church", "library", "clinic"]);
 const PRIORITY_MODAL_SELECTORS = [
   "#actionPhaseModal",
   "#seasonChangeDialog",
@@ -77,7 +78,10 @@ export function normalizeBuildingRequestState(source = null) {
 
 export function getActiveBuildingRequest(village) {
   const request = normalizeBuildingRequestState(village?.buildingRequest);
-  if (village) village.buildingRequest = request;
+  if (village) {
+    village.buildingRequest = request;
+    if (request) village.hasStartedBuildingRequest = true;
+  }
   return request;
 }
 
@@ -95,7 +99,11 @@ export function tryStartBuildingRequest(village, buildings) {
   if (hasResourceShortageWarning(village)) return null;
   if (Math.random() >= 0.5) return null;
 
-  const candidate = randChoice(getBuildingRequestCandidates(village, buildings));
+  const candidates = getBuildingRequestCandidates(village, buildings);
+  const requestCandidates = village.hasStartedBuildingRequest
+    ? candidates
+    : candidates.filter(candidate => FIRST_BUILDING_REQUEST_IDS.has(candidate.definition.buildingId));
+  const candidate = randChoice(requestCandidates);
   if (!candidate) return null;
 
   const match = randChoice(candidate.matches);
@@ -115,6 +123,7 @@ export function tryStartBuildingRequest(village, buildings) {
   };
 
   village.buildingRequest = request;
+  village.hasStartedBuildingRequest = true;
   village.log(`要望発生: ${request.requesterName}が${request.buildingName}を望んでいます（${BUILDING_REQUEST_DURATION_MONTHS}か月、建設費20%引き）`);
   showBuildingRequestModal(request);
   return request;
