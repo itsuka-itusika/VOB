@@ -6,14 +6,15 @@ import { runAfterFestivalModals } from "./festivalModal.js";
 
 const FRIENDSHIP_MIN = -100;
 const FRIENDSHIP_MAX = 100;
-const FRIENDSHIP_FOUNDING_VALUE = 30;
+const FRIENDSHIP_FOUNDING_VALUE = 20;
 const FRIENDSHIP_LABELS = [
-  { min: -100, max: -61, label: "仇敵" },
-  { min: -60, max: -31, label: "犬猿の仲" },
-  { min: -30, max: -1, label: "不仲" },
-  { min: 0, max: 19, label: "他人行儀" },
-  { min: 20, max: 49, label: "友好的" },
-  { min: 50, max: 79, label: "親密" },
+  { min: -100, max: -60, label: "憎悪" },
+  { min: -59, max: -30, label: "嫌悪" },
+  { min: -29, max: -1, label: "敬遠" },
+  { min: 0, max: 19, label: "普通" },
+  { min: 20, max: 39, label: "友好的" },
+  { min: 40, max: 59, label: "好意的" },
+  { min: 60, max: 79, label: "親愛" },
   { min: 80, max: 100, label: "魂の友" }
 ];
 const FRIENDSHIP_WORK_EXCLUDED_ACTIONS = new Set([
@@ -30,7 +31,8 @@ const FRIENDSHIP_WORK_EXCLUDED_ACTIONS = new Set([
   "罠作成"
 ]);
 const FRIENDSHIP_MAIN_RELATED_PREFIXES = new Set(["恋人", "夫", "妻", "親友"]);
-const FRIENDSHIP_PARENT_CHILD_PREFIXES = new Set(["母", "父", "子"]);
+const FRIENDSHIP_MAIN_RELATED_BOUNDS = { min: 65, max: 75 };
+const FRIENDSHIP_DEFAULT_BOUNDS = { min: -30, max: 30 };
 
 /**
  * 恋人チェック (星霜祭などで呼ばれる)
@@ -93,7 +95,7 @@ function isLoverCandidate(a, b) {
   if (!expectedBodySex) return false;
   return isSingle(b)
     && !hasLoverBlockingRelationship(a, b)
-    && getFriendshipScore(a, b) >= 30
+    && getPairFriendshipMinimum(a, b) >= 30
     && b.bodySex === expectedBodySex
     && b.bodyAge >= 16
     && b.bodyAge >= a.bodyAge - 10
@@ -253,6 +255,13 @@ function normalizeFriendshipValue(value, fallback = 0) {
   return clampValue(Math.round(safe), FRIENDSHIP_MIN, FRIENDSHIP_MAX);
 }
 
+function hasStoredFriendshipValue(person, targetName) {
+  if (!person || !targetName) return false;
+  const map = ensureFriendshipMap(person);
+  return Object.prototype.hasOwnProperty.call(map, targetName) &&
+    Number.isFinite(Number(map[targetName]));
+}
+
 function ensureFriendshipMap(person) {
   if (!person || typeof person !== "object") return {};
   if (!person.friendships || typeof person.friendships !== "object" || Array.isArray(person.friendships)) {
@@ -302,35 +311,62 @@ export function normalizeFriendshipState(person) {
 export function getFriendshipLabel(score) {
   const value = normalizeFriendshipValue(score);
   const item = FRIENDSHIP_LABELS.find(entry => value >= entry.min && value <= entry.max);
-  return item ? item.label : "他人行儀";
+  return item ? item.label : "普通";
 }
 
 export function getFriendshipScore(a, b, fallback = 0) {
   if (!a || !b || a === b || !a.name || !b.name) return 0;
   const mapA = ensureFriendshipMap(a);
-  const mapB = ensureFriendshipMap(b);
   const valueA = mapA[b.name];
+  if (Number.isFinite(Number(valueA))) {
+    return normalizeFriendshipValue(valueA, fallback);
+  }
+  const mapB = ensureFriendshipMap(b);
   const valueB = mapB[a.name];
-  return normalizeFriendshipValue(Number.isFinite(Number(valueA)) ? valueA : valueB, fallback);
+  return normalizeFriendshipValue(Number.isFinite(Number(valueB)) ? valueB : fallback, fallback);
+}
+
+export function getPairFriendshipMinimum(a, b, fallback = 0) {
+  return Math.min(getFriendshipScore(a, b, fallback), getFriendshipScore(b, a, fallback));
+}
+
+export function getPairFriendshipMaximum(a, b, fallback = 0) {
+  return Math.max(getFriendshipScore(a, b, fallback), getFriendshipScore(b, a, fallback));
+}
+
+export function setFriendshipScore(a, b, value) {
+  if (!a || !b || a === b || !a.name || !b.name) return 0;
+  const next = normalizeFriendshipValue(value);
+  ensureFriendshipMap(a)[b.name] = next;
+  return next;
+}
+
+export function adjustFriendshipScore(a, b, delta) {
+  if (!a || !b || a === b) return 0;
+  return setFriendshipScore(a, b, getFriendshipScore(a, b) + (Number(delta) || 0));
 }
 
 export function setMutualFriendship(a, b, value) {
   if (!a || !b || a === b || !a.name || !b.name) return 0;
   const next = normalizeFriendshipValue(value);
-  ensureFriendshipMap(a)[b.name] = next;
-  ensureFriendshipMap(b)[a.name] = next;
+  setFriendshipScore(a, b, next);
+  setFriendshipScore(b, a, next);
   return next;
 }
 
 export function adjustMutualFriendship(a, b, delta) {
   if (!a || !b || a === b) return 0;
-  return setMutualFriendship(a, b, getFriendshipScore(a, b) + (Number(delta) || 0));
+  const amount = Number(delta) || 0;
+  const nextA = adjustFriendshipScore(a, b, amount);
+  const nextB = adjustFriendshipScore(b, a, amount);
+  return Math.min(nextA, nextB);
 }
 
 export function raiseMutualFriendshipTo(a, b, minimum) {
-  const current = getFriendshipScore(a, b);
-  if (current >= minimum) return current;
-  return setMutualFriendship(a, b, minimum);
+  const target = normalizeFriendshipValue(minimum);
+  if (getFriendshipScore(a, b) < target) setFriendshipScore(a, b, target);
+  if (getFriendshipScore(b, a) < target) setFriendshipScore(b, a, target);
+  return getPairFriendshipMinimum(a, b);
 }
 
 function forEachVillagerPair(village, callback) {
@@ -346,7 +382,15 @@ export function ensureVillageFriendships(village, fallback = 0) {
   if (!village || !Array.isArray(village.villagers)) return;
   village.villagers.forEach(normalizeFriendshipState);
   forEachVillagerPair(village, (a, b) => {
-    setMutualFriendship(a, b, getFriendshipScore(a, b, fallback));
+    const aHas = hasStoredFriendshipValue(a, b.name);
+    const bHas = hasStoredFriendshipValue(b, a.name);
+    if (!aHas && !bHas) {
+      setMutualFriendship(a, b, fallback);
+    } else if (!aHas) {
+      setFriendshipScore(a, b, getFriendshipScore(b, a, fallback));
+    } else if (!bHas) {
+      setFriendshipScore(b, a, getFriendshipScore(a, b, fallback));
+    }
   });
 }
 
@@ -396,40 +440,38 @@ function rollTwoStepChange(negative = false) {
   return 0;
 }
 
-function getPairRelationshipPrefixes(a, b) {
-  const prefixes = [];
-  getParsedRelationships(a).forEach(parsed => {
-    if (parsed.target === b.name) prefixes.push(parsed.prefix);
-  });
-  getParsedRelationships(b).forEach(parsed => {
-    if (parsed.target === a.name) prefixes.push(parsed.prefix);
-  });
-  return [...new Set(prefixes)];
+function hasMainRelatedRelationship(person, other) {
+  return getParsedRelationships(person).some(parsed =>
+    parsed.target === other.name && FRIENDSHIP_MAIN_RELATED_PREFIXES.has(parsed.prefix)
+  );
 }
 
-function getFriendshipBoundsForPair(a, b) {
-  const prefixes = getPairRelationshipPrefixes(a, b);
-  if (prefixes.some(prefix => FRIENDSHIP_MAIN_RELATED_PREFIXES.has(prefix))) return { min: 40, max: 75 };
-  if (prefixes.some(prefix => FRIENDSHIP_PARENT_CHILD_PREFIXES.has(prefix))) return { min: -5, max: 60 };
-  if (prefixes.length === 0) return { min: -25, max: 20 };
-  return null;
+function getFriendshipBoundsForDirection(person, other) {
+  return hasMainRelatedRelationship(person, other)
+    ? FRIENDSHIP_MAIN_RELATED_BOUNDS
+    : FRIENDSHIP_DEFAULT_BOUNDS;
+}
+
+function applyFriendshipBoundsForDirection(person, other) {
+  const bounds = getFriendshipBoundsForDirection(person, other);
+  const score = getFriendshipScore(person, other);
+  if (score < bounds.min) {
+    setFriendshipScore(person, other, score + 1);
+  } else if (score > bounds.max) {
+    setFriendshipScore(person, other, score - 1);
+  }
 }
 
 function applyFriendshipBounds(a, b) {
-  const bounds = getFriendshipBoundsForPair(a, b);
-  if (!bounds) return;
-  const score = getFriendshipScore(a, b);
-  if (score < bounds.min) {
-    setMutualFriendship(a, b, score + 1);
-  } else if (score > bounds.max) {
-    setMutualFriendship(a, b, score - 1);
-  }
+  applyFriendshipBoundsForDirection(a, b);
+  applyFriendshipBoundsForDirection(b, a);
 }
 
 function processSameWorkFriendship(a, b) {
   const action = String(a.action || "").trim();
   if (action !== String(b.action || "").trim() || !isFriendshipWorkAction(action)) return;
-  if (getFriendshipScore(a, b) <= 40) adjustMutualFriendship(a, b, 1);
+  processSameWorkFriendshipDirection(a, b);
+  processSameWorkFriendshipDirection(b, a);
   const workCount = incrementMutualPairCounter(a, b, "workTogether");
   if (workCount >= 6) {
     addRelationship(a, `仕事仲間:${b.name}`);
@@ -437,34 +479,67 @@ function processSameWorkFriendship(a, b) {
   }
 }
 
+function processSameWorkFriendshipDirection(a, b) {
+  const score = getFriendshipScore(a, b);
+  if (score >= -10 && score <= 39) {
+    adjustFriendshipScore(a, b, 1);
+  } else if (score <= -26) {
+    adjustFriendshipScore(a, b, -1);
+  }
+}
+
+function areSpiritAdults(a, b) {
+  return Number(a?.spiritAge) >= 16 && Number(b?.spiritAge) >= 16;
+}
+
+function processCharmAffinityForDirection(a, b) {
+  const score = getFriendshipScore(a, b);
+  if (Number(b.chr) >= 20 && score <= 25 && Math.random() < 0.5) {
+    adjustFriendshipScore(a, b, 1);
+  }
+  if (Number(b.chr) <= 10 && getFriendshipScore(a, b) >= -5 && Math.random() < 0.5) {
+    adjustFriendshipScore(a, b, -1);
+  }
+}
+
+function processValueAffinityForDirection(a, b) {
+  if (!areSpiritAdults(a, b)) return;
+  if (Math.abs(Math.min(20, Number(a.ind) || 0) - Math.min(20, Number(b.ind) || 0)) >= 8 && getFriendshipScore(a, b) >= -55) {
+    adjustFriendshipScore(a, b, rollTwoStepChange(true));
+  }
+  if (Math.abs(Math.min(20, Number(a.eth) || 0) - Math.min(20, Number(b.eth) || 0)) >= 8 && getFriendshipScore(a, b) >= -55) {
+    adjustFriendshipScore(a, b, rollTwoStepChange(true));
+  }
+
+  if (Math.abs((Number(a.ind) || 0) - (Number(b.ind) || 0)) <= 4 && getFriendshipScore(a, b) <= 59) {
+    adjustFriendshipScore(a, b, rollTwoStepChange(false));
+  }
+  if (Math.abs((Number(a.eth) || 0) - (Number(b.eth) || 0)) <= 4 && getFriendshipScore(a, b) <= 59) {
+    adjustFriendshipScore(a, b, rollTwoStepChange(false));
+  }
+}
+
+function processDesireAffinityForDirection(a, b) {
+  if (Number(a.sexdr) >= 20 &&
+      Number(a.spiritAge) >= 16 &&
+      Number(b.bodyAge) >= 16 &&
+      Number(b.chr) >= 16 &&
+      a.spiritSex !== b.bodySex &&
+      getFriendshipScore(a, b) <= 55 &&
+      Math.random() < 0.5) {
+    adjustFriendshipScore(a, b, 1);
+  }
+}
+
+function processAffinityFriendshipDirection(a, b) {
+  processCharmAffinityForDirection(a, b);
+  processValueAffinityForDirection(a, b);
+  processDesireAffinityForDirection(a, b);
+}
+
 function processAffinityFriendship(a, b) {
-  if ((Number(a.chr) >= 20 || Number(b.chr) >= 20) && getFriendshipScore(a, b) <= 30 && Math.random() < 0.5) {
-    adjustMutualFriendship(a, b, 1);
-  }
-  if ((Number(a.chr) <= 12 || Number(b.chr) <= 12) && getFriendshipScore(a, b) >= 5 && Math.random() < 0.5) {
-    adjustMutualFriendship(a, b, -1);
-  }
-
-  if (Math.abs(Math.min(20, Number(a.ind) || 0) - Math.min(20, Number(b.ind) || 0)) >= 8 && getFriendshipScore(a, b) >= -70) {
-    adjustMutualFriendship(a, b, rollTwoStepChange(true));
-  }
-  if (Math.abs(Math.min(20, Number(a.eth) || 0) - Math.min(20, Number(b.eth) || 0)) >= 8 && getFriendshipScore(a, b) >= -70) {
-    adjustMutualFriendship(a, b, rollTwoStepChange(true));
-  }
-
-  if (Math.abs((Number(a.ind) || 0) - (Number(b.ind) || 0)) <= 4 && getFriendshipScore(a, b) <= 70) {
-    adjustMutualFriendship(a, b, rollTwoStepChange(false));
-  }
-  if (Math.abs((Number(a.eth) || 0) - (Number(b.eth) || 0)) <= 4 && getFriendshipScore(a, b) <= 70) {
-    adjustMutualFriendship(a, b, rollTwoStepChange(false));
-  }
-
-  if (Number(a.sexdr) >= 20 && a.spiritSex !== b.bodySex && getFriendshipScore(a, b) <= 50 && Math.random() < 0.5) {
-    adjustMutualFriendship(a, b, 1);
-  }
-  if (Number(b.sexdr) >= 20 && b.spiritSex !== a.bodySex && getFriendshipScore(a, b) <= 50 && Math.random() < 0.5) {
-    adjustMutualFriendship(a, b, 1);
-  }
+  processAffinityFriendshipDirection(a, b);
+  processAffinityFriendshipDirection(b, a);
 }
 
 export function processMonthlyFriendship(village) {
@@ -528,7 +603,7 @@ export function applyRaidFriendshipResults(village) {
   frontliners.forEach((a, index) => {
     frontliners.slice(index + 1).forEach(b => {
       const count = incrementMutualPairCounter(a, b, "frontRaidTogether");
-      if (count >= 3 && getFriendshipScore(a, b) >= 20) {
+      if (count >= 3 && getPairFriendshipMinimum(a, b) >= 20) {
         addRelationship(a, `戦友:${b.name}`);
         addRelationship(b, `戦友:${a.name}`);
       }
@@ -549,14 +624,6 @@ export function applyRaidFriendshipResults(village) {
   delete village.raidFriendshipParticipants;
   delete village.raidFriendshipFrontliners;
   delete village.raidFriendshipDamage;
-}
-
-export function hasNonEnemyRelationship(person) {
-  return getParsedRelationships(person).some(parsed => {
-    if (parsed.prefix === "天敵") return false;
-    if (parsed.flag === "既婚") return true;
-    return Boolean(parsed.raw);
-  });
 }
 
 export function formatRelationshipsForDisplay(person) {
@@ -743,12 +810,12 @@ export function processFriendshipRelationChanges(village) {
   const handledBreakups = new Set();
 
   forEachVillagerPair(village, (a, b) => {
-    const score = getFriendshipScore(a, b);
+    const pairMinimum = getPairFriendshipMinimum(a, b);
     const pairKey = [a.name, b.name].sort().join("\u0000");
 
-    if (score <= 29 && !handledBreakups.has(pairKey) && removePairRelationshipByPrefix(a, b, "恋人")) {
+    if (pairMinimum <= 39 && !handledBreakups.has(pairKey) && removePairRelationshipByPrefix(a, b, "恋人")) {
       handledBreakups.add(pairKey);
-      adjustMutualFriendship(a, b, -5);
+      adjustMutualFriendship(a, b, -20);
       a.happiness = clampValue(a.happiness - 30, 0, 100);
       b.happiness = clampValue(b.happiness - 30, 0, 100);
       addRelationship(a, `元恋人:${b.name}`);
@@ -757,14 +824,14 @@ export function processFriendshipRelationChanges(village) {
       showBreakupModal(village, a, b);
     }
 
-    if (getFriendshipScore(a, b) <= 29) {
+    if (getPairFriendshipMinimum(a, b) <= 39) {
       removePairRelationshipByPrefix(a, b, "親友");
     }
-    if (getFriendshipScore(a, b) <= 19) {
+    if (getPairFriendshipMinimum(a, b) <= 19) {
       removePairRelationshipsWhere(a, b.name, parsed => parsed.prefix === "戦友" || (parsed.prefix.endsWith("仲間") && parsed.prefix !== "仕事仲間"));
       removePairRelationshipsWhere(b, a.name, parsed => parsed.prefix === "戦友" || (parsed.prefix.endsWith("仲間") && parsed.prefix !== "仕事仲間"));
     }
-    if (getFriendshipScore(a, b) >= 0 && removePairRelationshipByPrefix(a, b, "天敵")) {
+    if (getPairFriendshipMinimum(a, b) >= 0 && removePairRelationshipByPrefix(a, b, "天敵")) {
       addRelationship(a, `かつての天敵:${b.name}`);
       addRelationship(b, `かつての天敵:${a.name}`);
     }
@@ -810,7 +877,7 @@ function collectRelationshipLabels(village, person, other) {
     });
   }
 
-  return labels.length > 0 ? [...new Set(labels)] : ["顔見知り"];
+  return [...new Set(labels)];
 }
 
 function collectExchangeLabels(person, other) {
@@ -819,6 +886,50 @@ function collectExchangeLabels(person, other) {
   if (person.bodyOwner === other.name) labels.push("体の本来の持ち主");
   if (other.bodyOwner === person.name) labels.push("かつての身体");
   return [...new Set(labels)];
+}
+
+function getFriendshipLabelKind(score) {
+  switch (getFriendshipLabel(score)) {
+    case "憎悪":
+      return "hatred";
+    case "嫌悪":
+      return "dislike";
+    case "敬遠":
+      return "avoid";
+    case "普通":
+      return "neutral";
+    case "好意的":
+      return "favor";
+    case "親愛":
+    case "魂の友":
+      return "deep";
+    default:
+      return "none";
+  }
+}
+
+function hasLabelKindPair(kinds, first, second) {
+  return (kinds[0] === first && kinds[1] === second) ||
+    (kinds[0] === second && kinds[1] === first);
+}
+
+function collectSpecialRelationshipLabels(person, other) {
+  const kinds = [
+    getFriendshipLabelKind(getFriendshipScore(person, other)),
+    getFriendshipLabelKind(getFriendshipScore(other, person))
+  ];
+
+  if (hasLabelKindPair(kinds, "hatred", "hatred")) return ["不倶戴天の敵"];
+  if (hasLabelKindPair(kinds, "hatred", "dislike") || hasLabelKindPair(kinds, "dislike", "dislike")) return ["犬猿の仲"];
+  if (hasLabelKindPair(kinds, "hatred", "avoid") || hasLabelKindPair(kinds, "dislike", "avoid")) return ["苦手意識"];
+  if (hasLabelKindPair(kinds, "avoid", "avoid")) return ["よそよそしい仲"];
+
+  if ((kinds.includes("hatred") || kinds.includes("dislike")) && kinds.includes("deep")) return ["一方的な愛"];
+  if ((kinds.includes("hatred") || kinds.includes("dislike")) && kinds.includes("favor")) return ["一方的な好意"];
+  if ((kinds.includes("avoid") || kinds.includes("neutral")) && kinds.includes("deep")) return ["届かない愛"];
+  if ((kinds.includes("avoid") || kinds.includes("neutral")) && kinds.includes("favor")) return ["届かない好意"];
+  if (hasLabelKindPair(kinds, "favor", "favor")) return ["仲良し"];
+  return [];
 }
 
 function escapeHtml(value) {
@@ -840,9 +951,10 @@ export function openFriendshipDetailModal(village, person) {
   const rows = others.map((other, index) => {
     const score = getFriendshipScore(person, other);
     const relationLabels = collectRelationshipLabels(village, person, other);
+    const specialLabels = collectSpecialRelationshipLabels(person, other);
     const exchangeLabels = collectExchangeLabels(person, other);
     const friendshipLabel = getFriendshipLabel(score);
-    const labels = [...relationLabels, ...exchangeLabels, friendshipLabel].join(" / ");
+    const labels = [...relationLabels, ...specialLabels, ...exchangeLabels].join(" / ") || "なし";
     return `
       <tr>
         <td class="friendship-detail-person">
@@ -851,7 +963,7 @@ export function openFriendshipDetailModal(village, person) {
           </button>
           <span>${escapeHtml(other.name)}</span>
         </td>
-        <td>${escapeHtml(String(score))}</td>
+        <td>${escapeHtml(friendshipLabel)}</td>
         <td>${escapeHtml(labels)}</td>
       </tr>
     `;
@@ -864,7 +976,7 @@ export function openFriendshipDetailModal(village, person) {
   modal.id = "friendshipDetailModal";
   modal.className = "friendship-detail-modal";
   modal.innerHTML = `
-    <div class="modal-header">${escapeHtml(person.name)}の友好度</div>
+    <div class="modal-header">${escapeHtml(person.name)}の好感度</div>
     <div class="friendship-detail-content">
       <table class="friendship-detail-table">
         <colgroup>
@@ -875,7 +987,7 @@ export function openFriendshipDetailModal(village, person) {
         <thead>
           <tr>
             <th>相手</th>
-            <th>友好度</th>
+            <th>好感度</th>
             <th>関係</th>
           </tr>
         </thead>

@@ -421,7 +421,7 @@ function convertObjectToVillage(dataObj) {
   if (Array.isArray(dataObj.villagers)) {
     v.villagers = dataObj.villagers.map(o => convertObjectToVillager(o));
     const hasFriendshipData = dataObj.villagers.some(o => o && hasOwn(o, "friendships"));
-    ensureVillageFriendships(v, hasFriendshipData ? 0 : 30);
+    ensureVillageFriendships(v, hasFriendshipData ? 0 : 20);
     // 全村人の行動テーブルを更新
     v.villagers.forEach(villager => {
       refreshJobTable(villager, v);

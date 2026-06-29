@@ -941,7 +941,7 @@ function handleRecruitmentSuccess(visitor, recruiter, successRate = 0, source = 
   // 訪問者リストから削除し、村人リストに追加
   theVillage.visitors = theVillage.visitors.filter(v => v !== originalVisitor);
   theVillage.villagers.push(visitor);
-  initializeNewVillagerFriendships(theVillage, visitor, recruiter, { actorValue: 30, otherValue: 20 });
+  initializeNewVillagerFriendships(theVillage, visitor, recruiter, { actorValue: 25, otherValue: 10 });
   incrementTitleCounter(
     recruiter,
     source === "誘惑" ? TITLE_COUNTER_KEYS.SEDUCTION_SUCCESS : TITLE_COUNTER_KEYS.RECRUITMENT_SUCCESS,
