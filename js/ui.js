@@ -55,6 +55,7 @@ import { applyVillageScaleArtClass, getVillageScaleTitle } from "./villageScale.
 import { getDivineMightStatus } from "./divineMight.js";
 import { getBuildingRequestWarnings } from "./buildingRequests.js";
 import { hasDespairState, hasDisappointmentState } from "./domain/despair.js";
+import { syncEffectiveStats } from "./domain/statLayers.js";
 import {
   VILLAGE_ROLE_DOCTOR,
   VILLAGE_ROLE_HEADMAN,
@@ -917,11 +918,11 @@ function getVillageRoleDescription(role) {
     case VILLAGE_ROLE_HEADMAN:
       return "里長選挙で選ばれた固定役職。勤勉・勇気・倫理+3。";
     case VILLAGE_ROLE_LIBRARIAN:
-      return "図書館建設で選べる役職。研究・写本の成果1.2倍。";
+      return "図書館建設で選べる役職。知力+1、研究・写本の成果1.2倍。";
     case VILLAGE_ROLE_PRIEST:
-      return "礼拝堂建設で選べる役職。神官・シスター・巫女の成果1.2倍。巫女の神威獲得には補正しません。";
+      return "礼拝堂建設で選べる役職。魔力+1、神官・シスター・巫女の成果1.2倍。巫女の神威獲得には補正しません。";
     case VILLAGE_ROLE_DOCTOR:
-      return "診療所建設で選べる役職。看護・あんまの回復量1.2倍。";
+      return "診療所建設で選べる役職。倫理+1、看護・あんまの回復量1.2倍。";
     default:
       return "";
   }
@@ -984,6 +985,7 @@ function appendVillageRoleCell(row, person, village, editable) {
   select.onchange = () => {
     const nextRole = select.value;
     if (assignVillageRole(village, person, nextRole)) {
+      syncEffectiveStats(person);
       if (nextRole !== VILLAGE_ROLE_NONE) showDictionaryEntry(nextRole);
       updateUI(village);
       return;

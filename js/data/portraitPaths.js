@@ -9,7 +9,14 @@ const LEGACY_ARACHNID_PORTRAIT_FILES = [
   "Arachnid/ChatGPT Image 2026年6月4日 01_44_58.png"
 ];
 export const ARACHNID_PORTRAIT_FILES = Array.from({ length: 5 }, (_, index) => `ARACHNID${index + 1}.png`);
+export const HARPY_PORTRAIT_FILES = Array.from({ length: 12 }, (_, index) => `HARPY${index + 1}.png`);
+export const CYCLOPS_PORTRAIT_FILES = Array.from({ length: 4 }, (_, index) => `CYCLOPS${index + 1}.png`);
+export const WINGED_PORTRAIT_FILES = Array.from({ length: 16 }, (_, index) => `ANGEL${index + 1}.png`);
+export const ALSEID_PORTRAIT_FILES = Array.from({ length: 13 }, (_, index) => `ALSEID${index + 1}.png`);
+export const NEREID_PORTRAIT_FILES = Array.from({ length: 15 }, (_, index) => `NEREID${index + 1}.png`);
+export const DRYAD_PORTRAIT_FILES = Array.from({ length: 18 }, (_, index) => `DRYAD${index + 1}.png`);
 export const EQUINA_PORTRAIT_FILES = Array.from({ length: 18 }, (_, index) => `EQUINA${index + 1}.png`);
+export const CENTAUR_PORTRAIT_FILES = Array.from({ length: 9 }, (_, index) => `CENTAUR${index + 1}.png`);
 export const SATYR_PORTRAIT_FILES = Array.from({ length: 12 }, (_, index) => `SATYR${index + 1}.png`);
 export const MAENAD_PORTRAIT_FILES = Array.from({ length: 16 }, (_, index) => `MAENAD${index + 1}.png`);
 

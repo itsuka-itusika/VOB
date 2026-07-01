@@ -10,7 +10,21 @@ import {
 } from "./createVillagers.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { addNonHousePopLimitBonus } from "./domain/buildingState.js";
-import { BABY_FEMALE_PORTRAIT_KEY, BABY_MALE_PORTRAIT_KEY } from "./data/portraitPaths.js";
+import {
+  ALSEID_PORTRAIT_FILES,
+  ARACHNID_PORTRAIT_FILES,
+  BABY_FEMALE_PORTRAIT_KEY,
+  BABY_MALE_PORTRAIT_KEY,
+  CENTAUR_PORTRAIT_FILES,
+  CYCLOPS_PORTRAIT_FILES,
+  DRYAD_PORTRAIT_FILES,
+  EQUINA_PORTRAIT_FILES,
+  HARPY_PORTRAIT_FILES,
+  MAENAD_PORTRAIT_FILES,
+  NEREID_PORTRAIT_FILES,
+  SATYR_PORTRAIT_FILES,
+  WINGED_PORTRAIT_FILES
+} from "./data/portraitPaths.js";
 import { getBaseStat, setBaseStat, setBaseStatsFromEffective, syncEffectiveStats } from "./domain/statLayers.js";
 import { OLD_WOLF_TRAIT, syncWolfSpeciesTraits, YOUNG_WOLF_TRAIT } from "./domain/speciesTraits.js";
 import { recordAdulthoodHistory, recordBirthHistory, recordPregnancyHistory } from "./history.js";
@@ -33,6 +47,19 @@ const RACE_BODY_TRAITS = {
   "メナド": ["山羊角", "澄んだ声"],
   "セントール": ["半人半馬"]
 };
+const CHILD_ADULT_PORTRAITS_BY_RACE = new Map([
+  ["ハーピー", HARPY_PORTRAIT_FILES],
+  ["キュクロプス", CYCLOPS_PORTRAIT_FILES],
+  ["翼人", WINGED_PORTRAIT_FILES],
+  ["アルセイド", ALSEID_PORTRAIT_FILES],
+  ["ネレイド", NEREID_PORTRAIT_FILES],
+  ["ドライアド", DRYAD_PORTRAIT_FILES],
+  ["アラクニド", ARACHNID_PORTRAIT_FILES],
+  ["エクイナ", EQUINA_PORTRAIT_FILES],
+  ["サテュロス", SATYR_PORTRAIT_FILES],
+  ["メナド", MAENAD_PORTRAIT_FILES],
+  ["セントール", CENTAUR_PORTRAIT_FILES]
+]);
 const PHYSICAL_STATS = ["str", "vit", "dex", "mag", "chr"];
 const MENTAL_STATS = ["int", "ind", "eth", "cou", "sexdr"];
 const CHILD_BODY_TRAITS = ["赤子", "子供", "少年", "少女"];
@@ -170,6 +197,13 @@ function applyRaceBodyTraits(character) {
     .forEach(trait => addUnique(character.bodyTraits, trait));
   syncWolfSpeciesTraits(character);
   syncEffectiveStats(character);
+}
+
+function selectAdultPortraitForChild(child, adult) {
+  const portraits = CHILD_ADULT_PORTRAITS_BY_RACE.get(normalizeChildRace(child?.race));
+  return Array.isArray(portraits) && portraits.length > 0
+    ? randChoice(portraits)
+    : selectPortraitByCharacter(adult);
 }
 
 function hasOwnChildInVillage(village, parent) {
@@ -369,7 +403,7 @@ function buildAdultTemplate(child, potentialStats) {
   adult.mindTraits = removeTraits(adult.mindTraits, CHILD_MIND_TRAITS);
   applyRaceBodyTraits(adult);
   assignHobby(adult);
-  adult.portraitFile = selectPortraitByCharacter(adult);
+  adult.portraitFile = selectAdultPortraitForChild(child, adult);
   return adult;
 }
 

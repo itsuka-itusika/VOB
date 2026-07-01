@@ -5,10 +5,14 @@ import { randInt, randChoice, randNormalInRange } from "./util.js";
 import { ACTION_NONE, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
 import { isOriginalBodyPortrait, rememberCurrentPortrait } from "./domain/portraitHistory.js";
 import {
+  ALSEID_PORTRAIT_FILES,
   ARACHNID_PORTRAIT_FILES,
+  DRYAD_PORTRAIT_FILES,
   EQUINA_PORTRAIT_FILES,
   MAENAD_PORTRAIT_FILES,
+  NEREID_PORTRAIT_FILES,
   SATYR_PORTRAIT_FILES,
+  WINGED_PORTRAIT_FILES,
   getPortraitGroupKey,
   normalizePortraitKey
 } from "./data/portraitPaths.js";
@@ -78,10 +82,6 @@ const VISITOR_TABLES_BY_SCALE = [
 ];
 
 const RARE_VISITOR_TYPE = "レア種族";
-const WINGED_VISITOR_PORTRAITS = Array.from({ length: 16 }, (_, index) => `ANGEL${index + 1}.png`);
-const ALSEID_VISITOR_PORTRAITS = Array.from({ length: 13 }, (_, index) => `ALSEID${index + 1}.png`);
-const NEREID_VISITOR_PORTRAITS = Array.from({ length: 15 }, (_, index) => `NEREID${index + 1}.png`);
-const DRYAD_VISITOR_PORTRAITS = Array.from({ length: 18 }, (_, index) => `DRYAD${index + 1}.png`);
 const RARE_VISITOR_TYPES = [
   {
     type: "翼人",
@@ -107,7 +107,7 @@ const RARE_VISITOR_TYPES = [
       forcedBodyTraits: ["飛行", "光輪"],
       forcedMindTraits: ["神聖"],
       chanceMindTraits: [{ trait: "非戦主義", chance: 0.5 }],
-      portraits: WINGED_VISITOR_PORTRAITS
+      portraits: WINGED_PORTRAIT_FILES
     }
   },
   {
@@ -138,7 +138,7 @@ const RARE_VISITOR_TYPES = [
       forcedBodyTraits: ["緑の指", "不老"],
       forcedMindTraits: ["文明忌避"],
       chanceMindTraits: [{ trait: "非戦主義", chance: 0.5 }],
-      portraits: ALSEID_VISITOR_PORTRAITS
+      portraits: ALSEID_PORTRAIT_FILES
     }
   },
   {
@@ -165,7 +165,7 @@ const RARE_VISITOR_TYPES = [
       },
       forcedBodyTraits: ["水中呼吸", "不老"],
       chanceMindTraits: [{ trait: "非戦主義", chance: 0.5 }],
-      portraits: NEREID_VISITOR_PORTRAITS
+      portraits: NEREID_PORTRAIT_FILES
     }
   },
   {
@@ -195,7 +195,7 @@ const RARE_VISITOR_TYPES = [
       },
       forcedBodyTraits: ["緑の指", "光合成"],
       forcedMindTraits: ["不殺"],
-      portraits: DRYAD_VISITOR_PORTRAITS
+      portraits: DRYAD_PORTRAIT_FILES
     }
   },
   {

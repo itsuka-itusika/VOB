@@ -708,7 +708,7 @@ function forceMarriage(a,b,v) {
   addRelationship(b,"既婚");
   a.happiness=clampValue(a.happiness+50,0,100);
   b.happiness=clampValue(b.happiness+50,0,100);
-  raiseMutualFriendshipTo(a, b, 50);
+  raiseMutualFriendshipTo(a, b, 60);
 
   addSpouseRelationships(a, b);
   recordMarriageHistory(v, a, b, { source: "クピドの奇跡" });

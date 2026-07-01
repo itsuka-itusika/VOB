@@ -109,7 +109,7 @@ function forceMarriage(a, b, village) {
   recordMarriageHistory(village, a, b, { source: "秘宝" });
   a.happiness = clampValue(a.happiness + 50, 0, 100);
   b.happiness = clampValue(b.happiness + 50, 0, 100);
-  raiseMutualFriendshipTo(a, b, 50);
+  raiseMutualFriendshipTo(a, b, 60);
   village.log(`【秘宝】黄金の矢により${a.name}と${b.name}が結ばれました`);
 }
 
