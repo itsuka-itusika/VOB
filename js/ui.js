@@ -821,7 +821,7 @@ function appendIdentityCells(row, person) {
   nameCell.onclick = () => openConversationFor(person);
 
   appendTextCell(row, person.bodyOwner);
-  appendTextCell(row, person.race);
+  appendDictionaryCell(row, [person.race || "人間"], { category: "race" });
   // bodySex/bodyAge と spiritSex/spiritAge は別仕様。表示時も統合しない。
   appendTextCell(row, person.bodySex);
   appendTextCell(row, person.bodyAge);

@@ -2777,6 +2777,16 @@ body.mobile-mode #raidEnemiesTable th:nth-child(6),
 body.mobile-mode #raidEnemiesTable td:nth-child(6) {
   width: 2.4%;
 }
+body.mobile-mode #villagersTable td:nth-child(4) .dictionary-term,
+body.mobile-mode #captivesTable td:nth-child(4) .dictionary-term,
+body.mobile-mode #visitorsTable td:nth-child(4) .dictionary-term,
+body.mobile-mode #raidEnemiesTable td:nth-child(4) .dictionary-term {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
 body.mobile-mode #villagersTable th:nth-child(7),
 body.mobile-mode #villagersTable td:nth-child(7),
 body.mobile-mode #villagersTable th:nth-child(8),

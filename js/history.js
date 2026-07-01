@@ -3,6 +3,8 @@ import { getPastPortraitFiles, isOriginalBodyOwner } from "./domain/portraitHist
 import { DEFAULT_PORTRAIT_KEY, isKnownPortraitKey, normalizePortraitKey } from "./data/portraitPaths.js";
 import { getPersonTitles } from "./titles.js";
 import { SPEECH_TYPE_MAPPING } from "./data/villagerData.js";
+import { showDictionaryEntry } from "./dictionary.js";
+import { combinedDictionaryData } from "./data/dictionaryData.js";
 
 export const HISTORY_EVENT_TYPES = Object.freeze({
   ARCHIVE_GAP: "archiveGap",
@@ -414,6 +416,27 @@ function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
+function getDictionaryTermTitle(term) {
+  const entry = combinedDictionaryData[term];
+  return entry?.description || `${term}の辞書を表示`;
+}
+
+function renderDictionaryTerm(term) {
+  const label = String(term || "").trim();
+  if (!label) return "";
+  return `<span class="dictionary-term" tabindex="0" data-dictionary-term="${escapeHtml(label)}" title="${escapeHtml(getDictionaryTermTitle(label))}">${escapeHtml(label)}</span>`;
+}
+
+function bindDictionaryTerms(content) {
+  content.querySelectorAll("[data-dictionary-term]").forEach(element => {
+    const label = (element.dataset.dictionaryTerm || element.textContent || "").trim();
+    if (!label) return;
+    const showEntry = () => showDictionaryEntry(label);
+    element.addEventListener("mouseenter", showEntry);
+    element.addEventListener("focus", showEntry);
+  });
+}
+
 function formatHistoryDate(event) {
   return `${event.year}年${event.month}月`;
 }
@@ -820,7 +843,7 @@ function bindPastPortraitControls(content) {
 function renderPersonalHistorySummary(person) {
   const profileFields = [
     { label: "名前", value: person.name || "不明", className: "is-name" },
-    { label: "種族", value: person.race || "人間", className: "is-race" },
+    { label: "種族", valueHtml: renderDictionaryTerm(person.race || "人間"), className: "is-race" },
     { label: "肉体", value: `${person.bodyAge ?? "?"}歳/${person.bodySex || "不明"}`, className: "is-body" },
     { label: "精神", value: `${person.spiritAge ?? "?"}歳/${person.spiritSex || "不明"}`, className: "is-spirit" },
     { label: "性格", value: getPersonalityTrait(person), className: "is-personality" },
@@ -854,7 +877,7 @@ function renderPersonalHistorySummary(person) {
         <div class="personal-history-profile-grid">
           <div class="personal-history-profile-table">
             ${profileFields.map(field => `<span class="personal-history-profile-label ${escapeHtml(field.className)}">${escapeHtml(field.label)}</span>`).join("")}
-            ${profileFields.map(field => `<strong class="personal-history-profile-value ${escapeHtml(field.className)}">${escapeHtml(field.value)}</strong>`).join("")}
+            ${profileFields.map(field => `<strong class="personal-history-profile-value ${escapeHtml(field.className)}">${field.valueHtml ?? escapeHtml(field.value)}</strong>`).join("")}
           </div>
           ${detailFields.map(field => `
             <div class="personal-history-profile-field is-detail">
@@ -890,6 +913,7 @@ export function openPersonalHistoryModal(village, person, options = {}) {
   `;
   bindPersonalHistoryPortraitFallback(content);
   bindPastPortraitControls(content);
+  bindDictionaryTerms(content);
   content.querySelector("[data-open-friendship-detail]")?.addEventListener("click", async () => {
     const { openFriendshipDetailModal } = await import("./relationships.js");
     openFriendshipDetailModal(village, person);
