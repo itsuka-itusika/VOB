@@ -11,6 +11,10 @@ const CAPTIVE_CONVERSATION_LINES = {
     "翼を折り畳み、木柵の隙間から空を見上げている。",
     "羽づくろいを止め、こちらの声にだけ耳を向けた。"
   ],
+  "狼": [
+    "牙を見せ、低く唸りながらこちらを見ている。",
+    "伏せたまま耳だけを動かし、牢の外の気配を探っている。"
+  ],
   default: [
     "牢の中から、こちらの言葉を測るように見返している。",
     "粗末な寝藁に腰を下ろし、まだ村を信用していない。"
@@ -28,6 +32,8 @@ export function getCaptiveConversationLines(captive, { failed = false } = {}) {
       ? "ハーピー"
       : type.includes("ゴブリン")
         ? "ゴブリン"
-        : "default";
+        : type.includes("狼")
+          ? "狼"
+          : "default";
   return CAPTIVE_CONVERSATION_LINES[key];
 }

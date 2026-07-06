@@ -35,6 +35,7 @@ const PERMANENT_BODY_TRAIT_ADDS = Object.freeze({
 const PERMANENT_MIND_TRAIT_ADDS = Object.freeze({
   "ニート": { ind: -2 },
   "狂信": { cou: 10 },
+  "古代知識": { mag: 5 },
   "秘蹟：剣": { str: 10 },
   "秘蹟：盾": { vit: 10 }
 });

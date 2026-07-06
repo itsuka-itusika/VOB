@@ -7,6 +7,7 @@ import {
   RAID_SCALE_TABLES
 } from "./data/raidData.js";
 import { refreshJobTable } from "./domain/jobTables.js";
+import { getRaiderSpeechType } from "./domain/raiderSpeechTypes.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
 import { syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
 import { clearRaidWarningModal, showRaidWarningModal } from "./raidWarningModal.js";
@@ -275,6 +276,10 @@ function createRaidEnemy(village, raiderType, existingNames) {
   e.raiderRole = raiderType.role || "";
   e.raidPosition = raiderType.raidPosition || "front";
   e.raidTargeting = raiderType.raidTargeting || "frontFirst";
+  const speechType = getRaiderSpeechType(e);
+  if (speechType) {
+    e.speechType = speechType;
+  }
   e.name = `${displayType}の${e.name}`;
 
   // 襲撃者として矛盾するランダム精神特性は外す。

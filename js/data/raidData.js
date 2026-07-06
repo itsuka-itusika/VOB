@@ -651,7 +651,6 @@ export const RAIDER_TYPES = [
     minCount: 1,
     maxCount: 1,
     race: "スフィンクス",
-    forcedSex: "女",
     ageRange: { min: 30, max: 120 },
     params: {
       job: "スフィンクス",
@@ -673,6 +672,8 @@ export const RAIDER_TYPES = [
       sexdr: [5, 16]
     },
     forcedBodyTraits: ["人面獣身"],
+    mindTraits: ["古代知識"],
+    hobbies: ["月光浴", "読書", "詩作", "祈り", "謎掛け", "瞑想", "人間観察", "自由研究", "天体観測", "占い"],
     dialogues: [
       "問いに答えよ。沈黙もまた答えとして扱おう。",
       "知恵のない村は、砂に埋もれるだけです。",

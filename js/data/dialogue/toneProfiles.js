@@ -35,7 +35,14 @@ export const TONE_PROFILES = {
   "ギャル風": { family: "bright", gender: "female", fallback: ["bright", "female", "default"] },
   "中性的": { family: "neutralFemale", gender: "female", fallback: ["neutralFemale", "female", "default"] },
 
-  "老人": { family: "elder", gender: "male", fallback: ["elder", "male", "default"] }
+  "老人": { family: "elder", gender: "male", fallback: ["elder", "male", "default"] },
+  "狼": { family: "wolf", gender: "beast", fallback: ["wolf"] },
+  "ゴブリン": { family: "goblin", gender: "monster", fallback: ["goblin"] }
+};
+
+const SPECIAL_DIALOGUE_FALLBACK_LINES = {
+  "狼": ["ぐるる……。", "わふ……。", "……（耳を伏せている）", "低く唸っている。"],
+  "ゴブリン": ["なんだ、用かゴブ。", "飯はあるのかゴブ。", "へっ、村の仕事も悪くないゴブ。", "言うことは聞く。今はな。"]
 };
 
 export function normalizeDialogueTone(tone) {
@@ -76,6 +83,26 @@ export function getToneLookupKeys(tone, character = null) {
     ...fallbackWithoutDefault(defaultProfile?.fallback),
     "default"
   ]);
+}
+
+export function isSpecialDialogueTone(tone) {
+  return Object.prototype.hasOwnProperty.call(SPECIAL_DIALOGUE_FALLBACK_LINES, normalizeDialogueTone(tone));
+}
+
+export function getSpecialToneLookupKeys(tone) {
+  const normalizedTone = normalizeDialogueTone(tone);
+  const profile = TONE_PROFILES[normalizedTone] || TONE_PROFILES[tone];
+  const fallbackWithoutDefault = (keys = []) => keys.filter(key => key !== "default");
+  return uniqueKeys([
+    normalizedTone,
+    tone,
+    profile?.family,
+    ...fallbackWithoutDefault(profile?.fallback)
+  ]);
+}
+
+export function getSpecialDialogueToneFallbackLines(tone) {
+  return SPECIAL_DIALOGUE_FALLBACK_LINES[normalizeDialogueTone(tone)] || null;
 }
 
 export function isChildlikeDialogueTone(tone) {

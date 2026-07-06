@@ -1,6 +1,9 @@
 import {
   getToneLookupKeys,
+  getSpecialDialogueToneFallbackLines,
+  getSpecialToneLookupKeys,
   isChildlikeDialogueTone,
+  isSpecialDialogueTone,
   normalizeDialogueTone,
   resolveDialogueTone,
   resolveStoredSpeechType,
@@ -72,6 +75,13 @@ function asLineArray(value, context = {}) {
 function selectToneLines(group, character, context = {}) {
   if (!group) return [];
   const tone = resolveDialogueTone(character);
+  if (isSpecialDialogueTone(tone)) {
+    const keys = getSpecialToneLookupKeys(tone);
+    const key = keys.find(candidate => group[candidate]);
+    return key
+      ? asLineArray(group[key], context)
+      : asLineArray(getSpecialDialogueToneFallbackLines(tone), context);
+  }
   const keys = getToneLookupKeys(tone, character);
   const key = keys.find(candidate => group[candidate]);
   return key ? asLineArray(group[key], context) : [];
@@ -111,8 +121,13 @@ export function getChildlikeRandomEventLine(character, { eventKey = null, kind =
 
 export function selectRandomEventLineBySpeechType(group, speechType, character, options = {}) {
   if (!group) return null;
-  const genderFallback = character?.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ";
   const extraKeys = Array.isArray(options.extraKeys) ? options.extraKeys : [];
+  if (isSpecialDialogueTone(speechType)) {
+    const keys = getSpecialToneLookupKeys(speechType);
+    return findLineByKeys(group, keys) || getSpecialDialogueToneFallbackLines(speechType);
+  }
+
+  const genderFallback = character?.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ";
   const keys = uniqueKeys([
     ...extraKeys,
     speechType,
@@ -162,6 +177,9 @@ function getRandomEventSecondLine(character, eventKey, { base = null, speechType
   if (!base) return null;
 
   const resolvedSpeechType = speechType || resolveStoredSpeechType(character);
+  if (isSpecialDialogueTone(resolvedSpeechType)) {
+    return pickDialogueLine(getSpecialDialogueToneFallbackLines(resolvedSpeechType));
+  }
   const style = SPEECH_TYPE_TONES[resolvedSpeechType] || (character?.spiritSex === "女" ? "female" : "male");
   const isMale = character?.spiritSex !== "女";
 

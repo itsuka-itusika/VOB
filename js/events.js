@@ -39,6 +39,7 @@ import { BUILDINGS } from "./buildings.js";
 import { advanceBuildingRequestMonth, tryStartBuildingRequest } from "./buildingRequests.js";
 import {
   clearCaptiveFailedTraits,
+  getCaptives,
   getPeopleForFoodAndWinterMaterials,
   processCaptiveActionRecovery,
   processCaptiveReleaseDeadlines
@@ -73,6 +74,23 @@ function applySecurityBaselineDecay(village) {
 
   village.security = nextSecurity;
   village.log(`治安自然低下: 基礎値${baselineSecurity}を上回ったため治安-${actualLoss}`);
+}
+
+function removeResidentOrCaptive(village, person) {
+  const villagerIndex = village.villagers.indexOf(person);
+  if (villagerIndex !== -1) {
+    village.villagers.splice(villagerIndex, 1);
+    return true;
+  }
+
+  const captives = getCaptives(village);
+  const captiveIndex = captives.indexOf(person);
+  if (captiveIndex !== -1) {
+    captives.splice(captiveIndex, 1);
+    return true;
+  }
+
+  return false;
 }
 
 /**
@@ -420,13 +438,11 @@ export function endOfMonthProcess(v) {
   v.villageTraits = v.villageTraits.filter(tr=> !removeList.includes(tr));
 
   // 危篤者の死亡処理（危篤者は必ず死亡）
-  let deadPeople = v.villagers.filter(p => p.bodyTraits.includes("危篤"));
+  let deadPeople = getPeopleForFoodAndWinterMaterials(v).filter(p => p.bodyTraits.includes("危篤"));
   deadPeople.forEach(p => {
-    let index = v.villagers.indexOf(p);
-    if (index !== -1) {
+    if (removeResidentOrCaptive(v, p)) {
       recordVillagerDeathHistory(v, p, { reason: "老衰" });
       clearRelationshipsForDepartedVillager(v, p);
-      v.villagers.splice(index, 1);
       v.log(`${p.name}は老衰により死亡した...`);
     }
   });
@@ -556,7 +572,7 @@ export function doMonthStartProcess(v) {
   }
 
   // 老人・老狼の危篤化判定（5%）
-  v.villagers.forEach(p => {
+  getPeopleForFoodAndWinterMaterials(v).forEach(p => {
     if ((p.bodyTraits.includes("老人") || p.bodyTraits.includes(OLD_WOLF_TRAIT)) && !p.bodyTraits.includes("危篤")) {
       if (Math.random() < 0.05) {  // 5%の確率
         p.bodyTraits.push("危篤");

@@ -74,6 +74,20 @@ const HALF_HORSE_BLOCKED_ACTIONS = new Set([
   "機織り",
   ...MASSAGE_ACTIONS
 ]);
+const HUMAN_BEAST_ALLOWED_ACTIONS = new Set([
+  "研究",
+  "神官",
+  "シスター",
+  "警備",
+  ACTION_REST,
+  ACTION_LEISURE,
+  ACTION_HEAL,
+  "研究助手",
+  "遊び",
+  ACTION_CRADLE,
+  ACTION_DEFEND,
+  ACTION_FORTIFY
+]);
 const FOUR_LEGGED_BLOCKED_ACTIONS = new Set([
   "農作業",
   "伐採",
@@ -206,6 +220,12 @@ function applyHalfHorseBodyFilter(person) {
   if (!traitList(person, "bodyTraits").includes("半人半馬")) return;
   person.jobTable = person.jobTable.filter(action => !HALF_HORSE_BLOCKED_ACTIONS.has(action));
   person.actionTable = person.actionTable.filter(action => !HALF_HORSE_BLOCKED_ACTIONS.has(action));
+}
+
+function applyHumanBeastBodyFilter(person) {
+  if (!traitList(person, "bodyTraits").includes("人面獣身")) return;
+  person.jobTable = person.jobTable.filter(action => HUMAN_BEAST_ALLOWED_ACTIONS.has(action));
+  person.actionTable = person.actionTable.filter(action => HUMAN_BEAST_ALLOWED_ACTIONS.has(action));
 }
 
 function applyFourLeggedBodyFilter(person) {
@@ -362,6 +382,7 @@ export function refreshJobTable(v, village = {}) {
   if (traitList(v, "bodyTraits").includes(YOUNG_WOLF_TRAIT)) {
     const preferredTable = ["遊び"];
     setTables(v, preferredTable, [ACTION_REST, ACTION_LEISURE, "遊び"]);
+    applyHumanBeastBodyFilter(v);
     normalizePreferredForTable(v, v.jobTable, { defaultPreferred: "遊び" });
     normalizeCurrentAction(v);
     return;
@@ -377,6 +398,7 @@ export function refreshJobTable(v, village = {}) {
     setTables(v, [ACTION_CRADLE], [ACTION_CRADLE]);
     setPreferredAction(v, ACTION_CRADLE);
     addRaidActionsIfAllowed(v, village);
+    applyHumanBeastBodyFilter(v);
     normalizeCurrentAction(v);
     return;
   }
@@ -390,8 +412,10 @@ export function refreshJobTable(v, village = {}) {
     applyHalfHorseBodyFilter(v);
     applyFourLeggedBodyFilter(v);
     applyWildMindFilter(v);
+    applyHumanBeastBodyFilter(v);
     normalizePreferredForTable(v, v.jobTable, { defaultPreferred: "遊び" });
     addRaidActionsIfAllowed(v, village);
+    applyHumanBeastBodyFilter(v);
     normalizeCurrentAction(v);
     return;
   }
@@ -405,8 +429,10 @@ export function refreshJobTable(v, village = {}) {
     applyHalfHorseBodyFilter(v);
     applyFourLeggedBodyFilter(v);
     applyWildMindFilter(v);
+    applyHumanBeastBodyFilter(v);
     normalizePreferredForTable(v, v.jobTable, { defaultPreferred: "遊び" });
     addRaidActionsIfAllowed(v, village);
+    applyHumanBeastBodyFilter(v);
     normalizeCurrentAction(v);
     return;
   }
@@ -419,7 +445,9 @@ export function refreshJobTable(v, village = {}) {
   applyHalfHorseBodyFilter(v);
   applyFourLeggedBodyFilter(v);
   applyWildMindFilter(v);
+  applyHumanBeastBodyFilter(v);
   normalizePreferredForTable(v, v.jobTable);
   addRaidActionsIfAllowed(v, village);
+  applyHumanBeastBodyFilter(v);
   normalizeCurrentAction(v);
 }

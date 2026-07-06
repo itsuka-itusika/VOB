@@ -1,6 +1,7 @@
 import { clampValue } from "./util.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
+import { getRaiderSpeechType } from "./domain/raiderSpeechTypes.js";
 
 export const ACTION_CAPTIVE = "虜囚";
 export const CAPTIVE_TRAIT = "捕虜";
@@ -9,9 +10,6 @@ export const CAPTIVE_SOCIAL_COEFFICIENT = 0.1;
 export const MAX_CAPTIVES = 3;
 export const HOLDING_CELL_MAX_CAPTIVES = 1;
 export const CAPTIVE_RELEASE_MONTHS = 6;
-
-const BEAST_RAIDER_RACES = new Set(["狼"]);
-const BEAST_RAIDER_TYPES = new Set(["狼", "餓狼"]);
 
 function getMonthIndex(year, month) {
   return (Number(year) || 0) * 12 + Math.max(0, (Number(month) || 1) - 1);
@@ -78,6 +76,10 @@ export function normalizeCaptive(person) {
 
 export function normalizeFormerCaptive(person) {
   if (!person) return person;
+  const speechType = getRaiderSpeechType(person);
+  if (speechType) {
+    person.speechType = speechType;
+  }
   person.mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
   person.mindTraits = person.mindTraits.filter(trait =>
     trait !== CAPTIVE_TRAIT &&
@@ -156,9 +158,6 @@ export function processCaptiveReleaseDeadlines(village) {
 
 export function isCapturableRaider(person) {
   if (!person) return false;
-  const raiderType = String(person.raiderType || person.job || "");
-  const race = String(person.race || "");
-  if (BEAST_RAIDER_TYPES.has(raiderType) || BEAST_RAIDER_RACES.has(race)) return false;
   return Array.isArray(person.mindTraits) && person.mindTraits.includes("襲撃者");
 }
 
