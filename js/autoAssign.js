@@ -248,7 +248,7 @@ function getJobTraitMultiplier(person, job, village) {
   if (hasTrait(person, "水中呼吸") && job === "漁") mul *= 2;
   if (hasTrait(person, "森の知恵") && job === "採集") mul *= 1.2;
   if (hasTrait(person, "海の知恵") && job === "漁") mul *= 1.2;
-  if ((person.hobby === "ハンティング" || person.hobby === "狩猟") && job === "狩猟") mul *= 1.1;
+  if ((person.hobby === "ハンティング" || person.hobby === "狩猟" || person.hobby === "狩り") && job === "狩猟") mul *= 1.1;
   if (hasTrait(person, "思春期") && ["農作業", "伐採", "狩猟", "漁", "採集", "内職", "丁稚", "研究助手"].includes(job)) mul *= 0.8;
   if (hasVillageRole(person, VILLAGE_ROLE_LIBRARIAN) && ["研究", "写本"].includes(job)) mul *= 1.2;
   if (hasVillageRole(person, VILLAGE_ROLE_PRIEST) && ["神官", "シスター", "巫女"].includes(job)) mul *= 1.2;

@@ -95,6 +95,9 @@ export class HobbyEffects {
         p.hobby = "ハンティング";
         msg = this.applyHuntingHobby(p, v);
         break;
+      case "狩り":
+        msg = this.applyHuntingHobby(p, v, "狩り");
+        break;
       case "お茶会":
         msg = this.applyTeaParty(p, v);
         break;
@@ -106,6 +109,36 @@ export class HobbyEffects {
         break;
       case "ダンス":
         msg = this.applyDance(p, v);
+        break;
+      case "遠乗り":
+        msg = this.applyLongRide(p);
+        break;
+      case "毛づくろい":
+        msg = this.applyGrooming(p, "毛づくろい");
+        break;
+      case "羽づくろい":
+        msg = this.applyGrooming(p, "羽づくろい");
+        break;
+      case "繁殖":
+        msg = this.applyBreedingHobby(p);
+        break;
+      case "子育て":
+        msg = this.applyChildcareHobby(p, v);
+        break;
+      case "日光浴":
+        msg = this.applySunbathing(p);
+        break;
+      case "歌唱":
+        msg = this.applySinging(p, v);
+        break;
+      case "月光浴":
+        msg = this.applyMoonbathing(p, v);
+        break;
+      case "謎掛け":
+        msg = this.applyRiddleHobby(p, v);
+        break;
+      case "人間観察":
+        msg = this.applyPeopleWatching(p);
         break;
       default:
         msg = `(趣味[${h}]:追加効果なし)`;
@@ -360,11 +393,11 @@ export class HobbyEffects {
     return `(天体観測:メンタル+15,魔素+${gain}${this.maybeRaiseStat(p, "int", 0.2)}${this.maybeRaiseStat(p, "mag", 0.2)})`;
   }
 
-  static applyHuntingHobby(p, v) {
+  static applyHuntingHobby(p, v, label = "ハンティング") {
     const gain = randInt(8, 16);
     p.hp = clampValue(p.hp - 8, 0, 100);
     addStoredResource(v, "food", gain);
-    return `(ハンティング:体力-8,食料+${gain}${this.maybeRaiseStat(p, "cou", 0.25)}${this.maybeRaiseStat(p, "dex", 0.15)})`;
+    return `(${label}:体力-8,食料+${gain}${this.maybeRaiseStat(p, "cou", 0.25)}${this.maybeRaiseStat(p, "dex", 0.15)})`;
   }
 
   static applyTeaParty(p, v) {
@@ -393,5 +426,71 @@ export class HobbyEffects {
       mm.happiness = clampValue(mm.happiness + 2, 0, 100);
     });
     return `(ダンス:体力-5,幸福+12,男性幸福+2${this.maybeRaiseStat(p, "dex", 0.2)}${this.maybeRaiseStat(p, "chr", 0.2)})`;
+  }
+
+  static applyLongRide(p) {
+    p.hp = clampValue(p.hp - 8, 0, 100);
+    p.happiness = clampValue(p.happiness + 12, 0, 100);
+    return `(遠乗り:体力-8,幸福+12${this.maybeRaiseStat(p, "cou", 0.2)}${this.maybeRaiseStat(p, "vit", 0.15)})`;
+  }
+
+  static applyGrooming(p, label) {
+    p.mp = clampValue(p.mp + 8, 0, 100);
+    p.happiness = clampValue(p.happiness + 10, 0, 100);
+    return `(${label}:メンタル+8,幸福+10${this.maybeRaiseStat(p, "chr", 0.25)})`;
+  }
+
+  static applyBreedingHobby(p) {
+    p.mp = clampValue(p.mp + 8, 0, 100);
+    p.happiness = clampValue(p.happiness + 12, 0, 100);
+    return `(繁殖:メンタル+8,幸福+12${this.maybeRaiseStat(p, "sexdr", 0.25)})`;
+  }
+
+  static applyChildcareHobby(p, v) {
+    p.mp = clampValue(p.mp + 10, 0, 100);
+    p.happiness = clampValue(p.happiness + 8, 0, 100);
+    const children = Array.isArray(v?.villagers)
+      ? v.villagers.filter(x => x !== p && Number(x.bodyAge) < 12)
+      : [];
+    if (children.length > 0) {
+      const child = children[randInt(0, children.length - 1)];
+      child.happiness = clampValue(child.happiness + 4, 0, 100);
+      return `(子育て:メンタル+10,幸福+8,子ども幸福+4${this.maybeRaiseStat(p, "eth", 0.2)})`;
+    }
+    return `(子育て:メンタル+10,幸福+8${this.maybeRaiseStat(p, "eth", 0.2)})`;
+  }
+
+  static applySunbathing(p) {
+    p.hp = clampValue(p.hp + 8, 0, 100);
+    p.happiness = clampValue(p.happiness + 8, 0, 100);
+    return `(日光浴:体力+8,幸福+8${this.maybeRaiseStat(p, "vit", 0.15)})`;
+  }
+
+  static applySinging(p, v) {
+    p.mp = clampValue(p.mp + 12, 0, 100);
+    const listeners = Array.isArray(v?.villagers) ? v.villagers.filter(x => x !== p) : [];
+    listeners.forEach(person => {
+      person.happiness = clampValue(person.happiness + 2, 0, 100);
+    });
+    return `(歌唱:メンタル+12,他者幸福+2${this.maybeRaiseStat(p, "chr", 0.25)}${this.maybeRaiseStat(p, "mag", 0.15)})`;
+  }
+
+  static applyMoonbathing(p, v) {
+    const gain = randInt(3, 8);
+    p.mp = clampValue(p.mp + 15, 0, 100);
+    v.mana = clampValue(v.mana + gain, 0, 99999);
+    return `(月光浴:メンタル+15,魔素+${gain}${this.maybeRaiseStat(p, "mag", 0.25)})`;
+  }
+
+  static applyRiddleHobby(p, v) {
+    const gain = randInt(3, 8);
+    p.mp = clampValue(p.mp + 8, 0, 100);
+    v.tech = clampValue(v.tech + gain, 0, 99999);
+    return `(謎掛け:メンタル+8,技術+${gain}${this.maybeRaiseStat(p, "int", 0.3)})`;
+  }
+
+  static applyPeopleWatching(p) {
+    p.mp = clampValue(p.mp + 10, 0, 100);
+    return `(人間観察:メンタル+10${this.maybeRaiseStat(p, "int", 0.25)}${this.maybeRaiseStat(p, "chr", 0.15)})`;
   }
 }
