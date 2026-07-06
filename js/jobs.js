@@ -45,7 +45,7 @@ import { completeTutorialTask } from "./tutorial.js";
 import { incrementTitleCounter, TITLE_COUNTER_KEYS } from "./titles.js";
 import { addDivineMight, showPendingDivineMightLevelUpModal } from "./divineMight.js";
 
-const HEALING_RECOVERABLE_BODY_TRAITS = ["負傷", "疫病"];
+const HEALING_RECOVERABLE_BODY_TRAITS = ["負傷", "重体", "疫病"];
 const BASE_JOB_STAT_GROWTH_CHANCE = 0.05;
 const PHYSICAL_JOB_GROWTH_STATS = new Set(["str", "vit", "dex", "mag", "chr"]);
 const MENTAL_JOB_GROWTH_STATS = new Set(["int", "ind", "eth", "cou", "sexdr"]);

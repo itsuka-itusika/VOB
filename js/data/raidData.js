@@ -802,12 +802,14 @@ const DEFAULT_RAID_SUCCESS_REWARDS = {
 };
 
 const DEFAULT_RAID_FAILURE_PENALTY = {
-  foodRate: 0.2,
-  materialsRate: 0.2,
-  fundsRate: 0.2,
+  foodRate: 0,
+  materialsRate: 0,
+  fundsRate: 0,
   security: 10,
   villagerHpRange: [5, 15],
-  villagerHappiness: 30
+  villagerHappiness: 30,
+  buildingDamage: false,
+  severeInjury: false
 };
 
 const RAIDER_TYPE_BY_TYPE = new Map(RAIDER_TYPES.map(raiderType => [raiderType.type, raiderType]));
@@ -839,7 +841,10 @@ function createExistingRaiderRaid(id, raiderTypeName, overrides = {}) {
       }
     ],
     successRewards: cloneRaidRules(DEFAULT_RAID_SUCCESS_REWARDS),
-    failurePenalty: cloneRaidRules(DEFAULT_RAID_FAILURE_PENALTY)
+    failurePenalty: {
+      ...cloneRaidRules(DEFAULT_RAID_FAILURE_PENALTY),
+      ...(overrides.failurePenalty || {})
+    }
   };
 }
 
@@ -893,7 +898,12 @@ export const FALLBACK_RAID_RULES = {
 };
 
 export const RAID_MODULES = [
-  createExistingRaiderRaid("bandit", "野盗"),
+  createExistingRaiderRaid("bandit", "野盗", {
+    failurePenalty: {
+      foodRate: 0.2,
+      fundsRate: 0.2
+    }
+  }),
   createExistingRaiderRaid("mercenary-band", "傭兵団", {
     avoidance: {
       type: "resourcePayment",
@@ -902,16 +912,36 @@ export const RAID_MODULES = [
       rate: 0.4,
       minAmount: 200
     },
+    failurePenalty: {
+      fundsRate: 0.3
+    },
     introDialogues: [
       "この村を焼く契約は受けている。だが、今すぐ金を出すなら見逃してやる。",
       "命まで買いたいなら、相応の金を積め。足りなければ仕事に移るだけだ。",
       "金で済ませるか、刃で払うか。選ぶ時間は長くないぞ。"
     ]
   }),
-  createExistingRaiderRaid("goblin", "ゴブリン"),
-  createExistingRaiderRaid("wolf", "狼"),
-  createExistingRaiderRaid("cyclops", "キュクロプス"),
-  createExistingRaiderRaid("harpy", "ハーピー"),
+  createExistingRaiderRaid("goblin", "ゴブリン", {
+    failurePenalty: {
+      foodRate: 0.25
+    }
+  }),
+  createExistingRaiderRaid("wolf", "狼", {
+    failurePenalty: {
+      foodRate: 0.2
+    }
+  }),
+  createExistingRaiderRaid("cyclops", "キュクロプス", {
+    failurePenalty: {
+      foodRate: 0.2,
+      buildingDamage: true
+    }
+  }),
+  createExistingRaiderRaid("harpy", "ハーピー", {
+    failurePenalty: {
+      fundsRate: 0.25
+    }
+  }),
   createCompositeRaiderRaid({
     id: "harpy-swarm",
     name: "ハーピーの大群",
@@ -921,7 +951,10 @@ export const RAID_MODULES = [
     enemyGroups: [
       { raiderType: "ハーピー", minCount: 3, maxCount: 4 },
       { raiderType: "ハーピーの長", minCount: 1, maxCount: 1 }
-    ]
+    ],
+    failurePenalty: {
+      fundsRate: 0.35
+    }
   }),
   createCompositeRaiderRaid({
     id: "starving-wolves",
@@ -930,7 +963,10 @@ export const RAID_MODULES = [
     weight: 18,
     enemyGroups: [
       { raiderType: "餓狼", minCount: 3, maxCount: 4 }
-    ]
+    ],
+    failurePenalty: {
+      foodRate: 0.3
+    }
   }),
   createCompositeRaiderRaid({
     id: "cyclops-band",
@@ -939,7 +975,11 @@ export const RAID_MODULES = [
     weight: 6,
     enemyGroups: [
       { raiderType: "キュクロプス", minCount: 2, maxCount: 3 }
-    ]
+    ],
+    failurePenalty: {
+      foodRate: 0.3,
+      buildingDamage: true
+    }
   }),
   createCompositeRaiderRaid({
     id: "grassland-people",
@@ -973,7 +1013,10 @@ export const RAID_MODULES = [
       "争いに敗れた氏族だ。食料を渡せば、ここで血を流す理由はない。",
       "弱った氏族でも、馬上の刃は鈍っていない。蓄えを出せ。",
       "冬を越す食料が要る。拒むなら、村から奪っていく。"
-    ]
+    ],
+    failurePenalty: {
+      foodRate: 0.3
+    }
   }),
   createCompositeRaiderRaid({
     id: "tax-collector-visit",
@@ -997,7 +1040,11 @@ export const RAID_MODULES = [
       "近隣の領主より徴税に来た。食料と資金を納めよ。",
       "義理がないと言うなら、こちらも徴発に移るだけだ。",
       "税を拒む村には、領主の暴力が向かう。"
-    ]
+    ],
+    failurePenalty: {
+      foodRate: 0.25,
+      fundsRate: 0.3
+    }
   }),
   createCompositeRaiderRaid({
     id: "horse-nomad-raid",
@@ -1021,7 +1068,11 @@ export const RAID_MODULES = [
       "食料も富も差し出せ。拒む村は、蹄で踏み荒らす。",
       "我らは敗残ではない。狙って来た獲物を逃がさぬ。",
       "重い貢納で済ませるか、戦でさらに失うか。選べ。"
-    ]
+    ],
+    failurePenalty: {
+      foodRate: 0.4,
+      fundsRate: 0.4
+    }
   }),
   createCompositeRaiderRaid({
     id: "pilgrimage-knights",
@@ -1062,7 +1113,11 @@ export const RAID_MODULES = [
       "聖地への道には寄進が要る。協力すれば剣は収めよう。",
       "巡礼の名を軽んじるなら、不信心者として扱う。",
       "志の高い者も、飢えた者もいる。だが装備と隊列は本物だ。"
-    ]
+    ],
+    failurePenalty: {
+      fundsRate: 0.35,
+      severeInjury: true
+    }
   }),
   createCompositeRaiderRaid({
     id: "sphinx-visit",
@@ -1074,9 +1129,8 @@ export const RAID_MODULES = [
       { raiderType: "スフィンクス", minCount: 1, maxCount: 1 }
     ],
     failurePenalty: {
-      foodRate: 0.35,
       materialsRate: 0.35,
-      fundsRate: 0.35,
+      fundsRate: 0.25,
       security: 18,
       villagerHpRange: [12, 28],
       villagerHappiness: 45
@@ -1096,6 +1150,12 @@ export const RAID_MODULES = [
     enemyGroups: [
       { raiderType: "翼人兵", minCount: 3, maxCount: 5 }
     ],
+    failurePenalty: {
+      security: 18,
+      villagerHpRange: [10, 22],
+      villagerHappiness: 40,
+      severeInjury: true
+    },
     introDialogues: [
       "白き翼は、異端の村を見逃さない。",
       "古き神の祭をやめよ。拒むなら神罰を受けよ。",
@@ -1118,12 +1178,12 @@ export const RAID_MODULES = [
       { raiderType: "聖女", minCount: 1, maxCount: 1 }
     ],
     failurePenalty: {
-      foodRate: 0.3,
       materialsRate: 0.3,
       fundsRate: 0.3,
       security: 18,
       villagerHpRange: [10, 25],
-      villagerHappiness: 40
+      villagerHappiness: 40,
+      severeInjury: true
     },
     introDialogues: [
       "これは巡礼ではない。異端討伐である。",
@@ -1145,12 +1205,12 @@ export const RAID_MODULES = [
     ],
     defense: { surviveTurns: 6 },
     failurePenalty: {
-      foodRate: 0.35,
       materialsRate: 0.35,
       fundsRate: 0.35,
       security: 22,
       villagerHpRange: [12, 30],
-      villagerHappiness: 50
+      villagerHappiness: 50,
+      severeInjury: true
     },
     introDialogues: [
       "幾重の翼が降りる時、下位の裁きは終わる。",
@@ -1172,11 +1232,11 @@ export const RAID_MODULES = [
     defense: { surviveTurns: 7 },
     failurePenalty: {
       foodRate: 0.45,
-      materialsRate: 0.35,
       fundsRate: 0.45,
       security: 25,
       villagerHpRange: [15, 35],
-      villagerHappiness: 55
+      villagerHappiness: 55,
+      severeInjury: true
     },
     introDialogues: [
       "偵察は終わった。ここからは兵団の戦だ。",

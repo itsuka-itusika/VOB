@@ -14,7 +14,7 @@ import { getCaptives } from "./captives.js";
 import { DESPAIR_TRAIT, DISAPPOINTMENT_TRAIT } from "./domain/despair.js";
 
 const SEASON_TRAITS_TO_REMOVE = ["夏", "秋", "冬", "冷夏", "飛蝗", "厳冬", "疫病流行"];
-const BAD_BODY_TRAITS = ["負傷", "疲労", "過労", "飢餓", "凍え", "病気", "疫病", "産褥", "危篤"];
+const BAD_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "凍え", "病気", "疫病", "産褥", "危篤"];
 const BAD_MIND_TRAITS = ["心労", "抑鬱"];
 export const PINECONE_STAFF_SECRET_TREASURE_ID = "pinecone_staff";
 const SECRET_TREASURE_SELL_PRICES = {
@@ -318,7 +318,7 @@ export const SECRET_TREASURES = [
   {
     id: "ambrosia",
     name: "アンブロシア",
-    desc: "指定した村人1名の体力を100にし、負傷・産褥などの状態異常を解除して行動可能にする。危篤は解除できない。",
+    desc: "指定した村人1名の体力を100にし、負傷・重体・産褥などの状態異常を解除して行動可能にする。危篤は解除できない。",
     sellPrice: SECRET_TREASURE_SELL_PRICES.ambrosia,
     target: "villager",
     use: (village, target) => {
@@ -330,14 +330,14 @@ export const SECRET_TREASURES = [
   {
     id: "nectar",
     name: "ネクタル",
-    desc: "指定した村人1名の体力とメンタルを40回復し、負傷・疲労・過労・病気・疫病・心労・抑鬱を解除する。",
+    desc: "指定した村人1名の体力とメンタルを40回復し、負傷・重体・疲労・過労・病気・疫病・心労・抑鬱を解除する。",
     sellPrice: SECRET_TREASURE_SELL_PRICES.nectar,
     target: "villager",
     use: (village, target) => {
       target.hp = clampValue((Number(target.hp) || 0) + 40, 0, 100);
       target.mp = clampValue((Number(target.mp) || 0) + 40, 0, 100);
       const recovered = restoreBadStatus(target, village, {
-        includeBodyTraits: ["負傷", "疲労", "過労", "病気", "疫病"],
+        includeBodyTraits: ["負傷", "重体", "疲労", "過労", "病気", "疫病"],
         includeMindTraits: ["心労", "抑鬱"]
       });
       village.log(`【秘宝】ネクタルを${target.name}に使いました。体力+40、メンタル+40${recovered.length ? `、${recovered.join("・")}を解除` : ""}`);
@@ -360,7 +360,7 @@ export const SECRET_TREASURES = [
   {
     id: "serpent_staff",
     name: "蛇の巻き付いた杖",
-    desc: "指定した村人1名の負傷・産褥・疫病・危篤・失望・絶望などの状態異常を解除し、体力・メンタルが33以下なら34まで回復する。",
+    desc: "指定した村人1名の負傷・重体・産褥・疫病・危篤・失望・絶望などの状態異常を解除し、体力・メンタルが33以下なら34まで回復する。",
     sellPrice: SECRET_TREASURE_SELL_PRICES.serpent_staff,
     target: "villager",
     use: (village, target) => {

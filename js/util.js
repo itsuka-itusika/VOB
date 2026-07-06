@@ -89,6 +89,7 @@ export function isForcedHealingAction(character) {
   return bodyTraits.includes("病気") ||
     bodyTraits.includes("疫病") ||
     bodyTraits.includes("負傷") ||
+    bodyTraits.includes("重体") ||
     bodyTraits.includes("過労") ||
     bodyTraits.includes("産褥") ||
     mindTraits.includes("抑鬱");

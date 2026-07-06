@@ -21,6 +21,7 @@ import {
   getActiveRaidShooters,
   isRaidCombatAction
 } from "./raidRules.js";
+import { refreshJobTable } from "./domain/jobTables.js";
 import { updateUI } from "./ui.js";
 import { applyRaidFriendshipResults, recordRaidFriendshipDamage, startRaidFriendshipTracking } from "./relationships.js";
 
@@ -37,6 +38,9 @@ const RAID_TARGET_FRONT_FIRST = "frontFirst";
 const RAID_TARGET_MIDDLE_FIRST = "middleFirst";
 const RAID_TARGET_MIDDLE_ONLY = "middleOnly";
 const RAID_TARGET_FRONT_MIDDLE_RANDOM = "frontMiddleRandom";
+const TRAIT_INJURED = "負傷";
+const TRAIT_SERIOUS_INJURY = "重体";
+const TRAIT_CRITICAL = "危篤";
 const pendingRaidDepartures = new WeakSet();
 const settlingRaidVillages = new WeakSet();
 const raidUnitRenderIds = new WeakMap();
@@ -304,7 +308,9 @@ function calculateRaidFailurePenalty(village) {
     securityLoss: Number(penalty.security) || 0,
     happinessLoss: Number(penalty.villagerHappiness) || 0,
     hpMin,
-    hpMax
+    hpMax,
+    buildingDamage: penalty.buildingDamage === true,
+    severeInjury: penalty.severeInjury === true
   };
 }
 
@@ -320,8 +326,56 @@ function formatRaidFailurePenaltyLines(village) {
     `資金: -${penalty.fundsLoss}`,
     `治安: -${penalty.securityLoss}`,
     hpText,
-    `村人幸福: -${penalty.happinessLoss}`
+    `村人幸福: -${penalty.happinessLoss}`,
+    penalty.buildingDamage ? "建築損壊: あり" : "建築損壊: なし",
+    penalty.severeInjury ? "重体判定: あり" : "重体判定: なし"
   ];
+}
+
+function getSevereInjuryChance(person) {
+  const bodyAge = Number(person?.bodyAge);
+  return Number.isFinite(bodyAge) && bodyAge >= 50 ? 0.5 : 0.3;
+}
+
+function normalizeBodyTraits(person) {
+  if (!Array.isArray(person.bodyTraits)) person.bodyTraits = [];
+  return person.bodyTraits;
+}
+
+function rollRaidSevereInjuryCheck(village, raidRules) {
+  if (raidRules.failurePenalty?.severeInjury !== true) return null;
+
+  const candidates = (village.villagers || []).filter(person => {
+    const bodyTraits = Array.isArray(person.bodyTraits) ? person.bodyTraits : [];
+    return (Number(person.hp) || 0) <= 0 &&
+      !bodyTraits.includes(TRAIT_SERIOUS_INJURY) &&
+      !bodyTraits.includes(TRAIT_CRITICAL);
+  });
+  if (candidates.length === 0) return null;
+
+  const target = randChoice(candidates);
+  return {
+    target,
+    isSevere: Math.random() < getSevereInjuryChance(target)
+  };
+}
+
+function applyRaidSevereInjuryResult(village, result) {
+  if (!result || !(village.villagers || []).includes(result.target)) return;
+
+  const target = result.target;
+  const bodyTraits = normalizeBodyTraits(target);
+  if (result.isSevere) {
+    target.bodyTraits = bodyTraits.filter(trait => trait !== TRAIT_INJURED);
+    if (!target.bodyTraits.includes(TRAIT_SERIOUS_INJURY)) {
+      target.bodyTraits.push(TRAIT_SERIOUS_INJURY);
+    }
+    village.log(`重体判定:${target.name}は重体になった`);
+  } else {
+    if (!bodyTraits.includes(TRAIT_INJURED)) bodyTraits.push(TRAIT_INJURED);
+    village.log(`重体判定:${target.name}は重体を免れ、負傷に留まった`);
+  }
+  refreshJobTable(target, village);
 }
 
 function hasSurvivedRaidTurns(village) {
@@ -819,7 +873,7 @@ function handleCombatDefeat(target, village, result) {
     return;
   }
   addRaidActionLog(result, `　　→ ${target.name}は負傷離脱(HP0)`);
-  if (!target.bodyTraits.includes("負傷")) target.bodyTraits.push("負傷");
+  if (!target.bodyTraits.includes(TRAIT_INJURED)) target.bodyTraits.push(TRAIT_INJURED);
   addRaidDepartureAnimation(result, target, "負傷離脱");
   markRaidDeparture(target);
 }
@@ -993,17 +1047,22 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
       });
 
       const penaltyLog = [
-        `食料-${penalty.foodLoss}`,
-        `資材-${penalty.materialsLoss}`,
-        `資金-${penalty.fundsLoss}`,
-        `治安-${penalty.securityLoss}`,
+        penalty.foodLoss > 0 ? `食料-${penalty.foodLoss}` : "",
+        penalty.materialsLoss > 0 ? `資材-${penalty.materialsLoss}` : "",
+        penalty.fundsLoss > 0 ? `資金-${penalty.fundsLoss}` : "",
+        penalty.securityLoss > 0 ? `治安-${penalty.securityLoss}` : "",
         penalty.hpMax > 0 ? `村人HP-${penalty.hpMin}~${penalty.hpMax}` : "",
-        `幸福-${penalty.happinessLoss}`
-      ].filter(Boolean).join(",");
+        penalty.happinessLoss > 0 ? `幸福-${penalty.happinessLoss}` : "",
+        penalty.buildingDamage ? "建築損壊あり" : "",
+        penalty.severeInjury ? "重体判定あり" : ""
+      ].filter(Boolean).join(",") || "追加被害なし";
       village.log(`迎撃失敗:${penaltyLog}`);
-      damageRandomBuilding(village);
+      if (penalty.buildingDamage) {
+        damageRandomBuilding(village);
+      }
     }
 
+    const severeInjuryResult = rollRaidSevereInjuryCheck(village, raidRules);
     applyRaidFriendshipResults(village);
     village.isRaidProcessDone=true;
     village.currentRaid = null;
@@ -1052,6 +1111,7 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
       doAgingProcess(village);
     }
     runMonthStartPhase(village);
+    applyRaidSevereInjuryResult(village, severeInjuryResult);
 
     village.isRaidFinalizing = false;
     updateUI(village);

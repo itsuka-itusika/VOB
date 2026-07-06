@@ -49,6 +49,33 @@ const OPENING_RAID_GRACE_YEAR = 1091;
 const OPENING_RAID_GRACE_LAST_MONTH = 6;
 const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成"]);
 
+const TRAIT_INJURED = "負傷";
+const TRAIT_SERIOUS_INJURY = "重体";
+const TRAIT_CRITICAL = "危篤";
+
+function processSeriousInjuryMonthStart(village) {
+  getPeopleForFoodAndWinterMaterials(village).forEach(person => {
+    if (!Array.isArray(person.bodyTraits)) person.bodyTraits = [];
+    if (!person.bodyTraits.includes(TRAIT_SERIOUS_INJURY)) return;
+
+    person.bodyTraits = person.bodyTraits.filter(trait => trait !== TRAIT_SERIOUS_INJURY);
+    if (Math.random() < 0.8) {
+      if (!person.bodyTraits.includes(TRAIT_INJURED)) {
+        person.bodyTraits.push(TRAIT_INJURED);
+      }
+      village.log(`${person.name}の重体は負傷まで回復した`);
+    } else {
+      if (!person.bodyTraits.includes(TRAIT_CRITICAL)) {
+        person.bodyTraits.push(TRAIT_CRITICAL);
+        recordCriticalHistory(village, person, { reason: "重体" });
+      }
+      village.log(`${person.name}の重体が悪化し、危篤状態になった...`);
+    }
+    syncEffectiveStats(person);
+    refreshJobTable(person, village);
+  });
+}
+
 function resetMonthlySocialAttemptFlags(village) {
   (village.villagers || []).forEach(person => {
     person.socialAttemptedThisMonth = false;
@@ -564,6 +591,7 @@ export function doMonthStartProcess(v) {
   v.log("【月初処理】");
   resetMonthlySocialAttemptFlags(v);
   processCaptiveReleaseDeadlines(v);
+  processSeriousInjuryMonthStart(v);
 
   // 治安30以下で荒廃状態に
   if (v.security <= 30 && !v.villageTraits.includes("荒廃")) {
