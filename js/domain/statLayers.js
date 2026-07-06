@@ -63,7 +63,7 @@ const TEMP_MIND_TRAIT_EFFECTS = Object.freeze({
   "抑鬱": { mul: { int: 0.25, ind: 0.25, eth: 0.25, cou: 0.25, sexdr: 0.25 } },
   "狂乱": { mul: { eth: 0.2 }, add: { sexdr: 15 } },
   "酩酊": { mul: { ind: 0.2, eth: 0.2 }, add: { sexdr: 10 } },
-  "火星の加護": { mul: { mag: 0.2, int: 0.2, ind: 0.2, eth: 0.2 }, add: { str: 7, vit: 7, cou: 7 } },
+  "火星の加護": { mul: { int: 0.2, ind: 0.2, eth: 0.2 }, add: { str: 7, vit: 7, cou: 7 } },
   "ニケ": { add: { cou: 10 } }
 });
 
