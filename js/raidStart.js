@@ -285,7 +285,7 @@ function createRaidEnemy(village, raiderType, existingNames) {
   // 襲撃者として矛盾するランダム精神特性は外す。
   e.mindTraits = e.mindTraits.filter(trait => trait !== "ニート" && trait !== "非戦主義");
 
-  syncWolfSpeciesTraits(e);
+  syncWolfSpeciesTraits(e, { includeWildMindTrait: true });
   syncEffectiveStats(e);
   return e;
 }

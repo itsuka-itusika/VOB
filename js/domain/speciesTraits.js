@@ -26,17 +26,19 @@ export function isWolf(person) {
   return person?.race === WOLF_RACE;
 }
 
-export function syncWolfSpeciesTraits(person) {
+export function syncWolfSpeciesTraits(person, { includeWildMindTrait = false } = {}) {
   if (!person || !isWolf(person)) return false;
 
   let changed = false;
   const bodyTraits = ensureTraitArray(person, "bodyTraits");
-  const mindTraits = ensureTraitArray(person, "mindTraits");
 
   [FOUR_LEGGED_TRAIT, SENSITIVE_NOSE_TRAIT].forEach(trait => {
     changed = addUniqueTrait(bodyTraits, trait) || changed;
   });
-  changed = addUniqueTrait(mindTraits, WILD_MIND_TRAIT) || changed;
+  if (includeWildMindTrait) {
+    const mindTraits = ensureTraitArray(person, "mindTraits");
+    changed = addUniqueTrait(mindTraits, WILD_MIND_TRAIT) || changed;
+  }
 
   const bodyAge = Number(person.bodyAge) || 0;
   if (bodyAge === 0) {
