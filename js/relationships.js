@@ -42,6 +42,7 @@ export function doLoverCheck(village, options = {}) {
     x.spiritAge >= 16
     && isSingle(x)
     && !hasMindTrait(x, "神聖")
+    && !hasMindTrait(x, "野生")
   );
   if (candidatesA.length===0) {
     village.log("恋人判定:対象者なし");
@@ -95,6 +96,8 @@ function isLoverCandidate(a, b) {
   if (!expectedBodySex) return false;
   return isSingle(b)
     && !hasLoverBlockingRelationship(a, b)
+    && !hasBodyTrait(b, "四足歩行")
+    && !hasBodyTrait(b, "人面獣身")
     && getPairFriendshipMinimum(a, b) >= 30
     && b.bodySex === expectedBodySex
     && b.bodyAge >= 16
@@ -110,6 +113,10 @@ function getLoverSuccessRate(a, b) {
 
 function hasMindTrait(person, trait) {
   return Array.isArray(person?.mindTraits) && person.mindTraits.includes(trait);
+}
+
+function hasBodyTrait(person, trait) {
+  return Array.isArray(person?.bodyTraits) && person.bodyTraits.includes(trait);
 }
 
 /**

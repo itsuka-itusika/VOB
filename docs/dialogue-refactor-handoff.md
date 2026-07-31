@@ -76,6 +76,9 @@
 - `js/data/dialogue/reproductionLines.js`
   - 妊娠、臨月、産褥、成人など、肉体状態や成長に関する会話。
 
+- `js/data/dialogue/secretTreasureLines.js`
+  - 秘宝の専用結果モーダルで使う口調別反応。
+
 - `js/data/dialogue/visitorLines.js`
   - 訪問者タイプ別の会話。
 

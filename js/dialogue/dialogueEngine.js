@@ -14,6 +14,7 @@ import { SEASONAL_LINES } from "../data/dialogue/seasonLines.js";
 import { CONDITION_LINES } from "../data/dialogue/conditionLines.js";
 import { JOB_LINES } from "../data/dialogue/jobLines.js";
 import { REPRODUCTION_LINES } from "../data/dialogue/reproductionLines.js";
+import { SECRET_TREASURE_LINES } from "../data/dialogue/secretTreasureLines.js";
 import { getVisitorLineKey, VISITOR_GENERIC_LINES, VISITOR_LINES } from "../data/dialogue/visitorLines.js";
 import {
   BUDDING_EVENT_LINES,
@@ -223,6 +224,8 @@ export function getDialogueLines({ character, scene, key, context = {} }) {
       return selectToneLines(JOB_LINES[key], character, context);
     case "reproduction":
       return selectToneLines(REPRODUCTION_LINES[key], character, context);
+    case "secretTreasure":
+      return selectToneLines(SECRET_TREASURE_LINES[key], character, context);
     case "visitor":
       return getVisitorLines(key);
     default:

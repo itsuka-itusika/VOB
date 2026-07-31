@@ -21,6 +21,7 @@
 - `jobLines.js`: preferredAction に応じた会話。
 - `reproductionLines.js`: 妊娠、臨月、産褥、成人化など。
 - `exchangeLines.js`: 肉体交換への反応。交換の奇跡と落雷による肉体交換で共有する。
+- `secretTreasureLines.js`: 秘宝の専用結果モーダルで表示する口調別反応。
 - `visitorLines.js`: 訪問者タイプ別会話。
 - `randomEventLines.js`: ランダムイベント用の口調別セリフ。
 - `toneProfiles.js`: 口調キー、alias、fallback、口調解決。

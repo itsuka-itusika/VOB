@@ -85,7 +85,7 @@ function markBodyExchangeSourceRace(person, fromRace, toRace) {
 /**
  * Swap body-related parameters between two characters.
  */
-export function doExchange(a, b, v, isLightning = false, historySource = null) {
+export function doExchange(a, b, v, isLightning = false, historySource = null, options = {}) {
   ensureStatLayers(a);
   ensureStatLayers(b);
   const sourceRaceA = a.race || "人間";
@@ -177,5 +177,7 @@ export function doExchange(a, b, v, isLightning = false, historySource = null) {
   if (!isLightning) {
     v.log(`【交換の奇跡】${a.name}と${b.name}の肉体を交換しました`);
   }
-  recordBodyExchangeHistory(v, a, b, { source: exchangeSource });
+  if (options.recordHistory !== false) {
+    recordBodyExchangeHistory(v, a, b, { source: exchangeSource });
+  }
 }

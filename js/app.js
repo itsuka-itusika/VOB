@@ -20,7 +20,7 @@ import {
   saveVillageToJsonFile,
   saveVillageToLocalStorage
 } from "./saveLoad.js";
-import { closeSecretTreasureModal, openSecretTreasureModal, SECRET_TREASURES, sellSelectedSecretTreasure, useSelectedSecretTreasure } from "./secretTreasures.js";
+import { closeDryadFruitModal, closeSecretTreasureModal, openSecretTreasureModal, SECRET_TREASURES, sellSelectedSecretTreasure, useSelectedSecretTreasure } from "./secretTreasures.js";
 import { RAID_MODULES } from "./data/raidData.js";
 import { updateUI } from "./ui.js";
 import { getCaptives } from "./captives.js";
@@ -278,6 +278,7 @@ function bindGlobalHandlers() {
     closeBuildingModal,
     openSecretTreasureModal: () => openSecretTreasureModal(theVillage),
     closeSecretTreasureModal,
+    closeDryadFruitModal,
     openHistoryModal: () => openHistoryModal(theVillage),
     closeHistoryModal,
     closePersonalHistoryModal,
@@ -314,6 +315,7 @@ function bindModalOverlayClickClose() {
   bindOverlayClickClose("modalOverlay", closeMiracleModal);
   bindOverlayClickClose("buildingOverlay", closeBuildingModal);
   bindOverlayClickClose("secretTreasureOverlay", closeSecretTreasureModal);
+  bindOverlayClickClose("dryadFruitOverlay", closeDryadFruitModal);
   bindOverlayClickClose("historyOverlay", closeHistoryModal);
   bindOverlayClickClose("personalHistoryOverlay", closePersonalHistoryModal);
 }

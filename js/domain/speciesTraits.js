@@ -1,4 +1,5 @@
 export const WOLF_RACE = "狼";
+export const GOBLIN_RACE = "ゴブリン";
 export const FOUR_LEGGED_TRAIT = "四足歩行";
 export const SENSITIVE_NOSE_TRAIT = "嗅覚鋭敏";
 export const WILD_MIND_TRAIT = "野生";
@@ -24,6 +25,29 @@ function removeTrait(traits, trait) {
 
 export function isWolf(person) {
   return person?.race === WOLF_RACE;
+}
+
+export function isGoblin(person) {
+  return person?.race === GOBLIN_RACE;
+}
+
+export function countsTowardPopulation(person) {
+  return !isWolf(person);
+}
+
+export function getPopulationCount(villageOrVillagers) {
+  const villagers = Array.isArray(villageOrVillagers)
+    ? villageOrVillagers
+    : villageOrVillagers?.villagers;
+  return Array.isArray(villagers)
+    ? villagers.filter(countsTowardPopulation).length
+    : 0;
+}
+
+export function isAtPopulationLimit(village, incomingPerson = null) {
+  if (incomingPerson && !countsTowardPopulation(incomingPerson)) return false;
+  const popLimit = Number(village?.popLimit);
+  return Number.isFinite(popLimit) && getPopulationCount(village) >= popLimit;
 }
 
 export function syncWolfSpeciesTraits(person, { includeWildMindTrait = false } = {}) {

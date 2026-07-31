@@ -12,6 +12,7 @@ import { MERCHANT_SECRET_TREASURE_LINES } from "./data/dialogue/visitorLines.js"
 import { getCaptiveConversationLines } from "./data/dialogue/captiveLines.js";
 import { incrementTitleCounter, TITLE_COUNTER_KEYS } from "./titles.js";
 import { initializeNewVillagerFriendships } from "./relationships.js";
+import { isAtPopulationLimit } from "./domain/speciesTraits.js";
 import {
   CAPTIVE_FAILED_TRAIT,
   CAPTIVE_SOCIAL_COEFFICIENT,
@@ -446,7 +447,7 @@ function openRecruitmentModal(visitor) {
     }
     
     // 人口上限チェックを追加
-    if (theVillage.villagers.length >= theVillage.popLimit) {
+    if (isAtPopulationLimit(theVillage, visitor)) {
       alert("村の人口上限に達しています。新たな村人を受け入れるには、家屋を建設して人口上限を増やしてください。");
       theVillage.log(`勧誘失敗: 人口上限(${theVillage.popLimit}人)に達しています`);
       return;
@@ -558,7 +559,7 @@ function openSeductionModal(visitor) {
     }
     
     // 人口上限チェックを追加
-    if (theVillage.villagers.length >= theVillage.popLimit) {
+    if (isAtPopulationLimit(theVillage, visitor)) {
       alert("村の人口上限に達しています。新たな村人を受け入れるには、家屋を建設して人口上限を増やしてください。");
       theVillage.log(`誘惑失敗: 人口上限(${theVillage.popLimit}人)に達しています`);
       return;
@@ -746,7 +747,7 @@ function openCaptiveSocialModal(captive, source) {
       alert(`${actor.name}は今月すでに勧誘または誘惑を試みています。`);
       return;
     }
-    if (theVillage.villagers.length >= theVillage.popLimit) {
+    if (isAtPopulationLimit(theVillage, captive)) {
       alert("村の人口上限に達しています。新たな村人を受け入れるには、家屋を建設して人口上限を増やしてください。");
       theVillage.log(`${source}失敗: 人口上限(${theVillage.popLimit}人)に達しています`);
       return;

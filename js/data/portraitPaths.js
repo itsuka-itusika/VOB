@@ -19,6 +19,7 @@ export const EQUINA_PORTRAIT_FILES = Array.from({ length: 18 }, (_, index) => `E
 export const CENTAUR_PORTRAIT_FILES = Array.from({ length: 9 }, (_, index) => `CENTAUR${index + 1}.png`);
 export const SATYR_PORTRAIT_FILES = Array.from({ length: 12 }, (_, index) => `SATYR${index + 1}.png`);
 export const MAENAD_PORTRAIT_FILES = Array.from({ length: 16 }, (_, index) => `MAENAD${index + 1}.png`);
+export const GOBLIN_PORTRAIT_FILES = Array.from({ length: 13 }, (_, index) => `GOB${index + 1}.png`);
 
 const PORTRAIT_ROOT = "images/portraits";
 const CHILD_SHADOW_PORTRAIT_KEYS = new Set(["CHILD_SHADOW.svg", "CHILD_SHADOW_BABY.svg"]);

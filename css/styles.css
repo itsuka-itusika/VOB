@@ -1067,6 +1067,7 @@ section h2 {
 /* モーダル: 建築・秘宝・村史・個人記録 */
 #buildingOverlay,
 #secretTreasureOverlay,
+#dryadFruitOverlay,
 #historyOverlay,
 #personalHistoryOverlay {
   position: fixed;
@@ -1078,6 +1079,7 @@ section h2 {
 }
 #buildingModal,
 #secretTreasureModal,
+#dryadFruitModal,
 #historyModal,
 #personalHistoryModal {
   position: fixed;
@@ -2276,7 +2278,8 @@ section h2 {
 
 /* 交換モーダル用のスタイル */
 #exchangeOverlay,
-#panFluteExchangeOverlay {
+#panFluteExchangeOverlay,
+#dryadFruitOverlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -2288,7 +2291,8 @@ section h2 {
 }
 
 #exchangeModal,
-#panFluteExchangeModal {
+#panFluteExchangeModal,
+#dryadFruitModal {
   position: fixed;
   top: 50%;
   left: 50%;
@@ -2307,7 +2311,8 @@ section h2 {
 }
 
 .exchange-content,
-.pan-flute-exchange-content {
+.pan-flute-exchange-content,
+.dryad-fruit-content {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2316,6 +2321,46 @@ section h2 {
 .exchange-title {
   text-align: center;
   margin-bottom: 20px;
+}
+
+.dryad-fruit-title {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.dryad-fruit-title h3 {
+  margin: 0;
+  color: #41783f;
+}
+
+.dryad-fruit-person {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 20px;
+  width: min(560px, 100%);
+  align-items: center;
+}
+
+.dryad-fruit-portrait-area {
+  width: 150px;
+  height: 150px;
+  background: #e7f0df;
+}
+
+.dryad-fruit-portrait-area img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dryad-fruit-dialogue-area {
+  display: grid;
+  gap: 8px;
+  min-height: 80px;
+  padding: 14px;
+  border: 1px solid #b8c9aa;
+  border-radius: 5px;
+  background: #f7fbf3;
 }
 
 .exchange-title h3 {
@@ -3156,6 +3201,7 @@ body.mobile-mode #buildingRequestModal,
 body.mobile-mode #buildingRequestCompleteModal,
 body.mobile-mode #exchangeModal,
 body.mobile-mode #panFluteExchangeModal,
+body.mobile-mode #dryadFruitModal,
 body.mobile-mode #raidModal,
 body.mobile-mode #villageScaleModal,
 body.mobile-mode #monthEndModal,
@@ -3169,6 +3215,14 @@ body.mobile-mode .event-modal {
   overflow-y: auto;
   box-sizing: border-box;
   transform: translateX(-50%);
+}
+body.mobile-mode .dryad-fruit-person {
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 8px;
+}
+body.mobile-mode .dryad-fruit-portrait-area {
+  width: 92px;
+  height: 92px;
 }
 body.mobile-mode .modal-header {
   margin-bottom: 4px;

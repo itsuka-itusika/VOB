@@ -19,6 +19,7 @@ import {
   CYCLOPS_PORTRAIT_FILES,
   DRYAD_PORTRAIT_FILES,
   EQUINA_PORTRAIT_FILES,
+  GOBLIN_PORTRAIT_FILES,
   HARPY_PORTRAIT_FILES,
   MAENAD_PORTRAIT_FILES,
   NEREID_PORTRAIT_FILES,
@@ -31,7 +32,7 @@ import { recordAdulthoodHistory, recordBirthHistory, recordPregnancyHistory } fr
 import { addRelationship, checkHasRelationship, getRelationshipTargetName, normalizeRelationship } from "./relationships.js";
 import { getDialogueLine } from "./dialogue/dialogueEngine.js";
 
-const HUMANOID_RACES = new Set(["人間", "ハーピー", "半神", "キュクロプス", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド", "エクイナ", "サテュロス", "メナド", "セントール"]);
+const HUMANOID_RACES = new Set(["人間", "ゴブリン", "ハーピー", "半神", "キュクロプス", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド", "エクイナ", "サテュロス", "メナド", "セントール"]);
 const FEMALE_FIXED_RACES = new Set(["ハーピー", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド", "エクイナ", "メナド"]);
 const LONG_LIVED_RACES = new Set(["ドライアド", "ネレイド", "アルセイド", "翼人"]);
 const RACE_BODY_TRAITS = {
@@ -48,6 +49,7 @@ const RACE_BODY_TRAITS = {
   "セントール": ["半人半馬"]
 };
 const CHILD_ADULT_PORTRAITS_BY_RACE = new Map([
+  ["ゴブリン", GOBLIN_PORTRAIT_FILES],
   ["ハーピー", HARPY_PORTRAIT_FILES],
   ["キュクロプス", CYCLOPS_PORTRAIT_FILES],
   ["翼人", WINGED_PORTRAIT_FILES],
@@ -297,11 +299,10 @@ function decideChildRace(childSex, motherSnapshot, fatherSnapshot, explicitRace 
   if (motherRace === "メナド") {
     return childSex === "男" ? "サテュロス" : "メナド";
   }
-  if (childSex === "女") return normalizeChildRace(motherSnapshot?.race);
   if (childSex === "男" && isFemaleFixedRace(motherSnapshot?.race)) {
-    return normalizeChildRace(fatherSnapshot?.race);
+    return "人間";
   }
-  return "人間";
+  return motherRace;
 }
 
 function decidePregnancyChildRace(childSex, motherSnapshot, fatherSnapshot, options = {}) {

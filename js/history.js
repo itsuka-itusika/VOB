@@ -17,6 +17,7 @@ export const HISTORY_EVENT_TYPES = Object.freeze({
   MARRIAGE: "marriage",
   BIRTH: "birth",
   BODY_EXCHANGE: "bodyExchange",
+  DRYAD_FRUIT: "dryadFruit",
   MYTHIC_EVENT: "mythicEvent",
   LOVER: "lover",
   SOCIAL_RELATION: "socialRelation",
@@ -37,6 +38,7 @@ const HISTORY_TYPE_LABELS = Object.freeze({
   [HISTORY_EVENT_TYPES.MARRIAGE]: "婚姻",
   [HISTORY_EVENT_TYPES.BIRTH]: "出生",
   [HISTORY_EVENT_TYPES.BODY_EXCHANGE]: "肉体交換",
+  [HISTORY_EVENT_TYPES.DRYAD_FRUIT]: "ドライアド化",
   [HISTORY_EVENT_TYPES.MYTHIC_EVENT]: "怪異",
   [HISTORY_EVENT_TYPES.LOVER]: "恋人",
   [HISTORY_EVENT_TYPES.SOCIAL_RELATION]: "交友",
@@ -378,6 +380,20 @@ export function recordBodyExchangeHistory(village, personA, personB, options = {
   });
 }
 
+export function recordDryadFruitHistory(village, person, options = {}) {
+  if (!person) return;
+  const previousRace = options.previousRace || "人間";
+  addHistoryEvent(village, {
+    type: HISTORY_EVENT_TYPES.DRYAD_FRUIT,
+    title: `${person.name}、ドライアドの身体となる`,
+    text: `${person.name}がドライアドの果実を食べ、${previousRace}の身体からドライアドの身体となった。`,
+    people: [person],
+    importance: "minor",
+    scope: HISTORY_SCOPES.PERSON,
+    tags: ["ドライアドの果実", previousRace, "ドライアド"]
+  });
+}
+
 export function recordCriticalHistory(village, person, options = {}) {
   if (!person) return;
   const reason = options.reason || "老衰";
@@ -528,6 +544,8 @@ function getVillageHistoryText(event) {
     case HISTORY_EVENT_TYPES.BODY_EXCHANGE:
       if (personA && personB) return getBodyExchangeVillageText(event);
       break;
+    case HISTORY_EVENT_TYPES.DRYAD_FRUIT:
+      return cleanRecordText(event.text || event.title);
     case HISTORY_EVENT_TYPES.MYTHIC_EVENT:
       return cleanRecordText(event.text || event.title);
     case HISTORY_EVENT_TYPES.LOVER:
@@ -554,6 +572,8 @@ function getPersonalHistoryText(event, personName) {
   switch (event.type) {
     case HISTORY_EVENT_TYPES.BODY_EXCHANGE:
       return getBodyExchangePersonalText(event, otherName);
+    case HISTORY_EVENT_TYPES.DRYAD_FRUIT:
+      return cleanRecordText(event.text).replace(`${personName}が`, "").trim() || "ドライアドの身体となった。";
     case HISTORY_EVENT_TYPES.MARRIAGE:
       return otherName ? `${otherName}と夫婦となった。` : cleanRecordText(event.text);
     case HISTORY_EVENT_TYPES.LOVER:

@@ -1,22 +1,27 @@
 import { doExchange } from "./exchange.js";
+import { createRandomVisitorOfType } from "./createVillagers.js";
 import { refreshJobTable } from "./domain/jobTables.js";
-import { recordMarriageHistory } from "./history.js";
+import { recordDryadFruitHistory, recordMarriageHistory } from "./history.js";
 import { openExchangeModal, openPanFluteExchangeModal, showMarriageMiracleModal, showMiracleResultModal } from "./miracles.js";
 import { avoidCurrentRaidWithMessengerPass, canAvoidCurrentRaidWithMessengerPass, startRaidEvent } from "./raidStart.js";
 import { addRelationship, removeRelationship, addSpouseRelationships, raiseMutualFriendshipTo } from "./relationships.js";
 import { updateChildGrowthStage } from "./reproduction.js";
-import { clampValue, round3 } from "./util.js";
+import { clampValue, getPortraitPath, round3 } from "./util.js";
 import { updateUI } from "./ui.js";
 import { addAcquiredStat, syncEffectiveStats } from "./domain/statLayers.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { MESSENGER_PASS_SECRET_TREASURE_ID } from "./data/tutorialData.js";
 import { getCaptives } from "./captives.js";
 import { DESPAIR_TRAIT, DISAPPOINTMENT_TRAIT } from "./domain/despair.js";
+import { getDialogueLine } from "./dialogue/dialogueEngine.js";
+import { DEFAULT_PORTRAIT_KEY, getPortraitAssetPath } from "./data/portraitPaths.js";
 
 const SEASON_TRAITS_TO_REMOVE = ["夏", "秋", "冬", "冷夏", "飛蝗", "厳冬", "疫病流行"];
 const BAD_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "凍え", "病気", "疫病", "産褥", "危篤"];
 const BAD_MIND_TRAITS = ["心労", "抑鬱"];
 export const PINECONE_STAFF_SECRET_TREASURE_ID = "pinecone_staff";
+export const DRYAD_FRUIT_SECRET_TREASURE_ID = "dryad_fruit";
+const DEFAULT_PORTRAIT_PATH = getPortraitAssetPath(DEFAULT_PORTRAIT_KEY);
 const SECRET_TREASURE_SELL_PRICES = {
   persephone_statue: 300,
   abundance_horn: 300,
@@ -29,6 +34,7 @@ const SECRET_TREASURE_SELL_PRICES = {
   serpent_staff: 500,
   chronos_elixir: 500,
   old_priest_statue: 100,
+  [DRYAD_FRUIT_SECRET_TREASURE_ID]: 100,
   [PINECONE_STAFF_SECRET_TREASURE_ID]: 50,
   pan_flute: 300,
   grotesque_portrait: 500,
@@ -239,6 +245,53 @@ function applyPineconeStaff(village, pair) {
   });
 }
 
+function showDryadFruitModal(target, line) {
+  const overlay = document.getElementById("dryadFruitOverlay");
+  const modal = document.getElementById("dryadFruitModal");
+  const portrait = document.getElementById("dryadFruitPortrait");
+  const name = document.getElementById("dryadFruitName");
+  const dialogue = document.getElementById("dryadFruitDialogue");
+  if (!overlay || !modal || !portrait || !name || !dialogue) return;
+
+  portrait.src = getPortraitPath(target);
+  portrait.alt = `${target.name} portrait`;
+  portrait.onerror = () => {
+    portrait.src = DEFAULT_PORTRAIT_PATH;
+  };
+  name.textContent = `${target.name}:`;
+  dialogue.textContent = line || "森の息吹が、新たな身体に静かに満ちていく。";
+  overlay.style.display = "block";
+  modal.style.display = "block";
+}
+
+export function closeDryadFruitModal() {
+  const overlay = document.getElementById("dryadFruitOverlay");
+  const modal = document.getElementById("dryadFruitModal");
+  if (overlay) overlay.style.display = "none";
+  if (modal) modal.style.display = "none";
+}
+
+function applyDryadFruit(village, target) {
+  const previousRace = target.race || "人間";
+  const previousBodyOwner = target.bodyOwner;
+  const dryad = createRandomVisitorOfType(
+    "ドライアド",
+    getVillagers(village).map(person => person.name)
+  );
+  if (!dryad) return false;
+
+  doExchange(target, dryad, village, true, "ドライアドの果実", { recordHistory: false });
+  target.bodyOwner = previousBodyOwner;
+  recordDryadFruitHistory(village, target, { previousRace });
+  village.log(`【秘宝】${target.name}がドライアドの果実を食べ、ドライアドの身体になりました`);
+  showDryadFruitModal(target, getDialogueLine({
+    character: target,
+    scene: "secretTreasure",
+    key: "dryadFruit"
+  }));
+  return true;
+}
+
 function getPublicBathBonus(village) {
   const flags = village.buildingFlags || {};
   return 5 + (Number(flags.publicBathRecoveryBonus) || 0);
@@ -394,6 +447,14 @@ export const SECRET_TREASURES = [
     sellPrice: SECRET_TREASURE_SELL_PRICES.chronos_elixir,
     target: "childVillager",
     use: (village, target) => growToSixteen(target, village)
+  },
+  {
+    id: DRYAD_FRUIT_SECRET_TREASURE_ID,
+    name: "ドライアドの果実",
+    desc: "指定した村人1名をドライアドの身体にする。",
+    sellPrice: SECRET_TREASURE_SELL_PRICES[DRYAD_FRUIT_SECRET_TREASURE_ID],
+    target: "villager",
+    use: (village, target) => applyDryadFruit(village, target)
   },
   {
     id: "old_priest_statue",

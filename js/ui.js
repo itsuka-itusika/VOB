@@ -43,6 +43,7 @@ import {
 } from "./domain/jobTables.js";
 import { getResourceStorageStatus, getResourceStorageWarningRatio } from "./domain/resourceLimits.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
+import { getPopulationCount } from "./domain/speciesTraits.js";
 import { isUnassignedActionVillager } from "./domain/rules.js";
 import { showDictionaryEntry } from "./dictionary.js";
 import { combinedDictionaryData } from "./data/dictionaryData.js";
@@ -241,7 +242,7 @@ function buildWarningMessages(village) {
     });
   }
 
-  if (villagers.length >= village.popLimit) {
+  if (getPopulationCount(villagers) >= village.popLimit) {
     warnings.push({
       level: "warning",
       text: "人口が上限に達しています。新規加入には家屋が必要です。"
@@ -1114,7 +1115,7 @@ export function updateUI(v) {
     <div class="resource-box"><span class="resource-label">技術</span><span class="resource-value">${v.tech}</span></div>
     <div class="resource-box"><span class="resource-label">治安</span><span class="resource-value">${v.security}</span></div>
     <div class="resource-box"><span class="resource-label">規模</span><span class="resource-value">${v.building}</span></div>
-    <div class="resource-box"><span class="resource-label">人口/上限</span><span class="resource-value">${v.villagers.length}/${v.popLimit}</span></div>
+    <div class="resource-box"><span class="resource-label">人口/上限</span><span class="resource-value">${getPopulationCount(v)}/${v.popLimit}</span></div>
     <div class="resource-box resource-traits"><span class="resource-label">村特性</span><span class="resource-value" id="villageTraitsTerms"></span></div>
   `;
   const villageTraitsTerms = document.getElementById("villageTraitsTerms");
