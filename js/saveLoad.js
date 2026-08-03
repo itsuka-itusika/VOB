@@ -221,6 +221,7 @@ function convertVillageToObject(village) {
     monthsSinceRaid: normalizeFiniteNumber(village.monthsSinceRaid, 0),
     raidCooldown: normalizeFiniteNumber(village.raidCooldown, 0),
     pendingRaid: cloneNullableDeepObject(village.pendingRaid),
+    battleDebugMode: !!village.battleDebugMode,
     // raidEnemies (Villager互換配列)
     raidEnemies: village.raidEnemies.map(vill => convertVillagerToObject(vill)),
 
@@ -418,6 +419,7 @@ function convertObjectToVillage(dataObj) {
   v.monthsSinceRaid = Math.max(0, Math.floor(normalizeFiniteNumber(dataObj.monthsSinceRaid, 0)));
   v.raidCooldown = Math.max(0, Math.floor(normalizeFiniteNumber(dataObj.raidCooldown, 0)));
   v.pendingRaid = cloneNullableDeepObject(dataObj.pendingRaid);
+  v.battleDebugMode = !!dataObj.battleDebugMode;
   if (Array.isArray(dataObj.raidEnemies)) {
     v.raidEnemies = dataObj.raidEnemies.map(o => convertObjectToVillager(o));
   }

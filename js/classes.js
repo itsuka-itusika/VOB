@@ -53,6 +53,7 @@ export class Village {
     this.monthsSinceRaid = 0;
     this.raidCooldown = 0;
     this.pendingRaid = null;
+    this.battleDebugMode = false;
     this.isRaidProcessDone = false;
     this.isRaidFinalizing = false;
     this.raidTurnCount = 0;

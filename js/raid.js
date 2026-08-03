@@ -1111,7 +1111,9 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
       doAgingProcess(village);
     }
     runMonthStartPhase(village);
-    applyRaidSevereInjuryResult(village, severeInjuryResult);
+    if (!village.battleDebugMode) {
+      applyRaidSevereInjuryResult(village, severeInjuryResult);
+    }
 
     village.isRaidFinalizing = false;
     updateUI(village);

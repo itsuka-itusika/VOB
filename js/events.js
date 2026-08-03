@@ -52,6 +52,33 @@ const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成"]);
 const TRAIT_INJURED = "負傷";
 const TRAIT_SERIOUS_INJURY = "重体";
 const TRAIT_CRITICAL = "危篤";
+const BATTLE_DEBUG_BODY_TRAITS_TO_REMOVE = new Set([
+  "負傷", "重体", "危篤", "疲労", "過労", "飢餓", "凍え", "病気", "疫病", "産褥"
+]);
+const BATTLE_DEBUG_MIND_TRAITS_TO_REMOVE = new Set([
+  "心労", "抑鬱", "失望", "絶望", "狂乱"
+]);
+
+function recoverBattleDebugVillagers(village) {
+  if (!village.battleDebugMode) return;
+
+  village.villagers.forEach(person => {
+    const hadPostpartum = Array.isArray(person.bodyTraits) && person.bodyTraits.includes("産褥");
+    person.bodyTraits = Array.isArray(person.bodyTraits)
+      ? person.bodyTraits.filter(trait => !BATTLE_DEBUG_BODY_TRAITS_TO_REMOVE.has(trait))
+      : [];
+    person.mindTraits = Array.isArray(person.mindTraits)
+      ? person.mindTraits.filter(trait => !BATTLE_DEBUG_MIND_TRAITS_TO_REMOVE.has(trait))
+      : [];
+    if (hadPostpartum) person.postpartumMonths = 0;
+    person.hp = 100;
+    person.mp = 100;
+    syncEffectiveStats(person);
+    refreshJobTable(person, village);
+  });
+
+  village.log("【デバッグ】全村人の状態・体力・メンタルが全回復しました");
+}
 
 function processSeriousInjuryMonthStart(village) {
   getPeopleForFoodAndWinterMaterials(village).forEach(person => {
@@ -463,6 +490,8 @@ export function endOfMonthProcess(v) {
   let removeList=["豊穣","訪問者","襲撃者","ミダス"];
   // "襲撃中" はここでは消さない(raid.js 内で完了時に消す)
   v.villageTraits = v.villageTraits.filter(tr=> !removeList.includes(tr));
+
+  recoverBattleDebugVillagers(v);
 
   // 危篤者の死亡処理（危篤者は必ず死亡）
   let deadPeople = getPeopleForFoodAndWinterMaterials(v).filter(p => p.bodyTraits.includes("危篤"));

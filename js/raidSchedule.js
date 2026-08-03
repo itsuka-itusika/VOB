@@ -50,6 +50,8 @@ function isRaidActive(village) {
 }
 
 export function getRaidReservationChance(village) {
+  if (village?.battleDebugMode) return 1;
+
   const monthsSinceRaid = normalizeNonNegativeInteger(village?.monthsSinceRaid, 0);
   if (monthsSinceRaid < 2) return 0;
 
@@ -175,6 +177,12 @@ export function processRaidScheduleAtMonthStart(village, options = {}) {
 
   if (advancePendingRaid(village)) return;
   if (isRaidActive(village)) return;
+
+  if (village.battleDebugMode) {
+    village.raidCooldown = 0;
+    startRaidEvent(village);
+    return;
+  }
 
   if (village.raidCooldown > 0) {
     village.raidCooldown = Math.max(0, village.raidCooldown - 1);

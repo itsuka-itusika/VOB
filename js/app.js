@@ -30,6 +30,7 @@ let debugTitleActionsEnabled = false;
 
 function replaceVillageState(nextVillage, loadedMessage) {
   Object.assign(theVillage, nextVillage);
+  if (theVillage.battleDebugMode) debugTitleActionsEnabled = true;
   theVillage.log(loadedMessage);
   updateUI(theVillage);
 }
@@ -77,12 +78,7 @@ function grantAllSecretTreasures(village) {
   return addedCount;
 }
 
-function runDebugAction() {
-  if (window.prompt("パスワードを入力してください") !== "VOB") {
-    alert("パスワードが違います。");
-    return;
-  }
-
+function unlockVobDebugFeatures() {
   theVillage.food = 10000;
   theVillage.materials = 10000;
   theVillage.funds = 10000;
@@ -90,6 +86,29 @@ function runDebugAction() {
 
   grantAllSecretTreasures(theVillage);
   debugTitleActionsEnabled = true;
+}
+
+function runDebugAction() {
+  const command = window.prompt("パスワードを入力してください")?.trim().toUpperCase();
+  if (command === "END") {
+    theVillage.battleDebugMode = false;
+    theVillage.log("【デバッグ】BATTLEモードを解除しました");
+    updateUI(theVillage);
+    return;
+  }
+
+  if (command !== "VOB" && command !== "BATTLE") {
+    alert("パスワードが違います。");
+    return;
+  }
+
+  unlockVobDebugFeatures();
+
+  if (command === "BATTLE") {
+    theVillage.battleDebugMode = true;
+    theVillage.raidCooldown = 0;
+    theVillage.log("【デバッグ】BATTLEモードを開始しました。毎月襲撃が発生し、月末に全村人の状態・体力・メンタルが全回復します");
+  }
 
   theVillage.log("【デバッグ】食料・資材・資金・技術を10000にし、全秘宝を入手しました。タイトルのV/B/末尾sクリックを有効化しました");
   updateUI(theVillage);
