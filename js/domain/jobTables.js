@@ -13,6 +13,7 @@ import {
 } from "../raidRules.js";
 import { syncEffectiveStats } from "./statLayers.js";
 import { FOUR_LEGGED_TRAIT, isWolf, WILD_MIND_TRAIT, YOUNG_WOLF_TRAIT } from "./speciesTraits.js";
+import { isSaltPillar } from "./apocalypseRules.js";
 
 export const ACTION_NONE = "なし";
 export const ACTION_REST = "休養";
@@ -304,6 +305,22 @@ export function applyForcedActionRestriction(person) {
   const beforeActionTable = Array.isArray(person.actionTable) ? person.actionTable.join("\u0001") : "";
   const bodyTraits = traitList(person, "bodyTraits");
   const mindTraits = traitList(person, "mindTraits");
+
+  if (isSaltPillar(person)) {
+    preservePreferredBeforeRestriction(person);
+    setTables(person, [], [ACTION_NONE]);
+    person.action = ACTION_NONE;
+    return {
+      restricted: true,
+      changed: beforePreferred !== person.preferredAction ||
+        beforeJob !== person.job ||
+        beforeAction !== person.action ||
+        beforeJobTable !== person.jobTable.join("\u0001") ||
+        beforeActionTable !== person.actionTable.join("\u0001"),
+      reason: "塩の柱",
+      action: ACTION_NONE
+    };
+  }
 
   if (bodyTraits.includes("危篤")) {
     preservePreferredBeforeRestriction(person);

@@ -21,6 +21,7 @@ import {
   normalizeFormerCaptive,
   releaseCaptive
 } from "./captives.js";
+import { isSaltPillar } from "./domain/apocalypseRules.js";
 import {
   buyMerchantSecretTreasure,
   MERCHANT_SECRET_TREASURE_CHANCE,
@@ -106,6 +107,10 @@ function ensureMerchantStock(visitor) {
  * 会話モーダルを開く
  */
 export function openConversationModal(character) {
+  if (isSaltPillar(character)) {
+    theVillage.log(character.name + "は塩の柱となっており、話しかけることができない。");
+    return;
+  }
   const overlay = document.getElementById("conversationOverlay");
   const modal = document.getElementById("conversationModal");
   const portrait = document.getElementById("conversationPortrait");
@@ -132,7 +137,7 @@ export function openConversationModal(character) {
   portrait.style.cursor = "pointer";
   portrait.title = "クリックで会話を更新";
   portrait.onclick = () => refreshConversationText(character);
-  
+
   // キャラクター情報を表示するためのHTML要素を追加
   const characterInfo = document.getElementById("characterInfo");
   if (characterInfo) {
@@ -140,7 +145,7 @@ export function openConversationModal(character) {
       <div class="character-name">${character.name}｜${character.race}｜${character.bodySex}｜${character.bodyAge}歳</div>
     `;
   }
-  
+
   const isVillageMember = theVillage.villagers.includes(character);
   if (isVillageMember) {
     refreshJobTable(character, theVillage);
@@ -155,13 +160,13 @@ export function openConversationModal(character) {
   const hasFailedRecruitment = character.mindTraits && character.mindTraits.includes("勧誘失敗");
   const isCaptiveCharacter = isCaptive(character, theVillage);
   const hasFailedCaptiveSocial = character.mindTraits && character.mindTraits.includes(CAPTIVE_FAILED_TRAIT);
-  
+
   // 会話テキストを設定
   refreshConversationText(character);
 
   // ボタンの表示制御
   actionButtons.innerHTML = "";
-  
+
   if (isCaptiveCharacter) {
     const buttons = [];
     if (!hasFailedCaptiveSocial) {
@@ -208,7 +213,7 @@ export function openConversationModal(character) {
     }
     actionButtons.innerHTML = buttons.join("");
     actionButtons.style.display = buttons.length > 0 ? "block" : "none";
-    
+
     // 勧誘ボタンのイベントリスナーを設定
     const recruitButton = document.getElementById("recruitButton");
     if (recruitButton) {
@@ -216,7 +221,7 @@ export function openConversationModal(character) {
         openRecruitmentModal(character);
       });
     }
-    
+
     // 誘惑ボタンのイベントリスナーを設定
     const seduceButton = document.getElementById("seduceButton");
     if (seduceButton) {
@@ -266,7 +271,7 @@ export function openConversationModal(character) {
 export function closeConversationModal() {
   const overlay = document.getElementById("conversationOverlay");
   const modal = document.getElementById("conversationModal");
-  
+
   if (overlay) overlay.style.display = "none";
   if (modal) modal.style.display = "none";
 }
@@ -290,7 +295,7 @@ function changeCharacterAction(character, newAction) {
   if (Array.isArray(character.actionTable) && character.actionTable.includes(newAction)) {
     character.action = newAction;
     refreshConversationText(character);
-    
+
     // ボタンのアクティブ状態を更新
     [
       ["assignDefender", ACTION_DEFEND],
@@ -301,7 +306,7 @@ function changeCharacterAction(character, newAction) {
       const button = document.getElementById(id);
       if (button) button.className = newAction === action ? "active-action" : "";
     });
-    
+
     // 村のUIを更新
     updateUI(theVillage);
   } else {
@@ -398,11 +403,11 @@ function openRecruitmentModal(visitor) {
   const overlay = document.createElement("div");
   overlay.id = "recruitmentOverlay";
   overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:3000;";
-  
+
   const modal = document.createElement("div");
   modal.id = "recruitmentModal";
   modal.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:20px;z-index:3001;min-width:300px;border-radius:5px;box-shadow:0 2px 10px rgba(0,0,0,0.1);";
-  
+
   modal.innerHTML = `
     <h3 style="margin-top:0;">勧誘する村人を選択</h3>
     <p style="margin-bottom:15px;">${visitor.name}を勧誘します。</p>
@@ -418,10 +423,10 @@ function openRecruitmentModal(visitor) {
       <button id="doRecruitment" style="padding:5px 15px;" ${hasCandidates ? "" : "disabled"}>勧誘する</button>
     </div>
   `;
-  
+
   document.body.appendChild(overlay);
   document.body.appendChild(modal);
-  
+
   // イベントリスナーを設定
   const recruiterSelect = document.getElementById("recruiterSelect");
   const recruitmentSuccessRate = document.getElementById("recruitmentSuccessRate");
@@ -445,7 +450,7 @@ function openRecruitmentModal(visitor) {
       alert(`${recruiter.name}は今月すでに勧誘または誘惑を試みています。`);
       return;
     }
-    
+
     // 人口上限チェックを追加
     if (isAtPopulationLimit(theVillage, visitor)) {
       alert("村の人口上限に達しています。新たな村人を受け入れるには、家屋を建設して人口上限を増やしてください。");
@@ -453,9 +458,9 @@ function openRecruitmentModal(visitor) {
       return;
     }
     markVisitorSocialAttempt(recruiter);
-    
+
     const successRate = calculateRecruitmentSuccessRate(visitor, recruiter);
-    
+
     // 勧誘判定
     if (Math.random() * 100 < successRate) {
       handleRecruitmentSuccess(visitor, recruiter, successRate);
@@ -465,12 +470,12 @@ function openRecruitmentModal(visitor) {
       theVillage.log(`${recruiter.name}の勧誘は失敗しました。(成功率: ${Math.floor(successRate)}%)`);
       alert("勧誘に失敗しました。");
     }
-    
+
     closeRecruitmentModal();
     closeConversationModal();
     updateUI(theVillage);
   });
-  
+
   // キャンセルボタンのイベントリスナーを設定
   const cancelButton = document.getElementById("cancelRecruitment");
   if (cancelButton) {
@@ -478,7 +483,7 @@ function openRecruitmentModal(visitor) {
       closeRecruitmentModal();
     });
   }
-  
+
   // オーバーレイクリックでもモーダルを閉じる
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) {
@@ -502,11 +507,11 @@ function openSeductionModal(visitor) {
   const overlay = document.createElement("div");
   overlay.id = "seductionOverlay";
   overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:3000;";
-  
+
   const modal = document.createElement("div");
   modal.id = "seductionModal";
   modal.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:20px;z-index:3001;min-width:300px;border-radius:5px;box-shadow:0 2px 10px rgba(0,0,0,0.1);";
-  
+
   modal.innerHTML = `
     <h3 style="margin-top:0;">誘惑する村人を選択</h3>
     <p style="margin-bottom:15px;">${visitor.name}を誘惑します。</p>
@@ -525,10 +530,10 @@ function openSeductionModal(visitor) {
       <button id="doSeduction" style="padding:5px 15px;" ${hasCandidates ? "" : "disabled"}>誘惑する</button>
     </div>
   `;
-  
+
   document.body.appendChild(overlay);
   document.body.appendChild(modal);
-  
+
   // イベントリスナーを設定
   const seducerSelect = document.getElementById("seducerSelect");
   const seductionSuccessRate = document.getElementById("seductionSuccessRate");
@@ -557,7 +562,7 @@ function openSeductionModal(visitor) {
       alert(`${seducer.name}は今月すでに勧誘または誘惑を試みています。`);
       return;
     }
-    
+
     // 人口上限チェックを追加
     if (isAtPopulationLimit(theVillage, visitor)) {
       alert("村の人口上限に達しています。新たな村人を受け入れるには、家屋を建設して人口上限を増やしてください。");
@@ -565,7 +570,7 @@ function openSeductionModal(visitor) {
       return;
     }
     markVisitorSocialAttempt(seducer);
-    
+
     // 条件チェック
     // 1. 訪問者の精神性別と誘惑者の肉体性別が異なるか
     // 2. 誘惑者の好色が21以上か
@@ -578,7 +583,7 @@ function openSeductionModal(visitor) {
       updateUI(theVillage);
       return;
     }
-    
+
     if (!seductionCheck.ok && seductionCheck.reason === "好色不足") {
       alert("誘惑者の好色が足りません。誘惑できません。");
       theVillage.log(`${seducer.name}の誘惑は失敗しました。(理由: 誘惑者の好色不足)`);
@@ -587,9 +592,9 @@ function openSeductionModal(visitor) {
       updateUI(theVillage);
       return;
     }
-    
+
     const successRate = calculateSeductionSuccessRate(visitor, seducer);
-    
+
     // 誘惑判定
     if (Math.random() * 100 < successRate) {
       handleRecruitmentSuccess(visitor, seducer, successRate, "誘惑");
@@ -599,12 +604,12 @@ function openSeductionModal(visitor) {
       theVillage.log(`${seducer.name}の誘惑は失敗しました。(成功率: ${Math.floor(successRate)}%)`);
       alert("誘惑に失敗しました。");
     }
-    
+
     closeSeductionModal();
     closeConversationModal();
     updateUI(theVillage);
   });
-  
+
   // キャンセルボタンのイベントリスナーを設定
   const cancelButton = document.getElementById("cancelSeduction");
   if (cancelButton) {
@@ -612,7 +617,7 @@ function openSeductionModal(visitor) {
       closeSeductionModal();
     });
   }
-  
+
   // オーバーレイクリックでもモーダルを閉じる
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) {
@@ -921,24 +926,24 @@ function handleRecruitmentSuccess(visitor, recruiter, successRate = 0, source = 
   const originalVisitor = visitor;
   // 訪問者のタイプを取得（名前から抽出）
   const visitorType = visitor.name.includes("の") ? visitor.name.split("の")[0] : null;
-  
+
   visitor.mindTraits = visitor.mindTraits.filter(t => t !== "訪問者");
   setPreferredAction(visitor, ACTION_NONE);
   visitor.action = ACTION_NONE;
   visitor.jobTable = [];
   visitor.actionTable = [];
-  
+
   // 棄民の場合は強制的に老人口調に設定
   if (visitorType === "棄民" || visitor.name.includes("棄民の")) {
     visitor.speechType = "老人";
   }
-  
+
   // 名前から「〜の」を削除
   const separatorIndex = visitor.name.indexOf("の");
   if (separatorIndex >= 0) {
     visitor.name = visitor.name.slice(separatorIndex + 1);
   }
-  
+
   // 訪問者リストから削除し、村人リストに追加
   theVillage.visitors = theVillage.visitors.filter(v => v !== originalVisitor);
   theVillage.villagers.push(visitor);
@@ -950,13 +955,13 @@ function handleRecruitmentSuccess(visitor, recruiter, successRate = 0, source = 
     { getPermanentStat }
   );
   recordVillagerJoinHistory(theVillage, visitor, { recruiter, source });
-  
+
   // 行動テーブルを更新
   refreshJobTable(visitor, theVillage);
-  
+
   theVillage.log(`${recruiter.name}の${source}により、${visitor.name}が村人になりました。(成功率: ${Math.floor(successRate)}%)`);
   alert(`${source}成功！${visitor.name}が村人になりました。`);
-  
+
   // モーダルを閉じる
   closeConversationModal();
 }

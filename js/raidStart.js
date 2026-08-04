@@ -118,7 +118,7 @@ function selectRaidDefinition(village) {
     return sum + candidate.weight;
   }, 0);
   let random = Math.random() * totalWeight;
-  
+
   for (const candidate of candidates) {
     random -= candidate.weight;
     if (random <= 0) {
@@ -228,6 +228,9 @@ function createRaidEnemy(village, raiderType, existingNames) {
       mindTraits: e.mindTraits
     });
   }
+  if (raiderType.useDefaultPortrait) {
+    e.portraitFile = "default.png";
+  }
 
   // 狼の場合は肉体特性を上書き
   if (displayType === "狼") {
@@ -276,6 +279,8 @@ function createRaidEnemy(village, raiderType, existingNames) {
   e.raiderRole = raiderType.role || "";
   e.raidPosition = raiderType.raidPosition || "front";
   e.raidTargeting = raiderType.raidTargeting || "frontFirst";
+  e.exchangeImmune = !!raiderType.exchangeImmune;
+  e.uncapturable = !!raiderType.uncapturable;
   const speechType = getRaiderSpeechType(e);
   if (speechType) {
     e.speechType = speechType;

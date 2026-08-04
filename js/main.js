@@ -11,6 +11,7 @@ import { recordGameStartHistory } from "./history.js";
 import { isUnassignedActionVillager } from "./domain/rules.js";
 import { getRaidReadiness } from "./raidRules.js";
 import { hasDespairState } from "./domain/despair.js";
+import { getActiveVillagers } from "./domain/apocalypseRules.js";
 
 // Villageインスタンスを生成
 export const theVillage = new Village();
@@ -39,6 +40,9 @@ const TURN_BLOCKING_MODAL_SELECTORS = [
   "#inquisitionInsufficientFundsModal",
   "#inquisitionHospitalityResultModal",
   "#inquisitionExpulsionResultModal",
+  "#bacchusGoldenStatueEventModal",
+  "#apocalypseStartModal",
+  "#apocalypseEventModal",
   "#secretTreasureEventModal",
   ".effect-result-modal",
   "#recruitmentModal",
@@ -86,7 +90,7 @@ function formatPersonNamesForConfirm(people) {
 }
 
 function confirmDespairingVillagersBeforeTurn(village) {
-  const despairingVillagers = village.villagers.filter(hasDespairState);
+  const despairingVillagers = getActiveVillagers(village).filter(hasDespairState);
   if (despairingVillagers.length === 0 || typeof window === "undefined") return true;
 
   const names = formatPersonNamesForConfirm(despairingVillagers);

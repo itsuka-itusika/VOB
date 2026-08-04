@@ -234,7 +234,7 @@ const EQUINA_VISITOR_TYPE = {
   ],
   useDisplayTypeAsJob: true,
   forcedSex: "女",
-  ageRange: { min: 18, max: 25 },
+  ageRange: { min: 18, max: 28 },
   params: {
     job: "旅人",
     action: "訪問",
@@ -411,21 +411,21 @@ export function selectPortraitByCharacter(character) {
   if (character.bodySex === "男") {
     const bodyTraits = character.bodyTraits;
     let selectedGroup = null;
-    
+
     // 1. まず特性による判定を行う
     if (bodyTraits.some(trait => [
       "巨漢", "怪力", "マッチョ", "筋骨隆々",
       "巨躯", "巨人"
     ].includes(trait))) {
       selectedGroup = MALE_PORTRAIT_FILES.GROUP_A;
-    } 
+    }
     else if (bodyTraits.some(trait => [
       "美形", "スマート", "中性的", "眉目秀麗", "優男",
       "色男", "ミステリアス", "クール"
     ].includes(trait))) {
       selectedGroup = MALE_PORTRAIT_FILES.GROUP_B;
     }
-    
+
     // 2. 特性がない場合はステータスで判定
     if (!selectedGroup) {
       if (character.chr >= 15) {
@@ -450,17 +450,17 @@ export function selectPortraitByCharacter(character) {
       usedPortraits.male.add(selected);
       return selected;
     }
-    
+
     // 4. 使用可能な顔グラフィックがない場合は使用済みリストをクリアして再選択
     usedPortraits.male.clear();
     const selected = randChoice(selectedGroup);
     usedPortraits.male.add(selected);
     return selected;
   }
-  
+
   // 女性の場合も同様の処理
   const bodyTraits = character.bodyTraits;
-  
+
   // グループA: 清楚・神秘系
   if (bodyTraits.some(trait => [
     "癒し系", "清楚", "神秘的", "ミステリアス",
@@ -473,7 +473,7 @@ export function selectPortraitByCharacter(character) {
       return selected;
     }
   }
-  
+
   // グループB: 華やか・魅惑系
   if (bodyTraits.some(trait => [
     "華やか", "魔性", "豊満", "スタイル抜群", "絶世の美女"
@@ -485,7 +485,7 @@ export function selectPortraitByCharacter(character) {
       return selected;
     }
   }
-  
+
   // グループC: 凛々しい・健康的系
   if (bodyTraits.some(trait => [
     "凛々しい", "クール", "しなやか",
@@ -498,7 +498,7 @@ export function selectPortraitByCharacter(character) {
       return selected;
     }
   }
-  
+
   // グループD: 普通・地味系
   if (bodyTraits.some(trait => [
     "虚弱", "やせ型", "小柄", "平凡",
@@ -511,7 +511,7 @@ export function selectPortraitByCharacter(character) {
       return selected;
     }
   }
-  
+
   // デフォルト: 特徴がない場合は普通グループから
   const availablePortraits = filterUnusedPortraits(FEMALE_PORTRAIT_FILES.GROUP_D);
   if (availablePortraits.length > 0) {
@@ -519,7 +519,7 @@ export function selectPortraitByCharacter(character) {
     usedPortraits.female.add(selected);
     return selected;
   }
-  
+
   // 全ての顔グラフィックが使用済みの場合、使用済みリストをクリアして再選択
   usedPortraits.female.clear();
   const selected = randChoice(FEMALE_PORTRAIT_FILES.GROUP_D);
@@ -588,7 +588,7 @@ export function createRandomVillager({ sex, minAge, maxAge, params = {}, ranges 
     job: params.job
   });
   let vill = new Villager(nm, sex, age);
-  
+
   if (params || ranges) {
     // デフォルトのランダム値で初期化
     initRandomParams(vill);
@@ -616,7 +616,7 @@ export function createRandomVillager({ sex, minAge, maxAge, params = {}, ranges 
   applyTraitParameterBonuses(vill);
   assignHobby(vill);
   refreshJobTable(vill);
-  
+
   // 顔グラフィックの設定
   // 棄民の場合は専用グループから選択
   if (vill.name && typeof vill.name === 'string' && vill.name.includes("棄民の")) {
@@ -690,17 +690,17 @@ export function generateRandomName(sex, options = {}) {
   } else if (options.race === "セントール" || options.job === "セントール" || options.job === "遊牧民" || options.job === "騎馬兵団") {
     nameList = steppeMaleNames;
   }
-  
+
   const reservedNames = getReservedNames(options.existingNames);
   const availableNames = nameList.filter(name => !reservedNames.has(name));
-  
+
   if (availableNames.length === 0) {
     const baseName = options.fallbackParentName || randChoice(nameList);
     const fallbackName = buildFallbackChildName(baseName, reservedNames);
     registerUsedName(fallbackName);
     return fallbackName;
   }
-  
+
   // ランダムに名前を選択して使用済みとしてマーク
   const chosenName = randChoice(availableNames);
   registerUsedName(chosenName);
@@ -755,7 +755,7 @@ export function initRandomParams(v) {
 export function determineSpeechType(character) {  // export を追加
   // デフォルトの口調
   const defaultSpeechType = (character.spiritSex || character.bodySex) === "男" ? "普通Ｍ" : "普通Ｆ";
-  
+
   // 精神特性がない場合はデフォルトを返す
   if (!character.mindTraits || character.mindTraits.length === 0) {
     return defaultSpeechType;
@@ -764,7 +764,7 @@ export function determineSpeechType(character) {  // export を追加
   // 最初の精神特性を使用して口調を決定
   const trait = character.mindTraits[0];
   const speechTypes = SPEECH_TYPE_MAPPING[trait];
-  
+
   if (!speechTypes) {
     return defaultSpeechType;
   }
@@ -1199,7 +1199,7 @@ function selectVisitorType(village = null) {
   const visitorTable = resolveVisitorTable(village);
   const totalWeight = visitorTable.reduce((sum, type) => sum + type.weight, 0);
   let random = Math.random() * totalWeight;
-  
+
   for (const visitorType of visitorTable) {
     random -= visitorType.weight;
     if (random <= 0) {
@@ -1350,14 +1350,14 @@ function isGoatPairVisitorType(visitorType) {
  */
 function buildVisitorFromType(visitorType, existingNames = [], options = {}) {
   const displayType = getVisitorDisplayType(visitorType);
-  
+
   // 性別を明示的に設定（visitorTypeに指定がなければランダム）
   const bodySex = visitorType.forcedSex || (Math.random() < 0.5 ? "男" : "女");
   const visitorParams = {
     ...visitorType.params,
     ...(visitorType.useDisplayTypeAsJob ? { job: displayType } : {})
   };
-  
+
   const visitor = createRandomVillager({
     sex: bodySex,  // 肉体性別を明示的に設定
     minAge: visitorType.ageRange.min,
@@ -1376,13 +1376,13 @@ function buildVisitorFromType(visitorType, existingNames = [], options = {}) {
   if (options.registerName !== false) {
     registerUsedName(visitor.name);
   }
-  
+
   // 訪問者は村人化するまで訪問固定。通常時の復帰先は持たない。
   setPreferredAction(visitor, ACTION_NONE);
   visitor.jobTable = [];
   visitor.action = "訪問";
   visitor.actionTable = ["訪問"];
-  
+
   // 精神特性に訪問者を追加（1回のみ）
   visitor.mindTraits.push("訪問者");
   if (visitorType.rareVisitorType) {
@@ -1402,7 +1402,7 @@ function buildVisitorFromType(visitorType, existingNames = [], options = {}) {
   if (visitorType.type === "棄民") {
     // 特別な精神特性をランダムで追加
     const specialTraits = [
-      "達人農夫", "達人木樵", "達人狩人", "達人漁師", 
+      "達人農夫", "達人木樵", "達人狩人", "達人漁師",
       "森の知恵", "海の知恵", "歴戦"
     ];
     const randomTrait = specialTraits[Math.floor(Math.random() * specialTraits.length)];
@@ -1413,7 +1413,7 @@ function buildVisitorFromType(visitorType, existingNames = [], options = {}) {
   visitor.portraitFile = Array.isArray(visitorType.portraits) && visitorType.portraits.length > 0
     ? randChoice(visitorType.portraits)
     : selectPortraitByCharacter(visitor);
-  
+
   // 精神性別が設定されていない場合は肉体性別と同じに設定
   if (!visitor.spiritSex) {
     visitor.spiritSex = visitor.bodySex;

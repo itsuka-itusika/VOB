@@ -8,6 +8,7 @@ import { getToneLookupKeys, resolveDialogueTone } from "./data/dialogue/toneProf
 import { DEFAULT_PORTRAIT_KEY, getPortraitAssetPath } from "./data/portraitPaths.js";
 import { addDivineMight } from "./divineMight.js";
 import { getCaptives } from "./captives.js";
+import { getActiveVillagers } from "./domain/apocalypseRules.js";
 import { clampValue, getVillagerFoodConsumption, getVillagerWinterMaterialConsumption, randChoice } from "./util.js";
 
 const DEFAULT_PORTRAIT_PATH = getPortraitAssetPath(DEFAULT_PORTRAIT_KEY);
@@ -167,7 +168,7 @@ export function fulfillBuildingRequest(village, buildingId) {
   const request = getActiveBuildingRequest(village);
   if (!request || request.buildingId !== buildingId) return null;
 
-  const requester = (village.villagers || []).find(person => person.name === request.requesterName);
+  const requester = getActiveVillagers(village).find(person => person.name === request.requesterName);
   if (requester) {
     requester.happiness = clampValue((Number(requester.happiness) || 0) + 30, 0, 100);
   }
@@ -191,7 +192,7 @@ function getBuildingRequestRuleLines(rule, person) {
 }
 
 function getBuildingRequestCandidates(village, buildings = []) {
-  const villagers = Array.isArray(village.villagers) ? village.villagers : [];
+  const villagers = getActiveVillagers(village);
   const buildingById = new Map(buildings.map(building => [building.id, building]));
   const builtIds = new Set(Array.isArray(village.buildings) ? village.buildings : []);
 

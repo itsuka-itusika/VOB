@@ -1,4 +1,4 @@
-import { doExchange } from "./exchange.js";
+import { canExchangeBody, doExchange } from "./exchange.js";
 import { createRandomVisitorOfType } from "./createVillagers.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { recordDryadFruitHistory, recordMarriageHistory } from "./history.js";
@@ -15,6 +15,7 @@ import { getCaptives } from "./captives.js";
 import { DESPAIR_TRAIT, DISAPPOINTMENT_TRAIT } from "./domain/despair.js";
 import { getDialogueLine } from "./dialogue/dialogueEngine.js";
 import { DEFAULT_PORTRAIT_KEY, getPortraitAssetPath } from "./data/portraitPaths.js";
+import { getActiveVillagers } from "./domain/apocalypseRules.js";
 
 const SEASON_TRAITS_TO_REMOVE = ["夏", "秋", "冬", "冷夏", "飛蝗", "厳冬", "疫病流行"];
 const BAD_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "凍え", "病気", "疫病", "産褥", "危篤"];
@@ -36,8 +37,8 @@ const SECRET_TREASURE_SELL_PRICES = {
   old_priest_statue: 100,
   [DRYAD_FRUIT_SECRET_TREASURE_ID]: 100,
   [PINECONE_STAFF_SECRET_TREASURE_ID]: 50,
-  pan_flute: 300,
-  grotesque_portrait: 500,
+  pan_flute: 100,
+  grotesque_portrait: 200,
   golden_mask: 500,
   blue_stone_tablet: 150,
   [MESSENGER_PASS_SECRET_TREASURE_ID]: 50
@@ -49,7 +50,7 @@ const DISABLED_RANDOM_SECRET_TREASURE_IDS = new Set([
 ]);
 
 function getVillagers(village) {
-  return Array.isArray(village.villagers) ? village.villagers : [];
+  return getActiveVillagers(village);
 }
 
 function randFrom(items) {
@@ -79,7 +80,7 @@ function getBodyExchangeCandidates(village) {
     ...getCaptives(village),
     ...(Array.isArray(village.visitors) ? village.visitors : []),
     ...(Array.isArray(village.raidEnemies) ? village.raidEnemies : [])
-  ];
+  ].filter(canExchangeBody);
 }
 
 function getPanFluteCandidates(village) {

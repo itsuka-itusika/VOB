@@ -3,6 +3,7 @@
 import { randInt, clampValue, getPortraitPath } from "./util.js";
 import { recordLoverHistory, recordMarriageHistory, recordSocialRelationHistory } from "./history.js";
 import { runAfterFestivalModals } from "./festivalModal.js";
+import { isSaltPillar } from "./domain/apocalypseRules.js";
 
 const FRIENDSHIP_MIN = -100;
 const FRIENDSHIP_MAX = 100;
@@ -40,6 +41,7 @@ const FRIENDSHIP_DEFAULT_BOUNDS = { min: -30, max: 30 };
 export function doLoverCheck(village, options = {}) {
   let candidatesA = village.villagers.filter(x=>
     x.spiritAge >= 16
+    && !isSaltPillar(x)
     && isSingle(x)
     && !hasMindTrait(x, "神聖")
     && !hasMindTrait(x, "野生")
@@ -91,6 +93,7 @@ function getOppositeSex(sex) {
 
 function isLoverCandidate(a, b) {
   if (!a || !b || a === b) return false;
+  if (isSaltPillar(a) || isSaltPillar(b)) return false;
   if (hasMindTrait(a, "神聖") || hasMindTrait(b, "神聖")) return false;
   const expectedBodySex = getOppositeSex(a.spiritSex);
   if (!expectedBodySex) return false;
@@ -125,6 +128,7 @@ function hasBodyTrait(person, trait) {
 export function doMarriageCheck(village) {
   let c = village.villagers.filter(x=>
     x.spiritAge>=18
+    && !isSaltPillar(x)
     && checkHasRelationship(x,"恋人")
     && !checkHasRelationship(x,"既婚")
   );
@@ -137,6 +141,7 @@ export function doMarriageCheck(village) {
   if (!bName) return;
 
   let b = village.villagers.find(xx=>xx.name===bName);
+  if (!b || isSaltPillar(b)) return;
   if (!b) return;
 
   let rA = Math.min(100, (a.ind+a.eth)*2);
@@ -382,7 +387,9 @@ export function raiseMutualFriendshipTo(a, b, minimum) {
 }
 
 function forEachVillagerPair(village, callback) {
-  const villagers = Array.isArray(village?.villagers) ? village.villagers : [];
+  const villagers = Array.isArray(village?.villagers)
+    ? village.villagers.filter(person => !isSaltPillar(person))
+    : [];
   for (let i = 0; i < villagers.length; i++) {
     for (let j = i + 1; j < villagers.length; j++) {
       callback(villagers[i], villagers[j]);

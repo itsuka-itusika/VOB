@@ -10,6 +10,10 @@ import { isCaptive, normalizeCaptive } from "./captives.js";
 
 const RAID_JOBS = ["野盗", "ゴブリン", "狼", "キュクロプス", "ハーピー"];
 
+export function canExchangeBody(person) {
+  return !!person && !person.exchangeImmune;
+}
+
 function cloneNullableObject(value) {
   return value == null ? null : { ...value };
 }
@@ -86,6 +90,10 @@ function markBodyExchangeSourceRace(person, fromRace, toRace) {
  * Swap body-related parameters between two characters.
  */
 export function doExchange(a, b, v, isLightning = false, historySource = null, options = {}) {
+  if (!isLightning && (!canExchangeBody(a) || !canExchangeBody(b))) {
+    v?.log?.("【交換無効】黙示録の四騎士には肉体交換が効きません。");
+    return false;
+  }
   ensureStatLayers(a);
   ensureStatLayers(b);
   const sourceRaceA = a.race || "人間";

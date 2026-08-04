@@ -25,6 +25,8 @@ export class Village {
     this.lastHeadmanElectionYear = null;
     this.nextHeadmanElectionYear = null;
     this.lastThunderboltMiracleMonth = "";
+    this.apocalypseStarted = false;
+    this.apocalypseStage = 0;
 
     this.villagers = [];
     this.pendingGoldenRainPregnancies = [];

@@ -57,6 +57,7 @@ import { getDivineMightStatus } from "./divineMight.js";
 import { getBuildingRequestWarnings } from "./buildingRequests.js";
 import { hasDespairState, hasDisappointmentState } from "./domain/despair.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
+import { getActiveVillagers, isApocalypseActive, isSaltPillar } from "./domain/apocalypseRules.js";
 import {
   VILLAGE_ROLE_DOCTOR,
   VILLAGE_ROLE_HEADMAN,
@@ -176,6 +177,7 @@ function formatWarningNames(people) {
 function buildWarningMessages(village) {
   const warnings = [];
   const villagers = Array.isArray(village.villagers) ? village.villagers : [];
+  const activeVillagers = getActiveVillagers(village);
   const peopleForConsumption = villagers.concat(getCaptives(village));
   const foodStorage = getResourceStorageStatus(village, "food");
   const materialStorage = getResourceStorageStatus(village, "materials");
@@ -183,14 +185,21 @@ function buildWarningMessages(village) {
   const foodCost = getMonthlyFoodCost(village);
   const monthsOfFood = foodCost > 0 ? village.food / foodCost : Infinity;
   const winterNeed = peopleForConsumption.reduce((sum, person) => sum + getVillagerWinterMaterialConsumption(person), 0) * getWinterMonthsToPrepare(village.month);
-  const lowHpCount = villagers.filter(person => Number(person.hp) <= 33).length;
-  const lowMpCount = villagers.filter(person => Number(person.mp) <= 33).length;
-  const despairingVillagers = villagers.filter(hasDespairState);
-  const disappointedVillagers = villagers.filter(person =>
+  const lowHpCount = activeVillagers.filter(person => Number(person.hp) <= 33).length;
+  const lowMpCount = activeVillagers.filter(person => Number(person.mp) <= 33).length;
+  const despairingVillagers = activeVillagers.filter(hasDespairState);
+  const disappointedVillagers = activeVillagers.filter(person =>
     hasDisappointmentState(person) && !hasDespairState(person) && (Number(person.happiness) || 0) <= 0
   );
-  const noActionCount = villagers.filter(isUnassignedActionVillager).length;
+  const noActionCount = activeVillagers.filter(isUnassignedActionVillager).length;
   const assemblyHallBuilt = hasActiveBuildingFlag(village, "hasAssemblyHall", "assemblyHall");
+
+  if (isApocalypseActive(village)) {
+    warnings.push({
+      level: "danger",
+      text: "天の怒りにより七つの災厄が村を襲う。人々が畏れ反省し、自ら黄金像を引き倒さない限り災いは続くだろう（建築コマンドから黄金像を破壊することができます）"
+    });
+  }
 
   if (foodCost > 0 && monthsOfFood <= 3) {
     warnings.push({
@@ -791,8 +800,10 @@ function appendNumberCell(row, value) {
 function appendPortraitCell(row, person) {
   const cell = document.createElement("td");
   cell.classList.add("villager-portrait-cell");
-  cell.style.cursor = "pointer";
-  cell.onclick = () => openConversationFor(person);
+  if (!isSaltPillar(person)) {
+    cell.style.cursor = "pointer";
+    cell.onclick = () => openConversationFor(person);
+  }
 
   const frame = document.createElement("div");
   frame.classList.add("villager-portrait-frame");
@@ -818,8 +829,10 @@ function appendIdentityCells(row, person) {
   appendPortraitCell(row, person);
 
   const nameCell = appendTextCell(row, person.name);
-  nameCell.style.cursor = "pointer";
-  nameCell.onclick = () => openConversationFor(person);
+  if (!isSaltPillar(person)) {
+    nameCell.style.cursor = "pointer";
+    nameCell.onclick = () => openConversationFor(person);
+  }
 
   appendTextCell(row, person.bodyOwner);
   appendDictionaryCell(row, [person.race || "人間"], { category: "race" });
@@ -1160,7 +1173,7 @@ export function updateUI(v) {
 
   // テーブル更新後にソート機能をセットアップ
   setupTableSort();
-  
+
   // もし現在ソート中の列があれば、その状態を維持
   if (sortState.column !== null) {
     sortVillagerTable(sortState.column, sortState.isAsc);

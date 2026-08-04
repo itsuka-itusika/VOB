@@ -55,6 +55,10 @@
   - ランダムイベントの実行本体。イベントデータ、会話、結果モーダルをつなぐ。
 - `js/heresyInquisition.js`
   - 規模・神威による異端審問の月初判定、もてなし費用、選択結果、専用モーダルを扱う。
+- `js/bacchusGoldenStatue.js`
+  - 異端・自治集落・神威Lv5による黄金像建立イベントの月初判定と建築解放モーダルを扱う。
+- js/apocalypse.js / js/domain/apocalypseRules.js
+  - 黄金像完成後の黙示録状態、七災厄の月初進行、塩の柱、専用襲撃開始、黄金像破壊・敗北中断・四騎士撃退時の仮エンディングを扱う。
 - `js/reproduction.js`
   - 妊娠、出産、産褥、成人化、成長段階を扱う。
 - `js/relationships.js`
@@ -139,6 +143,8 @@
 `historyEvents` を持たない既存セーブデータを読み込んだ場合は、読込時点の年月に「古い村史の欠落」イベントを1件追加し、それ以降の出来事だけを村史に記録します。個人記録は同じ `historyEvents` を人物名で絞り込んで表示し、村史に出さない個人向けイベントは `scope: "person"` として保存します。
 
 `tutorial` を持たない既存セーブデータは、読み込み時に未達成状態として初期化します。警告欄には通常警告の後に、食料生産、資材生産、納屋建築、奇跡使用の順で最初の未達成項目だけを表示します。全項目達成後は `tutorial.complete` が true になり、警告欄には表示されません。
+
+黄金像建立イベントの解放状態は buildingFlags.canBuildBacchusGoldenStatue、建築済み状態は建築物配列と buildingFlags.hasBacchusGoldenStatue、黙示録突入状態と進行段階は apocalypseStarted / apocalypseStage に保存します。塩の柱の経過は村人ごとの saltPillarMonths、四騎士の交換耐性・捕縛不可は exchangeImmune / uncapturable に保存します。これらを持たない既存セーブデータは未発生状態として読み込みます。
 
 ## 顔グラフィック画像
 

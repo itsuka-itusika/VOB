@@ -1,6 +1,7 @@
 import { clampValue, randInt } from "./util.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { addAcquiredStat } from "./domain/statLayers.js";
+import { getActiveVillagers } from "./domain/apocalypseRules.js";
 
 export class HobbyEffects {
   static apply(p, v) {
@@ -13,7 +14,7 @@ export class HobbyEffects {
 
     let msg = "";
     switch(h) {
-      case "喧嘩": 
+      case "喧嘩":
         msg = this.applyFighting(p, v);
         break;
       case "筋トレ":
@@ -187,16 +188,16 @@ export class HobbyEffects {
   static applyExposure(p, v) {
     p.hp = clampValue(p.hp-10, 0, 100);
     v.security = clampValue(v.security-10, 0, 100);
-    
+
     if (p.bodySex === "男") {
-      v.villagers.forEach(x => {
+      getActiveVillagers(v).forEach(x => {
         x.happiness = clampValue(x.happiness-5, 0, 100);
       });
       return "(露出[男]:体力-10,治安-10,全体幸福-5)";
     } else {
       let msg = "(露出[女]:体力-10,治安-10";
       if (p.chr >= 15) {
-        let men = v.villagers.filter(x => x.spiritSex === "男");
+        let men = getActiveVillagers(v).filter(x => x.spiritSex === "男");
         men.forEach(mm => {
           mm.happiness = clampValue(mm.happiness+5, 0, 100);
         });
@@ -217,7 +218,7 @@ export class HobbyEffects {
   static applySelfPower(p, v) {
     p.hp = clampValue(p.hp-20, 0, 100);
     if (p.bodySex === "女") {
-      let men = v.villagers.filter(x => x.spiritSex === "男");
+      let men = getActiveVillagers(v).filter(x => x.spiritSex === "男");
       men.forEach(mm => {
         mm.happiness = clampValue(mm.happiness+3, 0, 100);
       });
@@ -267,7 +268,7 @@ export class HobbyEffects {
 
   static applyPickup(p, v, targetSpiritSex) {
     p.mp = clampValue(p.mp + 10, 0, 100);
-    const targets = v.villagers.filter(x => x !== p && x.spiritSex === targetSpiritSex);
+    const targets = getActiveVillagers(v).filter(x => x !== p && x.spiritSex === targetSpiritSex);
     if (targets.length > 0) {
       const target = targets[randInt(0, targets.length - 1)];
       target.happiness = clampValue(target.happiness + 4, 0, 100);
@@ -421,7 +422,7 @@ export class HobbyEffects {
   static applyDance(p, v) {
     p.hp = clampValue(p.hp - 5, 0, 100);
     p.happiness = clampValue(p.happiness + 12, 0, 100);
-    const men = v.villagers.filter(x => x !== p && x.spiritSex === "男");
+    const men = getActiveVillagers(v).filter(x => x !== p && x.spiritSex === "男");
     men.forEach(mm => {
       mm.happiness = clampValue(mm.happiness + 2, 0, 100);
     });
@@ -450,7 +451,7 @@ export class HobbyEffects {
     p.mp = clampValue(p.mp + 10, 0, 100);
     p.happiness = clampValue(p.happiness + 8, 0, 100);
     const children = Array.isArray(v?.villagers)
-      ? v.villagers.filter(x => x !== p && Number(x.bodyAge) < 12)
+      ? getActiveVillagers(v).filter(x => x !== p && Number(x.bodyAge) < 12)
       : [];
     if (children.length > 0) {
       const child = children[randInt(0, children.length - 1)];
@@ -468,7 +469,7 @@ export class HobbyEffects {
 
   static applySinging(p, v) {
     p.mp = clampValue(p.mp + 12, 0, 100);
-    const listeners = Array.isArray(v?.villagers) ? v.villagers.filter(x => x !== p) : [];
+    const listeners = Array.isArray(v?.villagers) ? getActiveVillagers(v).filter(x => x !== p) : [];
     listeners.forEach(person => {
       person.happiness = clampValue(person.happiness + 2, 0, 100);
     });

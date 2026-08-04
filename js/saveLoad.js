@@ -187,6 +187,8 @@ function convertVillageToObject(village) {
       ? village.scaleTitleStage
       : getInitialScaleStageIndex(village.building),
     lastThunderboltMiracleMonth: String(village.lastThunderboltMiracleMonth || ""),
+    apocalypseStarted: !!village.apocalypseStarted,
+    apocalypseStage: Math.max(0, Math.min(7, Math.floor(normalizeFiniteNumber(village.apocalypseStage, 0)))),
     lastHeadmanElectionYear: village.lastHeadmanElectionYear != null && Number.isFinite(Number(village.lastHeadmanElectionYear))
       ? Number(village.lastHeadmanElectionYear)
       : null,
@@ -230,7 +232,7 @@ function convertVillageToObject(village) {
     pendingGoldenRainPregnancies: Array.isArray(village.pendingGoldenRainPregnancies)
       ? JSON.parse(JSON.stringify(village.pendingGoldenRainPregnancies))
       : [],
-    
+
     // 訪問者情報を追加
     visitors: village.visitors.map(vill => convertVillagerToObject(vill)),
     captives: (village.captives || []).map(vill => convertVillagerToObject(vill))
@@ -302,7 +304,7 @@ function convertVillagerToObject(vill) {
     actionTable: [...vill.actionTable],
     villageRole: normalizeVillageRoleForPerson(vill),
     bodyOwner: vill.bodyOwner,
-    
+
     // 口調タイプと顔グラフィック情報を追加
     speechType: vill.speechType,
     portraitFile: normalizePortraitFile(vill.portraitFile),
@@ -315,6 +317,9 @@ function convertVillagerToObject(vill) {
     nikeMonths: normalizeFiniteNumber(vill.nikeMonths, 0),
     portraitMonths: normalizeFiniteNumber(vill.portraitMonths, 0),
     portraitEthLoss: normalizeFiniteNumber(vill.portraitEthLoss, 0),
+    saltPillarMonths: normalizeFiniteNumber(vill.saltPillarMonths, 0),
+    exchangeImmune: !!vill.exchangeImmune,
+    uncapturable: !!vill.uncapturable,
     potentialStats: vill.potentialStats ? { ...vill.potentialStats } : null,
     bodyPotentialStats: vill.bodyPotentialStats ? { ...vill.bodyPotentialStats } : null,
     mindPotentialStats: vill.mindPotentialStats ? { ...vill.mindPotentialStats } : null,
@@ -395,6 +400,11 @@ function convertObjectToVillage(dataObj) {
   if (Array.isArray(dataObj.buildings)) {
     v.buildings = [...dataObj.buildings];
   }
+  v.apocalypseStarted = !!dataObj.apocalypseStarted || v.buildings.includes("bacchusGoldenStatue");
+  v.apocalypseStage = Math.max(0, Math.min(7, Math.floor(normalizeFiniteNumber(dataObj.apocalypseStage, 0))));
+  if (v.apocalypseStarted && !v.villageTraits.includes("黙示録")) {
+    v.villageTraits.push("黙示録");
+  }
   if (dataObj.buildingFlags) {
     v.buildingFlags = { ...dataObj.buildingFlags };
   }
@@ -434,7 +444,7 @@ function convertObjectToVillage(dataObj) {
       refreshJobTable(villager, v);
     });
   }
-  
+
   // 訪問者情報を復元
   if (Array.isArray(dataObj.visitors)) {
     v.visitors = dataObj.visitors.map(o => convertObjectToVillager(o));
@@ -512,14 +522,14 @@ function convertObjectToVillager(obj) {
   vill.action = obj.action || ACTION_NONE;
   vill.actionTable = Array.isArray(obj.actionTable) ? [...obj.actionTable] : [];
   vill.bodyOwner = obj.bodyOwner || obj.name;
-  
+
   // 口調タイプを保存・復元するように追加
   vill.speechType = obj.speechType || determineSpeechType(vill);
-  
+
   // 顔グラフィックのファイル名を復元
   vill.portraitFile = normalizePortraitFile(obj.portraitFile);
   vill.pastPortraitFiles = normalizePastPortraitFiles(obj.pastPortraitFiles);
-  
+
   // 種族情報を復元
   vill.race = normalizeRaceName(obj.race);
   if (obj.rareVisitorType) {
@@ -534,6 +544,9 @@ function convertObjectToVillager(obj) {
   vill.nikeMonths = normalizeFiniteNumber(obj.nikeMonths, 0);
   vill.portraitMonths = normalizeFiniteNumber(obj.portraitMonths, 0);
   vill.portraitEthLoss = normalizeFiniteNumber(obj.portraitEthLoss, 0);
+  vill.saltPillarMonths = normalizeFiniteNumber(obj.saltPillarMonths, 0);
+  vill.exchangeImmune = !!obj.exchangeImmune;
+  vill.uncapturable = !!obj.uncapturable;
   vill.potentialStats = obj.potentialStats ? { ...obj.potentialStats } : null;
   vill.bodyPotentialStats = hasOwn(obj, "bodyPotentialStats")
     ? cloneNullableObject(obj.bodyPotentialStats)

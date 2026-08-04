@@ -38,6 +38,9 @@ import { addDivineMight, getDivineMightGainFromMonthlyMana, runAfterPendingDivin
 import { BUILDINGS } from "./buildings.js";
 import { advanceBuildingRequestMonth, tryStartBuildingRequest } from "./buildingRequests.js";
 import { tryTriggerHeresyInquisition } from "./heresyInquisition.js";
+import { tryTriggerBacchusGoldenStatueEvent } from "./bacchusGoldenStatue.js";
+import { advanceSaltPillarMonths, processApocalypseMonthStart } from "./apocalypse.js";
+import { getActiveVillagers, isSaltPillar } from "./domain/apocalypseRules.js";
 import {
   clearCaptiveFailedTraits,
   getCaptives,
@@ -83,6 +86,7 @@ function recoverBattleDebugVillagers(village) {
 
 function processSeriousInjuryMonthStart(village) {
   getPeopleForFoodAndWinterMaterials(village).forEach(person => {
+    if (isSaltPillar(person)) return;
     if (!Array.isArray(person.bodyTraits)) person.bodyTraits = [];
     if (!person.bodyTraits.includes(TRAIT_SERIOUS_INJURY)) return;
 
@@ -112,7 +116,7 @@ function resetMonthlySocialAttemptFlags(village) {
 }
 
 function applySecurityBaselineDecay(village) {
-  const villagers = Array.isArray(village.villagers) ? village.villagers : [];
+  const villagers = getActiveVillagers(village);
   const averageEthics = villagers.length > 0
     ? villagers.reduce((sum, person) => sum + (Number(person.eth) || 0), 0) / villagers.length
     : 0;
@@ -194,7 +198,7 @@ export function doFixedEventPost(village) {
 function newYearFestival(v) {
   showFestivalModal("newYear");
   v.log("【新年祭】体力+20,メンタル+20,幸福+20-30 全員");
-  v.villagers.forEach(p=>{
+  getActiveVillagers(v).forEach(p=>{
     p.hp=clampValue(p.hp+20,0,100);
     p.mp=clampValue(p.mp+20,0,100);
     let inc=randInt(20,30);
@@ -205,7 +209,7 @@ function newYearFestival(v) {
 function resurrectionFestival(v) {
   showFestivalModal("resurrection");
   v.log("【復活祭】体力+20,メンタル+20");
-  v.villagers.forEach(p=>{
+  getActiveVillagers(v).forEach(p=>{
     p.hp=clampValue(p.hp+20,0,100);
     p.mp=clampValue(p.mp+20,0,100);
   });
@@ -214,7 +218,7 @@ function resurrectionFestival(v) {
 function summerSolsticeFestival(v) {
   showFestivalModal("summerSolstice");
   v.log("【夏至祭】体力+20,メンタル+20 +結婚判定");
-  v.villagers.forEach(p=>{
+  getActiveVillagers(v).forEach(p=>{
     p.hp=clampValue(p.hp+20,0,100);
     p.mp=clampValue(p.mp+20,0,100);
   });
@@ -228,7 +232,7 @@ function harvestFestival(v) {
     runAfterFestivalModals(showPineconeStaffIntroModal);
   }
   v.log(`【収穫祭】全員体力+30,メンタル+10${treasure ? `,${treasure.name}+1` : ""}`);
-  v.villagers.forEach(p=>{
+  getActiveVillagers(v).forEach(p=>{
     p.hp=clampValue(p.hp+30,0,100);
     p.mp=clampValue(p.mp+10,0,100);
   });
@@ -293,6 +297,7 @@ function restoreRecoveredForcedActions(village) {
 }
 
 export function runMonthStartPhase(village) {
+  advanceSaltPillarMonths(village);
   const monthStartSeason = [3,6,9,12].includes(village.month)
     ? updateSeason(village, { showDialog: false, logChange: false })
     : "";
@@ -305,12 +310,14 @@ export function runMonthStartPhase(village) {
   doFixedEventPre(village);
   handleBirthAndPostpartum(village);
   restoreRecoveredForcedActions(village);
-  doRandomEventPre(village);
+  const apocalypseActive = processApocalypseMonthStart(village);
+  if (!apocalypseActive) doRandomEventPre(village);
   tryStartBuildingRequest(village, BUILDINGS);
   applyMonthStartRestrictions(village);
   runHeadmanElectionIfDue(village);
   tryTriggerHeresyInquisition(village);
-  doRaidStartCheck(village);
+  if (!apocalypseActive) doRaidStartCheck(village);
+  tryTriggerBacchusGoldenStatueEvent(village);
 }
 
 function getVisitorLimit(village) {
@@ -341,6 +348,7 @@ function applyPublicBathMonthlyRecovery(village) {
   let recoveredCount = 0;
   let blockedCount = 0;
   village.villagers.forEach(person => {
+    if (isSaltPillar(person)) return;
     if (isPublicBathRecoveryBlocked(person)) {
       blockedCount++;
       return;
@@ -380,6 +388,7 @@ function applyFountainMonthlyHappiness(village) {
   let affectedCount = 0;
   let blockedCount = 0;
   village.villagers.forEach(person => {
+    if (isSaltPillar(person)) return;
     if (hasHopeLossState(person)) {
       blockedCount++;
       return;
@@ -410,6 +419,7 @@ function processHopeLossAtMonthStart(village) {
   const leavingPeople = [];
 
   village.villagers.forEach(person => {
+    if (isSaltPillar(person)) return;
     person.mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
 
     if (hasDespairState(person)) {
@@ -470,6 +480,7 @@ export function endOfMonthProcess(v) {
   let isWinter = v.villageTraits.includes("冬");
 
   getPeopleForFoodAndWinterMaterials(v).forEach(p=>{
+    if (isSaltPillar(p)) return;
     totalF += getVillagerFoodConsumption(p);
 
     if (isWinter) {
@@ -496,7 +507,7 @@ export function endOfMonthProcess(v) {
   recoverBattleDebugVillagers(v);
 
   // 危篤者の死亡処理（危篤者は必ず死亡）
-  let deadPeople = getPeopleForFoodAndWinterMaterials(v).filter(p => p.bodyTraits.includes("危篤"));
+  let deadPeople = getPeopleForFoodAndWinterMaterials(v).filter(p => !isSaltPillar(p) && p.bodyTraits.includes("危篤"));
   deadPeople.forEach(p => {
     if (removeResidentOrCaptive(v, p)) {
       recordVillagerDeathHistory(v, p, { reason: "老衰" });
@@ -509,6 +520,7 @@ export function endOfMonthProcess(v) {
 
   // 狂乱・酩酊の解除処理
   getPeopleForFoodAndWinterMaterials(v).forEach(p => {
+    if (isSaltPillar(p)) return;
     if (p.mindTraits.includes("狂乱")) {
       p.mindTraits = p.mindTraits.filter(t => t !== "狂乱");
       syncEffectiveStats(p);
@@ -523,6 +535,7 @@ export function endOfMonthProcess(v) {
 
   // 火星の加護の効果期間更新 (3ヶ月経過した場合、効果を終了)
   v.villagers.forEach(p => {
+    if (isSaltPillar(p)) return;
     p.bodyTraits = Array.isArray(p.bodyTraits) ? p.bodyTraits : [];
     p.mindTraits = Array.isArray(p.mindTraits) ? p.mindTraits : [];
     if (p.bodyTraits.includes("火星の加護") || p.mindTraits.includes("火星の加護")) {
@@ -549,6 +562,7 @@ export function endOfMonthProcess(v) {
 
   // ニケの効果期間更新 (1ヶ月経過した場合、効果を終了)
   v.villagers.forEach(p => {
+    if (isSaltPillar(p)) return;
     if (p.mindTraits.includes("ニケ")) {
       if (typeof p.nikeMonths !== "number") {
         p.nikeMonths = 0;
@@ -565,6 +579,7 @@ export function endOfMonthProcess(v) {
 
   // 肖像の効果期間更新 (1ヶ月経過した場合、効果を終了)
   v.villagers.forEach(p => {
+    if (isSaltPillar(p)) return;
     if (p.mindTraits.includes("肖像")) {
       if (typeof p.portraitMonths !== "number") {
         p.portraitMonths = 0;
@@ -583,6 +598,7 @@ export function endOfMonthProcess(v) {
 
   // 状態異常の解除処理
   v.villagers.forEach(p => {
+    if (isSaltPillar(p)) return;
     let changed = false;
     let bodyTraitsToRemove = ["飢餓", "凍え", "疲労", "過労", "病気", "疫病"];
     bodyTraitsToRemove.forEach(trait => {
@@ -632,6 +648,7 @@ export function doMonthStartProcess(v) {
 
   // 老人・老狼の危篤化判定（5%）
   getPeopleForFoodAndWinterMaterials(v).forEach(p => {
+    if (isSaltPillar(p)) return;
     if ((p.bodyTraits.includes("老人") || p.bodyTraits.includes(OLD_WOLF_TRAIT)) && !p.bodyTraits.includes("危篤")) {
       if (Math.random() < 0.05) {  // 5%の確率
         p.bodyTraits.push("危篤");
@@ -643,7 +660,7 @@ export function doMonthStartProcess(v) {
 
   // 幸福度由来の魔素増加
   let tot=0;
-  v.villagers.forEach(p=>{
+  getActiveVillagers(v).forEach(p=>{
     let amt=6*(p.happiness/100);
     tot+=amt;
   });
@@ -660,6 +677,7 @@ export function doMonthStartProcess(v) {
   if (v.food<=0) {
     v.log("食料0→飢餓発生");
     getPeopleForFoodAndWinterMaterials(v).forEach(p=>{
+      if (isSaltPillar(p)) return;
       if (Array.isArray(p.bodyTraits) && p.bodyTraits.includes("光合成")) {
         v.log(`${p.name}は光合成により飢餓を免れた`);
         return;
@@ -668,7 +686,7 @@ export function doMonthStartProcess(v) {
       if (!p.bodyTraits.includes("飢餓")) {
         p.bodyTraits.push("飢餓");
       }
-      
+
       // 各種ステータスにペナルティ
       syncEffectiveStats(p);
       p.hp = Math.floor(p.hp * 0.5);  // 体力を50%に
@@ -679,6 +697,7 @@ export function doMonthStartProcess(v) {
   if (v.villageTraits.includes("冬") && v.materials<=0) {
     v.log("冬なのに資材0→凍え");
     getPeopleForFoodAndWinterMaterials(v).forEach(p=>{
+      if (isSaltPillar(p)) return;
       if (isWolf(p)) {
         v.log(`${p.name}は狼の耐寒性で凍えを免れた`);
         return;
@@ -688,7 +707,7 @@ export function doMonthStartProcess(v) {
       if (!p.bodyTraits.includes("凍え")) {
         p.bodyTraits.push("凍え");
       }
-      
+
       // 各種ステータスにペナルティ
       syncEffectiveStats(p);
       p.hp = Math.floor(p.hp * 0.5);  // 体力を50%に
@@ -699,6 +718,7 @@ export function doMonthStartProcess(v) {
 
   // 体力・メンタル状態によるペナルティ
   v.villagers.forEach(p => {
+    if (isSaltPillar(p)) return;
     // 体力に関するペナルティ
     if (p.hp <= 0) {
       // 過労状態
@@ -707,7 +727,7 @@ export function doMonthStartProcess(v) {
       }
       syncEffectiveStats(p);
       p.happiness = clampValue(p.happiness - 30, 0, 100);
-      
+
 
       v.log(`${p.name}は過労状態になった`);
     } else if (p.hp <= 33) {
@@ -718,7 +738,7 @@ export function doMonthStartProcess(v) {
       syncEffectiveStats(p);
       v.log(`${p.name}は疲労状態になった`);
     }
-    
+
     // メンタルに関するペナルティ
     if (p.mp <= 0) {
       // 抑鬱状態
@@ -747,7 +767,7 @@ export function doMonthStartProcess(v) {
   applyFountainMonthlyHappiness(v);
 
   // 幸福度調整
-  v.villagers.forEach(p=>{
+  getActiveVillagers(v).forEach(p=>{
     if (p.happiness>50) {
       let diff = p.happiness-50;
       let dec = Math.floor(diff * randFloat(0.2,0.4));
@@ -776,6 +796,7 @@ export function doMonthStartProcess(v) {
 
   // 全村人の行動テーブルを再構築し、一時行動から通常の復帰先へ戻す
   v.villagers.forEach(p=>{
+    if (isSaltPillar(p)) return;
     const currentAction = String(p.action || ACTION_NONE).trim() || ACTION_NONE;
 
     p.actionTable = [];
@@ -867,6 +888,7 @@ export function doMonthStartProcess(v) {
 export function doAgingProcess(v) {
   v.log("【加齢処理】");
   v.villagers.forEach(p=>{
+    if (isSaltPillar(p)) return;
     p.bodyAge++;
     p.spiritAge++;
     if (isWolf(p)) {

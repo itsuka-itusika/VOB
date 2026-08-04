@@ -754,6 +754,146 @@ export const RAIDER_TYPES = [
       "一度退いても終わりではない。次の波が来る。",
       "この村は兵站に使える。焼きすぎるな、奪い尽くせ。"
     ]
+  },
+  {
+    type: "黙示録の騎士・征服",
+    displayType: "白の騎士",
+    weight: 0,
+    minCount: 1,
+    maxCount: 1,
+    race: "異形の大天使",
+    ageRange: { min: 100, max: 300 },
+    params: { job: "黙示録の騎士・征服", action: "襲撃" },
+    raidPosition: "middle",
+    raidTargeting: "frontMiddleRandom",
+    useDefaultPortrait: true,
+    exchangeImmune: true,
+    uncapturable: true,
+    ranges: {
+      hp: [230, 260],
+      str: [38, 46],
+      vit: [36, 44],
+      dex: [40, 48],
+      mag: [48, 58],
+      chr: [44, 54],
+      int: [42, 52],
+      ind: [36, 44],
+      eth: [42, 50],
+      cou: [42, 50],
+      sexdr: [0, 4]
+    },
+    forcedBodyTraits: ["飛行", "光輪", "異形の大天使"],
+    mindTraits: ["神聖", "狂信", "歴戦"],
+    dialogues: [
+      "白き冠の下にひれ伏せ。すべての地は、天のものとなる。",
+      "おまえたちの奇跡で、この身を奪うことはできぬ。",
+      "征服は慈悲である。抗う自由さえ、ここで終わる。"
+    ]
+  },
+  {
+    type: "黙示録の騎士・戦争",
+    displayType: "赤の騎士",
+    weight: 0,
+    minCount: 1,
+    maxCount: 1,
+    race: "異形の大天使",
+    ageRange: { min: 100, max: 300 },
+    params: { job: "黙示録の騎士・戦争", action: "襲撃" },
+    raidPosition: "front",
+    raidTargeting: "frontFirst",
+    useDefaultPortrait: true,
+    exchangeImmune: true,
+    uncapturable: true,
+    ranges: {
+      hp: [260, 300],
+      str: [52, 62],
+      vit: [46, 56],
+      dex: [36, 44],
+      mag: [38, 48],
+      chr: [38, 46],
+      int: [34, 42],
+      ind: [46, 54],
+      eth: [32, 40],
+      cou: [52, 60],
+      sexdr: [0, 4]
+    },
+    forcedBodyTraits: ["飛行", "光輪", "異形の大天使"],
+    mindTraits: ["神聖", "狂信", "歴戦"],
+    dialogues: [
+      "赤き剣は、村と村人を分けては斬らぬ。すべてを戦場に変える。",
+      "争え。憎め。そのたびに私の刃は重くなる。",
+      "黄金の像を守る腕ごと、地へ落とそう。"
+    ]
+  },
+  {
+    type: "黙示録の騎士・飢饉",
+    displayType: "黒の騎士",
+    weight: 0,
+    minCount: 1,
+    maxCount: 1,
+    race: "異形の大天使",
+    ageRange: { min: 100, max: 300 },
+    params: { job: "黙示録の騎士・飢饉", action: "襲撃" },
+    raidPosition: "middle",
+    raidTargeting: "frontMiddleRandom",
+    useDefaultPortrait: true,
+    exchangeImmune: true,
+    uncapturable: true,
+    ranges: {
+      hp: [220, 250],
+      str: [34, 42],
+      vit: [38, 46],
+      dex: [42, 50],
+      mag: [54, 64],
+      chr: [32, 40],
+      int: [48, 58],
+      ind: [44, 52],
+      eth: [38, 46],
+      cou: [40, 48],
+      sexdr: [0, 4]
+    },
+    forcedBodyTraits: ["飛行", "光輪", "異形の大天使"],
+    mindTraits: ["神聖", "狂信", "歴戦"],
+    dialogues: [
+      "黒き秤に麦を載せよ。おまえたちの一日を、一粒ずつ量ろう。",
+      "倉は空となり、腹は祈りのほか何も受けつけなくなる。",
+      "飢えに肉体はない。ゆえに、交換の奇跡も届かぬ。"
+    ]
+  },
+  {
+    type: "黙示録の騎士・死",
+    displayType: "青白い騎士",
+    weight: 0,
+    minCount: 1,
+    maxCount: 1,
+    race: "異形の大天使",
+    ageRange: { min: 100, max: 300 },
+    params: { job: "黙示録の騎士・死", action: "襲撃" },
+    raidPosition: "front",
+    raidTargeting: "lowestHp",
+    useDefaultPortrait: true,
+    exchangeImmune: true,
+    uncapturable: true,
+    ranges: {
+      hp: [240, 280],
+      str: [46, 56],
+      vit: [42, 50],
+      dex: [46, 56],
+      mag: [50, 60],
+      chr: [30, 38],
+      int: [46, 54],
+      ind: [50, 60],
+      eth: [34, 42],
+      cou: [48, 58],
+      sexdr: [0, 4]
+    },
+    forcedBodyTraits: ["飛行", "光輪", "異形の大天使"],
+    mindTraits: ["神聖", "狂信", "歴戦"],
+    dialogues: [
+      "青白き翼が触れた名を、村の記録から消そう。",
+      "私は急がぬ。七つ目の角笛は、すでに鳴り終えた。",
+      "肉体を替えても、死の順番は替わらぬ。"
+    ]
   }
 
 ];
@@ -1246,6 +1386,90 @@ export const RAID_MODULES = [
       "偵察は終わった。ここからは兵団の戦だ。",
       "一波を退けても次が来る。兵站の整った軍を侮るな。",
       "高い士気と馬上の弓で、この村を包囲する。"
+    ]
+  }),
+  createCompositeRaiderRaid({
+    id: "apocalypse-upper-winged",
+    name: "第五の災厄・上位翼人兵の襲撃",
+    warningName: "上位翼人兵",
+    weight: 0,
+    representative: { raiderType: "上位翼人" },
+    enemyGroups: [
+      { raiderType: "上位翼人", minCount: 3, maxCount: 4 },
+      { raiderType: "翼人兵", minCount: 4, maxCount: 6 }
+    ],
+    defense: { surviveTurns: 6 },
+    failurePenalty: {
+      security: 28,
+      villagerHpRange: [18, 35],
+      villagerHappiness: 55,
+      severeInjury: true
+    },
+    introDialogues: [
+      "第五の角笛は鳴った。幾重の翼の下で、異端の村は裁かれる。",
+      "空を見上げよ。天の怒りは、刃となって降りる。",
+      "黄金の偶像を倒さぬ者に、もはや赦しはない。"
+    ]
+  }),
+  createCompositeRaiderRaid({
+    id: "apocalypse-grand-crusade",
+    name: "第六の災厄・大規模聖征軍団の襲撃",
+    warningName: "大規模聖征軍団",
+    weight: 0,
+    representative: [
+      { raiderType: "聖騎士" },
+      { raiderType: "聖女" }
+    ],
+    enemyGroups: [
+      { raiderType: "重装兵", minCount: 6, maxCount: 8 },
+      { raiderType: "上級騎士", minCount: 4, maxCount: 6 },
+      { raiderType: "聖騎士", minCount: 2, maxCount: 3 },
+      { raiderType: "聖女", minCount: 2, maxCount: 3 }
+    ],
+    defense: { surviveTurns: 7 },
+    failurePenalty: {
+      materialsRate: 0.5,
+      fundsRate: 0.5,
+      security: 35,
+      villagerHpRange: [25, 45],
+      villagerHappiness: 65,
+      buildingDamage: true,
+      severeInjury: true
+    },
+    introDialogues: [
+      "第六の角笛は鳴った。聖征の全軍をもって、この村を地図から消す。",
+      "天の怒りに抗う者よ、盾を並べよ。これが最後の悔い改めの時だ。",
+      "黄金の偶像を砕くまで、聖なる軍靴は止まらない。"
+    ]
+  }),
+  createCompositeRaiderRaid({
+    id: "apocalypse-four-horsemen",
+    name: "第七の災厄・黙示録の四騎士",
+    warningName: "黙示録の四騎士",
+    weight: 0,
+    representative: { raiderType: "黙示録の騎士・征服" },
+    enemyGroups: [
+      { raiderType: "黙示録の騎士・征服", minCount: 1, maxCount: 1 },
+      { raiderType: "黙示録の騎士・戦争", minCount: 1, maxCount: 1 },
+      { raiderType: "黙示録の騎士・飢饉", minCount: 1, maxCount: 1 },
+      { raiderType: "黙示録の騎士・死", minCount: 1, maxCount: 1 }
+    ],
+    defense: { surviveTurns: 8 },
+    successRewards: { completeHappiness: 30, partialHappiness: 15 },
+    failurePenalty: {
+      foodRate: 0.6,
+      materialsRate: 0.6,
+      fundsRate: 0.6,
+      security: 45,
+      villagerHpRange: [30, 55],
+      villagerHappiness: 75,
+      buildingDamage: true,
+      severeInjury: true
+    },
+    introDialogues: [
+      "第七の角笛は鳴った。征服、戦争、飢饉、死――四つの裁きがここに揃う。",
+      "肉体を取り替える奇跡など、天の使いには届かぬ。",
+      "我らを退けるか、黄金の偶像とともに砕かれるか。選べ。"
     ]
   })
 ];

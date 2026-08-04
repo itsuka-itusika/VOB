@@ -24,6 +24,8 @@ import {
 import { refreshJobTable } from "./domain/jobTables.js";
 import { updateUI } from "./ui.js";
 import { applyRaidFriendshipResults, recordRaidFriendshipDamage, startRaidFriendshipTracking } from "./relationships.js";
+import { handleApocalypseRaidResult } from "./apocalypse.js";
+import { isSaltPillar } from "./domain/apocalypseRules.js";
 
 const RAID_CLOSE_DELAY_MS = 700;
 const RAID_ACTION_SETTLE_DELAY_MS = 780;
@@ -346,6 +348,7 @@ function rollRaidSevereInjuryCheck(village, raidRules) {
   if (raidRules.failurePenalty?.severeInjury !== true) return null;
 
   const candidates = (village.villagers || []).filter(person => {
+    if (isSaltPillar(person)) return false;
     const bodyTraits = Array.isArray(person.bodyTraits) ? person.bodyTraits : [];
     return (Number(person.hp) || 0) <= 0 &&
       !bodyTraits.includes(TRAIT_SERIOUS_INJURY) &&
@@ -980,6 +983,7 @@ function finalizeRaidPartSuccess(village) {
 function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
   if (village.isRaidFinalizing || village.isRaidProcessDone) return;
 
+  const completedRaidId = village.currentRaid?.id || "";
   village.isRaidFinalizing = true;
   village.isRaidProcessDone = true;
   village.raidActionQueue = [];
@@ -1021,6 +1025,7 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
         : raidRules.successRewards?.completeHappiness) || 0;
       if (happinessGain !== 0) {
         village.villagers.forEach(p=>{
+          if (isSaltPillar(p)) return;
           p.happiness=clampValue(p.happiness+happinessGain,0,100);
         });
       }
@@ -1038,6 +1043,7 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
       village.security=clampValue(village.security - penalty.securityLoss,0,100);
 
       village.villagers.forEach(p=>{
+        if (isSaltPillar(p)) return;
         if (penalty.hpMax > 0) {
           p.hp=clampValue(p.hp - randInt(penalty.hpMin, penalty.hpMax),0,100);
         }
@@ -1064,6 +1070,7 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
 
     const severeInjuryResult = rollRaidSevereInjuryCheck(village, raidRules);
     applyRaidFriendshipResults(village);
+    handleApocalypseRaidResult(village, completedRaidId, isSuccess);
     village.isRaidProcessDone=true;
     village.currentRaid = null;
 
@@ -1340,7 +1347,7 @@ function appendRaidStatSummaryCell(row, unit) {
 // 戦闘ダメージを受けた際の処理を追加
 function applyDamage(target, damage, village) {
   target.hp = clampValue(target.hp - damage, 0, 100);
-  
+
   // HP0以下になった場合の処理
   if (target.hp <= 0) {
     // 村人の場合（襲撃者でない場合）の処理
@@ -1358,16 +1365,16 @@ function applyDamage(target, damage, village) {
 // 戦闘処理の部分を修正
 function executeCombatAction(action, village) {
   let rlog = document.getElementById("raidLogArea");
-  
+
   switch(action.type) {
     case "ATTACK": {
       let atk = action.attacker;
       let def = action.defender;
       let dmg = calcDamage(atk, def);
-      
+
       // ダメージ適用を関数化した処理に変更
       applyDamage(def, dmg.damage, village);
-      
+
       rlog.innerHTML += `<br>${atk.name} → ${def.name} : ${dmg.damage}ダメージ`;
       if (def.hp <= 0) {
         rlog.innerHTML += `<br>${def.name}は戦闘不能！`;
@@ -1376,7 +1383,7 @@ function executeCombatAction(action, village) {
     }
     // ... 他のケース ...
   }
-  
+
   updateRaidTables(village);
   checkCombatEndOfActions(village);
 }

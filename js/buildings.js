@@ -13,6 +13,13 @@ import {
 import { completeTutorialTask } from "./tutorial.js";
 import { showVillageScaleMilestones } from "./villageScale.js";
 import { fulfillBuildingRequest, getBuildingCostForVillage } from "./buildingRequests.js";
+import {
+  BACCHUS_GOLDEN_STATUE_BUILDING_ID,
+  BACCHUS_GOLDEN_STATUE_BUILT_FLAG,
+  BACCHUS_GOLDEN_STATUE_UNLOCK_FLAG,
+  startApocalypseFromGoldenStatue
+} from "./bacchusGoldenStatue.js";
+import { destroyBacchusGoldenStatue } from "./apocalypse.js";
 
 function ensureBuildingFlags(village) {
   if (!village.buildingFlags) village.buildingFlags = {};
@@ -297,6 +304,21 @@ export const BUILDINGS = [
     desc: "繁栄した郷村で解放。営倉建設後に建設可能。捕虜を最大3名まで収容できる。規模+20",
     isUnlocked: canBuildPrison,
     effect: standardBuildingEffect({ scale: 20, flag: "hasPrison", log: "牢獄建設完了: 捕虜を最大3名まで収容可能、規模+20" })
+  },
+  {
+    id: BACCHUS_GOLDEN_STATUE_BUILDING_ID,
+    name: "バッカスの黄金像",
+    materials: 500,
+    funds: 1500,
+    tech: 1000,
+    desc: "黄金像建立イベントで解放。交換の奇跡と交換の奇跡・強の消費魔素を半分にする。建設すると次月から七つの災厄が始まる。建設後は破壊可能。",
+    isUnlocked: (village) => !!village?.buildingFlags?.[BACCHUS_GOLDEN_STATUE_UNLOCK_FLAG],
+    confirmMessage: "警告：バッカスの黄金像を建設すると、天に怒りの声が響きます。\n次月から七つの災厄が順に村を襲い、ランダムイベントと通常の襲撃は停止します。\n\n黙示録は建築画面から黄金像を破壊することで中断できます。\nそれでも建設しますか？",
+    effect: (village) => {
+      ensureBuildingFlags(village)[BACCHUS_GOLDEN_STATUE_BUILT_FLAG] = true;
+      village.log("バッカスの黄金像建設完了: 交換の奇跡と交換の奇跡・強の消費魔素が半分になりました");
+    },
+    onConstructed: startApocalypseFromGoldenStatue
   }
 ];
 
@@ -419,7 +441,8 @@ function createBuildingItem(building, village) {
   button.disabled = isBuilt || reachedLimit || !canBuild;
   if (canBuild) {
     button.onclick = () => {
-      if (confirm(`${building.name}を建設しますか？`)) constructBuilding(building, village);
+      const confirmMessage = building.confirmMessage || `${building.name}を建設しますか？`;
+      if (confirm(confirmMessage)) constructBuilding(building, village);
     };
   }
   div.appendChild(button);
@@ -435,6 +458,17 @@ function createBuildingItem(building, village) {
       };
     }
     div.appendChild(repairButton);
+  }
+  if (building.id === BACCHUS_GOLDEN_STATUE_BUILDING_ID && builtCount > 0) {
+    const destroyButton = document.createElement("button");
+    destroyButton.className = "building-button destroy";
+    destroyButton.textContent = "黄金像を破壊";
+    destroyButton.onclick = () => {
+      const message = "バッカスの黄金像を破壊しますか？\n黙示録は中断され、交換の奇跡の消費魔素半減効果も失われます。\n建築解放フラグは残るため、後から再建できます。";
+      if (!confirm(message)) return;
+      if (destroyBacchusGoldenStatue(village)) openBuildingModal(village);
+    };
+    div.appendChild(destroyButton);
   }
   return div;
 }
@@ -521,6 +555,9 @@ function constructBuilding(building, village) {
 
   import("./ui.js").then(module => module.updateUI(village));
   closeBuildingModal();
+  if (typeof building.onConstructed === "function") {
+    building.onConstructed(village);
+  }
 }
 
 export function damageRandomBuilding(village) {

@@ -11,6 +11,7 @@ import {
   isHeadman,
   setVillageRole
 } from "./domain/villageRoles.js";
+import { getActiveVillagers } from "./domain/apocalypseRules.js";
 
 const ELECTION_MONTH = 7;
 const ELECTION_INTERVAL_YEARS = 3;
@@ -40,15 +41,15 @@ function isAdultMind(person) {
 }
 
 function getCurrentHeadmen(village) {
-  return (village.villagers || []).filter(isHeadman);
+  return getActiveVillagers(village).filter(isHeadman);
 }
 
 function getCandidates(village) {
-  return (village.villagers || []).filter(person => isAdultMind(person) && !isHeadman(person));
+  return getActiveVillagers(village).filter(person => isAdultMind(person) && !isHeadman(person));
 }
 
 function getVoters(village) {
-  return (village.villagers || []).filter(isAdultMind);
+  return getActiveVillagers(village).filter(isAdultMind);
 }
 
 function stat(person, key) {

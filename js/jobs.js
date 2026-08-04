@@ -44,8 +44,9 @@ import { rollSecretTreasureJobEvents, showSecretTreasureEventModals } from "./se
 import { completeTutorialTask } from "./tutorial.js";
 import { incrementTitleCounter, TITLE_COUNTER_KEYS } from "./titles.js";
 import { addDivineMight, showPendingDivineMightLevelUpModal } from "./divineMight.js";
+import { isSaltPillar } from "./domain/apocalypseRules.js";
 
-const HEALING_RECOVERABLE_BODY_TRAITS = ["負傷", "重体", "疫病"];
+const HEALING_RECOVERABLE_BODY_TRAITS = ["負傷", "疫病"];
 const BASE_JOB_STAT_GROWTH_CHANCE = 0.05;
 const PHYSICAL_JOB_GROWTH_STATS = new Set(["str", "vit", "dex", "mag", "chr"]);
 const MENTAL_JOB_GROWTH_STATS = new Set(["int", "ind", "eth", "cou", "sexdr"]);
@@ -385,8 +386,8 @@ function doRestJob(p, v) {
   let mpG = 0;
   let msg = "";
   if (p.mindTraits.includes("ワーカホリック")) {
-    hpG = 30; 
-    mpG = -10; 
+    hpG = 30;
+    mpG = -10;
     msg = "(ワーカホリック)";
   } else if (r<=20) {
     hpG = 70; mpG=30; msg="大成功";
@@ -473,7 +474,7 @@ function doFarm(p, v) {
 
   let amt=calculateFarmYield(p, v);
   let resourceLabel = "食料";
-  
+
   // ミダスの奇跡の効果
   if (v.villageTraits.includes("ミダス")) {
     v.funds = clampValue(v.funds+amt, 0, 99999);
@@ -568,7 +569,7 @@ function doHunt(p, v) {
     x = 70;
     result = "大成功";
   }
-  
+
   let amt = calculateHuntYield(p, v, x);
 
   // ミダスの奇跡の効果
@@ -630,7 +631,7 @@ function doFish(p, v) {
     x = 70;
     result = "大成功";
   }
-  
+
   let amt = calculateFishYield(p, v, x);
 
   // ミダスの奇跡の効果
@@ -724,7 +725,7 @@ function doHandiwork(p, v) {
   v.funds = clampValue(v.funds+amt, 0, 99999);
 
   let logMsg = `${p.name}内職:資金+${amt},体力-${tc},メンタル-${mc}`;
-  
+
   // ステータス上昇判定
   if (rollJobStatGrowth(p, "dex")) {
     addAcquiredStat(p, "dex", 1);
@@ -758,7 +759,7 @@ function doResearchLikeJob(p, v, jobName, calculateYield) {
   v.tech = clampValue(v.tech+gain, 0, 99999);
 
   let logMsg = `${p.name}${jobName}:技術+${gain},体力-${tc},メンタル-${mc}`;
-  
+
   // ステータス上昇判定
   if (rollJobStatGrowth(p, "mag")) {
     addAcquiredStat(p, "mag", 1);
@@ -784,7 +785,7 @@ function doGuardJob(p, v) {
   v.security = clampValue(v.security+inc, 0, 100);
 
   let logMsg = `${p.name}警備:治安+${inc},体力-${tc},メンタル-${mc}`;
-  
+
   // ステータス上昇判定
   if (rollJobStatGrowth(p, "str")) {
     addAcquiredStat(p, "str", 1);
@@ -801,7 +802,7 @@ function doGuardJob(p, v) {
 function doHealingJob(p, v) {
   let hpG = 20;
   let mpG = 20;
-  
+
   // 中年/老人で効率補正
   if (p.bodyTraits.includes("中年")) {
     hpG = Math.floor(hpG * 0.8);
@@ -810,7 +811,7 @@ function doHealingJob(p, v) {
     hpG = Math.floor(hpG * 0.6);
     mpG = Math.floor(mpG * 0.6);
   }
-  
+
   const recoveredTraits = HEALING_RECOVERABLE_BODY_TRAITS.filter(trait => p.bodyTraits.includes(trait));
   if (recoveredTraits.length > 0) {
     p.bodyTraits = p.bodyTraits.filter(trait => !HEALING_RECOVERABLE_BODY_TRAITS.includes(trait));
@@ -827,7 +828,7 @@ function doHealingJob(p, v) {
   if (recoveredTraits.length > 0) {
     logMsg += `,${recoveredTraits.join(",")}が回復`;
   }
-  
+
   v.log(logMsg);
 }
 
@@ -842,9 +843,10 @@ function doDancer(p, v) {
   p.mp = clampValue(p.mp-mc, 0, 100);
 
   let inc = calculateDancerHappiness(p, v);
-  
+
   let affected = 0;
   v.villagers.forEach(target => {
+    if (isSaltPillar(target)) return;
     if (target.spiritSex === "男") {
       target.happiness = clampValue(target.happiness + inc, 0, 100);
       affected++;
@@ -852,7 +854,7 @@ function doDancer(p, v) {
   });
 
   let logMsg = `${p.name}踊り子:男性${affected}人の幸福+${inc},体力-${tc},メンタル-${mc}`;
-  
+
   // ステータス上昇判定
   if (rollJobStatGrowth(p, "chr")) {
     addAcquiredStat(p, "chr", 1);
@@ -873,9 +875,10 @@ function doPoet(p, v) {
   p.mp = clampValue(p.mp-mc, 0, 100);
 
   let inc = calculatePoetHappiness(p, v);
-  
+
   let affected = 0;
   v.villagers.forEach(target => {
+    if (isSaltPillar(target)) return;
     if (target.spiritSex === "女") {
       target.happiness = clampValue(target.happiness + inc, 0, 100);
       affected++;
@@ -883,7 +886,7 @@ function doPoet(p, v) {
   });
 
   let logMsg = `${p.name}詩人:女性${affected}人の幸福+${inc},体力-${tc},メンタル-${mc}`;
-  
+
   // ステータス上昇判定
   if (rollJobStatGrowth(p, "chr")) {
     addAcquiredStat(p, "chr", 1);
@@ -906,6 +909,7 @@ function doNurse(p, v) {
   let lowestHP = 100;
   let targets = [];
   v.villagers.forEach(target => {
+    if (isSaltPillar(target)) return;
     if (target.hp < lowestHP) {
       lowestHP = target.hp;
       targets = [target];
@@ -918,13 +922,13 @@ function doNurse(p, v) {
   if (targets.length > 0) {
     let target = targets[Math.floor(Math.random() * targets.length)];
     let heal = calculateNurseHeal(p, v);
-    
+
     target.hp = clampValue(target.hp + heal, 0, 100);
     logMsg = `${p.name}看護:${target.name}の体力+${heal},体力-${tc},メンタル-${mc}`;
   } else {
     logMsg = `${p.name}看護:対象なし,体力-${tc},メンタル-${mc}`;
   }
-  
+
   // ステータス上昇判定
   if (rollJobStatGrowth(p, "mag")) {
     addAcquiredStat(p, "mag", 1);
@@ -945,9 +949,10 @@ function doSister(p, v) {
   p.mp = clampValue(p.mp-mc, 0, 100);
 
   let heal = calculatePriestMindHeal(p, v);
-  
+
   let affected = 0;
   v.villagers.forEach(target => {
+    if (isSaltPillar(target)) return;
     target.mp = clampValue(target.mp + heal, 0, 100);
     affected++;
   });
@@ -961,7 +966,7 @@ function doSister(p, v) {
   if (divineGain > 0) {
     logMsg += `,神威+${divineGain}`;
   }
-  
+
   // ステータス上昇判定
   if (rollJobStatGrowth(p, "chr")) {
     addAcquiredStat(p, "chr", 1);
@@ -982,9 +987,10 @@ function doPriest(p, v) {
   p.mp = clampValue(p.mp-mc, 0, 100);
 
   let heal = calculatePriestMindHeal(p, v);
-  
+
   let affected = 0;
   v.villagers.forEach(target => {
+    if (isSaltPillar(target)) return;
     target.mp = clampValue(target.mp + heal, 0, 100);
     affected++;
   });
@@ -998,7 +1004,7 @@ function doPriest(p, v) {
   if (divineGain > 0) {
     logMsg += `,神威+${divineGain}`;
   }
-  
+
   // ステータス上昇判定
   if (rollJobStatGrowth(p, "chr")) {
     addAcquiredStat(p, "chr", 1);
@@ -1048,7 +1054,7 @@ function doTradingLike(p, v, jobName, calculateYield) {
   v.funds = clampValue(v.funds+amt, 0, 99999);
 
   let logMsg = `${p.name}${jobName}:${result} 資金+${amt},体力-${tc},メンタル-${mc}`;
-  
+
   // ステータス上昇判定
   if (rollJobStatGrowth(p, "chr")) {
     addAcquiredStat(p, "chr", 1);
@@ -1071,10 +1077,13 @@ function doMassage(p, v) {
   const mindStat = getMassageMindStat(p, jobName);
   const mc = calcJobMindCost(jobName, p[mindStat], p, v);
   const heal = calculateMassageHeal(p, jobName);
+  const hiddenHappinessGain = jobName === ACTION_MASSAGE_FEMALE
+    ? Math.round(3 * (p.chr / 20) * (p.sexdr / 20))
+    : 0;
   let logMsg = `${p.name}${getActionDisplayName(jobName)}:体力-${tc},メンタル-${mc}`;
 
   if (jobName === ACTION_MASSAGE_MALE) {
-    
+
     // ステータス上昇判定
     if (rollJobStatGrowth(p, "str")) {
       addAcquiredStat(p, "str", 1);
@@ -1103,6 +1112,7 @@ function doMassage(p, v) {
   let lowestHP = 100;
   let targets = [];
   v.villagers.forEach(target => {
+    if (isSaltPillar(target)) return;
     if (target.hp < lowestHP) {
       lowestHP = target.hp;
       targets = [target];
@@ -1114,6 +1124,13 @@ function doMassage(p, v) {
   if (targets.length > 0) {
     let target = targets[Math.floor(Math.random() * targets.length)];
     target.hp = clampValue(target.hp + heal, 0, 100);
+    if (
+      jobName === ACTION_MASSAGE_FEMALE &&
+      target.spiritSex === "男" &&
+      target.sexdr >= 18
+    ) {
+      target.happiness = clampValue(target.happiness + hiddenHappinessGain, 0, 100);
+    }
     logMsg += `,${target.name}の体力+${heal}`;
   }
 
@@ -1132,7 +1149,7 @@ function doMiko(p, v) {
   addDivineMight(v, divineGain);
 
   let logMsg = `${p.name}巫女:体力-${tc},メンタル-${mc},魔素+${manaGain},神威+${divineGain}`;
-  
+
   // ステータス上昇判定
   if (rollJobStatGrowth(p, "chr")) {
     addAcquiredStat(p, "chr", 1);
@@ -1157,6 +1174,7 @@ function doBunny(p, v) {
   let affected = 0;
 
   v.villagers.forEach(target => {
+    if (isSaltPillar(target)) return;
     if (target.spiritSex === "男") {
       target.happiness = clampValue(target.happiness + happinessInc, 0, 100);
       target.mp = clampValue(target.mp + mentalHeal, 0, 100);
@@ -1165,7 +1183,7 @@ function doBunny(p, v) {
   });
 
   let logMsg = `${p.name}バニー:男性${affected}人の幸福+${happinessInc},メンタル+${mentalHeal},体力-${tc},メンタル-${mc}`;
-  
+
   // ステータス上昇判定
   if (rollJobStatGrowth(p, "chr")) {
     addAcquiredStat(p, "chr", 1);
@@ -1188,12 +1206,12 @@ function doAlchemy(p, v) {
   const alchemyYield = calculateAlchemyYield(p);
   let fundsGain = alchemyYield.funds;
   let manaGain = alchemyYield.mana;
-  
+
   v.funds = clampValue(v.funds + fundsGain, 0, 99999);
   v.mana = clampValue(v.mana + manaGain, 0, 99999);
 
   let logMsg = `${p.name}錬金:資金+${fundsGain},魔素+${manaGain},体力-${tc},メンタル-${mc}`;
-  
+
   // ステータス上昇判定
   if (rollJobStatGrowth(p, "mag")) {
     addAcquiredStat(p, "mag", 1);
@@ -1215,12 +1233,12 @@ function doCopyBook(p, v) {
 
   let fundsGain = calculateCopyBookYield(p);
   let techGain = calculateCopyBookYield(p);
-  
+
   v.funds = clampValue(v.funds + fundsGain, 0, 99999);
   v.tech = clampValue(v.tech + techGain, 0, 99999);
 
   let logMsg = `${p.name}写本:資金+${fundsGain},技術+${techGain},体力-${tc},メンタル-${mc}`;
-  
+
   // ステータス上昇判定
   if (rollJobStatGrowth(p, "vit")) {
     addAcquiredStat(p, "vit", 1);
@@ -1244,7 +1262,7 @@ function doWeaving(p, v) {
   v.funds = clampValue(v.funds + fundsGain, 0, 99999);
 
   let logMsg = `${p.name}機織り:資金+${fundsGain},体力-${tc},メンタル-${mc}`;
-  
+
   // ステータス上昇判定
   if (rollJobStatGrowth(p, "dex")) {
     addAcquiredStat(p, "dex", 1);
@@ -1280,7 +1298,7 @@ function doBrewing(p, v) {
   addDivineMight(v, divineGain);
 
   let logMsg = `${p.name}醸造:${foodResourceName}+${foodGain},魔素+${manaGain},神威+${divineGain},体力-${tc},メンタル-${mc}`;
-  
+
   // ステータス上昇判定
   if (rollJobStatGrowth(p, "mag")) {
     addAcquiredStat(p, "mag", 1);

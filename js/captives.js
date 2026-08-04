@@ -158,6 +158,7 @@ export function processCaptiveReleaseDeadlines(village) {
 
 export function isCapturableRaider(person) {
   if (!person) return false;
+  if (person.uncapturable) return false;
   return Array.isArray(person.mindTraits) && person.mindTraits.includes("襲撃者");
 }
 

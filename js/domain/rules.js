@@ -17,6 +17,7 @@ export function isRestrictedNoActionVillager(person) {
   const actionTable = Array.isArray(person?.actionTable) ? person.actionTable : [];
 
   return bodyTraits.includes("危篤") ||
+    bodyTraits.includes("塩の柱") ||
     hasInfantMind(person) ||
     mindTraits.includes("訪問者") ||
     mindTraits.includes("襲撃者") ||

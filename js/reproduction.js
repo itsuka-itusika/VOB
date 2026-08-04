@@ -31,6 +31,7 @@ import { OLD_WOLF_TRAIT, syncWolfSpeciesTraits, YOUNG_WOLF_TRAIT } from "./domai
 import { recordAdulthoodHistory, recordBirthHistory, recordPregnancyHistory } from "./history.js";
 import { addRelationship, checkHasRelationship, getRelationshipTargetName, normalizeRelationship } from "./relationships.js";
 import { getDialogueLine } from "./dialogue/dialogueEngine.js";
+import { isSaltPillar } from "./domain/apocalypseRules.js";
 
 const HUMANOID_RACES = new Set(["人間", "ゴブリン", "ハーピー", "半神", "キュクロプス", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド", "エクイナ", "サテュロス", "メナド", "セントール"]);
 const FEMALE_FIXED_RACES = new Set(["ハーピー", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド", "エクイナ", "メナド"]);
@@ -232,6 +233,7 @@ function isPregnancyAge(person, maxAge) {
 
 function canBeMother(person, village) {
   return isHumanoid(person) &&
+    !isSaltPillar(person) &&
     person.bodySex === "女" &&
     isPregnancyAge(person, 38) &&
     !hasMindTrait(person, "神聖") &&
@@ -245,12 +247,14 @@ function canBeMother(person, village) {
 
 function canBeFather(person) {
   return isHumanoid(person) &&
+    !isSaltPillar(person) &&
     person.bodySex === "男" &&
     Number(person.bodyAge) >= 12;
 }
 
 function canReceiveGoldenRainPregnancy(person) {
   return isHumanoid(person) &&
+    !isSaltPillar(person) &&
     person.bodySex === "女" &&
     isPregnancyAge(person, 29) &&
     !person.pregnancy &&
@@ -569,6 +573,7 @@ export function matureBodyToAdultOnly(character, village) {
 
 export function handleBirthAndPostpartum(village) {
   village.villagers.forEach(person => {
+    if (isSaltPillar(person)) return;
     if (Number(person.postpartumMonths) > 0) {
       person.postpartumMonths -= 1;
       if (person.postpartumMonths <= 0 && hasTrait(person, "産褥")) {
@@ -582,6 +587,7 @@ export function handleBirthAndPostpartum(village) {
   const mothers = [...village.villagers];
   mothers.forEach(mother => {
     if (!mother.pregnancy) return;
+    if (isSaltPillar(mother)) return;
 
     mother.pregnancy.months = (Number(mother.pregnancy.months) || 0) + 1;
     if (mother.pregnancy.months >= 8) {
@@ -644,6 +650,10 @@ function processPendingGoldenRainPregnancies(village) {
     }
 
     const mother = village.villagers.find(person => person.name === entry.targetName);
+    if (isSaltPillar(mother)) {
+      remaining.push(entry);
+      return;
+    }
     if (!mother || !canReceiveGoldenRainPregnancy(mother)) {
       if (mother) village.log(`${mother.name}への黄金の雨の兆しは、妊娠には至りませんでした。`);
       return;

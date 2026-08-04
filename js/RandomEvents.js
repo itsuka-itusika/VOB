@@ -8,6 +8,7 @@ import { matureBodyToAdultOnly, scheduleGoldenRainPregnancy } from "./reproducti
 import { refreshJobTable } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
+import { getActiveVillagers } from "./domain/apocalypseRules.js";
 import { addAcquiredStat, syncEffectiveStats } from "./domain/statLayers.js";
 import { recordHobbyAwakeningHistory, recordLoverHistory, recordMythicEventHistory, recordSocialRelationHistory } from "./history.js";
 import {
@@ -60,11 +61,11 @@ export class RandomEvents {
   }
 
   static captureVillagerState(village) {
-    return new Map(village.villagers.map(p => [p, snapshotVillager(p)]));
+    return new Map(getActiveVillagers(village).map(p => [p, snapshotVillager(p)]));
   }
 
   static collectChangedVillagers(village, beforeState) {
-    return village.villagers.filter(p => beforeState.get(p) !== snapshotVillager(p));
+    return getActiveVillagers(village).filter(p => beforeState.get(p) !== snapshotVillager(p));
   }
 
   static getEventSubject(eventKey, kind) {
@@ -157,9 +158,9 @@ export class RandomEvents {
 
     const changedVillagers = this.collectChangedVillagers(village, beforeState);
     const speakers = [...new Set([...changedVillagers, ...this._forcedSpeakers])];
-    if (speakers.length === 0 && village.villagers.length > 0) {
+    if (speakers.length === 0 && getActiveVillagers(village).length > 0) {
       // 資源のみが変化したイベントでも代表者のセリフを表示
-      const rep = this.randChoice(village.villagers);
+      const rep = this.randChoice(getActiveVillagers(village));
       if (rep) speakers.push(rep);
     }
     const title = EVENT_SUBJECTS[eventKey] || EVENT_KIND_TITLES[kind] || "ランダムイベント";
@@ -214,20 +215,20 @@ export class RandomEvents {
    */
   static doMythicEvent(v) {
     let cands = [];
-    v.villagers.forEach(p => {
-      if (p.bodySex === "女" && p.bodyAge >= 16 && p.bodyAge <= 25 && p.sexdr <= 5 && 
+    getActiveVillagers(v).forEach(p => {
+      if (p.bodySex === "女" && p.bodyAge >= 16 && p.bodyAge <= 25 && p.sexdr <= 5 &&
           !p.bodyTraits.includes("月の巫女")) {
         cands.push({ type: "狩猟神", vill: p });
       }
-      if (p.bodySex === "女" && p.bodyAge >= 16 && p.bodyAge <= 25 && p.chr >= 25 && 
+      if (p.bodySex === "女" && p.bodyAge >= 16 && p.bodyAge <= 25 && p.chr >= 25 &&
           !p.bodyTraits.includes("太陽の巫女")) {
         cands.push({ type: "太陽神", vill: p });
       }
-      if (p.bodySex === "女" && p.bodyAge >= 16 && p.bodyAge <= 28 && p.cou >= 20 && p.int >= 20 && 
+      if (p.bodySex === "女" && p.bodyAge >= 16 && p.bodyAge <= 28 && p.cou >= 20 && p.int >= 20 &&
           !p.bodyTraits.includes("梟の巫女")) {
         cands.push({ type: "戦女神", vill: p });
       }
-      if (p.bodySex === "女" && p.bodyAge >= 16 && p.bodyAge <= 28 && p.ind >= 20 && p.eth >= 20 && 
+      if (p.bodySex === "女" && p.bodyAge >= 16 && p.bodyAge <= 28 && p.ind >= 20 && p.eth >= 20 &&
           !p.bodyTraits.includes("大地の巫女")) {
         cands.push({ type: "地母神", vill: p });
       }
@@ -244,7 +245,7 @@ export class RandomEvents {
       }
     });
 
-    const growthPotionCandidates = v.villagers.filter(person => Number(person.bodyAge) <= 9);
+    const growthPotionCandidates = getActiveVillagers(v).filter(person => Number(person.bodyAge) <= 9);
     if (growthPotionCandidates.length > 0 && Math.random() < 0.2) {
       cands.push({ type: "strangeGrowthPotion", vill: this.randChoice(growthPotionCandidates) });
     }
@@ -300,8 +301,8 @@ export class RandomEvents {
 
     switch (ev) {
       case "cat": {
-        if (v.villagers.length > 0) {
-          let t = this.randChoice(v.villagers);
+        if (getActiveVillagers(v).length > 0) {
+          let t = this.randChoice(getActiveVillagers(v));
           let inc = randInt(20, 30);
           t.happiness = clampValue(t.happiness + inc, 0, 100);
           v.log(`子猫イベント:${t.name}幸福+${inc}`);
@@ -322,7 +323,7 @@ export class RandomEvents {
       }
       case "fireworks": {
         let inc = randInt(5, 10);
-        v.villagers.forEach(p => {
+        getActiveVillagers(v).forEach(p => {
           p.happiness = clampValue(p.happiness + inc, 0, 100);
         });
         v.log(`花火師来訪:村全体幸福+${inc}`);
@@ -330,7 +331,7 @@ export class RandomEvents {
       }
       case "hotSpring": {
         const hpGain = 10;
-        v.villagers.forEach(p => {
+        getActiveVillagers(v).forEach(p => {
           p.hp = clampValue(p.hp + hpGain, 0, 100);
         });
         if (!v.buildingFlags) v.buildingFlags = {};
@@ -343,7 +344,7 @@ export class RandomEvents {
           return null;
         }
 
-        const candidates = v.villagers.filter(person =>
+        const candidates = getActiveVillagers(v).filter(person =>
           Number(person.eth) <= 14 &&
           Number(person.sexdr) >= 20 &&
           person.bodySex === "女" &&
@@ -368,9 +369,9 @@ export class RandomEvents {
       }
       case "hobbyFriends": {
         const pairs = [];
-        v.villagers.forEach((a, i) => {
+        getActiveVillagers(v).forEach((a, i) => {
           if (!a.hobby) return;
-          v.villagers.slice(i + 1).forEach(b => {
+          getActiveVillagers(v).slice(i + 1).forEach(b => {
             if (a.hobby !== b.hobby) return;
             const relA = `${a.hobby}仲間:${b.name}`;
             const relB = `${b.hobby}仲間:${a.name}`;
@@ -395,7 +396,7 @@ export class RandomEvents {
         break;
       }
       case "menFriendship": {
-        let men = v.villagers.filter(x => x.spiritSex === "男" && x.bodyAge >= 16);
+        let men = getActiveVillagers(v).filter(x => x.spiritSex === "男" && x.bodyAge >= 16);
         const pairs = [];
         men.forEach((a, index) => {
           men.slice(index + 1).forEach(b => {
@@ -426,7 +427,7 @@ export class RandomEvents {
         break;
       }
       case "yuri": {
-        let candidates = v.villagers.filter(x => 
+        let candidates = getActiveVillagers(v).filter(x =>
           x.spiritSex === "男" &&
           x.bodySex === "女" &&
           x.bodyAge >= 12 && x.bodyAge <= 30 &&
@@ -464,7 +465,7 @@ export class RandomEvents {
         break;
       }
       case "tattoo": {
-        let candidates = v.villagers.filter(x => 
+        let candidates = getActiveVillagers(v).filter(x =>
           x.spiritSex === "男" &&
           x.bodyAge >= 12 &&
           x.spiritAge >= 16 &&
@@ -474,7 +475,7 @@ export class RandomEvents {
 
         if (candidates.length > 0) {
           let a = this.randChoice(candidates);
-          
+
           a.bodyTraits.push("刺青");
           addAcquiredStat(a, "chr", 1);
           a.happiness = clampValue(a.happiness + 20, 0, 100);
@@ -486,7 +487,7 @@ export class RandomEvents {
         break;
       }
       case "fashion": {
-        let candidates = v.villagers.filter(x => 
+        let candidates = getActiveVillagers(v).filter(x =>
           x.spiritSex === "男" &&
           x.bodySex === "女" &&
           x.bodyAge >= 12 && x.bodyAge <= 30 &&
@@ -497,7 +498,7 @@ export class RandomEvents {
 
         if (candidates.length > 0) {
           let a = this.randChoice(candidates);
-          
+
           addAcquiredStat(a, "chr", 3);
           a.happiness = clampValue(a.happiness + 20, 0, 100);
           a.hobby = "オシャレ";
@@ -510,7 +511,7 @@ export class RandomEvents {
         break;
       }
       case "muscle": {
-        let candidates = v.villagers.filter(x => 
+        let candidates = getActiveVillagers(v).filter(x =>
           x.spiritSex === "女" &&
           x.bodySex === "男" &&
           x.spiritAge >= 16 &&
@@ -520,7 +521,7 @@ export class RandomEvents {
 
         if (candidates.length > 0) {
           let b = this.randChoice(candidates);
-          
+
           addAcquiredStat(b, "str", 3);
           b.hobby = "筋トレ";
           recordHobbyAwakeningHistory(v, b, "筋トレ");
@@ -532,7 +533,7 @@ export class RandomEvents {
         break;
       }
       case "selfPleasure": {
-        let candidates = v.villagers.filter(x =>
+        let candidates = getActiveVillagers(v).filter(x =>
           x.spiritSex === "男" &&
           x.bodySex === "女" &&
           x.spiritAge >= 16 &&
@@ -640,7 +641,7 @@ export class RandomEvents {
         break;
       }
       case "heat": {
-        v.villagers.forEach(p => {
+        getActiveVillagers(v).forEach(p => {
           p.hp = clampValue(p.hp - 10, 0, 100);
         });
         v.log("猛暑:全員体力-10");
@@ -666,8 +667,8 @@ export class RandomEvents {
         break;
       }
       case "lightning1": {
-        if (v.villagers.length > 0) {
-          let t = this.randChoice(v.villagers);
+        if (getActiveVillagers(v).length > 0) {
+          let t = this.randChoice(getActiveVillagers(v));
           t.hp = clampValue(t.hp - 50, 0, 100);
           t.bodyTraits.push("負傷");
           v.log(`落雷1:${t.name}体力-50,負傷`);
@@ -675,16 +676,16 @@ export class RandomEvents {
         break;
       }
       case "lightning2": {
-        if (v.villagers.length >= 2) {
-          let a = this.randChoice(v.villagers);
-          let b = this.randChoice(v.villagers.filter(x => x !== a));
+        if (getActiveVillagers(v).length >= 2) {
+          let a = this.randChoice(getActiveVillagers(v));
+          let b = this.randChoice(getActiveVillagers(v).filter(x => x !== a));
           doExchange(a, b, v, true);
           v.log(`落雷2:${a.name}と${b.name}の肉体交換`);
         }
         break;
       }
       case "snow": {
-        v.villagers.forEach(p => {
+        getActiveVillagers(v).forEach(p => {
           p.hp = clampValue(p.hp - 5, 0, 100);
           p.mp = clampValue(p.mp - 5, 0, 100);
         });
@@ -692,7 +693,7 @@ export class RandomEvents {
         break;
       }
       case "fight": {
-        let candidates = v.villagers.filter(x => 
+        let candidates = getActiveVillagers(v).filter(x =>
           x.spiritSex === "男" &&
           x.spiritAge >= 12 &&
           x.eth <= 12
@@ -732,8 +733,8 @@ export class RandomEvents {
       }
       case "argument": {
         const pairs = [];
-        v.villagers.forEach((a, index) => {
-          v.villagers.slice(index + 1).forEach(b => {
+        getActiveVillagers(v).forEach((a, index) => {
+          getActiveVillagers(v).slice(index + 1).forEach(b => {
             pairs.push([a, b]);
           });
         });
@@ -751,7 +752,7 @@ export class RandomEvents {
         break;
       }
       case "drunk": {
-        let candidates = v.villagers.filter(x => 
+        let candidates = getActiveVillagers(v).filter(x =>
           x.spiritSex === "男" &&
           x.bodyAge >= 12 &&
           x.eth <= 14 &&
@@ -761,7 +762,7 @@ export class RandomEvents {
         if (candidates.length > 0) {
           let a = this.randChoice(candidates);
           this.addForcedSpeaker(a);
-          
+
           v.security = clampValue(v.security - 12, 0, 100);
 
           v.log(`飲酒イベント:${a.name}は飲んだくれて騒ぎを起こした！ 治安-12`);
@@ -771,7 +772,7 @@ export class RandomEvents {
         break;
       }
       case "epidemic": {
-        const candidates = v.villagers.filter(x =>
+        const candidates = getActiveVillagers(v).filter(x =>
           Array.isArray(x.bodyTraits) && !x.bodyTraits.includes("疫病")
         );
 
@@ -870,4 +871,4 @@ export class RandomEvents {
   static addRelationship(person, rel) {
     addCategorizedRelationship(person, rel);
   }
-} 
+}
