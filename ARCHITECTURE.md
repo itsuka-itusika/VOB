@@ -53,6 +53,8 @@
   - 月初・月末イベント、固定イベント、ランダムイベント呼び出し、季節更新、加齢を扱う。
 - `js/RandomEvents.js`
   - ランダムイベントの実行本体。イベントデータ、会話、結果モーダルをつなぐ。
+- `js/heresyInquisition.js`
+  - 規模・神威による異端審問の月初判定、もてなし費用、選択結果、専用モーダルを扱う。
 - `js/reproduction.js`
   - 妊娠、出産、産褥、成人化、成長段階を扱う。
 - `js/relationships.js`
@@ -110,7 +112,7 @@
   - 固定データ置き場。辞書、村人生成、襲撃、ランダムイベント、会話データが入る。
   - `js/data/tutorialData.js` はチュートリアル項目と報酬データを持つ。
   - `js/data/raidData.js` は襲撃者の能力定義、襲撃モジュール、代表襲撃者定義、回避手段、規模別襲撃テーブルを持つ。
-  - 襲撃テーブルの entry は、必要に応じて `minDivineMight`、`minScaleStageIndex` などの条件を持てる。襲撃モジュールは通常の `enemyGroups` に加え、重み付きの `enemyGroupVariants` で確率分岐する編成を定義できる。
+  - 襲撃テーブルは規模段階ごとに分かれ、`requiredVillageTrait` / `excludedVillageTrait` によって村特性「異端」の専用テーブルへ切り替わる。襲撃モジュールは通常の `enemyGroups` に加え、重み付きの `enemyGroupVariants` で確率分岐する編成を定義できる。
 
 新しい行動、資源、建築、奇跡、状態異常、特性、イベント、襲撃者、ルールなどを追加したり、既存仕様を変更した場合は、必要に応じて `js/data/dictionaryData.js` の用語説明も追加・更新します。プレイヤーが用語検索で確認できる情報と、実装上の仕様がずれないようにしてください。
 

@@ -14,6 +14,10 @@ const PRIORITY_MODAL_SELECTORS = [
   "#randomEventModal",
   "#buildingRequestModal",
   "#buildingRequestCompleteModal",
+  "#heresyInquisitionModal",
+  "#inquisitionInsufficientFundsModal",
+  "#inquisitionHospitalityResultModal",
+  "#inquisitionExpulsionResultModal",
   ".effect-result-modal",
   "#secretTreasureEventModal"
 ];

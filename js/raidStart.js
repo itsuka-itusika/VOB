@@ -32,7 +32,10 @@ function getVillageScaleStageIndex(village) {
 
 function getRaidTableForVillage(village) {
   const stageIndex = getVillageScaleStageIndex(village);
+  const villageTraits = Array.isArray(village?.villageTraits) ? village.villageTraits : [];
   return RAID_SCALE_TABLES.find(table => {
+    if (table.requiredVillageTrait && !villageTraits.includes(table.requiredVillageTrait)) return false;
+    if (table.excludedVillageTrait && villageTraits.includes(table.excludedVillageTrait)) return false;
     if (Array.isArray(table.scaleStageIndexes)) {
       return table.scaleStageIndexes.includes(stageIndex);
     }
@@ -91,9 +94,6 @@ function matchesRaidEntryConditions(village, entry, stageIndex) {
 
   const maxScaleStageIndex = Number(entry.maxScaleStageIndex);
   if (Number.isFinite(maxScaleStageIndex) && stageIndex > maxScaleStageIndex) return false;
-
-  const minDivineMight = Number(entry.minDivineMight);
-  if (Number.isFinite(minDivineMight) && (Number(village.divineMight) || 0) < minDivineMight) return false;
 
   return true;
 }

@@ -442,39 +442,6 @@ export const RAIDER_TYPES = [
     ]
   },
   {
-    type: "傭兵",
-    weight: 0,
-    minCount: 2,
-    maxCount: 3,
-    race: "人間",
-    forcedSex: "男",
-    ageRange: { min: 18, max: 42 },
-    params: {
-      job: "傭兵",
-      action: "襲撃"
-    },
-    raidPosition: "front",
-    portraits: numberedPortraits("BAN", 21),
-    ranges: {
-      hp: [60, 80],
-      str: [18, 24],
-      vit: [12, 22],
-      dex: [12, 22],
-      mag: [5, 12],
-      chr: [5, 15],
-      int: [8, 16],
-      ind: [8, 18],
-      eth: [2, 10],
-      cou: [16, 24],
-      sexdr: [10, 22]
-    },
-    dialogues: [
-      "税だろうが略奪だろうが、払われるなら同じ仕事だ。",
-      "騎士様の後ろで楽をしたいが、村が逆らうなら前に出る。",
-      "金の匂いがする。抵抗するなら取り分が増えるだけだ。"
-    ]
-  },
-  {
     type: "下級騎士",
     weight: 0,
     minCount: 2,
@@ -502,9 +469,9 @@ export const RAIDER_TYPES = [
       sexdr: [6, 18]
     },
     dialogues: [
-      "領主の命である。納めるものを納めよ。",
-      "拒むなら、徴税は討伐に変わる。",
-      "村の蓄えを調べる。門を開けよ。"
+      "巡礼の列を妨げるな。寄進を差し出し、道を開けよ。",
+      "聖地へ向かう騎士を拒むなら、不信心の報いを受ける。",
+      "門を開けよ。祈りの旅に必要な糧を求める。"
     ]
   },
   {
@@ -943,6 +910,19 @@ export const RAID_MODULES = [
     }
   }),
   createCompositeRaiderRaid({
+    id: "stray-harpy",
+    name: "逸れハーピーの襲撃",
+    warningName: "逸れハーピー",
+    weight: 3,
+    representative: { raiderType: "ハーピー" },
+    enemyGroups: [
+      { raiderType: "ハーピー", minCount: 1, maxCount: 1 }
+    ],
+    failurePenalty: {
+      fundsRate: 0.15
+    }
+  }),
+  createCompositeRaiderRaid({
     id: "harpy-swarm",
     name: "ハーピーの大群",
     warningName: "ハーピーの大群",
@@ -1016,34 +996,6 @@ export const RAID_MODULES = [
     ],
     failurePenalty: {
       foodRate: 0.3
-    }
-  }),
-  createCompositeRaiderRaid({
-    id: "tax-collector-visit",
-    name: "徴税官の来訪",
-    warningName: "徴税官",
-    weight: 12,
-    avoidance: {
-      type: "resourcePayment",
-      label: "税を納める",
-      resources: [
-        { resource: "food", rate: 0.25, minAmount: 80 },
-        { resource: "funds", rate: 0.3, minAmount: 150 }
-      ]
-    },
-    representative: { raiderType: "下級騎士" },
-    enemyGroups: [
-      { raiderType: "下級騎士", minCount: 2, maxCount: 3 },
-      { raiderType: "傭兵", minCount: 2, maxCount: 3 }
-    ],
-    introDialogues: [
-      "近隣の領主より徴税に来た。食料と資金を納めよ。",
-      "義理がないと言うなら、こちらも徴発に移るだけだ。",
-      "税を拒む村には、領主の暴力が向かう。"
-    ],
-    failurePenalty: {
-      foodRate: 0.25,
-      fundsRate: 0.3
     }
   }),
   createCompositeRaiderRaid({
@@ -1143,8 +1095,8 @@ export const RAID_MODULES = [
   }),
   createCompositeRaiderRaid({
     id: "winged-punishment",
-    name: "翼持つ者の襲撃",
-    warningName: "翼持つ者",
+    name: "翼人兵の襲撃",
+    warningName: "翼人兵",
     weight: 12,
     representative: { raiderType: "翼人兵" },
     enemyGroups: [
@@ -1189,6 +1141,58 @@ export const RAID_MODULES = [
       "これは巡礼ではない。異端討伐である。",
       "聖征の旗の下、古き神の村を砕く。",
       "悔い改める機会は過ぎた。剣で答える。"
+    ]
+  }),
+  createCompositeRaiderRaid({
+    id: "winged-punishment-strong",
+    name: "翼人兵（強）の襲撃",
+    warningName: "翼人兵（強）",
+    weight: 15,
+    representative: { raiderType: "翼人兵" },
+    enemyGroups: [
+      { raiderType: "翼人兵", minCount: 6, maxCount: 8 }
+    ],
+    defense: { surviveTurns: 6 },
+    failurePenalty: {
+      security: 22,
+      villagerHpRange: [12, 28],
+      villagerHappiness: 50,
+      severeInjury: true
+    },
+    introDialogues: [
+      "異端の記録は覆らない。翼の陣を組み、村を断て。",
+      "下位の裁きを退けた罪も加えられた。今度こそ神罰を受けよ。",
+      "白き翼の軍勢から逃れる空はない。"
+    ]
+  }),
+  createCompositeRaiderRaid({
+    id: "holy-crusade-strong",
+    name: "聖征騎士団（強）の襲撃",
+    warningName: "聖征騎士団（強）",
+    weight: 15,
+    representative: [
+      { raiderType: "聖騎士" },
+      { raiderType: "聖女" }
+    ],
+    enemyGroups: [
+      { raiderType: "重装兵", minCount: 3, maxCount: 4 },
+      { raiderType: "上級騎士", minCount: 2, maxCount: 3 },
+      { raiderType: "聖騎士", minCount: 1, maxCount: 2 },
+      { raiderType: "聖女", minCount: 1, maxCount: 2 }
+    ],
+    defense: { surviveTurns: 6 },
+    failurePenalty: {
+      materialsRate: 0.4,
+      fundsRate: 0.4,
+      security: 22,
+      villagerHpRange: [12, 30],
+      villagerHappiness: 50,
+      severeInjury: true
+    },
+    introDialogues: [
+      "異端の村へ、増派された聖征の剣を示す。",
+      "先の裁きを耐えたことを誇るな。今度は軍勢で押し潰す。",
+      "重き鎧と祈りの列を崩せるものなら、崩してみよ。"
     ]
   }),
   createCompositeRaiderRaid({
@@ -1253,62 +1257,97 @@ export const RAID_SCALE_TABLES = [
     id: "early-frontier",
     scaleStageIndexes: [0, 1],
     entries: [
-      { raidId: "goblin", weight: 30 },
-      { raidId: "wolf", weight: 28 },
-      { raidId: "bandit", weight: 30 },
-      { raidId: "harpy", weight: 6 }
+      { raidId: "goblin", weight: 10 },
+      { raidId: "wolf", weight: 10 },
+      { raidId: "bandit", weight: 10 },
+      { raidId: "stray-harpy", weight: 3 }
     ]
   },
   {
-    id: "border-travel",
-    scaleStageIndexes: [2, 3],
+    id: "frontier-village",
+    scaleStageIndexes: [2],
     entries: [
-      { raidId: "bandit", weight: 18 },
-      { raidId: "wolf", weight: 14 },
-      { raidId: "goblin", weight: 22 },
-      { raidId: "harpy", weight: 14 },
-      { raidId: "cyclops", weight: 8 },
-      { raidId: "mercenary-band", weight: 16 },
-      { raidId: "grassland-people", weight: 12 },
-      { raidId: "tax-collector-visit", weight: 10 }
+      { raidId: "goblin", weight: 10 },
+      { raidId: "wolf", weight: 10 },
+      { raidId: "bandit", weight: 10 },
+      { raidId: "harpy", weight: 10 },
+      { raidId: "grassland-people", weight: 10 }
+    ]
+  },
+  {
+    id: "mapped-village",
+    scaleStageIndexes: [3],
+    entries: [
+      { raidId: "goblin", weight: 5 },
+      { raidId: "wolf", weight: 5 },
+      { raidId: "mercenary-band", weight: 10 },
+      { raidId: "harpy", weight: 10 },
+      { raidId: "grassland-people", weight: 10 },
+      { raidId: "pilgrimage-knights", weight: 5 }
     ]
   },
   {
     id: "rich-village",
     scaleStageIndexes: [4],
     entries: [
-      { raidId: "mercenary-band", weight: 24 },
-      { raidId: "harpy", weight: 16 },
-      { raidId: "cyclops", weight: 10 },
-      { raidId: "harpy-swarm", weight: 14 },
-      { raidId: "starving-wolves", weight: 18 },
-      { raidId: "goblin", weight: 8 },
-      { raidId: "grassland-people", weight: 10 },
-      { raidId: "tax-collector-visit", weight: 10 },
-      { raidId: "pilgrimage-knights", weight: 8 },
-      { raidId: "sphinx-visit", weight: 4 },
-      { raidId: "winged-punishment", weight: 8, minDivineMight: 100 },
-      { raidId: "holy-crusade", weight: 5, minDivineMight: 100 }
+      { raidId: "starving-wolves", weight: 10 },
+      { raidId: "mercenary-band", weight: 10 },
+      { raidId: "harpy", weight: 5 },
+      { raidId: "grassland-people", weight: 5 },
+      { raidId: "pilgrimage-knights", weight: 10 },
+      { raidId: "harpy-swarm", weight: 5 },
+      { raidId: "cyclops", weight: 5 }
     ]
   },
   {
-    id: "prosperous",
-    minScaleStageIndex: 5,
+    id: "prosperous-village",
+    scaleStageIndexes: [5],
+    excludedVillageTrait: "異端",
     entries: [
-      { raidId: "mercenary-band", weight: 22 },
-      { raidId: "harpy-swarm", weight: 22 },
-      { raidId: "starving-wolves", weight: 18 },
-      { raidId: "cyclops", weight: 10 },
-      { raidId: "cyclops-band", weight: 6 },
-      { raidId: "harpy", weight: 6 },
-      { raidId: "goblin", weight: 6 },
-      { raidId: "horse-nomad-raid", weight: 12 },
+      { raidId: "mercenary-band", weight: 5 },
       { raidId: "pilgrimage-knights", weight: 10 },
-      { raidId: "sphinx-visit", weight: 5 },
-      { raidId: "winged-punishment", weight: 10, minDivineMight: 100 },
-      { raidId: "holy-crusade", weight: 8, minDivineMight: 100 },
-      { raidId: "upper-apostle-raid", weight: 5, minDivineMight: 100, minScaleStageIndex: 6 },
-      { raidId: "cavalry-corps", weight: 6, minDivineMight: 300 }
+      { raidId: "harpy-swarm", weight: 10 },
+      { raidId: "starving-wolves", weight: 10 },
+      { raidId: "horse-nomad-raid", weight: 10 },
+      { raidId: "cyclops", weight: 10 }
+    ]
+  },
+  {
+    id: "autonomous-settlement",
+    scaleStageIndexes: [6],
+    excludedVillageTrait: "異端",
+    entries: [
+      { raidId: "pilgrimage-knights", weight: 10 },
+      { raidId: "harpy-swarm", weight: 10 },
+      { raidId: "starving-wolves", weight: 5 },
+      { raidId: "horse-nomad-raid", weight: 10 },
+      { raidId: "cyclops-band", weight: 10 },
+      { raidId: "sphinx-visit", weight: 5 }
+    ]
+  },
+  {
+    id: "heresy-prosperous-village",
+    scaleStageIndexes: [5],
+    requiredVillageTrait: "異端",
+    entries: [
+      { raidId: "holy-crusade", weight: 15 },
+      { raidId: "winged-punishment", weight: 15 },
+      { raidId: "harpy-swarm", weight: 10 },
+      { raidId: "horse-nomad-raid", weight: 10 },
+      { raidId: "cyclops", weight: 10 }
+    ]
+  },
+  {
+    id: "heresy-autonomous-settlement",
+    scaleStageIndexes: [6],
+    requiredVillageTrait: "異端",
+    entries: [
+      { raidId: "holy-crusade-strong", weight: 15 },
+      { raidId: "winged-punishment-strong", weight: 15 },
+      { raidId: "harpy-swarm", weight: 5 },
+      { raidId: "horse-nomad-raid", weight: 10 },
+      { raidId: "cyclops-band", weight: 10 },
+      { raidId: "sphinx-visit", weight: 5 }
     ]
   }
 ];

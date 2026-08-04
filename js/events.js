@@ -37,6 +37,7 @@ import { getVisitorArrivalLine } from "./data/dialogue/visitorLines.js";
 import { addDivineMight, getDivineMightGainFromMonthlyMana, runAfterPendingDivineMightLevelUp } from "./divineMight.js";
 import { BUILDINGS } from "./buildings.js";
 import { advanceBuildingRequestMonth, tryStartBuildingRequest } from "./buildingRequests.js";
+import { tryTriggerHeresyInquisition } from "./heresyInquisition.js";
 import {
   clearCaptiveFailedTraits,
   getCaptives,
@@ -308,6 +309,7 @@ export function runMonthStartPhase(village) {
   tryStartBuildingRequest(village, BUILDINGS);
   applyMonthStartRestrictions(village);
   runHeadmanElectionIfDue(village);
+  tryTriggerHeresyInquisition(village);
   doRaidStartCheck(village);
 }
 
