@@ -40,10 +40,10 @@ const NUMBERED_PORTRAIT_LIMITS = new Map([
   ["MC", 55],
   ["MD", 30],
   ["ME", 22],
-  ["A", 58],
-  ["BB", 46],
-  ["C", 74],
-  ["D", 39],
+  ["A", 32],
+  ["BB", 29],
+  ["C", 33],
+  ["D", 62],
   ["GG", 28],
   ["BAN", 21],
   ["GOB", 13],
@@ -70,6 +70,19 @@ const NUMBERED_PORTRAIT_LIMITS = new Map([
   ["NEREID", 15],
   ["SAINT", 21]
 ]);
+
+const AGE_VARIANT_PORTRAIT_LIMITS = {
+  old: new Map([
+    ["MA", 16], ["MB", 24], ["MC", 55], ["MD", 30], ["ME", 22],
+    ["A", 32], ["BB", 29], ["C", 33], ["D", 62],
+    ["BAN", 21], ["NOMAD", 20], ["KNIGHT", 26], ["ELITE_NOMAD", 20],
+    ["ELITE", 22], ["HOLY_KNIGHT", 8], ["EQUINA", 18], ["SAINT", 21]
+  ]),
+  young: new Map([
+    ["MA", 16], ["MB", 24], ["MC", 55], ["MD", 30], ["ME", 22],
+    ["A", 32], ["BB", 29], ["C", 33], ["D", 62], ["EQUINA", 18]
+  ])
+};
 
 const TODDLER_PORTRAIT_GROUPS = new Set(["MA", "MB", "MC", "MD", "ME", "GG", "A", "BB", "C", "D"]);
 const TODDLER_PORTRAIT_LIMIT = 2;
@@ -216,4 +229,66 @@ export function getPortraitAssetPath(value) {
   const folder = PORTRAIT_GROUP_FOLDERS.get(parts?.group);
   if (!folder) return `${PORTRAIT_ROOT}/system/${DEFAULT_PORTRAIT_KEY}`;
   return `${PORTRAIT_ROOT}/${folder}/${key}`;
+}
+
+function getBodyAgePortraitVariant(character) {
+  const bodyTraits = Array.isArray(character?.bodyTraits) ? character.bodyTraits : [];
+  if (bodyTraits.includes("赤子")) return "";
+  if (bodyTraits.includes("老人")) return "old";
+  if (bodyTraits.includes("子供")) return "young";
+  return "";
+}
+
+function selectFallbackPortraitKey(group, limit) {
+  const number = Math.floor(Math.random() * limit) + 1;
+  return `${group}${number}.png`;
+}
+
+function replaceCharacterPortraitKey(character, field, key) {
+  if (!character || typeof character !== "object") return;
+  character[field] = key;
+}
+
+export function getPortraitAssetPathForCharacter(character) {
+  const variant = getBodyAgePortraitVariant(character);
+  let portraitField = variant === "young" && character?.adultPortraitFile
+    ? "adultPortraitFile"
+    : "portraitFile";
+  let key = normalizePortraitKey(character?.[portraitField]);
+  let parts = getNumberedPortraitParts(key);
+
+  if (variant === "young" && parts?.type === "toddler") {
+    const youngLimit = AGE_VARIANT_PORTRAIT_LIMITS.young.get(parts.group);
+    if (Number.isInteger(youngLimit) && youngLimit > 0) {
+      portraitField = "adultPortraitFile";
+      key = selectFallbackPortraitKey(parts.group, youngLimit);
+      replaceCharacterPortraitKey(character, portraitField, key);
+      parts = getNumberedPortraitParts(key);
+    }
+  }
+
+  if (parts?.type !== "numbered") return getPortraitAssetPath(key);
+
+  const baseLimit = NUMBERED_PORTRAIT_LIMITS.get(parts.group);
+  if (!isKnownPortraitKey(key) && Number.isInteger(baseLimit) && baseLimit > 0) {
+    key = selectFallbackPortraitKey(parts.group, baseLimit);
+    replaceCharacterPortraitKey(character, portraitField, key);
+    parts = getNumberedPortraitParts(key);
+  }
+
+  const variantLimit = variant ? AGE_VARIANT_PORTRAIT_LIMITS[variant]?.get(parts.group) : null;
+  if (!Number.isInteger(variantLimit) || variantLimit <= 0) {
+    return getPortraitAssetPath(key);
+  }
+
+  if (parts.number > variantLimit) {
+    key = selectFallbackPortraitKey(parts.group, variantLimit);
+    replaceCharacterPortraitKey(character, portraitField, key);
+    parts = getNumberedPortraitParts(key);
+  }
+
+  const folder = PORTRAIT_GROUP_FOLDERS.get(parts.group);
+  if (!folder) return getPortraitAssetPath(key);
+  const variantFile = key.replace(/\.png$/i, `_${variant}.png`);
+  return `${PORTRAIT_ROOT}/${folder}/${variant}/${variantFile}`;
 }

@@ -1,6 +1,6 @@
 // util.js
 
-import { getPortraitAssetPath } from "./data/portraitPaths.js";
+import { getPortraitAssetPathForCharacter } from "./data/portraitPaths.js";
 import { isGoblin, isWolf } from "./domain/speciesTraits.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
 
@@ -77,7 +77,7 @@ export function randNormalInRange(min, max, mean = (min + max) / 2, stddev = (ma
  * @returns {string} 顔グラフィックのパス
  */
 export function getPortraitPath(character) {
-  return getPortraitAssetPath(character?.portraitFile);
+  return getPortraitAssetPathForCharacter(character);
 }
 
 /**

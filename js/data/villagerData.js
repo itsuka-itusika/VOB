@@ -38,18 +38,14 @@ export const FEMALE_PORTRAIT_FILES = {
 "A1.png", "A2.png", "A3.png", "A4.png", "A5.png", "A6.png", "A7.png", "A8.png", "A9.png", "A10.png",
 "A11.png", "A12.png", "A13.png", "A14.png", "A15.png", "A16.png", "A17.png", "A18.png", "A19.png", "A20.png",
 "A21.png", "A22.png", "A23.png", "A24.png", "A25.png", "A26.png", "A27.png", "A28.png", "A29.png", "A30.png",
-"A31.png", "A32.png", "A33.png", "A34.png", "A35.png", "A36.png", "A37.png", "A38.png", "A39.png", "A40.png",
-"A41.png", "A42.png", "A43.png", "A44.png", "A45.png", "A46.png", "A47.png", "A48.png", "A49.png", "A50.png",
-"A51.png", "A52.png", "A53.png", "A54.png", "A55.png", "A56.png", "A57.png", "A58.png"
+"A31.png", "A32.png"
   ],
   
   // 華やか・魅惑グループ
   GROUP_B: [
 "BB1.png", "BB2.png", "BB3.png", "BB4.png", "BB5.png", "BB6.png", "BB7.png", "BB8.png", "BB9.png", "BB10.png",
 "BB11.png", "BB12.png", "BB13.png", "BB14.png", "BB15.png", "BB16.png", "BB17.png", "BB18.png", "BB19.png", "BB20.png",
-"BB21.png", "BB22.png", "BB23.png", "BB24.png", "BB25.png", "BB26.png", "BB27.png", "BB28.png", "BB29.png", "BB30.png",
-"BB31.png", "BB32.png", "BB33.png", "BB34.png", "BB35.png", "BB36.png", "BB37.png", "BB38.png", "BB39.png", "BB40.png",
-"BB41.png", "BB42.png", "BB43.png", "BB44.png", "BB45.png", "BB46.png"
+"BB21.png", "BB22.png", "BB23.png", "BB24.png", "BB25.png", "BB26.png", "BB27.png", "BB28.png", "BB29.png"
 
   ],
   
@@ -58,11 +54,7 @@ export const FEMALE_PORTRAIT_FILES = {
 "C1.png", "C2.png", "C3.png", "C4.png", "C5.png", "C6.png", "C7.png", "C8.png", "C9.png", "C10.png",
 "C11.png", "C12.png", "C13.png", "C14.png", "C15.png", "C16.png", "C17.png", "C18.png", "C19.png", "C20.png",
 "C21.png", "C22.png", "C23.png", "C24.png", "C25.png", "C26.png", "C27.png", "C28.png", "C29.png", "C30.png",
-"C31.png", "C32.png", "C33.png", "C34.png", "C35.png", "C36.png", "C37.png", "C38.png", "C39.png", "C40.png",
-"C41.png", "C42.png", "C43.png", "C44.png", "C45.png", "C46.png", "C47.png", "C48.png", "C49.png", "C50.png",
-"C51.png", "C52.png", "C53.png", "C54.png", "C55.png", "C56.png", "C57.png", "C58.png", "C59.png", "C60.png",
-"C61.png", "C62.png", "C63.png", "C64.png", "C65.png", "C66.png", "C67.png", "C68.png", "C69.png", "C70.png",
-"C71.png", "C72.png", "C73.png", "C74.png"
+"C31.png", "C32.png", "C33.png"
   ],
   
   // 普通・地味グループ
@@ -70,7 +62,10 @@ export const FEMALE_PORTRAIT_FILES = {
 "D1.png", "D2.png", "D3.png", "D4.png", "D5.png", "D6.png", "D7.png", "D8.png", "D9.png", "D10.png",
 "D11.png", "D12.png", "D13.png", "D14.png", "D15.png", "D16.png", "D17.png", "D18.png", "D19.png", "D20.png",
 "D21.png", "D22.png", "D23.png", "D24.png", "D25.png", "D26.png", "D27.png", "D28.png", "D29.png", "D30.png",
-"D31.png", "D32.png", "D33.png", "D34.png", "D35.png", "D36.png", "D37.png", "D38.png", "D39.png"
+"D31.png", "D32.png", "D33.png", "D34.png", "D35.png", "D36.png", "D37.png", "D38.png", "D39.png", "D40.png",
+"D41.png", "D42.png", "D43.png", "D44.png", "D45.png", "D46.png", "D47.png", "D48.png", "D49.png", "D50.png",
+"D51.png", "D52.png", "D53.png", "D54.png", "D55.png", "D56.png", "D57.png", "D58.png", "D59.png", "D60.png",
+"D61.png", "D62.png"
   ]
 };
 
