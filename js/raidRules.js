@@ -10,9 +10,20 @@ export const TRAIT_UNDER_RAID = "襲撃中";
 export const RAID_ACTIONS = [ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT, ACTION_TRAP];
 export const RAID_COMBAT_ACTIONS = [ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT];
 
-const RAID_COMMON_UNABLE_BODY_TRAITS = ["赤子", "重体", "危篤", "塩の柱", YOUNG_WOLF_TRAIT];
 const RAID_COMMON_UNABLE_MIND_TRAITS = ["無垢", "萌芽", "襲撃者", "訪問者"];
 const RAID_DEFEND_UNABLE_MIND_TRAITS = [...RAID_COMMON_UNABLE_MIND_TRAITS, "思春期"];
+const RAID_BODY_BLOCK_REASONS = [
+  "塩の柱",
+  "赤子",
+  YOUNG_WOLF_TRAIT,
+  "危篤",
+  "重体",
+  "疫病",
+  "病気",
+  "負傷",
+  "過労",
+  "産褥"
+];
 
 function traitList(person, key) {
   return Array.isArray(person?.[key]) ? person[key] : [];
@@ -23,15 +34,57 @@ function hasAnyTrait(traits, unableTraits) {
 }
 
 function hasCommonRaidBlockingCondition(person) {
-  if (!person || isForcedHealingAction(person) || (Number(person.hp) || 0) <= 0) {
-    return true;
-  }
+  return Boolean(getRaidActionBlockReason(person));
+}
+
+export function getRaidActionBlockReason(person, action = "", { ignoreRoleTraits = false } = {}) {
+  if (!person) return "不在";
+  if ((Number(person.hp) || 0) <= 0) return "体力尽き";
 
   const bodyTraits = traitList(person, "bodyTraits");
   const mindTraits = traitList(person, "mindTraits");
+  const bodyReason = RAID_BODY_BLOCK_REASONS.find(trait => bodyTraits.includes(trait));
+  if (bodyReason) return bodyReason;
+  if (mindTraits.includes("抑鬱")) return "抑鬱";
+  if (isForcedHealingAction(person)) return "状態異常";
+  if (mindTraits.includes("無垢")) return "無垢";
+  if (mindTraits.includes("萌芽")) return "萌芽";
+  if (!ignoreRoleTraits && mindTraits.includes("襲撃者")) return "襲撃者";
+  if (!ignoreRoleTraits && mindTraits.includes("訪問者")) return "訪問者";
+  if (action === ACTION_DEFEND && mindTraits.includes("思春期")) return "思春期";
+  if ((action === ACTION_TRAP || action === ACTION_SHOOT) && bodyTraits.includes(FOUR_LEGGED_TRAIT)) {
+    return FOUR_LEGGED_TRAIT;
+  }
+  if ((action === ACTION_TRAP || action === ACTION_SHOOT || action === ACTION_FORTIFY) && mindTraits.includes(WILD_MIND_TRAIT)) {
+    return WILD_MIND_TRAIT;
+  }
+  return "";
+}
 
-  return hasAnyTrait(bodyTraits, RAID_COMMON_UNABLE_BODY_TRAITS) ||
-    hasAnyTrait(mindTraits, RAID_COMMON_UNABLE_MIND_TRAITS);
+export function getRaidActionSkipMessage(person, action = "戦闘", options = {}) {
+  const name = person?.name || "??";
+  const label = action || "戦闘";
+  const reason = getRaidActionBlockReason(person, action, options);
+  const messages = {
+    "塩の柱": `${name}は塩の柱と化した身体を動かせず、行動できない。`,
+    "赤子": `${name}は赤子の身体では戦えず、泣き声を上げた。`,
+    [YOUNG_WOLF_TRAIT]: `${name}はまだ幼く、身を伏せて戦いをやり過ごした。`,
+    "危篤": `${name}は危篤状態で身動きが取れない。`,
+    "重体": `${name}は重体のため立ち上がれず、行動できない。`,
+    "疫病": `${name}は疫病に冒され、行動できない。`,
+    "病気": `${name}は病気のため身体を動かせない。`,
+    "負傷": `${name}は負傷の痛みで動けず、行動を断念した。`,
+    "過労": `${name}は過労で立っていられず、行動できない。`,
+    "産褥": `${name}は産褥の身体を休めるため、行動しない。`,
+    "抑鬱": `${name}は心を奮い立たせられず、行動できない。`,
+    "無垢": `${name}は戦いを理解できず、行動しない。`,
+    "萌芽": `${name}はまだ幼く、戦いに参加できない。`,
+    "思春期": `${name}は前衛で迎撃できず、行動しない。`,
+    [FOUR_LEGGED_TRAIT]: `${name}は四足の身体で${label}の道具を扱えない。`,
+    [WILD_MIND_TRAIT]: `${name}は野生の本能に従い、${label}の指示を受け付けない。`,
+    "体力尽き": `${name}は体力が尽きており、行動できない。`
+  };
+  return `【${label}】${messages[reason] || `${name}は行動不能。`}`;
 }
 
 export function canDefendInRaid(person) {

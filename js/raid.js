@@ -18,6 +18,8 @@ import {
   ACTION_SHOOT,
   ACTION_TRAP,
   canPerformRaidAction,
+  getRaidActionBlockReason,
+  getRaidActionSkipMessage,
   getActiveRaidShooters,
   isRaidCombatAction
 } from "./raidRules.js";
@@ -681,7 +683,7 @@ function doOneTrapAction(action, village) {
   let p=action.actor;
   const result = createRaidActionResult(p);
   if (!p||p.hp<=0 || !canPerformRaidAction(p, ACTION_TRAP, village)) {
-    addRaidActionLog(result, `【罠作成】${p?p.name:"??"} は行動不能`);
+    addRaidActionLog(result, getRaidActionSkipMessage(p, ACTION_TRAP));
     return result;
   }
   if (village.raidEnemies.length===0) {
@@ -755,7 +757,10 @@ function doOneCombatAction(action, village) {
     return result;
   }
   if (!canActInCombat(actor, village)) {
-    addRaidActionLog(result, `【戦闘】${actor?actor.name:"??"}は行動不能`);
+    const actionLabel = isEnemyUnit(actor, village) ? "襲撃" : (actor?.action || "戦闘");
+    addRaidActionLog(result, getRaidActionSkipMessage(actor, actionLabel, {
+      ignoreRoleTraits: isEnemyUnit(actor, village)
+    }));
     return result;
   }
 
@@ -796,7 +801,10 @@ function doOneCombatAction(action, village) {
 
 function canActInCombat(actor, village) {
   if (!actor || actor.hp <= 0) return false;
-  if (isEnemyUnit(actor, village)) return getAliveEnemies(village).includes(actor);
+  if (isEnemyUnit(actor, village)) {
+    return getAliveEnemies(village).includes(actor) &&
+      !getRaidActionBlockReason(actor, "襲撃", { ignoreRoleTraits: true });
+  }
   return isRaidCombatAction(actor.action) && canPerformRaidAction(actor, actor.action, village);
 }
 

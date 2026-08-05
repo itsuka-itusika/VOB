@@ -472,7 +472,9 @@ function getEventSource(event) {
 }
 
 function normalizeJoinSource(source) {
-  return source === "誘惑" ? "誘惑" : "勧誘";
+  if (source === "誘惑") return "誘惑";
+  if (source === "保護") return "保護";
+  return "勧誘";
 }
 
 function getBodyExchangeVillageText(event) {

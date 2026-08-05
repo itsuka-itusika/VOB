@@ -1,6 +1,7 @@
 export const DEFAULT_PORTRAIT_KEY = "default.png";
 export const BABY_MALE_PORTRAIT_KEY = "malebaby.png";
 export const BABY_FEMALE_PORTRAIT_KEY = "femalebaby.png";
+export const WOLF_PUP_PORTRAIT_KEY = "WOLF_PUP.png";
 const LEGACY_ARACHNID_PORTRAIT_FILES = [
   "Arachnid/ChatGPT Image 2026年6月4日 01_41_09.png",
   "Arachnid/ChatGPT Image 2026年6月4日 01_41_23.png",
@@ -155,7 +156,7 @@ function getNumberedPortraitParts(key) {
 }
 
 export function isKnownPortraitKey(key) {
-  if (SYSTEM_PORTRAIT_KEYS.has(key) || BABY_PORTRAIT_KEYS.has(key)) return true;
+  if (SYSTEM_PORTRAIT_KEYS.has(key) || BABY_PORTRAIT_KEYS.has(key) || key === WOLF_PUP_PORTRAIT_KEY) return true;
 
   const parts = getNumberedPortraitParts(key);
   if (!parts || !Number.isInteger(parts.number) || parts.number < 1) return false;
@@ -192,6 +193,7 @@ export function normalizePortraitKey(value) {
 export function getPortraitGroupKey(value) {
   const key = normalizePortraitKey(value);
   if (BABY_PORTRAIT_KEYS.has(key)) return "baby";
+  if (key === WOLF_PUP_PORTRAIT_KEY) return "WOLF";
   if (SYSTEM_PORTRAIT_KEYS.has(key)) return "system";
 
   const parts = getNumberedPortraitParts(key);
@@ -203,6 +205,7 @@ export function getPortraitAssetPath(value) {
   if (!isKnownPortraitKey(key)) return `${PORTRAIT_ROOT}/system/${DEFAULT_PORTRAIT_KEY}`;
 
   if (BABY_PORTRAIT_KEYS.has(key)) return `${PORTRAIT_ROOT}/babies/${key}`;
+  if (key === WOLF_PUP_PORTRAIT_KEY) return `${PORTRAIT_ROOT}/wolf/${key}`;
   if (SYSTEM_PORTRAIT_KEYS.has(key)) return `${PORTRAIT_ROOT}/system/${key}`;
 
   const parts = getNumberedPortraitParts(key);

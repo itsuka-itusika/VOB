@@ -364,9 +364,24 @@ function createMessengerPassAvoidanceOption(village) {
   };
 }
 
-function createRaidAvoidanceOptions(village, avoidance) {
+function createSphinxRiddleAvoidanceOption(village, raidDefinition) {
+  if (raidDefinition?.id !== "sphinx-visit") return null;
+  const candidates = Array.isArray(village?.villagers) ? village.villagers : [];
+  return {
+    type: "sphinxRiddle",
+    label: "問答に挑む",
+    detail: "村人を1人選択。成功率は（知力 - 20）÷20（最低0%・最高100%）。",
+    candidates,
+    candidateLabel: person => `${person.name}（知力${Math.floor(Number(person.int) || 0)}）`,
+    disabled: candidates.length === 0,
+    disabledReason: candidates.length === 0 ? "問答に挑む村人がいません" : ""
+  };
+}
+
+function createRaidAvoidanceOptions(village, raidDefinition) {
   return [
-    createAvoidanceOption(village, avoidance),
+    createAvoidanceOption(village, raidDefinition?.avoidance),
+    createSphinxRiddleAvoidanceOption(village, raidDefinition),
     createMessengerPassAvoidanceOption(village)
   ].filter(Boolean);
 }
@@ -457,6 +472,8 @@ function endRaidByAvoidance(village, raidDefinition, option) {
   village.villagers.forEach(person => refreshJobTable(person, village));
   if (option.type === "messengerPass") {
     village.log(`【秘宝】伝令神の手形を使い、${raidDefinition.name}の襲撃をなかったことにしました。`);
+  } else if (option.type === "sphinxRiddle") {
+    village.log("スフィンクスは問答に満足し去っていった。");
   } else {
     village.log(`${raidDefinition.name}: ${formatAvoidancePaidResources(option)}を支払い、襲撃者は去っていった。`);
   }
@@ -471,6 +488,29 @@ function executeRaidAvoidance(village, raidDefinition, option = null) {
   if (!option || option.disabled) {
     if (option?.disabledReason) village.log(`${raidDefinition.name}: ${option.disabledReason}`);
     return false;
+  }
+
+  if (option.type === "sphinxRiddle") {
+    const person = option.selectedPerson;
+    if (!person || !village.villagers.includes(person)) {
+      return {
+        close: false,
+        message: "問答に挑む村人を選んでください。"
+      };
+    }
+    const intelligence = Number(person.int) || 0;
+    const successChance = Math.max(0, Math.min(1, (intelligence - 20) / 20));
+    const successRate = Math.round(successChance * 100);
+    if (Math.random() < successChance) {
+      village.log(`${person.name}がスフィンクスの問答に答えた（成功率${successRate}%）。`);
+      endRaidByAvoidance(village, raidDefinition, option);
+      return true;
+    }
+
+    const message = `${person.name}の答えにスフィンクスは満足せず、問答は失敗した（成功率${successRate}%）。`;
+    village.log(message);
+    updateUI(village);
+    return { close: false, message };
   }
 
   if (option.type === "messengerPass") {
@@ -597,7 +637,7 @@ export function startRaidEvent(village, options = {}) {
     representative,
     introDialogues: raidDefinition.introDialogues,
     enemyCount,
-    avoidanceOptions: createRaidAvoidanceOptions(village, raidDefinition.avoidance),
+    avoidanceOptions: createRaidAvoidanceOptions(village, raidDefinition),
     onAvoidance: option => executeRaidAvoidance(village, raidDefinition, option)
   });
 

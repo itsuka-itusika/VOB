@@ -4,13 +4,14 @@ import { randInt, clampValue, round3 } from "./util.js";
 import { adjustMutualFriendship, doLoverCheck, addRelationship as addCategorizedRelationship, getPairFriendshipMinimum, normalizeRelationship, parseRelationship } from "./relationships.js";
 import { doExchange } from "./exchange.js";
 import { showRandomEventModal } from "./randomEventModal.js";
-import { matureBodyToAdultOnly, scheduleGoldenRainPregnancy } from "./reproduction.js";
+import { createWolfFoundling, matureBodyToAdultOnly, scheduleGoldenRainPregnancy } from "./reproduction.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { getActiveVillagers } from "./domain/apocalypseRules.js";
 import { addAcquiredStat, syncEffectiveStats } from "./domain/statLayers.js";
-import { recordHobbyAwakeningHistory, recordLoverHistory, recordMythicEventHistory, recordSocialRelationHistory } from "./history.js";
+import { recordHobbyAwakeningHistory, recordLoverHistory, recordMythicEventHistory, recordSocialRelationHistory, recordVillagerJoinHistory } from "./history.js";
+import { updateUI } from "./ui.js";
 import {
   getChildlikeRandomEventLine,
   getDialogueLine,
@@ -178,7 +179,7 @@ export class RandomEvents {
 
   static shouldSuppressRandomEventAnnouncement(eventKey) {
     // doLoverCheck 側で恋人成立専用モーダルを出すため、汎用ランダムイベントモーダルは重ねない。
-    return eventKey === "lover";
+    return eventKey === "lover" || eventKey === "wolfChild";
   }
 
   static chooseEventKind({ chanceMultiplier = 1 } = {}) {
@@ -300,6 +301,35 @@ export class RandomEvents {
     let ev = this.randChoice(EVENT_POOLS.good);
 
     switch (ev) {
+      case "wolfChild": {
+        if (v.villagers.some(person => person.race === "狼")) return null;
+
+        v.log("狼の子供が村に迷い込んできた。");
+        showRandomEventModal({
+          title: "狼の子供",
+          message: "森の端から、まだ幼い狼の子供が一匹、村へ迷い込んできました。どうしますか？",
+          closeOnOverlay: false,
+          actions: [
+            {
+              label: "村で飼う",
+              onSelect: () => {
+                const wolf = createWolfFoundling(v);
+                v.villagers.push(wolf);
+                recordVillagerJoinHistory(v, wolf, { source: "保護" });
+                v.log(`${wolf.name}（0歳の狼）を村で飼うことにした。`);
+                updateUI(v);
+              }
+            },
+            {
+              label: "森に返す",
+              onSelect: () => {
+                v.log("狼の子供を森へ返した。");
+              }
+            }
+          ]
+        });
+        break;
+      }
       case "cat": {
         if (getActiveVillagers(v).length > 0) {
           let t = this.randChoice(getActiveVillagers(v));

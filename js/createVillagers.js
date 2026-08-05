@@ -753,6 +753,8 @@ export function initRandomParams(v) {
  * 精神特性から口調タイプを決定
  */
 export function determineSpeechType(character) {  // export を追加
+  if (character?.race === "狼") return "狼";
+
   // デフォルトの口調
   const defaultSpeechType = (character.spiritSex || character.bodySex) === "男" ? "普通Ｍ" : "普通Ｆ";
 

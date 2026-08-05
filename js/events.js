@@ -49,7 +49,7 @@ import {
   processCaptiveReleaseDeadlines
 } from "./captives.js";
 
-const OPENING_RAID_GRACE_YEAR = 1091;
+const OPENING_RAID_GRACE_YEAR = 1195;
 const OPENING_RAID_GRACE_LAST_MONTH = 6;
 const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成"]);
 

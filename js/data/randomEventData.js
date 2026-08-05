@@ -11,7 +11,7 @@ export const EVENT_KIND_TITLES = {
 };
 
 export const EVENT_POOLS = {
-  good: ["cat", "gold", "strangeRain", "fireworks", "hotSpring", "bathPerk", "hobbyFriends", "menFriendship", "lover", "yuri", "tattoo", "fashion", "muscle", "selfPleasure"],
+  good: ["wolfChild", "cat", "gold", "strangeRain", "fireworks", "hotSpring", "bathPerk", "hobbyFriends", "menFriendship", "lover", "yuri", "tattoo", "fashion", "muscle", "selfPleasure"],
   bad: ["storm", "downpour", "heat", "fire", "thief", "rats", "lightning1", "lightning2", "snow", "fight", "argument", "drunk", "epidemic"]
 };
 export const GOLDEN_RAIN_RACES = new Set(["人間", "ハーピー", "半神", "キュクロプス", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド"]);
@@ -23,6 +23,7 @@ export const EVENT_SUBJECTS = {
   "地母神": "地母神の慈愛",
   goldenRain: "黄金の雨",
   strangeGrowthPotion: "怪しい薬の急成長",
+  wolfChild: "狼の子供",
   cat: "猫との出会い",
   gold: "金貨の発見",
   strangeRain: "不思議な雨",
@@ -59,6 +60,7 @@ export const EVENT_MOODS = {
   "地母神": "mythic",
   goldenRain: "mythic",
   strangeGrowthPotion: "selfChange",
+  wolfChild: "happy",
   cat: "happy",
   gold: "gain",
   strangeRain: "gain",

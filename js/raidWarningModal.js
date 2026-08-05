@@ -165,6 +165,22 @@ function showRaidWarningWhenReady() {
   buttons.appendChild(interceptButton);
 
   avoidanceOptions.forEach(avoidanceOption => {
+    let candidateSelect = null;
+    if (Array.isArray(avoidanceOption.candidates)) {
+      candidateSelect = document.createElement("select");
+      candidateSelect.setAttribute("aria-label", "問答に挑む村人");
+      candidateSelect.disabled = !!avoidanceOption.disabled;
+      avoidanceOption.candidates.forEach((candidate, index) => {
+        const candidateOption = document.createElement("option");
+        candidateOption.value = String(index);
+        candidateOption.textContent = typeof avoidanceOption.candidateLabel === "function"
+          ? avoidanceOption.candidateLabel(candidate)
+          : candidate.name;
+        candidateSelect.appendChild(candidateOption);
+      });
+      buttons.appendChild(candidateSelect);
+    }
+
     const avoidanceButton = document.createElement("button");
     avoidanceButton.type = "button";
     avoidanceButton.textContent = avoidanceOption.label;
@@ -173,8 +189,22 @@ function showRaidWarningWhenReady() {
       avoidanceButton.title = avoidanceOption.disabledReason;
     }
     avoidanceButton.onclick = () => {
-      if (typeof onAvoidance === "function" && onAvoidance(avoidanceOption)) {
+      const selectedIndex = candidateSelect ? Number(candidateSelect.value) : -1;
+      const selectedPerson = selectedIndex >= 0 ? avoidanceOption.candidates[selectedIndex] : null;
+      const resolvedOption = candidateSelect
+        ? { ...avoidanceOption, selectedPerson }
+        : avoidanceOption;
+      const outcome = typeof onAvoidance === "function" ? onAvoidance(resolvedOption) : false;
+      if (outcome === true || outcome?.close === true) {
         closeRaidWarningModal();
+      } else if (outcome?.message) {
+        lineElement.textContent = outcome.message;
+        const resultDetail = document.createElement("div");
+        resultDetail.textContent = "問答は一度限りです。「防衛する」を選んでください。";
+        detail.appendChild(resultDetail);
+        buttons.querySelectorAll("button, select").forEach(control => {
+          if (control !== interceptButton) control.disabled = true;
+        });
       }
     };
     buttons.appendChild(avoidanceButton);

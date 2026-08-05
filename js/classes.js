@@ -10,7 +10,7 @@ import { createStatMap, STAT_LAYER_VERSION } from "./domain/statLayers.js";
 
 export class Village {
   constructor() {
-    this.year = 1091;
+    this.year = 1195;
     this.month = 4;
 
     this.food = 150;
