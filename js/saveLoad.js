@@ -17,8 +17,8 @@ import { hasActiveBuildingFlag, normalizeDamagedBuildings, recalculateBuildingDe
 import { normalizeVillageRoleForPerson, normalizeVillageRoles } from "./domain/villageRoles.js";
 
 const BODY_TRAIT_RENAMES = {
-  "幼児": "子供",
-  "児童": "子供",
+  "子供": "幼児",
+  "児童": "幼児",
   "雷霆神の加護": "雷霆の加護"
 };
 
@@ -328,8 +328,6 @@ function convertVillagerToObject(vill) {
     adultMindTraits: Array.isArray(vill.adultMindTraits) ? [...vill.adultMindTraits] : [],
     adultHobby: vill.adultHobby || "",
     adultPortraitFile: normalizeOptionalPortraitFile(vill.adultPortraitFile),
-    toddlerPortraitFile: normalizeOptionalPortraitFile(vill.toddlerPortraitFile),
-    toddlerPortraitGroup: vill.toddlerPortraitGroup || "",
     childMindTrait: vill.childMindTrait || "",
     ...(vill.raiderType ? { raiderType: vill.raiderType } : {}),
     ...(vill.raiderRole ? { raiderRole: vill.raiderRole } : {}),
@@ -573,8 +571,6 @@ function convertObjectToVillager(obj) {
   vill.adultMindTraits = Array.isArray(obj.adultMindTraits) ? [...obj.adultMindTraits] : [];
   vill.adultHobby = obj.adultHobby || "";
   vill.adultPortraitFile = normalizeOptionalPortraitFile(obj.adultPortraitFile);
-  vill.toddlerPortraitFile = normalizeOptionalPortraitFile(obj.toddlerPortraitFile);
-  vill.toddlerPortraitGroup = obj.toddlerPortraitGroup || "";
   vill.childMindTrait = obj.childMindTrait || "";
   vill.adultBodyReached = obj.adultBodyReached !== undefined
     ? !!obj.adultBodyReached

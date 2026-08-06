@@ -225,7 +225,7 @@ function growToSixteen(person, village) {
   if (oldSpiritAge <= 15) person.spiritAge = 16;
   updateChildGrowthStage(person, village, { announce: true });
   if (!hasPotential) {
-    person.bodyTraits = (person.bodyTraits || []).filter(trait => !["赤子", "子供", "少年", "少女"].includes(trait));
+    person.bodyTraits = (person.bodyTraits || []).filter(trait => !["赤子", "幼児", "少年", "少女"].includes(trait));
     person.mindTraits = (person.mindTraits || []).filter(trait => !["無垢", "萌芽", "思春期"].includes(trait));
     refreshJobTable(person, village);
   }

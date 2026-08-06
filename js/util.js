@@ -105,7 +105,7 @@ export function getVillagerFoodConsumption(character) {
   if (bodyTraits.includes("光合成")) return 0;
   let cost = 10;
   if (bodyTraits.includes("赤子")) cost = 2;
-  else if (bodyTraits.includes("子供")) cost = 6;
+  else if (bodyTraits.includes("幼児")) cost = 6;
   else if (bodyTraits.includes("少年") || bodyTraits.includes("少女")) cost = 8;
   else if (mindTraits.includes("大食い")) cost = 12;
   else if (mindTraits.includes("小食")) cost = 8;
@@ -121,7 +121,7 @@ export function getVillagerWinterMaterialConsumption(character) {
   if (isWolf(character)) return 0;
   if (isGoblin(character)) return 4;
   if (bodyTraits.includes("赤子")) return 2;
-  if (bodyTraits.includes("子供")) return 6;
+  if (bodyTraits.includes("幼児")) return 6;
   if (bodyTraits.includes("少年") || bodyTraits.includes("少女")) return 8;
   return 10;
 }

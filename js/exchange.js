@@ -128,9 +128,7 @@ export function doExchange(a, b, v, isLightning = false, historySource = null, o
     bodyPotentialStats: cloneNullableObject(a.bodyPotentialStats),
     adultBodyTraits: Array.isArray(a.adultBodyTraits) ? [...a.adultBodyTraits] : [],
     adultBodyReached: !!a.adultBodyReached,
-    adultPortraitFile: a.adultPortraitFile || "",
-    toddlerPortraitFile: a.toddlerPortraitFile || "",
-    toddlerPortraitGroup: a.toddlerPortraitGroup || ""
+    adultPortraitFile: a.adultPortraitFile || ""
   };
 
   a.bodySex = b.bodySex;
@@ -150,8 +148,6 @@ export function doExchange(a, b, v, isLightning = false, historySource = null, o
   a.adultBodyTraits = Array.isArray(b.adultBodyTraits) ? [...b.adultBodyTraits] : [];
   a.adultBodyReached = !!b.adultBodyReached;
   a.adultPortraitFile = b.adultPortraitFile || "";
-  a.toddlerPortraitFile = b.toddlerPortraitFile || "";
-  a.toddlerPortraitGroup = b.toddlerPortraitGroup || "";
 
   b.bodySex = exchangeParams.bodySex;
   b.bodyAge = exchangeParams.bodyAge;
@@ -170,8 +166,6 @@ export function doExchange(a, b, v, isLightning = false, historySource = null, o
   b.adultBodyTraits = [...exchangeParams.adultBodyTraits];
   b.adultBodyReached = exchangeParams.adultBodyReached;
   b.adultPortraitFile = exchangeParams.adultPortraitFile;
-  b.toddlerPortraitFile = exchangeParams.toddlerPortraitFile;
-  b.toddlerPortraitGroup = exchangeParams.toddlerPortraitGroup;
 
   syncEffectiveStats(a);
   syncEffectiveStats(b);

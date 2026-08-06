@@ -12,9 +12,7 @@ import {
   MAENAD_PORTRAIT_FILES,
   NEREID_PORTRAIT_FILES,
   SATYR_PORTRAIT_FILES,
-  WINGED_PORTRAIT_FILES,
-  getPortraitGroupKey,
-  normalizePortraitKey
+  WINGED_PORTRAIT_FILES
 } from "./data/portraitPaths.js";
 import { applyGenerationBaseTraitBonuses, setBaseStatsFromEffective, syncEffectiveStats } from "./domain/statLayers.js";
 import { PHYSICAL_ABILITY_STATS } from "./domain/personSchema.js";
@@ -24,11 +22,10 @@ import {
   FEMALE_PORTRAIT_FILES,
   MALE_PORTRAIT_FILES,
   SPEECH_TYPE_MAPPING,
-  TODDLER_PORTRAIT_FILES,
   VISITOR_TYPES
 } from "./data/villagerData.js";
 import { MERCHANT_SECRET_TREASURE_CHANCE } from "./secretTreasureEvents.js";
-export { MALE_PORTRAIT_FILES, TODDLER_PORTRAIT_FILES } from "./data/villagerData.js";
+export { MALE_PORTRAIT_FILES } from "./data/villagerData.js";
 
 /**
  * 初期村人の人数設定
@@ -357,34 +354,9 @@ export const usedPortraits = {
  * 性別と能力値に応じて顔グラフィックを選択
  */
 
-function getPortraitGroupKeyFromFile(portraitFile) {
-  const groupKey = getPortraitGroupKey(normalizePortraitKey(portraitFile));
-  return TODDLER_PORTRAIT_FILES[groupKey] ? groupKey : "";
-}
-
 function hasNoAgingBodyTrait(v) {
   return NO_AGING_RACES.has(v?.race)
     || (Array.isArray(v?.bodyTraits) && v.bodyTraits.some(trait => NO_AGING_BODY_TRAITS.has(trait)));
-}
-
-function getFallbackToddlerPortraitGroup(character) {
-  if ((character.bodySex || character.spiritSex) === "男") {
-    if (character.chr >= 15) return "MC";
-    if (character.chr <= 14 && character.vit >= 15) return "MD";
-    if (character.chr <= 14 && character.vit <= 14) return "ME";
-    return "ME";
-  }
-  return "D";
-}
-
-export function selectToddlerPortraitByCharacter(character) {
-  const groupKey =
-    character.toddlerPortraitGroup ||
-    getPortraitGroupKeyFromFile(character.adultPortraitFile) ||
-    getFallbackToddlerPortraitGroup(character);
-  const portraits = TODDLER_PORTRAIT_FILES[groupKey] || TODDLER_PORTRAIT_FILES.D;
-  character.toddlerPortraitGroup = groupKey;
-  return randChoice(portraits);
 }
 
 export function selectPortraitByCharacter(character) {
@@ -1292,9 +1264,7 @@ function exchangeGeneratedVisitorBodies(a, b) {
     bodyPotentialStats: cloneNullableObject(a.bodyPotentialStats),
     adultBodyTraits: Array.isArray(a.adultBodyTraits) ? [...a.adultBodyTraits] : [],
     adultBodyReached: !!a.adultBodyReached,
-    adultPortraitFile: a.adultPortraitFile || "",
-    toddlerPortraitFile: a.toddlerPortraitFile || "",
-    toddlerPortraitGroup: a.toddlerPortraitGroup || ""
+    adultPortraitFile: a.adultPortraitFile || ""
   };
 
   a.bodySex = b.bodySex;
@@ -1314,8 +1284,6 @@ function exchangeGeneratedVisitorBodies(a, b) {
   a.adultBodyTraits = Array.isArray(b.adultBodyTraits) ? [...b.adultBodyTraits] : [];
   a.adultBodyReached = !!b.adultBodyReached;
   a.adultPortraitFile = b.adultPortraitFile || "";
-  a.toddlerPortraitFile = b.toddlerPortraitFile || "";
-  a.toddlerPortraitGroup = b.toddlerPortraitGroup || "";
 
   b.bodySex = body.bodySex;
   b.bodyAge = body.bodyAge;
@@ -1334,8 +1302,6 @@ function exchangeGeneratedVisitorBodies(a, b) {
   b.adultBodyTraits = [...body.adultBodyTraits];
   b.adultBodyReached = body.adultBodyReached;
   b.adultPortraitFile = body.adultPortraitFile;
-  b.toddlerPortraitFile = body.toddlerPortraitFile;
-  b.toddlerPortraitGroup = body.toddlerPortraitGroup;
 
   syncEffectiveStats(a);
   syncEffectiveStats(b);

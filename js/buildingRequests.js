@@ -246,7 +246,7 @@ function doesRuleMatch(ruleId, person) {
     case "fountain_lover":
       return hasRelationship(person, "恋人");
     case "fountain_child":
-      return hasAnyTrait(person, ["子供", "萌芽"]);
+      return hasAnyTrait(person, ["幼児", "萌芽"]);
     case "fountain_nereid":
       return person.race === "ネレイド";
     case "fountain_waterfall":

@@ -84,9 +84,6 @@ const AGE_VARIANT_PORTRAIT_LIMITS = {
   ])
 };
 
-const TODDLER_PORTRAIT_GROUPS = new Set(["MA", "MB", "MC", "MD", "ME", "GG", "A", "BB", "C", "D"]);
-const TODDLER_PORTRAIT_LIMIT = 2;
-
 const PORTRAIT_GROUP_FOLDERS = new Map([
   ["MA", "MA"],
   ["MB", "MB"],
@@ -149,15 +146,6 @@ function getLegacyArachnidPortraitKey(value) {
 }
 
 function getNumberedPortraitParts(key) {
-  const toddlerMatch = key.match(/^T_(MA|MB|MC|MD|ME|GG|A|BB|C|D)(\d+)\.png$/i);
-  if (toddlerMatch) {
-    return {
-      type: "toddler",
-      group: toddlerMatch[1].toUpperCase(),
-      number: Number(toddlerMatch[2])
-    };
-  }
-
   const match = key.match(/^(ANGEL_FIGHTER|HOLY_KNIGHT|ELITE_NOMAD|ARCHANGEL|MINOTAUR|CENTAUR|ARMORED|ARACHNID|CYCLOPS|KNIGHT|ALSEID|EQUINA|SATYR|MAENAD|NEREID|DRYAD|SAINT|ELITE|HARPY|ANGEL|NOMAD|BAN|GOB|WOLF|GG|MA|MB|MC|MD|ME|BB|A|C|D)(\d+)\.png$/i);
   if (!match) return null;
 
@@ -173,10 +161,6 @@ export function isKnownPortraitKey(key) {
 
   const parts = getNumberedPortraitParts(key);
   if (!parts || !Number.isInteger(parts.number) || parts.number < 1) return false;
-
-  if (parts.type === "toddler") {
-    return TODDLER_PORTRAIT_GROUPS.has(parts.group) && parts.number <= TODDLER_PORTRAIT_LIMIT;
-  }
 
   const max = NUMBERED_PORTRAIT_LIMITS.get(parts.group);
   return Number.isInteger(max) && parts.number <= max;
@@ -196,8 +180,12 @@ export function normalizePortraitKey(value) {
   if (lowerFileName === "child_shadow.svg") return "CHILD_SHADOW.svg";
   if (lowerFileName === "child_shadow_baby.svg") return "CHILD_SHADOW_BABY.svg";
 
+  const legacyToddlerMatch = fileName.match(/^T_(MA|MB|MC|MD|ME|GG|A|BB|C|D)(\d+)\.png$/i);
+  if (legacyToddlerMatch) {
+    return `${legacyToddlerMatch[1].toUpperCase()}${Number(legacyToddlerMatch[2])}.png`;
+  }
+
   const parts = getNumberedPortraitParts(fileName);
-  if (parts?.type === "toddler") return `T_${parts.group}${parts.number}.png`;
   if (parts?.type === "numbered") return `${parts.group}${parts.number}.png`;
 
   return /\.(png|svg)$/i.test(fileName) ? fileName : DEFAULT_PORTRAIT_KEY;
@@ -222,10 +210,6 @@ export function getPortraitAssetPath(value) {
   if (SYSTEM_PORTRAIT_KEYS.has(key)) return `${PORTRAIT_ROOT}/system/${key}`;
 
   const parts = getNumberedPortraitParts(key);
-  if (parts?.type === "toddler") {
-    return `${PORTRAIT_ROOT}/children/${parts.group}/${key}`;
-  }
-
   const folder = PORTRAIT_GROUP_FOLDERS.get(parts?.group);
   if (!folder) return `${PORTRAIT_ROOT}/system/${DEFAULT_PORTRAIT_KEY}`;
   return `${PORTRAIT_ROOT}/${folder}/${key}`;
@@ -235,7 +219,7 @@ function getBodyAgePortraitVariant(character) {
   const bodyTraits = Array.isArray(character?.bodyTraits) ? character.bodyTraits : [];
   if (bodyTraits.includes("赤子")) return "";
   if (bodyTraits.includes("老人")) return "old";
-  if (bodyTraits.includes("子供")) return "young";
+  if (bodyTraits.includes("幼児")) return "young";
   return "";
 }
 
@@ -256,16 +240,6 @@ export function getPortraitAssetPathForCharacter(character) {
     : "portraitFile";
   let key = normalizePortraitKey(character?.[portraitField]);
   let parts = getNumberedPortraitParts(key);
-
-  if (variant === "young" && parts?.type === "toddler") {
-    const youngLimit = AGE_VARIANT_PORTRAIT_LIMITS.young.get(parts.group);
-    if (Number.isInteger(youngLimit) && youngLimit > 0) {
-      portraitField = "adultPortraitFile";
-      key = selectFallbackPortraitKey(parts.group, youngLimit);
-      replaceCharacterPortraitKey(character, portraitField, key);
-      parts = getNumberedPortraitParts(key);
-    }
-  }
 
   if (parts?.type !== "numbered") return getPortraitAssetPath(key);
 

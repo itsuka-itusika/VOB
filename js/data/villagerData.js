@@ -69,19 +69,6 @@ export const FEMALE_PORTRAIT_FILES = {
   ]
 };
 
-export const TODDLER_PORTRAIT_FILES = {
-  MA: ["T_MA1.png", "T_MA2.png"],
-  MB: ["T_MB1.png", "T_MB2.png"],
-  MC: ["T_MC1.png", "T_MC2.png"],
-  MD: ["T_MD1.png", "T_MD2.png"],
-  ME: ["T_ME1.png", "T_ME2.png"],
-  GG: ["T_GG1.png", "T_GG2.png"],
-  A: ["T_A1.png", "T_A2.png"],
-  BB: ["T_BB1.png", "T_BB2.png"],
-  C: ["T_C1.png", "T_C2.png"],
-  D: ["T_D1.png", "T_D2.png"]
-};
-
 export const SPEECH_TYPE_MAPPING = {
   "独善的": { male: "クールＭ", female: "クールＦ" },
   "読書家": { male: "丁寧Ｍ", female: "丁寧Ｆ" },

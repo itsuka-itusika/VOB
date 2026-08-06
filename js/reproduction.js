@@ -5,8 +5,7 @@ import {
   assignBodyMindTraits,
   assignHobby,
   determineSpeechType,
-  selectPortraitByCharacter,
-  selectToddlerPortraitByCharacter
+  selectPortraitByCharacter
 } from "./createVillagers.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { addNonHousePopLimitBonus } from "./domain/buildingState.js";
@@ -67,7 +66,7 @@ const CHILD_ADULT_PORTRAITS_BY_RACE = new Map([
 ]);
 const PHYSICAL_STATS = ["str", "vit", "dex", "mag", "chr"];
 const MENTAL_STATS = ["int", "ind", "eth", "cou", "sexdr"];
-const CHILD_BODY_TRAITS = ["赤子", "子供", "少年", "少女"];
+const CHILD_BODY_TRAITS = ["赤子", "幼児", "少年", "少女"];
 const CHILD_MIND_TRAITS = ["無垢", "萌芽", "思春期"];
 const PREGNANCY_FULL_TERM_MONTHS = 10;
 const POSTPARTUM_MONTHS = 3;
@@ -470,15 +469,8 @@ function setChildPortrait(child) {
     return;
   }
 
-  if (child.bodyAge < 10) {
-    if (child.bodyAge <= 3) {
-      child.portraitFile = child.bodySex === "男" ? BABY_MALE_PORTRAIT_KEY : BABY_FEMALE_PORTRAIT_KEY;
-    } else {
-      if (!child.toddlerPortraitFile) {
-        child.toddlerPortraitFile = selectToddlerPortraitByCharacter(child);
-      }
-      child.portraitFile = child.toddlerPortraitFile;
-    }
+  if (child.bodyAge <= 3) {
+    child.portraitFile = child.bodySex === "男" ? BABY_MALE_PORTRAIT_KEY : BABY_FEMALE_PORTRAIT_KEY;
   } else if (child.adultPortraitFile) {
     child.portraitFile = child.adultPortraitFile;
   }
@@ -540,9 +532,9 @@ export function updateChildGrowthStage(child, village, { announce = false } = {}
     addUnique(child.bodyTraits, "赤子");
   } else if (child.bodyAge <= 9) {
     child.bodyTraits = removeTraits(child.bodyTraits, ["赤子", "少年", "少女"]);
-    addUnique(child.bodyTraits, "子供");
+    addUnique(child.bodyTraits, "幼児");
   } else if (child.bodyAge <= 15) {
-    child.bodyTraits = removeTraits(child.bodyTraits, ["赤子", "子供"]);
+    child.bodyTraits = removeTraits(child.bodyTraits, ["赤子", "幼児"]);
     addUnique(child.bodyTraits, child.bodySex === "男" ? "少年" : "少女");
   } else {
     const currentBodyTraits = removeTraits(child.bodyTraits, CHILD_BODY_TRAITS);
@@ -581,7 +573,7 @@ export function updateChildGrowthStage(child, village, { announce = false } = {}
 
   if (announce) {
     if (child.bodyAge === 4 || child.spiritAge === 4) {
-      village.log(`${child.name}は子供期に入りました`);
+      village.log(`${child.name}は幼児期に入りました`);
     } else if (child.bodyAge === 10 || child.spiritAge === 10) {
       village.log(`${child.name}は少年期に入りました`);
     } else if (child.bodyAge === 16 || child.spiritAge === 16) {

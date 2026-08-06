@@ -199,8 +199,6 @@ export class Villager {
     this.adultMindTraits = [];
     this.adultHobby = "";
     this.adultPortraitFile = "";
-    this.toddlerPortraitFile = "";
-    this.toddlerPortraitGroup = "";
     this.childMindTrait = "";
     this.adultBodyReached = false;
     this.adultMindReached = false;
