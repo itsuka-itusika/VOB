@@ -11,7 +11,7 @@ import {
   repairDamagedBuilding
 } from "./domain/buildingState.js";
 import { completeTutorialTask } from "./tutorial.js";
-import { showVillageScaleMilestones } from "./villageScale.js";
+import { getVillageScaleStage, showVillageScaleMilestones } from "./villageScale.js";
 import { fulfillBuildingRequest, getBuildingCostForVillage } from "./buildingRequests.js";
 import {
   BACCHUS_GOLDEN_STATUE_BUILDING_ID,
@@ -269,9 +269,9 @@ export const BUILDINGS = [
     materials: 50,
     funds: 50,
     tech: 50,
-    desc: "旅人の立ち寄る村で解放。襲撃中の「射撃」解放、中衛枠+1。最大3つまで建設可能。規模+10",
+    desc: "旅人の立ち寄る村で解放。襲撃中の「射撃」解放、中衛枠+1。設置上限は村の発展段階で1〜4。規模+10",
     allowMultiple: true,
-    maxCount: 3,
+    maxCount: village => Math.min(4, 1 + Math.max(0, getVillageScaleStage(village.building).index - 3)),
     isUnlocked: (village) => isScaleAtLeast(village, 120),
     effect: standardBuildingEffect({ scale: 10, flag: "hasWatchtower", log: "櫓建設完了: 射撃の中衛枠+1、規模+10" })
   },
@@ -327,6 +327,13 @@ function getBuildingCounts(village) {
     acc[id] = (acc[id] || 0) + 1;
     return acc;
   }, {});
+}
+
+export function getBuildingMaxCount(building, village) {
+  const value = typeof building?.maxCount === "function"
+    ? building.maxCount(village)
+    : building?.maxCount;
+  return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : Number.POSITIVE_INFINITY;
 }
 
 function getBuildBlockReason(building, village, { isBuilt = false, reachedLimit = false, costs = null } = {}) {
@@ -401,7 +408,8 @@ function createBuildingItem(building, village) {
   const activeCount = countActiveBuildings(village, building.id);
   const damagedCount = countDamagedBuildings(village, building.id);
   const isBuilt = !building.allowMultiple && builtCount > 0;
-  const reachedLimit = Number.isFinite(building.maxCount) && builtCount >= building.maxCount;
+  const maxCount = getBuildingMaxCount(building, village);
+  const reachedLimit = Number.isFinite(maxCount) && builtCount >= maxCount;
   const costs = getBuildingCostForVillage(building, village);
   const repairCosts = getBuildingRepairCosts(building);
   const canRepair = damagedCount > 0 && canAffordRepair(village, repairCosts);
@@ -409,8 +417,8 @@ function createBuildingItem(building, village) {
     village.materials >= costs.materials &&
     village.funds >= costs.funds &&
     village.tech >= costs.tech;
-  const countText = Number.isFinite(building.maxCount)
-    ? `${builtCount}/${building.maxCount}`
+  const countText = Number.isFinite(maxCount)
+    ? `${builtCount}/${maxCount}`
     : builtCount;
   const reasonText = getBuildBlockReason(building, village, { isBuilt, reachedLimit, costs });
   const repairReasonText = getRepairBlockReason(village, repairCosts);
@@ -421,7 +429,7 @@ function createBuildingItem(building, village) {
       ${costs.isDiscounted ? '<span class="building-request-mark">要望 -20%</span>' : ""}
       ${isBuilt ? '<span class="built-mark">建設済</span>' : ""}
       ${damagedCount > 0 ? `<span class="damaged-mark">損壊中: ${damagedCount}</span>` : ""}
-      ${(builtCount > 0 || Number.isFinite(building.maxCount)) ? `<span class="built-count">建設数: ${countText}</span>` : ""}
+      ${(builtCount > 0 || Number.isFinite(maxCount)) ? `<span class="built-count">建設数: ${countText}</span>` : ""}
     </div>
     <div class="building-desc">${building.desc}</div>
     ${builtCount > 0 ? `<div class="building-status">有効数: ${activeCount}${damagedCount > 0 ? ` / 損壊: ${damagedCount}` : ""}</div>` : ""}
@@ -537,6 +545,7 @@ function repairBuilding(building, village) {
 }
 
 function constructBuilding(building, village) {
+  if (countBuiltBuildings(village, building.id) >= getBuildingMaxCount(building, village)) return;
   const costs = getBuildingCostForVillage(building, village);
   village.materials -= costs.materials;
   village.funds -= costs.funds;

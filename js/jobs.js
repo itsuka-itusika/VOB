@@ -27,6 +27,7 @@ import {
   calculateWeavingYield,
   getMassageMindStat,
   getJobCostType,
+  getRestRecoveryMultiplier,
   rollBodyCost,
   rollMindCost,
 } from "./domain/jobMath.js";
@@ -396,13 +397,8 @@ function doRestJob(p, v) {
   } else {
     hpG = 40; mpG=10; msg="失敗";
   }
-  // 中年/老人で効率補正
-  let multi=1;
-  if (p.bodyTraits.includes("老人") || p.bodyTraits.includes("老狼")) multi=0.7;
-  else if (p.bodyTraits.includes("中年")) multi=0.9;
-
-  hpG=Math.floor(hpG*multi);
-  mpG=Math.floor(mpG*multi);
+  hpG=Math.floor(hpG*getRestRecoveryMultiplier(p, "hp"));
+  mpG=Math.floor(mpG*getRestRecoveryMultiplier(p, "mp"));
 
   p.hp=clampValue(p.hp+hpG,0,100);
   p.mp=clampValue(p.mp+mpG,0,100);

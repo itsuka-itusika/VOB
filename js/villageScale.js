@@ -19,22 +19,26 @@ export const VILLAGE_SCALE_STAGES = [
   {
     threshold: 120,
     title: "旅人の立ち寄る村",
-    description: "道行く者が足を止め、村の噂を外へ運ぶようになりました。"
+    description: "道行く者が足を止め、村の噂を外へ運ぶようになりました。",
+    effects: ["櫓が建設可能（設置数上限1）"]
   },
   {
     threshold: 180,
     title: "豊かな村",
-    description: "食料、行動割り当て、施設が安定し、周辺の小集落より豊かに見える村です。"
+    description: "食料、行動割り当て、施設が安定し、周辺の小集落より豊かに見える村です。",
+    effects: ["櫓の設置数上限 +1（合計2）"]
   },
   {
     threshold: 250,
     title: "繁栄した郷村",
-    description: "近隣の中でも存在感を持ち、領主や教会の帳簿にも載りうる村です。"
+    description: "近隣の中でも存在感を持ち、領主や教会の帳簿にも載りうる村です。",
+    effects: ["櫓の設置数上限 +1（合計3）"]
   },
   {
     threshold: 350,
     title: "自治集落",
-    description: "ただの村ではなく、外部から管理や警戒の対象として見られる共同体です。"
+    description: "ただの村ではなく、外部から管理や警戒の対象として見られる共同体です。",
+    effects: ["櫓の設置数上限 +1（合計4）"]
   }
 ];
 
@@ -114,6 +118,9 @@ function showNextMilestoneModal() {
       <div class="village-scale-kicker">村の発展</div>
       <h2>${stage.title}</h2>
       <p>${stage.description}</p>
+      ${Array.isArray(stage.effects) && stage.effects.length > 0
+        ? `<ul class="village-scale-effects">${stage.effects.map(effect => `<li>${effect}</li>`).join("")}</ul>`
+        : ""}
       <p class="village-scale-current">現在の規模 ${scale}</p>
       <button type="button" data-close-village-scale-modal>閉じる</button>
     </div>

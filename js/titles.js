@@ -53,6 +53,11 @@ const TITLE_DEFINITIONS = Object.freeze({
     id: "tradingCritical5",
     name: "市の目利き",
     description: "行商で大成功を5回出した。"
+  },
+  survivedCritical: {
+    id: "survivedCritical",
+    name: "死線を越えた者",
+    description: "危篤を経験し、その後も生きている。"
   }
 });
 
@@ -143,6 +148,7 @@ export function evaluateTitles(person, options = {}) {
   if (person.titleStats.huntCritical >= 5) add("huntCritical5");
   if (person.titleStats.fishCritical >= 5) add("fishCritical5");
   if (person.titleStats.tradingCritical >= 5) add("tradingCritical5");
+  if (person.hasBeenCritical && !person.bodyTraits?.includes("危篤")) add("survivedCritical");
 
   return added;
 }

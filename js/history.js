@@ -396,6 +396,7 @@ export function recordDryadFruitHistory(village, person, options = {}) {
 
 export function recordCriticalHistory(village, person, options = {}) {
   if (!person) return;
+  person.hasBeenCritical = true;
   const reason = options.reason || "老衰";
   addHistoryEvent(village, {
     type: HISTORY_EVENT_TYPES.CRITICAL,

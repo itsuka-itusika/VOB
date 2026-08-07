@@ -20,7 +20,9 @@ import {
   canPerformRaidAction,
   getRaidActionBlockReason,
   getRaidActionSkipMessage,
+  getActiveRaidFrontliners,
   getActiveRaidShooters,
+  getActiveRaidTrapMakers,
   isRaidCombatAction
 } from "./raidRules.js";
 import { refreshJobTable } from "./domain/jobTables.js";
@@ -415,18 +417,15 @@ function getCombatPosition(unit, village) {
 }
 
 function getTrapMakers(village) {
-  return village.villagers.filter(p =>
-    p.action === ACTION_TRAP &&
-    p.hp > 0 &&
-    canPerformRaidAction(p, ACTION_TRAP, village)
-  );
+  return getActiveRaidTrapMakers(village).filter(person => person.hp > 0);
 }
 
 function getVisibleTrapMakers(village) {
   if (village.raidPhase !== RAID_PHASE_REAR) return [];
+  const activeTrapMakers = getActiveRaidTrapMakers(village);
   return village.villagers.filter(p =>
     (
-      p.action === ACTION_TRAP &&
+      activeTrapMakers.includes(p) &&
       p.hp > 0 &&
       canPerformRaidAction(p, ACTION_TRAP, village)
     ) ||
@@ -454,11 +453,7 @@ function isRearRetreatingUnit(unit, village) {
 }
 
 function getVillageCombatants(village) {
-  const frontliners = village.villagers.filter(p =>
-    p.hp > 0 &&
-    (p.action === ACTION_DEFEND || p.action === ACTION_FORTIFY) &&
-    canPerformRaidAction(p, p.action, village)
-  );
+  const frontliners = getActiveRaidFrontliners(village).filter(person => person.hp > 0);
   return frontliners.concat(getActiveRaidShooters(village));
 }
 
@@ -484,11 +479,7 @@ function updateRaidStatusLine(village) {
   const statusLine = document.getElementById("raidStatusLine");
   if (!statusLine) return;
 
-  const frontliners = village.villagers.filter(p =>
-    p.hp > 0 &&
-    (p.action === ACTION_DEFEND || p.action === ACTION_FORTIFY) &&
-    canPerformRaidAction(p, p.action, village)
-  ).length;
+  const frontliners = getActiveRaidFrontliners(village).filter(person => person.hp > 0).length;
   const shooters = getActiveRaidShooters(village).length;
   const pendingTraps = getPendingTrapMakers(village).length;
   const enemyCount = getAliveEnemies(village).length;
@@ -563,11 +554,7 @@ export function openRaidModal(village) {
 
   let trapMakers = getTrapMakers(village);
   let combatants = getVillageCombatants(village);
-  const frontliners = village.villagers.filter(p =>
-    p.hp > 0 &&
-    (p.action === ACTION_DEFEND || p.action === ACTION_FORTIFY) &&
-    canPerformRaidAction(p, p.action, village)
-  );
+  const frontliners = getActiveRaidFrontliners(village).filter(person => person.hp > 0);
   startRaidFriendshipTracking(village, {
     participants: trapMakers.concat(combatants),
     frontliners
@@ -1152,14 +1139,11 @@ export function updateRaidTables(village) {
   const activeShooters = getActiveRaidShooters(village);
   const pendingShooters = village.villagers.filter(v => isPendingRaidDeparture(v) && v.action === ACTION_SHOOT);
   const shooters = activeShooters.concat(pendingShooters.filter(v => !activeShooters.includes(v)));
-  const frontliners = village.villagers.filter(v =>
-    (
-      v.hp > 0 &&
-      (v.action === ACTION_DEFEND || v.action === ACTION_FORTIFY) &&
-      canPerformRaidAction(v, v.action, village)
-    ) ||
-    (isPendingRaidDeparture(v) && (v.action === ACTION_DEFEND || v.action === ACTION_FORTIFY))
+  const activeFrontliners = getActiveRaidFrontliners(village);
+  const pendingFrontliners = village.villagers.filter(v =>
+    isPendingRaidDeparture(v) && (v.action === ACTION_DEFEND || v.action === ACTION_FORTIFY)
   );
+  const frontliners = activeFrontliners.concat(pendingFrontliners.filter(v => !activeFrontliners.includes(v)));
 
   renderRaidUnits({
     tableSelector: "#defenderTable tbody",

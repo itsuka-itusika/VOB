@@ -9,6 +9,8 @@ export const ACTION_FORTIFY = "籠城";
 export const TRAIT_UNDER_RAID = "襲撃中";
 export const RAID_ACTIONS = [ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT, ACTION_TRAP];
 export const RAID_COMBAT_ACTIONS = [ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT];
+export const RAID_BASE_FRONTLINER_SLOTS = 6;
+export const RAID_TRAP_MAKER_SLOTS = 3;
 
 const RAID_COMMON_UNABLE_MIND_TRAITS = ["無垢", "萌芽", "襲撃者", "訪問者"];
 const RAID_DEFEND_UNABLE_MIND_TRAITS = [...RAID_COMMON_UNABLE_MIND_TRAITS, "思春期"];
@@ -111,9 +113,36 @@ function sortRaidShootersByPriority(shooters) {
   });
 }
 
+function sortRaidFrontlinersByPriority(frontliners) {
+  return [...frontliners].sort((a, b) => {
+    const courageDiff = (Number(b?.cou) || 0) - (Number(a?.cou) || 0);
+    if (courageDiff !== 0) return courageDiff;
+    return (Number(b?.hp) || 0) - (Number(a?.hp) || 0);
+  });
+}
+
+function sortRaidTrapMakersByPriority(trapMakers) {
+  return [...trapMakers].sort((a, b) => {
+    const scoreA = (Number(a?.dex) || 0) * (Number(a?.int) || 0);
+    const scoreB = (Number(b?.dex) || 0) * (Number(b?.int) || 0);
+    return scoreB - scoreA;
+  });
+}
+
+export function getRaidFrontlinerSlotCount(village = null) {
+  if (!village) return Number.POSITIVE_INFINITY;
+  const woodenFenceBonus = hasActiveBuildingFlag(village, "hasWoodenFence", "woodenFence") ? 1 : 0;
+  const moatBonus = hasActiveBuildingFlag(village, "hasMoat", "moat") ? 1 : 0;
+  return RAID_BASE_FRONTLINER_SLOTS + woodenFenceBonus + moatBonus;
+}
+
+export function getRaidTrapMakerSlotCount(village = null) {
+  return village ? RAID_TRAP_MAKER_SLOTS : Number.POSITIVE_INFINITY;
+}
+
 export function getRaidShooterSlotCount(village = null) {
   if (!village) return Number.POSITIVE_INFINITY;
-  return Math.min(3, countActiveBuildings(village, "watchtower"));
+  return countActiveBuildings(village, "watchtower");
 }
 
 export function canShootInRaid(person, village = null) {
@@ -172,19 +201,46 @@ export function getActiveRaidShooters(village) {
     : shooters;
 }
 
-export function getRaidReadiness(village) {
+export function getActiveRaidFrontliners(village) {
   const villagers = Array.isArray(village?.villagers) ? village.villagers : [];
-  const defenders = villagers.filter(person => {
-    return person.action === ACTION_DEFEND && canPerformRaidAction(person, ACTION_DEFEND, village);
+  const frontliners = villagers.filter(person => {
+    return (person.action === ACTION_DEFEND || person.action === ACTION_FORTIFY) &&
+      canPerformRaidAction(person, person.action, village);
   });
-  const fortifiers = villagers.filter(person => {
-    return person.action === ACTION_FORTIFY && canPerformRaidAction(person, ACTION_FORTIFY, village);
-  });
-  const shooters = getActiveRaidShooters(village);
+  return sortRaidFrontlinersByPriority(frontliners).slice(0, getRaidFrontlinerSlotCount(village));
+}
+
+export function getActiveRaidTrapMakers(village) {
+  const villagers = Array.isArray(village?.villagers) ? village.villagers : [];
   const trapMakers = villagers.filter(person => {
     return person.action === ACTION_TRAP && canPerformRaidAction(person, ACTION_TRAP, village);
   });
-  const frontliners = defenders.concat(fortifiers);
+  return sortRaidTrapMakersByPriority(trapMakers).slice(0, getRaidTrapMakerSlotCount(village));
+}
+
+export function isRaidActionSlotAvailable(village, action, person = null) {
+  if (!village || !RAID_ACTIONS.includes(action)) return true;
+  const villagers = Array.isArray(village.villagers) ? village.villagers : [];
+  const assignedCount = action === ACTION_SHOOT
+    ? villagers.filter(item => item !== person && item.action === ACTION_SHOOT).length
+    : action === ACTION_TRAP
+      ? villagers.filter(item => item !== person && item.action === ACTION_TRAP).length
+      : villagers.filter(item => item !== person && (item.action === ACTION_DEFEND || item.action === ACTION_FORTIFY)).length;
+  const slotCount = action === ACTION_SHOOT
+    ? getRaidShooterSlotCount(village)
+    : action === ACTION_TRAP
+      ? getRaidTrapMakerSlotCount(village)
+      : getRaidFrontlinerSlotCount(village);
+  return assignedCount < slotCount;
+}
+
+export function getRaidReadiness(village) {
+  const villagers = Array.isArray(village?.villagers) ? village.villagers : [];
+  const frontliners = getActiveRaidFrontliners(village);
+  const defenders = frontliners.filter(person => person.action === ACTION_DEFEND);
+  const fortifiers = frontliners.filter(person => person.action === ACTION_FORTIFY);
+  const shooters = getActiveRaidShooters(village);
+  const trapMakers = getActiveRaidTrapMakers(village);
   const combatants = frontliners.concat(shooters);
 
   return {

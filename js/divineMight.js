@@ -6,7 +6,8 @@ export const DIVINE_MIGHT_LEVELS = [
   { level: 2, threshold: 90, miracleIds: ["1", "15", "3"] },
   { level: 3, threshold: 180, miracleIds: ["5", "7", "14"] },
   { level: 4, threshold: 320, miracleIds: ["9", "17"] },
-  { level: 5, threshold: 500, miracleIds: ["13"] }
+  { level: 5, threshold: 500, miracleIds: ["13"] },
+  { level: 6, threshold: 500, miracleIds: ["18", "19"], requiresApocalypseClear: true }
 ];
 
 const DIVINE_MIGHT_MAX = 99999;
@@ -30,7 +31,9 @@ const MIRACLE_SHORT_NAMES = {
   "14": "ミダス",
   "15": "市場",
   "16": "酒杯",
-  "17": "雷霆"
+  "17": "雷霆",
+  "18": "騒擾",
+  "19": "稀人"
 };
 
 export function getDivineMightAmount(village) {
@@ -45,15 +48,19 @@ export function formatDivineMightAmount(amount) {
     : value.toFixed(1).replace(/\.0$/, "");
 }
 
-export function getDivineMightLevelForAmount(amount) {
+function isDivineMightLevelAvailable(entry, village = null) {
+  return !entry.requiresApocalypseClear || !!village?.apocalypseCleared;
+}
+
+export function getDivineMightLevelForAmount(amount, village = null) {
   const value = Number(amount) || 0;
   return DIVINE_MIGHT_LEVELS.reduce((current, entry) => {
-    return value >= entry.threshold ? entry.level : current;
+    return value >= entry.threshold && isDivineMightLevelAvailable(entry, village) ? entry.level : current;
   }, 0);
 }
 
 export function getDivineMightLevel(village) {
-  return getDivineMightLevelForAmount(getDivineMightAmount(village));
+  return getDivineMightLevelForAmount(getDivineMightAmount(village), village);
 }
 
 export function getNextDivineMightLevelInfo(level) {
@@ -62,7 +69,7 @@ export function getNextDivineMightLevelInfo(level) {
 
 export function getDivineMightStatus(village) {
   const amount = getDivineMightAmount(village);
-  const level = getDivineMightLevelForAmount(amount);
+  const level = getDivineMightLevelForAmount(amount, village);
   const next = getNextDivineMightLevelInfo(level);
   const displayThreshold = next
     ? next.threshold
@@ -92,6 +99,14 @@ export function getMiracleUnlockInfo(miracleId, village) {
 
   const level = getDivineMightLevel(village);
   if (level >= required.level) return { unlocked: true, required, reason: "" };
+
+  if (required.requiresApocalypseClear && !village?.apocalypseCleared) {
+    return {
+      unlocked: false,
+      required,
+      reason: "黙示録の四騎士撃退後に解放"
+    };
+  }
 
   return {
     unlocked: false,
@@ -204,7 +219,8 @@ function isDivineMightModalBlocked() {
     "#secretTreasureEventModal",
     "#randomEventModal",
     "#festivalModal",
-    "#seasonChangeDialog"
+    "#seasonChangeDialog",
+    "#apocalypseEventModal"
   ];
   return selectors.some(selector => isVisibleElement(document.querySelector(selector)));
 }
@@ -214,7 +230,7 @@ export function addDivineMight(village, amount) {
   if (!village || gain <= 0) return { gain: 0, levelUp: false };
 
   const beforeAmount = getDivineMightAmount(village);
-  const beforeLevel = getDivineMightLevelForAmount(beforeAmount);
+  const beforeLevel = getDivineMightLevelForAmount(beforeAmount, village);
   village.divineMight = clampValue(beforeAmount + gain, 0, DIVINE_MIGHT_MAX);
   const afterLevel = getDivineMightLevel(village);
 
@@ -224,6 +240,18 @@ export function addDivineMight(village, amount) {
   }
 
   return { gain, levelUp: afterLevel > beforeLevel, beforeLevel, afterLevel };
+}
+
+export function refreshDivineMightLevelUnlock(village, beforeLevel = null) {
+  if (!village) return false;
+  const previousLevel = Number.isFinite(Number(beforeLevel))
+    ? Number(beforeLevel)
+    : getDivineMightLevelForAmount(getDivineMightAmount(village));
+  const afterLevel = getDivineMightLevel(village);
+  if (afterLevel <= previousLevel) return false;
+  queueDivineMightLevelUp(village, previousLevel, afterLevel);
+  scheduleDivineMightLevelUpModal(village);
+  return true;
 }
 
 export function subtractDivineMight(village, amount) {
@@ -266,7 +294,9 @@ export function showPendingDivineMightLevelUpModal(village, afterClose = null) {
 
   const unlockedText = unlockedNames.length > 0 ? unlockedNames.join("、") : "なし";
   const nextText = next
-    ? `Lv${next.level}（神威${next.threshold}）: ${nextNames.join("、")}`
+    ? (next.requiresApocalypseClear
+        ? `Lv${next.level}（四騎士撃退後）: ${nextNames.join("、")}`
+        : `Lv${next.level}（神威${next.threshold}）: ${nextNames.join("、")}`)
     : "すべての奇跡が解放済み";
 
   modal.innerHTML = `

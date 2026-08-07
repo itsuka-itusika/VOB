@@ -27,6 +27,7 @@ import {
   estimateMindCost,
   getMassageMindStat,
   getJobCostType,
+  getRestRecoveryMultiplier,
 } from "./domain/jobMath.js";
 import {
   ACTION_CRADLE,
@@ -54,6 +55,7 @@ import { getCaptives } from "./captives.js";
 import { getTutorialWarnings } from "./tutorial.js";
 import { applyVillageScaleArtClass, getVillageScaleTitle } from "./villageScale.js";
 import { getDivineMightStatus } from "./divineMight.js";
+import { RAID_ACTIONS, isRaidActionSlotAvailable } from "./raidRules.js";
 import { getBuildingRequestWarnings } from "./buildingRequests.js";
 import { hasDespairState, hasDisappointmentState } from "./domain/despair.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
@@ -396,12 +398,6 @@ function jobMindCost(job, stat, person, village) {
   return mindCost(getJobCostType(job).mind, stat, person, village);
 }
 
-function ageRestMultiplier(person) {
-  if (hasTrait(person, "老人") || hasTrait(person, "老狼")) return 0.7;
-  if (hasTrait(person, "中年")) return 0.9;
-  return 1;
-}
-
 function hasCurrentHobbyMate(person) {
   if (!person.hobby || !Array.isArray(person.relationships)) return false;
   return person.relationships.some(rel => {
@@ -528,8 +524,8 @@ function getTaskEstimateParts(person, task, village) {
     case "休養": {
       let hp = person.mindTraits.includes("ワーカホリック") ? 30 : (clinic ? 53 : 52);
       let mp = person.mindTraits.includes("ワーカホリック") ? -10 : (clinic ? 21 : 20);
-      hp = Math.floor(hp * ageRestMultiplier(person));
-      mp = Math.floor(mp * ageRestMultiplier(person));
+      hp = Math.floor(hp * getRestRecoveryMultiplier(person, "hp"));
+      mp = Math.floor(mp * getRestRecoveryMultiplier(person, "mp"));
       parts = [`体力+${hp}`, `メンタル${mp >= 0 ? "+" : ""}${mp}`];
       break;
     }
@@ -887,8 +883,10 @@ function appendActionCell(row, person, village, editable) {
     const option = document.createElement("option");
     const label = getActionOptionLabel(person, action, village);
     option.value = action;
-    option.textContent = label;
+    const slotUnavailable = RAID_ACTIONS.includes(action) && !isRaidActionSlotAvailable(village, action, person);
+    option.textContent = slotUnavailable ? `${label}（上限）` : label;
     option.title = getActionOptionTitle(person, action, village);
+    option.disabled = slotUnavailable;
     if (action === currentAction) option.selected = true;
     select.appendChild(option);
   });
@@ -897,6 +895,10 @@ function appendActionCell(row, person, village, editable) {
   select.onchange = () => {
     const newAction = select.value;
     if (newAction === ACTION_NONE) return;
+    if (RAID_ACTIONS.includes(newAction) && !isRaidActionSlotAvailable(village, newAction, person)) {
+      updateUI(village);
+      return;
+    }
     person.action = newAction;
     if (isPreferredActionCandidate(newAction)) {
       setPreferredAction(person, newAction);

@@ -14,6 +14,7 @@ import { clampValue } from "./util.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
 import { getRaidModuleById } from "./data/raidData.js";
 import { updateUI } from "./ui.js";
+import { getDivineMightLevel, refreshDivineMightLevelUnlock } from "./divineMight.js";
 
 export const APOCALYPSE_RAID_IDS = {
   FIFTH: "apocalypse-upper-winged",
@@ -392,11 +393,24 @@ export function destroyBacchusGoldenStatue(village, options = {}) {
 }
 
 function completeApocalypse(village) {
+  const beforeDivineMightLevel = getDivineMightLevel(village);
   removeVillageTrait(village, APOCALYPSE_TRAIT);
   removeVillageTrait(village, "異端");
   village.apocalypseStarted = false;
   village.apocalypseStage = 0;
+  village.apocalypseCleared = true;
+  const restoredSaltPillars = (village.villagers || []).filter(isSaltPillar);
+  restoredSaltPillars.forEach(person => {
+    person.bodyTraits = person.bodyTraits.filter(trait => trait !== SALT_PILLAR_TRAIT);
+    person.saltPillarMonths = 0;
+    syncEffectiveStats(person);
+    refreshJobTable(person, village);
+  });
+  refreshDivineMightLevelUnlock(village, beforeDivineMightLevel);
   village.log("【仮エンディング】黙示録の四騎士を退け、天の怒りと異端の記録は消え去った。");
+  if (restoredSaltPillars.length > 0) {
+    village.log(`塩の柱となっていた${restoredSaltPillars.length}人が元の姿へ戻った。`);
+  }
   addHistoryEvent(village, {
     title: "四騎士の退却",
     text: "黙示録の四騎士を退け、村は七つの災厄を越えた。天の怒りと異端の記録は消え去った。",
@@ -405,7 +419,7 @@ function completeApocalypse(village) {
   queueApocalypseModal({
     title: "七つの災厄を越えて",
     message: "四騎士は傷ついた翼を翻し、割れた天の彼方へ退いていった。村には、長い災厄の後の静寂が戻った。",
-    effect: "仮エンディングに到達しました。村特性「黙示録」と「異端」が解除されました。"
+    effect: "仮エンディングに到達しました。村特性「黙示録」と「異端」、身体特性「塩の柱」が解除され、神威Lv6が解放されました。"
   });
 }
 

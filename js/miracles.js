@@ -15,6 +15,7 @@ import { resolveDialogueTone } from "./data/dialogue/toneProfiles.js";
 import { BODY_EXCHANGE_SOURCE_RACE_LINE_KEYS, BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
 import { getVisitorArrivalLine } from "./data/dialogue/visitorLines.js";
 import { getActiveVillagers, isSaltPillar } from "./domain/apocalypseRules.js";
+import { startRaidEvent } from "./raidStart.js";
 import { completeTutorialTask } from "./tutorial.js";
 import { getCaptives } from "./captives.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
@@ -53,7 +54,9 @@ export const MIRACLES = [
   {id:"11", name:"出立の奇跡(50)", cost:50, desc:"1人離脱→幸福度分の魔素獲得"},
   {id:"14", name:"ミダスの奇跡(100)", cost:100, desc:"1ヶ月間、食料を得る代わりに資金を得る"},
   {id:"15", name:"市場の奇跡(120)", cost:120, desc:"行商人の訪問者を3人生成"},
-  {id:"17", name:"雷霆の奇跡(150)", cost:150, desc:"月1回。襲撃者1体の体力を80減らす。最低1で止まる"}
+  {id:"17", name:"雷霆の奇跡(150)", cost:150, desc:"月1回。襲撃者1体の体力を80減らす。最低1で止まる"},
+  {id:"18", name:"騒擾の奇跡(100)", cost:100, desc:"襲撃中でない時、ただちに襲撃を発生させる"},
+  {id:"19", name:"稀人の奇跡(300)", cost:300, desc:"レア種族、エクイナ、サテュロス、メナドの訪問者を1人呼ぶ"}
 ];
 
 const MIRACLE_UNLOCK_ORDER = DIVINE_MIGHT_LEVELS.flatMap(entry => entry.miracleIds);
@@ -151,6 +154,7 @@ function getMiracleBlockReason(costInfo, village, miracleId = "") {
   if (village.funds < costInfo.funds) reasons.push("資金不足");
   if (miracleId === "8" && !hasHearthMiracleTarget(village)) reasons.push("対象村人なし");
   if (miracleId === "17" && hasUsedThunderboltMiracleThisMonth(village)) reasons.push("今月は使用済み");
+  if (miracleId === "18" && village.villageTraits.includes("襲撃中")) reasons.push("襲撃中は使用不可");
   return reasons.join(", ");
 }
 
@@ -393,7 +397,9 @@ function renderMiracleCards(village, selectedId = "12") {
   if (select) select.value = currentId;
   const divineStatus = getDivineMightStatus(village);
   const nextDivineText = divineStatus.next
-    ? `次Lv${divineStatus.next.level}: 神威${divineStatus.next.threshold}まで残り${Math.ceil(divineStatus.remaining)}`
+    ? (divineStatus.next.requiresApocalypseClear
+        ? `次Lv${divineStatus.next.level}: 黙示録の四騎士撃退で解放`
+        : `次Lv${divineStatus.next.level}: 神威${divineStatus.next.threshold}まで残り${Math.ceil(divineStatus.remaining)}`)
     : "すべて解放済み";
 
   content.innerHTML = `
@@ -540,6 +546,10 @@ export function performMiracle(village) {
 
   if (mid === "8" && !hasHearthMiracleTarget(village)) {
     village.log("【竈女神の奇跡】対象村人なし");
+    return;
+  }
+  if (mid === "18" && village.villageTraits.includes("襲撃中")) {
+    village.log("【騒擾の奇跡】襲撃中は使用できません");
     return;
   }
 
@@ -707,6 +717,13 @@ export function performMiracle(village) {
         case "15": // 市場の奇跡
           marketMiracle(village);
           break;
+        case "18": // 騒擾の奇跡
+          village.log("【騒擾の奇跡】遠くで鬨の声が上がり、村へ騒乱が引き寄せられた");
+          startRaidEvent(village);
+          break;
+        case "19": // 稀人の奇跡
+          rareGuestMiracle(village);
+          break;
       }
       break;
   }
@@ -848,6 +865,24 @@ function travelerMiracle(v) {
     ? `${newV.name}が村を訪れました。<br>「${arrivalLine}」`
     : `${newV.name}が村を訪れました。`;
   showMiracleResultModal(v, "旅人の奇跡", message, [newV]);
+}
+
+function rareGuestMiracle(v) {
+  const types = ["レア種族", "エクイナ", "サテュロス", "メナド"];
+  const type = types[Math.floor(Math.random() * types.length)];
+  const existingNames = [
+    ...v.villagers.map(person => person.name),
+    ...v.visitors.map(person => person.name)
+  ];
+  const newVisitor = createRandomVisitor(existingNames, type, v);
+  v.visitors.push(newVisitor);
+  v.log(`【稀人の奇跡】${newVisitor.name}が来訪(訪問者)`);
+  const arrivalLine = getVisitorArrivalLine(newVisitor);
+  if (arrivalLine) v.log(`${newVisitor.name}「${arrivalLine}」`);
+  const message = arrivalLine
+    ? `${newVisitor.name}が村を訪れました。<br>「${arrivalLine}」`
+    : `${newVisitor.name}が村を訪れました。`;
+  showMiracleResultModal(v, "稀人の奇跡", message, [newVisitor]);
 }
 
 /** 市場の奇跡(行商人3名来訪) */

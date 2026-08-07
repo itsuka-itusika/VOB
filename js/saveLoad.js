@@ -5,7 +5,7 @@ import { ACTION_NONE, isPreferredActionCandidate, refreshJobTable, setPreferredA
 import { getPermanentStat, hydrateStatLayersFromObject, syncEffectiveStats } from "./domain/statLayers.js";
 import { syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
 import { normalizePastPortraitFiles } from "./domain/portraitHistory.js";
-import { createArchiveGapHistoryEvent, normalizeHistoryEvents } from "./history.js";
+import { createArchiveGapHistoryEvent, HISTORY_EVENT_TYPES, normalizeHistoryEvents } from "./history.js";
 import { normalizePortraitKey } from "./data/portraitPaths.js";
 import { ensureVillageFriendships, normalizeFriendshipState, normalizeRelationships } from "./relationships.js";
 import { ensureTitleState, evaluateTitles } from "./titles.js";
@@ -189,6 +189,7 @@ function convertVillageToObject(village) {
     lastThunderboltMiracleMonth: String(village.lastThunderboltMiracleMonth || ""),
     apocalypseStarted: !!village.apocalypseStarted,
     apocalypseStage: Math.max(0, Math.min(7, Math.floor(normalizeFiniteNumber(village.apocalypseStage, 0)))),
+    apocalypseCleared: !!village.apocalypseCleared,
     lastHeadmanElectionYear: village.lastHeadmanElectionYear != null && Number.isFinite(Number(village.lastHeadmanElectionYear))
       ? Number(village.lastHeadmanElectionYear)
       : null,
@@ -295,6 +296,7 @@ function convertVillagerToObject(vill) {
     socialAttemptedThisMonth: !!vill.socialAttemptedThisMonth,
     titleIds: Array.isArray(vill.titleIds) ? [...vill.titleIds] : [],
     titleStats: vill.titleStats ? { ...vill.titleStats } : {},
+    hasBeenCritical: !!vill.hasBeenCritical,
 
     preferredAction: vill.preferredAction || vill.job || "なし",
     job: vill.job,
@@ -389,6 +391,10 @@ function convertObjectToVillage(dataObj) {
   } else {
     v.historyEvents = [createArchiveGapHistoryEvent(v.year, v.month)];
   }
+  v.apocalypseCleared = !!dataObj.apocalypseCleared || v.historyEvents.some(event => {
+    return event.title === "四騎士の退却" ||
+      (event.tags.includes("四騎士") && event.tags.includes("仮エンディング"));
+  });
   v.gameOver = !!dataObj.gameOver;
   v.hasDonePreEvent = !!dataObj.hasDonePreEvent;
   v.hasDonePostEvent = !!dataObj.hasDonePostEvent;
@@ -451,6 +457,13 @@ function convertObjectToVillage(dataObj) {
     v.captives = dataObj.captives.map(o => normalizeCaptive(convertObjectToVillager(o)));
     v.captives.forEach(captive => ensureCaptiveReleaseDeadline(v, captive));
   }
+  const criticalNames = new Set(v.historyEvents
+    .filter(event => event.type === HISTORY_EVENT_TYPES.CRITICAL || event.tags.includes("危篤"))
+    .flatMap(event => event.people));
+  [...v.villagers, ...v.visitors, ...v.captives, ...v.raidEnemies].forEach(person => {
+    if (criticalNames.has(person.name)) person.hasBeenCritical = true;
+    evaluateTitles(person, { getPermanentStat });
+  });
   normalizeVillageRoles(v);
 
   return v;
@@ -511,6 +524,7 @@ function convertObjectToVillager(obj) {
   vill.socialAttemptedThisMonth = !!obj.socialAttemptedThisMonth;
   vill.titleIds = Array.isArray(obj.titleIds) ? [...obj.titleIds] : [];
   vill.titleStats = obj.titleStats && typeof obj.titleStats === "object" ? { ...obj.titleStats } : {};
+  vill.hasBeenCritical = !!obj.hasBeenCritical;
   ensureTitleState(vill);
   registerUsedName(vill.name);
 

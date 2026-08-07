@@ -20,8 +20,10 @@ import {
   canDefendInRaid,
   canMakeTrapInRaid,
   canShootInRaid,
+  getRaidFrontlinerSlotCount,
   getRaidReadiness,
   getRaidShooterSlotCount,
+  getRaidTrapMakerSlotCount,
   isRaidAction,
   isRaidActive
 } from "./raidRules.js";
@@ -533,21 +535,9 @@ function getMinimumFrontliners(village, profiles) {
 
   return Math.min(
     frontOptions.length,
+    getRaidFrontlinerSlotCount(village),
     Math.max(1, Math.ceil(Math.min(enemyCount || 1, activeProfiles.length) / 2))
   );
-}
-
-function chooseNonShooterRaidAssignment(profile) {
-  if (profile.canTrap) {
-    return { preferredAction: profile.fallback.preferredAction, action: ACTION_TRAP };
-  }
-  if (profile.canDefend) {
-    return { preferredAction: profile.fallback.preferredAction, action: ACTION_DEFEND };
-  }
-  if (profile.canFortify) {
-    return { preferredAction: profile.fallback.preferredAction, action: ACTION_FORTIFY };
-  }
-  return profile.fallback;
 }
 
 function enforceShooterSlots(village, profiles, assignments) {
@@ -559,7 +549,25 @@ function enforceShooterSlots(village, profiles, assignments) {
     .sort((a, b) => b.shooterScore - a.shooterScore);
 
   assignedShooters.slice(shooterSlots).forEach(profile => {
-    assignments.set(profile.person, chooseNonShooterRaidAssignment(profile));
+    assignments.set(profile.person, profile.fallback);
+  });
+}
+
+function enforceTrapMakerSlots(village, profiles, assignments) {
+  const assignedTrapMakers = profiles
+    .filter(profile => assignments.get(profile.person)?.action === ACTION_TRAP)
+    .sort((a, b) => b.trapScore - a.trapScore);
+  assignedTrapMakers.slice(getRaidTrapMakerSlotCount(village)).forEach(profile => {
+    assignments.set(profile.person, profile.fallback);
+  });
+}
+
+function enforceFrontlinerSlots(village, profiles, assignments) {
+  const assignedFrontliners = profiles
+    .filter(profile => [ACTION_DEFEND, ACTION_FORTIFY].includes(assignments.get(profile.person)?.action))
+    .sort((a, b) => Math.max(b.defenderScore, b.fortifierScore) - Math.max(a.defenderScore, a.fortifierScore));
+  assignedFrontliners.slice(getRaidFrontlinerSlotCount(village)).forEach(profile => {
+    assignments.set(profile.person, profile.fallback);
   });
 }
 
@@ -621,6 +629,8 @@ function buildRaidAssignments(village, targets) {
   });
 
   enforceShooterSlots(village, profiles, assignments);
+  enforceTrapMakerSlots(village, profiles, assignments);
+  enforceFrontlinerSlots(village, profiles, assignments);
 
   return assignments;
 }

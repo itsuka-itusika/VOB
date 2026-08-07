@@ -27,6 +27,7 @@ export class Village {
     this.lastThunderboltMiracleMonth = "";
     this.apocalypseStarted = false;
     this.apocalypseStage = 0;
+    this.apocalypseCleared = false;
 
     this.villagers = [];
     this.pendingGoldenRainPregnancies = [];
@@ -159,6 +160,7 @@ export class Villager {
     this.socialAttemptedThisMonth = false;
     this.titleIds = [];
     this.titleStats = {};
+    this.hasBeenCritical = false;
 
     /** 行動割り当て関連 */
     // preferredAction は通常時の復帰先。job は旧セーブ・旧コード互換の別名として同期する。

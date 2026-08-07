@@ -95,6 +95,14 @@ export function hasBodyTrait(person, trait) {
   return Array.isArray(person?.bodyTraits) && person.bodyTraits.includes(trait);
 }
 
+export function getRestRecoveryMultiplier(person, resource = "hp") {
+  if (hasBodyTrait(person, "老人") || hasBodyTrait(person, "老狼")) return 0.7;
+  if (hasBodyTrait(person, "中年")) return 0.9;
+  if (resource === "hp" && hasBodyTrait(person, "幼児")) return 1.4;
+  if (resource === "hp" && (hasBodyTrait(person, "少年") || hasBodyTrait(person, "少女"))) return 1.2;
+  return 1;
+}
+
 export function getBodyCostMultiplier(person, village) {
   if (hasMindTrait(person, SWEATY_TRAIT) && hasVillageTrait(village, SUMMER_TRAIT)) {
     return SEASONAL_COST_MULTIPLIER;
