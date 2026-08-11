@@ -30,8 +30,8 @@ import {
 } from "./secretTreasureEvents.js";
 
 const DEFAULT_PORTRAIT_PATH = getPortraitAssetPath(DEFAULT_PORTRAIT_KEY);
-const VISITOR_SEDUCTION_MIN_LUST = 18;
-const VISITOR_TARGET_LUST_MULTIPLIER_MAX = 1.2;
+const SEDUCTION_MIN_LUST = 18;
+const TARGET_LUST_MULTIPLIER_MAX = 1.2;
 
 // 訪問者タイプごとの勧誘成功率係数
 const RECRUITMENT_COEFFICIENTS = {
@@ -362,7 +362,7 @@ function calculateCaptivePersuasionSuccessRate(captive, persuader) {
 function calculateCaptiveSeductionSuccessRate(captive, seducer) {
   const check = canAttemptSeduction(captive, seducer);
   if (!check.ok) return 0;
-  const targetLustMultiplier = Math.max(0, ((Number(captive.sexdr) || 0) - 10) / 10);
+  const targetLustMultiplier = getSeductionTargetLustMultiplier(captive);
   return Math.min(100, Math.max(0,
     CAPTIVE_SOCIAL_COEFFICIENT * (seducer.chr / 20) * (seducer.sexdr / 20) * targetLustMultiplier * 100
   ));
@@ -375,31 +375,31 @@ function calculateRecruitmentSuccessRate(visitor, recruiter) {
   ));
 }
 
-function canAttemptSeduction(visitor, seducer, minimumLust = 21) {
-  // 誘惑は、訪問者の精神性別と誘惑者の肉体性別が異なる場合のみ可能。
+function canAttemptSeduction(target, seducer) {
+  // 誘惑は、被誘惑者の精神性別と誘惑者の肉体性別が異なる場合のみ可能。
   // 誘惑者側は「見た目・身体」として bodySex を参照し、
-  // 訪問者側は「惹かれる向き」として spiritSex を参照する。
-  if (visitor.spiritSex === seducer.bodySex) {
+  // 被誘惑者側は「惹かれる向き」として spiritSex を参照する。
+  if (target.spiritSex === seducer.bodySex) {
     return { ok: false, reason: "対象外性別" };
   }
-  if (seducer.sexdr < minimumLust) {
+  if (seducer.sexdr < SEDUCTION_MIN_LUST) {
     return { ok: false, reason: "好色不足" };
   }
   return { ok: true, reason: "" };
 }
 
-function canAttemptVisitorSeduction(visitor, seducer) {
-  return canAttemptSeduction(visitor, seducer, VISITOR_SEDUCTION_MIN_LUST);
+function getSeductionTargetLustMultiplier(target) {
+  return Math.min(
+    TARGET_LUST_MULTIPLIER_MAX,
+    Math.max(0, ((Number(target.sexdr) || 0) - 5) / 10)
+  );
 }
 
 function calculateSeductionSuccessRate(visitor, seducer) {
-  const check = canAttemptVisitorSeduction(visitor, seducer);
+  const check = canAttemptSeduction(visitor, seducer);
   if (!check.ok) return 0;
   const coefficient = getRecruitmentCoefficient(visitor);
-  const targetLustMultiplier = Math.min(
-    VISITOR_TARGET_LUST_MULTIPLIER_MAX,
-    Math.max(0, ((Number(visitor.sexdr) || 0) - 5) / 10)
-  );
+  const targetLustMultiplier = getSeductionTargetLustMultiplier(visitor);
   return Math.min(100, Math.max(0,
     coefficient * (seducer.chr / 20) * (seducer.sexdr / 20) * targetLustMultiplier * 100
   ));
@@ -527,7 +527,7 @@ function openSeductionModal(visitor) {
     <select id="seducerSelect" style="width:100%;padding:5px;margin-bottom:15px;">
       <option value="">${hasCandidates ? "誘惑する村人を選択してください" : "今月、勧誘・誘惑できる村人はいません"}</option>
       ${candidates.map(v => {
-        const check = canAttemptVisitorSeduction(visitor, v);
+        const check = canAttemptSeduction(visitor, v);
         const rate = Math.floor(calculateSeductionSuccessRate(visitor, v));
         const rateText = check.ok ? `成功率:${rate}%` : `不可:${check.reason}`;
         return `<option value="${v.name}">${v.name} (魅力:${Math.floor(v.chr)} 好色:${Math.floor(v.sexdr)} ${rateText})</option>`;
@@ -552,7 +552,7 @@ function openSeductionModal(visitor) {
       seductionSuccessRate.textContent = "成功率: -";
       return;
     }
-    const check = canAttemptVisitorSeduction(visitor, seducer);
+    const check = canAttemptSeduction(visitor, seducer);
     seductionSuccessRate.textContent = check.ok
       ? `成功率: ${Math.floor(calculateSeductionSuccessRate(visitor, seducer))}%`
       : `誘惑不可: ${check.reason}`;
@@ -583,7 +583,7 @@ function openSeductionModal(visitor) {
     // 条件チェック
     // 1. 訪問者の精神性別と誘惑者の肉体性別が異なるか
     // 2. 誘惑者の好色が18以上か
-    const seductionCheck = canAttemptVisitorSeduction(visitor, seducer);
+    const seductionCheck = canAttemptSeduction(visitor, seducer);
     if (!seductionCheck.ok && seductionCheck.reason === "対象外性別") {
       alert("誘惑は、誘惑者の肉体性別が、訪問者の精神性別にとって異性である場合に実行できます。誘惑者自身の精神性別ではなく、現在の肉体性別が参照されます。");
       theVillage.log(`${seducer.name}の誘惑は失敗しました。(理由: 対象外性別)`);
