@@ -30,6 +30,7 @@ export const APOCALYPSE_RAID_IDS = {
 
 const GOLDEN_STATUE_ID = "bacchusGoldenStatue";
 const GOLDEN_STATUE_BUILT_FLAG = "hasBacchusGoldenStatue";
+const LOCUST_TRAIT = "飛蝗";
 const APOCALYPSE_MODAL_ID = "apocalypseEventModal";
 const APOCALYPSE_OVERLAY_ID = "apocalypseEventOverlay";
 const PRIORITY_MODAL_SELECTORS = [
@@ -218,13 +219,14 @@ function applyFirstCalamity(village) {
 
 function applySecondCalamity(village) {
   const before = Math.max(0, Number(village.food) || 0);
-  const loss = Math.floor(before * 0.8);
+  const loss = Math.floor(before * 0.6);
   village.food = Math.max(0, before - loss);
+  addVillageTrait(village, LOCUST_TRAIT);
   recordStage(village, 2, "第二の角笛が吹かれた", "天を覆う蝗とともに黒き騎士・飢餓が現れ、蓄えを食い尽くした。");
   queueApocalypseModal({
     title: "第二の角笛が吹かれた",
-    message: "天を覆う蝗の向こうに、黒き騎士・飢餓が姿を現し、空になった倉を見届けると天へ消えた。",
-    effect: `食料の8割、${loss}が失われました。`,
+    message: "天を覆う蝗の向こうに、黒き騎士・飢餓が姿を現し、荒らされた倉を見届けると天へ消えた。",
+    effect: `食料の6割、${loss}が失われ、村特性「飛蝗」が付与されました。`,
     image: stageImage(2)
   });
 }
@@ -414,6 +416,7 @@ export function destroyBacchusGoldenStatue(village, options = {}) {
   if (!options.skipRaidCleanup) clearApocalypseRaid(village);
   removeGoldenStatueBuilding(village);
   removeVillageTrait(village, APOCALYPSE_TRAIT);
+  removeVillageTrait(village, LOCUST_TRAIT);
   village.apocalypseStarted = false;
   village.apocalypseStage = 0;
   const forced = !!options.forced;
@@ -439,6 +442,7 @@ function completeApocalypse(village) {
   const beforeDivineMightLevel = getDivineMightLevel(village);
   removeVillageTrait(village, APOCALYPSE_TRAIT);
   removeVillageTrait(village, "異端");
+  removeVillageTrait(village, LOCUST_TRAIT);
   village.apocalypseStarted = false;
   village.apocalypseStage = 0;
   village.apocalypseCleared = true;
