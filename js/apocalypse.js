@@ -20,6 +20,7 @@ import {
 import { getRaidModuleById } from "./data/raidData.js";
 import { updateUI } from "./ui.js";
 import { getDivineMightLevel, refreshDivineMightLevelUnlock } from "./divineMight.js";
+import { getCaptives, isCaptive, normalizeCaptive } from "./captives.js";
 
 export const APOCALYPSE_RAID_IDS = {
   SIXTH: "apocalypse-grand-crusade",
@@ -60,6 +61,19 @@ function addVillageTrait(village, trait) {
 function removeVillageTrait(village, trait) {
   village.villageTraits = (Array.isArray(village.villageTraits) ? village.villageTraits : [])
     .filter(value => value !== trait);
+}
+
+function getSaltPillarResidents(village) {
+  return [...new Set([...(village.villagers || []), ...getCaptives(village)])].filter(isSaltPillar);
+}
+
+function refreshAfterSaltPillarRecovery(person, village) {
+  syncEffectiveStats(person);
+  if (isCaptive(person, village)) {
+    normalizeCaptive(person);
+  } else {
+    refreshJobTable(person, village);
+  }
 }
 
 function isVisibleElement(element) {
@@ -428,12 +442,11 @@ function completeApocalypse(village) {
   village.apocalypseStarted = false;
   village.apocalypseStage = 0;
   village.apocalypseCleared = true;
-  const restoredSaltPillars = (village.villagers || []).filter(isSaltPillar);
+  const restoredSaltPillars = getSaltPillarResidents(village);
   restoredSaltPillars.forEach(person => {
     person.bodyTraits = person.bodyTraits.filter(trait => trait !== SALT_PILLAR_TRAIT);
     person.saltPillarMonths = 0;
-    syncEffectiveStats(person);
-    refreshJobTable(person, village);
+    refreshAfterSaltPillarRecovery(person, village);
   });
   refreshDivineMightLevelUnlock(village, beforeDivineMightLevel);
   village.log("【仮エンディング】黙示録の四騎士を退け、天の怒りと異端の記録は消え去った。");
@@ -469,14 +482,12 @@ export function handleApocalypseRaidResult(village, raidId, isSuccess) {
 }
 
 export function advanceSaltPillarMonths(village) {
-  (village.villagers || []).forEach(person => {
-    if (!isSaltPillar(person)) return;
+  getSaltPillarResidents(village).forEach(person => {
     person.saltPillarMonths = Math.max(0, Number(person.saltPillarMonths) || 0) + 1;
     if (person.saltPillarMonths < SALT_PILLAR_DURATION_MONTHS) return;
     person.bodyTraits = person.bodyTraits.filter(trait => trait !== SALT_PILLAR_TRAIT);
     person.saltPillarMonths = 0;
-    syncEffectiveStats(person);
-    refreshJobTable(person, village);
+    refreshAfterSaltPillarRecovery(person, village);
     village.log(`${person.name}の塩の身体が崩れ、人の姿へ戻った。`);
   });
 }

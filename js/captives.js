@@ -2,6 +2,8 @@ import { clampValue } from "./util.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { getRaiderSpeechType } from "./domain/raiderSpeechTypes.js";
+import { ACTION_SALT_PILLAR } from "./domain/jobTables.js";
+import { isSaltPillar } from "./domain/apocalypseRules.js";
 
 export const ACTION_CAPTIVE = "虜囚";
 export const CAPTIVE_TRAIT = "捕虜";
@@ -67,8 +69,8 @@ export function normalizeCaptive(person) {
   person.job = ACTION_CAPTIVE;
   person.preferredAction = ACTION_CAPTIVE;
   person.jobTable = [ACTION_CAPTIVE];
-  person.action = ACTION_CAPTIVE;
-  person.actionTable = [ACTION_CAPTIVE];
+  person.action = isSaltPillar(person) ? ACTION_SALT_PILLAR : ACTION_CAPTIVE;
+  person.actionTable = [person.action];
   person.assignmentLocked = true;
   syncEffectiveStats(person);
   return person;
@@ -221,6 +223,7 @@ export function getPeopleForFoodAndWinterMaterials(village) {
 export function processCaptiveActionRecovery(village) {
   const captives = getCaptives(village);
   captives.forEach(captive => {
+    if (isSaltPillar(captive)) return;
     captive.hp = clampValue((Number(captive.hp) || 0) + 10, 0, 100);
     captive.mp = clampValue((Number(captive.mp) || 0) + 10, 0, 100);
   });

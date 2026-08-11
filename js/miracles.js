@@ -120,7 +120,9 @@ export function onSelectMiracleChange(village) {
   // 特定のIDは対象選択が必要
   if (["3","6","7","11","12","13","16"].includes(mid)) {
     if (mid==="3"||mid==="12"||mid==="13") {
-      const selectOptions = mid === "12" ? { normalExchangeOnly: true } : (mid === "3" ? { villagersOnly: true } : {});
+      const selectOptions = mid === "12"
+        ? { normalExchangeOnly: true, includeSaltPillar: true }
+        : (mid === "13" ? { includeSaltPillar: true, excludeExchangeImmune: true } : { villagersOnly: true });
       div.appendChild(createVillagerSelect("targetA", village, selectOptions));
       div.appendChild(createVillagerSelect("targetB", village, selectOptions));
     } else {
@@ -212,10 +214,10 @@ function getMiracleTargetCount(mid) {
 
 function getMiracleTargetOptions(mid) {
   if (mid === "17") return { raidersOnly: true };
-  if (mid === "12") return { normalExchangeOnly: true };
+  if (mid === "12") return { normalExchangeOnly: true, includeSaltPillar: true };
   if (mid === "6") return { villagersOnly: true };
   if (mid === "3" || mid === "7" || mid === "11" || mid === "16") return { villagersOnly: true };
-  if (mid === "13") return { excludeExchangeImmune: true };
+  if (mid === "13") return { includeSaltPillar: true, excludeExchangeImmune: true };
   return {};
 }
 

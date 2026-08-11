@@ -7,6 +7,7 @@ import { isOriginalBodyPortrait, rememberCurrentPortrait } from "./domain/portra
 import { recordBodyExchangeHistory } from "./history.js";
 import { evaluateTitles } from "./titles.js";
 import { isCaptive, normalizeCaptive } from "./captives.js";
+import { SALT_PILLAR_TRAIT, isSaltPillar } from "./domain/apocalypseRules.js";
 
 const RAID_JOBS = ["野盗", "ゴブリン", "狼", "キュクロプス", "ハーピー"];
 
@@ -16,6 +17,13 @@ export function canExchangeBody(person) {
 
 function cloneNullableObject(value) {
   return value == null ? null : { ...value };
+}
+
+function getSaltPillarMonths(person) {
+  const bodyTraits = Array.isArray(person?.bodyTraits) ? person.bodyTraits : [];
+  return bodyTraits.includes(SALT_PILLAR_TRAIT)
+    ? Math.max(0, Number(person?.saltPillarMonths) || 0)
+    : 0;
 }
 
 function isRaidEnemy(person, village) {
@@ -56,6 +64,14 @@ function normalizeRaidEnemyAssignment(person) {
 }
 
 function refreshAssignmentAfterExchange(person, village) {
+  if (isSaltPillar(person)) {
+    if (isCaptive(person, village)) {
+      normalizeCaptive(person);
+    } else {
+      refreshJobTable(person, village);
+    }
+    return;
+  }
   if (isRaidEnemy(person, village)) {
     normalizeRaidEnemyAssignment(person);
     return;
@@ -98,6 +114,7 @@ export function doExchange(a, b, v, isLightning = false, historySource = null, o
   ensureStatLayers(b);
   const sourceRaceA = a.race || "人間";
   const sourceRaceB = b.race || "人間";
+  const saltPillarMonthsB = getSaltPillarMonths(b);
   const exchangeSource = historySource || (isLightning ? "落雷" : "奇跡");
   if (a.portraitFile !== b.portraitFile) {
     const isOriginalBodyA = isOriginalBodyPortrait(a);
@@ -120,6 +137,7 @@ export function doExchange(a, b, v, isLightning = false, historySource = null, o
     raiderPortrait: a.raiderPortrait,
     visitorPortrait: a.visitorPortrait,
     hp: a.hp,
+    saltPillarMonths: getSaltPillarMonths(a),
     baseStats: pickStats(a.baseStats, PHYSICAL_ABILITY_STATS),
     acquiredStatMods: pickStats(a.acquiredStatMods, PHYSICAL_ABILITY_STATS),
     bodyTraits: [...a.bodyTraits],
@@ -139,6 +157,7 @@ export function doExchange(a, b, v, isLightning = false, historySource = null, o
   a.raiderPortrait = b.raiderPortrait;
   a.visitorPortrait = b.visitorPortrait;
   a.hp = b.hp;
+  a.saltPillarMonths = saltPillarMonthsB;
   applyStats(a.baseStats, pickStats(b.baseStats, PHYSICAL_ABILITY_STATS));
   applyStats(a.acquiredStatMods, pickStats(b.acquiredStatMods, PHYSICAL_ABILITY_STATS));
   a.bodyTraits = [...b.bodyTraits];
@@ -157,6 +176,7 @@ export function doExchange(a, b, v, isLightning = false, historySource = null, o
   b.raiderPortrait = exchangeParams.raiderPortrait;
   b.visitorPortrait = exchangeParams.visitorPortrait;
   b.hp = exchangeParams.hp;
+  b.saltPillarMonths = exchangeParams.saltPillarMonths;
   applyStats(b.baseStats, exchangeParams.baseStats);
   applyStats(b.acquiredStatMods, exchangeParams.acquiredStatMods);
   b.bodyTraits = [...exchangeParams.bodyTraits];
