@@ -21,18 +21,20 @@ export const ACTION_LEISURE = "余暇";
 export const ACTION_HEAL = "療養";
 export const ACTION_LAST_MOMENTS = "臨終";
 export const ACTION_CRADLE = "揺籃";
+export const ACTION_SALT_PILLAR = "塩柱";
 export const ACTION_MASSAGE_MALE = "あんま男";
 export const ACTION_MASSAGE_FEMALE = "あんま女";
 export const MASSAGE_ACTIONS = [ACTION_MASSAGE_MALE, ACTION_MASSAGE_FEMALE];
 
 const TEMPORARY_ACTIONS = new Set([ACTION_REST, ACTION_LEISURE]);
-const FORCED_ACTIONS = new Set([ACTION_HEAL, ACTION_LAST_MOMENTS]);
+const FORCED_ACTIONS = new Set([ACTION_HEAL, ACTION_LAST_MOMENTS, ACTION_SALT_PILLAR]);
 const NON_PREFERRED_ACTIONS = new Set([
   ACTION_NONE,
   ACTION_REST,
   ACTION_LEISURE,
   ACTION_HEAL,
   ACTION_LAST_MOMENTS,
+  ACTION_SALT_PILLAR,
   ACTION_DEFEND,
   ACTION_FORTIFY,
   ACTION_SHOOT,
@@ -311,8 +313,8 @@ export function applyForcedActionRestriction(person) {
 
   if (isSaltPillar(person)) {
     preservePreferredBeforeRestriction(person);
-    setTables(person, [], [ACTION_NONE]);
-    person.action = ACTION_NONE;
+    setTables(person, [], [ACTION_SALT_PILLAR]);
+    person.action = ACTION_SALT_PILLAR;
     return {
       restricted: true,
       changed: beforePreferred !== person.preferredAction ||
@@ -321,7 +323,7 @@ export function applyForcedActionRestriction(person) {
         beforeJobTable !== person.jobTable.join("\u0001") ||
         beforeActionTable !== person.actionTable.join("\u0001"),
       reason: "塩の柱",
-      action: ACTION_NONE
+      action: ACTION_SALT_PILLAR
     };
   }
 

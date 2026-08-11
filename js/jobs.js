@@ -34,6 +34,7 @@ import {
 import {
   ACTION_MASSAGE_FEMALE,
   ACTION_MASSAGE_MALE,
+  ACTION_SALT_PILLAR,
   getActionDisplayName,
   normalizeActionForPerson,
   refreshJobTable
@@ -113,7 +114,7 @@ export function handleAllVillagerJobs(village) {
 
       let roll = randInt(1, 100);
       // サボり判定
-      if (roll <= saboProb && p.action !== "休養" && p.action !== "余暇" && p.action !== "なし" && p.action !== "揺籃" && p.action !== "迎撃" && p.action !== "籠城" && p.action !== "射撃" && p.action !== "罠作成" && p.action !== "療養" && p.action !== "臨終") {
+      if (roll <= saboProb && p.action !== "休養" && p.action !== "余暇" && p.action !== "なし" && p.action !== "揺籃" && p.action !== "迎撃" && p.action !== "籠城" && p.action !== "射撃" && p.action !== "罠作成" && p.action !== "療養" && p.action !== "臨終" && p.action !== ACTION_SALT_PILLAR) {
         doSabori(p, village);
       } else {
         doJobAction(p, village, secretTreasureFlags);
@@ -245,6 +246,9 @@ function doJobAction(p, v, secretTreasureFlags = null) {
   switch(normalizeActionForPerson(p.action, p)) {
     case "なし":
       v.log(`${p.name}は行動がない`);
+      break;
+    case ACTION_SALT_PILLAR:
+      v.log(`${p.name}は塩の柱となり、動かない`);
       break;
     case "休養":
       doRestJob(p, v);

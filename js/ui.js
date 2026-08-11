@@ -36,6 +36,7 @@ import {
   ACTION_MASSAGE_FEMALE,
   ACTION_MASSAGE_MALE,
   ACTION_NONE,
+  ACTION_SALT_PILLAR,
   getActionDisplayName,
   isPreferredActionCandidate,
   normalizeActionForPerson,
@@ -863,7 +864,7 @@ function appendActionCell(row, person, village, editable) {
   const select = document.createElement("select");
   const currentAction = String(person.action || ACTION_NONE).trim() || ACTION_NONE;
   const actionTable = Array.isArray(person.actionTable) ? person.actionTable : [];
-  const isFixedAction = actionTable.length === 1 && [ACTION_CRADLE, ACTION_HEAL, ACTION_LAST_MOMENTS].includes(actionTable[0]);
+  const isFixedAction = actionTable.length === 1 && [ACTION_CRADLE, ACTION_HEAL, ACTION_LAST_MOMENTS, ACTION_SALT_PILLAR].includes(actionTable[0]);
   if (currentAction !== ACTION_NONE) {
     select.title = getActionOptionTitle(person, currentAction, village);
   }

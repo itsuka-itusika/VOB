@@ -756,14 +756,14 @@ export const RAIDER_TYPES = [
     ]
   },
   {
-    type: "黙示録の騎士・征服",
+    type: "黙示録の騎士・支配",
     displayType: "白の騎士",
     weight: 0,
     minCount: 1,
     maxCount: 1,
     race: "異形の大天使",
     ageRange: { min: 100, max: 300 },
-    params: { job: "黙示録の騎士・征服", action: "襲撃" },
+    params: { job: "黙示録の騎士・支配", action: "襲撃" },
     raidPosition: "middle",
     raidTargeting: "frontMiddleRandom",
     useDefaultPortrait: true,
@@ -787,7 +787,7 @@ export const RAIDER_TYPES = [
     dialogues: [
       "白き冠の下にひれ伏せ。すべての地は、天のものとなる。",
       "おまえたちの奇跡で、この身を奪うことはできぬ。",
-      "征服は慈悲である。抗う自由さえ、ここで終わる。"
+      "支配は慈悲である。抗う自由さえ、ここで終わる。"
     ]
   },
   {
@@ -826,14 +826,14 @@ export const RAIDER_TYPES = [
     ]
   },
   {
-    type: "黙示録の騎士・飢饉",
+    type: "黙示録の騎士・飢餓",
     displayType: "黒の騎士",
     weight: 0,
     minCount: 1,
     maxCount: 1,
     race: "異形の大天使",
     ageRange: { min: 100, max: 300 },
-    params: { job: "黙示録の騎士・飢饉", action: "襲撃" },
+    params: { job: "黙示録の騎士・飢餓", action: "襲撃" },
     raidPosition: "middle",
     raidTargeting: "frontMiddleRandom",
     useDefaultPortrait: true,
@@ -861,14 +861,14 @@ export const RAIDER_TYPES = [
     ]
   },
   {
-    type: "黙示録の騎士・死",
+    type: "黙示録の騎士・疫病",
     displayType: "青白い騎士",
     weight: 0,
     minCount: 1,
     maxCount: 1,
     race: "異形の大天使",
     ageRange: { min: 100, max: 300 },
-    params: { job: "黙示録の騎士・死", action: "襲撃" },
+    params: { job: "黙示録の騎士・疫病", action: "襲撃" },
     raidPosition: "front",
     raidTargeting: "lowestHp",
     useDefaultPortrait: true,
@@ -1390,15 +1390,20 @@ export const RAID_MODULES = [
   }),
   createCompositeRaiderRaid({
     id: "apocalypse-upper-winged",
-    name: "第五の災厄・上位翼人兵の襲撃",
-    warningName: "上位翼人兵",
+    name: "第七の災厄・上位翼人兵と支配",
+    warningName: "上位翼人兵と白き騎士・支配",
     weight: 0,
-    representative: { raiderType: "上位翼人" },
+    representative: [
+      { raiderType: "黙示録の騎士・支配" },
+      { raiderType: "上位翼人" }
+    ],
     enemyGroups: [
       { raiderType: "上位翼人", minCount: 3, maxCount: 4 },
-      { raiderType: "翼人兵", minCount: 4, maxCount: 6 }
+      { raiderType: "翼人兵", minCount: 4, maxCount: 6 },
+      { raiderType: "黙示録の騎士・支配", minCount: 1, maxCount: 1 }
     ],
     defense: { surviveTurns: 6 },
+    successRewards: { completeHappiness: 30, partialHappiness: 15 },
     failurePenalty: {
       security: 28,
       villagerHpRange: [18, 35],
@@ -1406,17 +1411,18 @@ export const RAID_MODULES = [
       severeInjury: true
     },
     introDialogues: [
-      "第五の角笛は鳴った。幾重の翼の下で、異端の村は裁かれる。",
-      "空を見上げよ。天の怒りは、刃となって降りる。",
-      "黄金の偶像を倒さぬ者に、もはや赦しはない。"
+      "第七の角笛は鳴った。幾重の翼の下で、異端の村は支配される。",
+      "白き騎士の命により、天の軍勢が最後の裁きを下す。",
+      "黄金の偶像を倒さぬ者に、もはや自由も赦しもない。"
     ]
   }),
   createCompositeRaiderRaid({
     id: "apocalypse-grand-crusade",
-    name: "第六の災厄・大規模聖征軍団の襲撃",
-    warningName: "大規模聖征軍団",
+    name: "第六の災厄・大規模聖征軍団と戦争",
+    warningName: "大規模聖征軍団と赤き騎士・戦争",
     weight: 0,
     representative: [
+      { raiderType: "黙示録の騎士・戦争" },
       { raiderType: "聖騎士" },
       { raiderType: "聖女" }
     ],
@@ -1424,7 +1430,8 @@ export const RAID_MODULES = [
       { raiderType: "重装兵", minCount: 6, maxCount: 8 },
       { raiderType: "上級騎士", minCount: 4, maxCount: 6 },
       { raiderType: "聖騎士", minCount: 2, maxCount: 3 },
-      { raiderType: "聖女", minCount: 2, maxCount: 3 }
+      { raiderType: "聖女", minCount: 2, maxCount: 3 },
+      { raiderType: "黙示録の騎士・戦争", minCount: 1, maxCount: 1 }
     ],
     defense: { surviveTurns: 7 },
     failurePenalty: {
@@ -1437,9 +1444,9 @@ export const RAID_MODULES = [
       severeInjury: true
     },
     introDialogues: [
-      "第六の角笛は鳴った。聖征の全軍をもって、この村を地図から消す。",
-      "天の怒りに抗う者よ、盾を並べよ。これが最後の悔い改めの時だ。",
-      "黄金の偶像を砕くまで、聖なる軍靴は止まらない。"
+      "第六の角笛は鳴った。赤き騎士の下、聖征の全軍をもってこの村を地図から消す。",
+      "戦争の剣に抗う者よ、盾を並べよ。悔い改めの時は終わった。",
+      "黄金の偶像を砕くまで、赤き刃も聖なる軍靴も止まらない。"
     ]
   }),
   createCompositeRaiderRaid({
@@ -1447,12 +1454,12 @@ export const RAID_MODULES = [
     name: "第七の災厄・黙示録の四騎士",
     warningName: "黙示録の四騎士",
     weight: 0,
-    representative: { raiderType: "黙示録の騎士・征服" },
+    representative: { raiderType: "黙示録の騎士・支配" },
     enemyGroups: [
-      { raiderType: "黙示録の騎士・征服", minCount: 1, maxCount: 1 },
+      { raiderType: "黙示録の騎士・支配", minCount: 1, maxCount: 1 },
       { raiderType: "黙示録の騎士・戦争", minCount: 1, maxCount: 1 },
-      { raiderType: "黙示録の騎士・飢饉", minCount: 1, maxCount: 1 },
-      { raiderType: "黙示録の騎士・死", minCount: 1, maxCount: 1 }
+      { raiderType: "黙示録の騎士・飢餓", minCount: 1, maxCount: 1 },
+      { raiderType: "黙示録の騎士・疫病", minCount: 1, maxCount: 1 }
     ],
     defense: { surviveTurns: 8 },
     successRewards: { completeHappiness: 30, partialHappiness: 15 },
@@ -1467,7 +1474,7 @@ export const RAID_MODULES = [
       severeInjury: true
     },
     introDialogues: [
-      "第七の角笛は鳴った。征服、戦争、飢饉、死――四つの裁きがここに揃う。",
+      "第七の角笛は鳴った。支配、戦争、飢餓、疫病――四つの裁きがここに揃う。",
       "肉体を取り替える奇跡など、天の使いには届かぬ。",
       "我らを退けるか、黄金の偶像とともに砕かれるか。選べ。"
     ]

@@ -1,6 +1,6 @@
 export const APOCALYPSE_TRAIT = "黙示録";
 export const SALT_PILLAR_TRAIT = "塩の柱";
-export const SALT_PILLAR_DURATION_MONTHS = 6;
+export const SALT_PILLAR_DURATION_MONTHS = 3;
 
 export function isApocalypseActive(village) {
   return !!village?.apocalypseStarted &&

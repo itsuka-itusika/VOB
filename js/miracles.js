@@ -213,7 +213,7 @@ function getMiracleTargetCount(mid) {
 function getMiracleTargetOptions(mid) {
   if (mid === "17") return { raidersOnly: true };
   if (mid === "12") return { normalExchangeOnly: true };
-  if (mid === "6") return { villagersOnly: true, includeSaltPillar: true };
+  if (mid === "6") return { villagersOnly: true };
   if (mid === "3" || mid === "7" || mid === "11" || mid === "16") return { villagersOnly: true };
   if (mid === "13") return { excludeExchangeImmune: true };
   return {};
@@ -623,6 +623,11 @@ export function performMiracle(village) {
             refundMiracleMana(village, cost);
             return;
           }
+          if (isSaltPillar(vA)) {
+            village.log("【癒しの奇跡】塩の柱は治療できません");
+            refundMiracleMana(village, cost);
+            return;
+          }
           healMiracle(vA,village);
           break;
         case "16": // 酒杯(1人回復)
@@ -752,7 +757,7 @@ function forceMarriage(a,b,v) {
 
 /** 癒し: 負傷など回復 */
 function healMiracle(p,v) {
-  let arr=["負傷","重体","疲労","過労","飢餓","疫病","産褥","凍え","塩の柱"];
+  let arr=["負傷","重体","疲労","過労","飢餓","疫病","産褥","凍え"];
   let recoveredTraits = [];
 
   arr.forEach(trait => {
@@ -760,7 +765,6 @@ function healMiracle(p,v) {
       recoveredTraits.push(trait);
       p.bodyTraits = p.bodyTraits.filter(t => t !== trait);
       if (trait === "産褥") p.postpartumMonths = 0;
-      if (trait === "塩の柱") p.saltPillarMonths = 0;
     }
   });
 

@@ -3328,6 +3328,9 @@ body.mobile-mode .event-modal {
   box-sizing: border-box;
   transform: translateX(-50%);
 }
+body.mobile-mode .apocalypse-event-image {
+  max-height: min(48vh, 220px);
+}
 body.mobile-mode .heresy-inquisition-body {
   padding: 4px;
 }

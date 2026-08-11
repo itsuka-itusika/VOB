@@ -12,14 +12,19 @@ import {
 } from "./domain/apocalypseRules.js";
 import { clampValue } from "./util.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
+import {
+  damageBuilding,
+  getActiveBuildingIds,
+  recalculateBuildingDerivedState
+} from "./domain/buildingState.js";
 import { getRaidModuleById } from "./data/raidData.js";
 import { updateUI } from "./ui.js";
 import { getDivineMightLevel, refreshDivineMightLevelUnlock } from "./divineMight.js";
 
 export const APOCALYPSE_RAID_IDS = {
-  FIFTH: "apocalypse-upper-winged",
   SIXTH: "apocalypse-grand-crusade",
-  SEVENTH: "apocalypse-four-horsemen"
+  SEVENTH: "apocalypse-upper-winged",
+  LEGACY_SEVENTH: "apocalypse-four-horsemen"
 };
 
 const GOLDEN_STATUE_ID = "bacchusGoldenStatue";
@@ -201,27 +206,56 @@ function applySecondCalamity(village) {
   const before = Math.max(0, Number(village.food) || 0);
   const loss = Math.floor(before * 0.8);
   village.food = Math.max(0, before - loss);
-  recordStage(village, 2, "第二の角笛が吹かれた", "天を覆う蝗の大群が村を襲い、蓄えを食い尽くした。");
+  recordStage(village, 2, "第二の角笛が吹かれた", "天を覆う蝗とともに黒き騎士・飢餓が現れ、蓄えを食い尽くした。");
   queueApocalypseModal({
     title: "第二の角笛が吹かれた",
-    message: "天を覆う蝗の大群が村を襲った。",
+    message: "天を覆う蝗の向こうに、黒き騎士・飢餓が姿を現し、空になった倉を見届けると天へ消えた。",
     effect: `食料の8割、${loss}が失われました。`,
     image: stageImage(2)
   });
 }
 
 function applyThirdCalamity(village) {
-  const targets = chooseRandom(getActiveVillagers(village), 2);
-  targets.forEach(person => {
-    person.hp = clampValue((Number(person.hp) || 0) - 70, 0, 100);
-  });
-  const targetNames = targets.map(person => person.name).join("、") || "対象者なし";
-  recordStage(village, 3, "第三の角笛が吹かれた", `燃える雹が村を襲い、${targetNames}が大きな傷を負った。`);
+  const candidates = getActiveBuildingIds(village).filter(id => id !== GOLDEN_STATUE_ID);
+  const targets = chooseRandom(candidates, 2);
+  const damagedCount = targets.reduce((count, buildingId) => {
+    return count + (damageBuilding(village, buildingId) ? 1 : 0);
+  }, 0);
+  if (damagedCount > 0) {
+    recalculateBuildingDerivedState(village);
+    (village.villagers || []).forEach(person => refreshJobTable(person, village));
+  }
+  recordStage(village, 3, "第三の角笛が吹かれた", `硫黄の火が村へ降り注ぎ、建築物${damagedCount}基が損壊した。`);
   queueApocalypseModal({
     title: "第三の角笛が吹かれた",
-    message: "燃える雹が村を襲った。",
-    effect: targets.length > 0 ? `${targetNames}の体力が70低下しました。` : "被害を受ける村人はいませんでした。",
+    message: "裂けた空から燃える硫黄が降り注ぎ、村の建物を焼いた。",
+    effect: damagedCount > 0
+      ? `建築物${damagedCount}基が損壊しました。建築画面から修繕できます。`
+      : "損壊する有効な建築物はありませんでした。",
     image: stageImage(3)
+  });
+}
+
+function applyFourthCalamity(village) {
+  const candidates = getActiveVillagers(village).filter(person => {
+    return !Array.isArray(person.bodyTraits) || !person.bodyTraits.includes("疫病");
+  });
+  const targets = chooseRandom(candidates, 2);
+  targets.forEach(person => {
+    if (!Array.isArray(person.bodyTraits)) person.bodyTraits = [];
+    person.bodyTraits.push("疫病");
+    syncEffectiveStats(person);
+    refreshJobTable(person, village);
+  });
+  const targetNames = targets.map(person => person.name).join("、") || "対象者なし";
+  recordStage(village, 4, "第四の角笛が吹かれた", `青白き騎士・疫病が現れ、${targetNames}へ病の息を吹きかけた。`);
+  queueApocalypseModal({
+    title: "第四の角笛が吹かれた",
+    message: "青白き騎士・疫病が村を見下ろし、病の息と咳の響きを残して天へ消えた。",
+    effect: targets.length > 0
+      ? `${targetNames}に身体特性「疫病」が付与されました。`
+      : "疫病になる新たな村人はいませんでした。",
+    image: stageImage(7)
   });
 }
 
@@ -232,7 +266,7 @@ function getBraveSaltPillarTargets(village) {
   return chooseRandom(candidates.slice(0, poolSize), 2);
 }
 
-function applyFourthCalamity(village) {
+function applyFifthCalamity(village) {
   const targets = getBraveSaltPillarTargets(village);
   targets.forEach(person => {
     if (!Array.isArray(person.bodyTraits)) person.bodyTraits = [];
@@ -242,22 +276,22 @@ function applyFourthCalamity(village) {
     refreshJobTable(person, village);
   });
   const targetNames = targets.map(person => person.name).join("、") || "対象者なし";
-  recordStage(village, 4, "第四の角笛が吹かれた", `天の光が勇気ある者を射抜き、${targetNames}の身体を塩へ変えた。`);
+  recordStage(village, 5, "第五の角笛が吹かれた", `天の光が勇気ある者を射抜き、${targetNames}の身体を塩へ変えた。`);
   queueApocalypseModal({
-    title: "第四の角笛が吹かれた",
+    title: "第五の角笛が吹かれた",
     message: "天の光を振り仰いだ勇気ある者たちの身体が、白い塩へと変わった。",
     effect: targets.length > 0 ? `${targetNames}に身体特性「塩の柱」が付与されました。` : "塩の柱になる村人はいませんでした。",
     image: stageImage(4)
   });
 }
 
-function applyRaidCalamity(village, { stage, title, message, effect, raidId }) {
+function applyRaidCalamity(village, { stage, title, message, effect, raidId, image = stageImage(stage) }) {
   recordStage(village, stage, title, message);
   queueApocalypseModal({
     title,
     message,
     effect,
-    image: stageImage(stage),
+    image,
     onClose: () => startScriptedRaid(village, raidId)
   });
 }
@@ -301,20 +335,14 @@ export function processApocalypseMonthStart(village) {
       applyFourthCalamity(village);
       break;
     case 5:
-      applyRaidCalamity(village, {
-        stage: 5,
-        title: "第五の角笛が吹かれた",
-        message: "雲を裂き、上位翼人兵が神罰を携えて降り立った。",
-        effect: "上位翼人兵の襲撃が始まります。敗北すれば黄金像は破壊され、黙示録は終了します。",
-        raidId: APOCALYPSE_RAID_IDS.FIFTH
-      });
+      applyFifthCalamity(village);
       break;
     case 6:
       applyRaidCalamity(village, {
         stage: 6,
         title: "第六の角笛が吹かれた",
-        message: "地平を埋め尽くす大規模聖征軍団が、異端の村へ進軍した。",
-        effect: "大規模聖征軍団の襲撃が始まります。敗北すれば黄金像は破壊され、黙示録は終了します。",
+        message: "赤き騎士・戦争が、地平を埋め尽くす大規模聖征軍団を率いて進軍した。",
+        effect: "大規模聖征軍団と赤き騎士・戦争の襲撃が始まります。戦争のみ交換の奇跡が効きません。敗北すれば黄金像は破壊され、黙示録は終了します。",
         raidId: APOCALYPSE_RAID_IDS.SIXTH
       });
       break;
@@ -322,9 +350,10 @@ export function processApocalypseMonthStart(village) {
       applyRaidCalamity(village, {
         stage: 7,
         title: "第七の角笛が吹かれた",
-        message: "天が割れ、四つの異形の大天使――黙示録の四騎士が村の前に現れた。",
-        effect: "黙示録の四騎士の襲撃が始まります。四騎士には肉体交換が効きません。",
-        raidId: APOCALYPSE_RAID_IDS.SEVENTH
+        message: "白き騎士・支配が、雲を裂いて降り立つ上位翼人兵を従え、最後の裁きを告げた。",
+        effect: "上位翼人兵と白き騎士・支配の襲撃が始まります。支配のみ交換の奇跡が効きません。敗北すれば黄金像は破壊され、黙示録は終了します。",
+        raidId: APOCALYPSE_RAID_IDS.SEVENTH,
+        image: stageImage(5)
       });
       break;
   }
@@ -433,7 +462,7 @@ export function handleApocalypseRaidResult(village, raidId, isSuccess) {
     });
     return true;
   }
-  if (raidId === APOCALYPSE_RAID_IDS.SEVENTH) {
+  if ((Number(village.apocalypseStage) || 0) >= 7) {
     completeApocalypse(village);
   }
   return true;
