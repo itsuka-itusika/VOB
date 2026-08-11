@@ -34,6 +34,7 @@ const DEFAULT_PORTRAIT_PATH = getPortraitAssetPath(DEFAULT_PORTRAIT_KEY);
 const AUTONOMOUS_SETTLEMENT_SCALE = 350;
 const THUNDERBOLT_MIRACLE_DAMAGE = 80;
 let pendingExchangeResultVillage = null;
+const POST_CLEAR_MIRACLE_IDS = new Set(["18", "19"]);
 /**
  * 奇跡リスト
  */
@@ -56,18 +57,20 @@ export const MIRACLES = [
   {id:"15", name:"市場の奇跡(120)", cost:120, desc:"行商人の訪問者を3人生成"},
   {id:"17", name:"雷霆の奇跡(150)", cost:150, desc:"月1回。襲撃者1体の体力を80減らす。最低1で止まる"},
   {id:"18", name:"騒擾の奇跡(100)", cost:100, desc:"襲撃中でない時、ただちに襲撃を発生させる"},
-  {id:"19", name:"稀人の奇跡(300)", cost:300, desc:"レア種族、エクイナ、サテュロス、メナドの訪問者を1人呼ぶ"}
+  {id:"19", name:"稀人の奇跡(300)", cost:300, desc:"翼人、アルセイド、ネレイド、ドライアド、アラクニド、エクイナ、サテュロス、メナドの訪問者を1人呼ぶ"}
 ];
 
 const MIRACLE_UNLOCK_ORDER = DIVINE_MIGHT_LEVELS.flatMap(entry => entry.miracleIds);
 
-function getMiraclesForModal() {
+function getMiraclesForModal(village) {
   const byId = new Map(MIRACLES.map(miracle => [miracle.id, miracle]));
   const ordered = MIRACLE_UNLOCK_ORDER
     .map(id => byId.get(id))
     .filter(Boolean);
   const listedIds = new Set(MIRACLE_UNLOCK_ORDER);
-  return ordered.concat(MIRACLES.filter(miracle => !listedIds.has(miracle.id)));
+  return ordered
+    .concat(MIRACLES.filter(miracle => !listedIds.has(miracle.id)))
+    .filter(miracle => village?.apocalypseCleared || !POST_CLEAR_MIRACLE_IDS.has(miracle.id));
 }
 
 /**
@@ -84,7 +87,7 @@ export function openMiracleModal(village) {
   let sel = document.getElementById("miracleSelect");
   if (sel.parentElement) sel.parentElement.style.display = "none";
   sel.innerHTML="";
-  getMiraclesForModal().forEach(m=>{
+  getMiraclesForModal(village).forEach(m=>{
     let op=document.createElement("option");
     op.value=m.id;
     op.textContent=m.name;
@@ -246,6 +249,30 @@ function describeMiracleTarget(person) {
   return `${person.name}: ${person.race || "-"} / ${sex} / ${age}歳 / 筋${person.str} 耐${person.vit} 器${person.dex} 魔${person.mag} 魅${person.chr}`;
 }
 
+function createExchangePreviewPerson(person) {
+  const row = document.createElement("div");
+  row.className = "miracle-exchange-preview-person";
+
+  const portrait = document.createElement("img");
+  portrait.className = "miracle-exchange-preview-portrait";
+  portrait.src = getPortraitPath(person);
+  portrait.alt = "";
+  portrait.onerror = () => {
+    portrait.onerror = null;
+    portrait.src = DEFAULT_PORTRAIT_PATH;
+  };
+
+  const primaryBodyTrait = Array.isArray(person.bodyTraits) && person.bodyTraits.length > 0
+    ? person.bodyTraits[0]
+    : "-";
+  const details = document.createElement("div");
+  details.textContent = `${person.name}：${person.race || "-"} / ${person.bodySex || person.sex || "-"} / ${person.bodyAge ?? person.age ?? "-"}歳 / 筋${Math.floor(Number(person.str) || 0)} 耐${Math.floor(Number(person.vit) || 0)} 器${Math.floor(Number(person.dex) || 0)} 魔${Math.floor(Number(person.mag) || 0)} 魅${Math.floor(Number(person.chr) || 0)} /（${primaryBodyTrait}）`;
+
+  row.appendChild(portrait);
+  row.appendChild(details);
+  return row;
+}
+
 function updateMiraclePreview(mid, village, preview) {
   if (!preview) return;
   const targetA = document.getElementById("targetA");
@@ -255,13 +282,16 @@ function updateMiraclePreview(mid, village, preview) {
 
   if (["12", "13"].includes(mid)) {
     if (personA && personB && personA !== personB) {
-      preview.innerHTML = `
-        <div>名前と精神は残り、肉体名・種族・年齢・身体能力が入れ替わります。</div>
-        <div>${personA.name} ← ${describeMiracleTarget(personB)}</div>
-        <div>${personB.name} ← ${describeMiracleTarget(personA)}</div>
-      `;
+      const description = document.createElement("div");
+      description.className = "miracle-exchange-preview-description";
+      description.textContent = "種族・性別・年齢・身体能力が入れ替わります。";
+      preview.replaceChildren(
+        description,
+        createExchangePreviewPerson(personA),
+        createExchangePreviewPerson(personB)
+      );
     } else {
-      preview.textContent = "2人を選ぶと、交換後の肉体プレビューを表示します。";
+      preview.textContent = "2人を選ぶと、交換する肉体の情報を表示します。";
     }
     return;
   }
@@ -389,7 +419,7 @@ function getMiracleDisplayName(miracle, costInfo) {
 function renderMiracleCards(village, selectedId = "12") {
   const content = document.getElementById("miracleOptions");
   if (!content) return;
-  const miraclesForModal = getMiraclesForModal();
+  const miraclesForModal = getMiraclesForModal(village);
   const fallbackId = miraclesForModal.find(m => getMiracleUnlockInfo(m.id, village).unlocked)?.id || "12";
   const selectedMiracle = MIRACLES.find(m => m.id === selectedId);
   const currentId = selectedMiracle && getMiracleUnlockInfo(selectedMiracle.id, village).unlocked

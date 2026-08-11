@@ -2016,6 +2016,29 @@ section h2 {
   border-top: 1px solid #eee;
 }
 
+.miracle-exchange-preview-description {
+  margin-bottom: 6px;
+}
+
+.miracle-exchange-preview-person {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 6px;
+  align-items: center;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
+.miracle-exchange-preview-portrait {
+  display: block;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  object-fit: cover;
+  object-position: center 30%;
+}
+
 .miracle-button {
   width: 100%;
   padding: 8px;
