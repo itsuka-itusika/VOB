@@ -16,6 +16,7 @@ export const WINGED_PORTRAIT_FILES = Array.from({ length: 16 }, (_, index) => `A
 export const ALSEID_PORTRAIT_FILES = Array.from({ length: 13 }, (_, index) => `ALSEID${index + 1}.png`);
 export const NEREID_PORTRAIT_FILES = Array.from({ length: 15 }, (_, index) => `NEREID${index + 1}.png`);
 export const DRYAD_PORTRAIT_FILES = Array.from({ length: 18 }, (_, index) => `DRYAD${index + 1}.png`);
+export const INQUISITOR_PORTRAIT_FILES = Array.from({ length: 11 }, (_, index) => `INQUISITOR${index + 1}.png`);
 export const EQUINA_PORTRAIT_FILES = Array.from({ length: 18 }, (_, index) => `EQUINA${index + 1}.png`);
 export const CENTAUR_PORTRAIT_FILES = Array.from({ length: 9 }, (_, index) => `CENTAUR${index + 1}.png`);
 export const SATYR_PORTRAIT_FILES = Array.from({ length: 12 }, (_, index) => `SATYR${index + 1}.png`);
@@ -60,6 +61,7 @@ const NUMBERED_PORTRAIT_LIMITS = new Map([
   ["ARMORED", 8],
   ["ELITE", 22],
   ["HOLY_KNIGHT", 8],
+  ["INQUISITOR", 11],
   ["ARACHNID", 5],
   ["ANGEL", 16],
   ["ALSEID", 13],
@@ -110,6 +112,7 @@ const PORTRAIT_GROUP_FOLDERS = new Map([
   ["ARMORED", "armored"],
   ["ELITE", "elite"],
   ["HOLY_KNIGHT", "holy_knight"],
+  ["INQUISITOR", "Inquisitor"],
   ["ARACHNID", "arachnid"],
   ["ANGEL", "angel"],
   ["ALSEID", "alseid"],
@@ -146,7 +149,7 @@ function getLegacyArachnidPortraitKey(value) {
 }
 
 function getNumberedPortraitParts(key) {
-  const match = key.match(/^(ANGEL_FIGHTER|HOLY_KNIGHT|ELITE_NOMAD|ARCHANGEL|MINOTAUR|CENTAUR|ARMORED|ARACHNID|CYCLOPS|KNIGHT|ALSEID|EQUINA|SATYR|MAENAD|NEREID|DRYAD|SAINT|ELITE|HARPY|ANGEL|NOMAD|BAN|GOB|WOLF|GG|MA|MB|MC|MD|ME|BB|A|C|D)(\d+)\.png$/i);
+  const match = key.match(/^(ANGEL_FIGHTER|HOLY_KNIGHT|ELITE_NOMAD|INQUISITOR|ARCHANGEL|MINOTAUR|CENTAUR|ARMORED|ARACHNID|CYCLOPS|KNIGHT|ALSEID|EQUINA|SATYR|MAENAD|NEREID|DRYAD|SAINT|ELITE|HARPY|ANGEL|NOMAD|BAN|GOB|WOLF|GG|MA|MB|MC|MD|ME|BB|A|C|D)(\d+)\.png$/i);
   if (!match) return null;
 
   return {

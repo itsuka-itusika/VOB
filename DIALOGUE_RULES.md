@@ -21,6 +21,7 @@
 - `jobLines.js`: preferredAction に応じた会話。
 - `reproductionLines.js`: 妊娠、臨月、産褥、成人化など。
 - `exchangeLines.js`: 肉体交換への反応。交換の奇跡と落雷による肉体交換で共有する。
+- `exchangeSituationLines.js`: 入れ替わった身体の年齢・性別・種族・能力と、交換後半年以内の違和感に応じた通常会話。
 - `secretTreasureLines.js`: 秘宝の専用結果モーダルで表示する口調別反応。
 - `visitorLines.js`: 訪問者タイプ別会話。
 - `randomEventLines.js`: ランダムイベント用の口調別セリフ。
@@ -99,6 +100,7 @@ fallback は便利ですが、男女差や当事者性が混線しやすい場�
 - 通常会話は `getConversationLine({ character, village })` を入口にする。
 - 専用シーンの 1 行取得は `getDialogueLine({ character, scene, key, context })` を使う。
 - セリフ選択の優先度は `CONVERSATION_PRIORITY` に従う。
+- 入れ替わり後の特殊状況会話は季節・健康・仕事会話と同じ `NORMAL` とし、重傷などの高優先度状態を妨げない。
 - `襲撃者` や `訪問者` は口調ではなく状態・役割として扱う。
 - `妊娠`, `臨月`, `産褥`, `病気`, `負傷`, `季節`, `通常時の行動`, `イベント種別` は口調キーにしない。
 - 新しい scene を追加する場合は、データファイル、`getDialogueLines`、呼び出し元の表示経路を一緒に確認する。

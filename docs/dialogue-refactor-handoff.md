@@ -50,6 +50,7 @@
 - `condition`
 - `job`
 - `reproduction`
+- `exchangeSituation`
 - `visitor`
 
 `randomEvent` と `randomEventSecond` は、通常の `getDialogueLines` ではなく `getDialogueLine` 内の専用分岐で処理する。
@@ -78,6 +79,10 @@
 
 - `js/data/dialogue/secretTreasureLines.js`
   - 秘宝の専用結果モーダルで使う口調別反応。
+
+- `js/data/dialogue/exchangeSituationLines.js`
+  - 入れ替わり後の身体状況に応じた通常会話。
+  - 役得、老人の若返り、幼い身体、狼の身体、女性人格が得た強い男性肉体、交換後半年以内の違和感を口調別に持つ。
 
 - `js/data/dialogue/visitorLines.js`
   - 訪問者タイプ別の会話。
@@ -122,6 +127,7 @@
 - 勤勉 `ind <= 10`: `lazy/lowDiligence`, `NORMAL`
 - `JOB_LINES` に存在する仕事: `job/<仕事名>`, `NORMAL`
 - 村特性に含まれる `春`, `夏`, `秋`, `冬`: `season/<季節>`, `NORMAL`
+- `bodyOwner` が本人と異なる場合の入れ替わり特殊状況: `exchangeSituation/<状況>`, `NORMAL`
 
 `getConversationLine` では、以下は通常候補選択より前に処理される。
 

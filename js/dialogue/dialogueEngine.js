@@ -14,6 +14,7 @@ import { SEASONAL_LINES } from "../data/dialogue/seasonLines.js";
 import { CONDITION_LINES } from "../data/dialogue/conditionLines.js";
 import { JOB_LINES } from "../data/dialogue/jobLines.js";
 import { REPRODUCTION_LINES } from "../data/dialogue/reproductionLines.js";
+import { EXCHANGE_SITUATION_LINES } from "../data/dialogue/exchangeSituationLines.js";
 import { SECRET_TREASURE_LINES } from "../data/dialogue/secretTreasureLines.js";
 import { getVisitorLineKey, VISITOR_GENERIC_LINES, VISITOR_LINES } from "../data/dialogue/visitorLines.js";
 import {
@@ -38,6 +39,7 @@ export const CONVERSATION_PRIORITY = {
 };
 
 const SEASON_TRAITS = ["春", "夏", "秋", "冬"];
+const NON_HUMANOID_EXCHANGE_RACES = new Set(["狼", "スフィンクス"]);
 
 const BODY_CONDITION_CANDIDATES = [
   { trait: "危篤", scene: "condition", key: "critical", priority: CONVERSATION_PRIORITY.CRITICAL },
@@ -224,6 +226,8 @@ export function getDialogueLines({ character, scene, key, context = {} }) {
       return selectToneLines(JOB_LINES[key], character, context);
     case "reproduction":
       return selectToneLines(REPRODUCTION_LINES[key], character, context);
+    case "exchangeSituation":
+      return selectToneLines(EXCHANGE_SITUATION_LINES[key], character, context);
     case "secretTreasure":
       return selectToneLines(SECRET_TREASURE_LINES[key], character, context);
     case "visitor":
@@ -272,6 +276,75 @@ function getCurrentSeason(village) {
   return SEASON_TRAITS.find(trait => traits.includes(trait)) || "";
 }
 
+function hasDifferentBodyOwner(character) {
+  const name = String(character?.name || "").trim();
+  const bodyOwner = String(character?.bodyOwner || "").trim();
+  return name !== "" && bodyOwner !== "" && name !== bodyOwner;
+}
+
+function isHumanoidExchangeBody(character) {
+  return !NON_HUMANOID_EXCHANGE_RACES.has(character?.race || "人間");
+}
+
+function getAbsoluteMonth(year, month) {
+  const normalizedYear = Number(year);
+  const normalizedMonth = Number(month);
+  if (!Number.isFinite(normalizedYear) || !Number.isFinite(normalizedMonth)) return null;
+  return normalizedYear * 12 + normalizedMonth - 1;
+}
+
+function hasRecentBodyExchange(character, village) {
+  const currentMonth = getAbsoluteMonth(village?.year, village?.month);
+  if (currentMonth === null || !Array.isArray(village?.historyEvents)) return false;
+  return village.historyEvents.some(event => {
+    if (event?.type !== "bodyExchange" || !Array.isArray(event.people) || !event.people.includes(character?.name)) return false;
+    const eventMonth = getAbsoluteMonth(event.year, event.month);
+    if (eventMonth === null) return false;
+    const elapsedMonths = currentMonth - eventMonth;
+    return elapsedMonths >= 0 && elapsedMonths <= 6;
+  });
+}
+
+function hasExchangeSituationLines(character, key) {
+  const tone = resolveDialogueTone(character);
+  return Array.isArray(EXCHANGE_SITUATION_LINES[key]?.[tone]) && EXCHANGE_SITUATION_LINES[key][tone].length > 0;
+}
+
+export function getExchangeSituationKey(character, village) {
+  if (!hasDifferentBodyOwner(character)) return "";
+
+  const tone = resolveDialogueTone(character);
+  const bodyAge = Number(character?.bodyAge);
+  const spiritAge = Number(character?.spiritAge);
+  const isYoungAdultBody = bodyAge >= 16 && bodyAge <= 30;
+  const isHumanoidBody = isHumanoidExchangeBody(character);
+
+  if (
+    character?.spiritSex === "男"
+    && spiritAge >= 16
+    && Number(character?.sexdr) >= 18
+    && character?.bodySex === "女"
+    && isYoungAdultBody
+    && isHumanoidBody
+    && hasExchangeSituationLines(character, "roleBenefit")
+  ) return "roleBenefit";
+
+  if (tone === "老人" && character?.bodySex === "女" && isYoungAdultBody && isHumanoidBody) return "rejuvenatedFemale";
+  if (tone === "老人" && character?.bodySex === "男" && isYoungAdultBody && isHumanoidBody) return "rejuvenatedMale";
+  if (bodyAge <= 9) return "youngChildBody";
+  if (tone !== "狼" && character?.race === "狼") return "wolfBody";
+
+  if (
+    character?.spiritSex === "女"
+    && spiritAge >= 16
+    && character?.bodySex === "男"
+    && Number(character?.str) >= 20
+    && hasExchangeSituationLines(character, "strongMaleBody")
+  ) return "strongMaleBody";
+
+  return hasRecentBodyExchange(character, village) ? "discomfort" : "";
+}
+
 function getVisitorType(visitor) {
   return getVisitorLineKey(visitor, VISITOR_LINES);
 }
@@ -312,6 +385,15 @@ export function collectConversationCandidates({ character, village, context = {}
     key: healthStatus.key,
     priority: healthStatus.priority
   }, sharedContext);
+
+  const exchangeSituationKey = getExchangeSituationKey(character, village);
+  if (exchangeSituationKey) {
+    addCandidate(candidates, character, {
+      scene: "exchangeSituation",
+      key: exchangeSituationKey,
+      priority: CONVERSATION_PRIORITY.NORMAL
+    }, sharedContext);
+  }
 
   if (hasTrait(character, "臨月", "bodyTraits")) {
     addCandidate(candidates, character, {
