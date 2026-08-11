@@ -2,13 +2,13 @@
 
 import { randInt, clampValue, round3 } from "./util.js";
 import { adjustMutualFriendship, doLoverCheck, addRelationship as addCategorizedRelationship, getPairFriendshipMinimum, normalizeRelationship, parseRelationship } from "./relationships.js";
-import { doExchange } from "./exchange.js";
+import { canExchangeBody, doExchange } from "./exchange.js";
 import { showRandomEventModal } from "./randomEventModal.js";
 import { createWolfFoundling, matureBodyToAdultOnly, scheduleGoldenRainPregnancy } from "./reproduction.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
-import { getActiveVillagers } from "./domain/apocalypseRules.js";
+import { getActiveVillagers, getVillagersIncludingSaltPillar } from "./domain/apocalypseRules.js";
 import { addAcquiredStat, syncEffectiveStats } from "./domain/statLayers.js";
 import { recordHobbyAwakeningHistory, recordLoverHistory, recordMythicEventHistory, recordSocialRelationHistory, recordVillagerJoinHistory } from "./history.js";
 import { updateUI } from "./ui.js";
@@ -706,9 +706,10 @@ export class RandomEvents {
         break;
       }
       case "lightning2": {
-        if (getActiveVillagers(v).length >= 2) {
-          let a = this.randChoice(getActiveVillagers(v));
-          let b = this.randChoice(getActiveVillagers(v).filter(x => x !== a));
+        const candidates = getVillagersIncludingSaltPillar(v).filter(canExchangeBody);
+        if (candidates.length >= 2) {
+          let a = this.randChoice(candidates);
+          let b = this.randChoice(candidates.filter(x => x !== a));
           doExchange(a, b, v, true);
           v.log(`落雷2:${a.name}と${b.name}の肉体交換`);
         }

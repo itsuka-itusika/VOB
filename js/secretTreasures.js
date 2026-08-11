@@ -15,7 +15,7 @@ import { getCaptives } from "./captives.js";
 import { DESPAIR_TRAIT, DISAPPOINTMENT_TRAIT } from "./domain/despair.js";
 import { getDialogueLine } from "./dialogue/dialogueEngine.js";
 import { DEFAULT_PORTRAIT_KEY, getPortraitAssetPath } from "./data/portraitPaths.js";
-import { getActiveVillagers } from "./domain/apocalypseRules.js";
+import { getActiveVillagers, getVillagersIncludingSaltPillar } from "./domain/apocalypseRules.js";
 
 const SEASON_TRAITS_TO_REMOVE = ["夏", "秋", "冬", "冷夏", "飛蝗", "厳冬", "疫病流行"];
 const BAD_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "凍え", "病気", "疫病", "産褥", "危篤"];
@@ -49,8 +49,8 @@ const DISABLED_RANDOM_SECRET_TREASURE_IDS = new Set([
   PINECONE_STAFF_SECRET_TREASURE_ID
 ]);
 
-function getVillagers(village) {
-  return getActiveVillagers(village);
+function getVillagers(village, includeSaltPillar = false) {
+  return includeSaltPillar ? getVillagersIncludingSaltPillar(village) : getActiveVillagers(village);
 }
 
 function randFrom(items) {
@@ -76,7 +76,7 @@ function shuffled(items) {
 
 function getBodyExchangeCandidates(village) {
   return [
-    ...getVillagers(village),
+    ...getVillagers(village, true),
     ...getCaptives(village),
     ...(Array.isArray(village.visitors) ? village.visitors : []),
     ...(Array.isArray(village.raidEnemies) ? village.raidEnemies : [])
@@ -92,7 +92,7 @@ function pickPanFlutePairs(village) {
     ...getCaptives(village),
     ...(Array.isArray(village.visitors) ? village.visitors : []),
     ...(Array.isArray(village.raidEnemies) ? village.raidEnemies : [])
-  ];
+  ].filter(canExchangeBody);
   const selected = [];
   if (outsiders.length > 0) selected.push(randFrom(outsiders));
 
@@ -452,9 +452,10 @@ export const SECRET_TREASURES = [
   {
     id: DRYAD_FRUIT_SECRET_TREASURE_ID,
     name: "ドライアドの果実",
-    desc: "指定した村人1名をドライアドの身体にする。",
+    desc: "塩の柱状態を含む指定した村人1名をドライアドの身体にする。",
     sellPrice: SECRET_TREASURE_SELL_PRICES[DRYAD_FRUIT_SECRET_TREASURE_ID],
     target: "villager",
+    includeSaltPillar: true,
     use: (village, target) => applyDryadFruit(village, target)
   },
   {
@@ -479,7 +480,7 @@ export const SECRET_TREASURES = [
   {
     id: PINECONE_STAFF_SECRET_TREASURE_ID,
     name: "松かさの杖",
-    desc: "交換の奇跡・強と同じ効果。村人・捕虜・訪問者・襲撃者から2名を選び、肉体を交換する。",
+    desc: "交換の奇跡・強と同じ効果。塩の柱状態を含む村人・捕虜・訪問者・襲撃者から2名を選び、肉体を交換する。",
     sellPrice: SECRET_TREASURE_SELL_PRICES[PINECONE_STAFF_SECRET_TREASURE_ID],
     target: "exchangePair",
     canUse: (village) => getBodyExchangeCandidates(village).length >= 2,
@@ -489,7 +490,7 @@ export const SECRET_TREASURES = [
   {
     id: "pan_flute",
     name: "牧神の管笛",
-    desc: "村人・捕虜・訪問者・襲撃者から6名を選び、3組の肉体を入れ替える。",
+    desc: "塩の柱状態を含む村人・捕虜・訪問者・襲撃者から6名を選び、3組の肉体を入れ替える。",
     sellPrice: SECRET_TREASURE_SELL_PRICES.pan_flute,
     canUse: (village) => getPanFluteCandidates(village).length > 5,
     blockedReason: "村人・捕虜・訪問者・襲撃者の合計が6名以上必要です",
@@ -562,7 +563,7 @@ function getSecretTreasureLabel(entry) {
 }
 
 function getTargetCandidates(village, definition) {
-  const villagers = getVillagers(village);
+  const villagers = getVillagers(village, definition.includeSaltPillar === true);
   let candidates = [];
   if (definition.target === "childVillager") {
     candidates = villagers.filter(person => (Number(person.bodyAge) || 0) <= 15 || (Number(person.spiritAge) || 0) <= 15);

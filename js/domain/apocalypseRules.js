@@ -12,6 +12,10 @@ export function isSaltPillar(person) {
   return Array.isArray(person?.bodyTraits) && person.bodyTraits.includes(SALT_PILLAR_TRAIT);
 }
 
+export function getVillagersIncludingSaltPillar(village) {
+  return Array.isArray(village?.villagers) ? village.villagers : [];
+}
+
 export function getActiveVillagers(village) {
-  return (Array.isArray(village?.villagers) ? village.villagers : []).filter(person => !isSaltPillar(person));
+  return getVillagersIncludingSaltPillar(village).filter(person => !isSaltPillar(person));
 }
