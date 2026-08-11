@@ -31,6 +31,7 @@ export const APOCALYPSE_RAID_IDS = {
 const GOLDEN_STATUE_ID = "bacchusGoldenStatue";
 const GOLDEN_STATUE_BUILT_FLAG = "hasBacchusGoldenStatue";
 const LOCUST_TRAIT = "飛蝗";
+const APOCALYPSE_LOCUST_DURATION_MONTHS = 3;
 const APOCALYPSE_MODAL_ID = "apocalypseEventModal";
 const APOCALYPSE_OVERLAY_ID = "apocalypseEventOverlay";
 const PRIORITY_MODAL_SELECTORS = [
@@ -222,11 +223,12 @@ function applySecondCalamity(village) {
   const loss = Math.floor(before * 0.6);
   village.food = Math.max(0, before - loss);
   addVillageTrait(village, LOCUST_TRAIT);
+  village.apocalypseLocustMonths = 0;
   recordStage(village, 2, "第二の角笛が吹かれた", "天を覆う蝗とともに黒き騎士・飢餓が現れ、蓄えを食い尽くした。");
   queueApocalypseModal({
     title: "第二の角笛が吹かれた",
     message: "天を覆う蝗の向こうに、黒き騎士・飢餓が姿を現し、荒らされた倉を見届けると天へ消えた。",
-    effect: `食料の6割、${loss}が失われ、村特性「飛蝗」が付与されました。`,
+    effect: `食料の6割、${loss}が失われ、村特性「飛蝗」が3か月間付与されました（黙示録終了時は即座に解除）。`,
     image: stageImage(2)
   });
 }
@@ -315,6 +317,7 @@ function applyRaidCalamity(village, { stage, title, message, effect, raidId, ima
 export function startApocalypseFromGoldenStatue(village) {
   village.apocalypseStarted = true;
   village.apocalypseStage = 0;
+  village.apocalypseLocustMonths = null;
   village.pendingRaid = null;
   addVillageTrait(village, APOCALYPSE_TRAIT);
   village.log("【黙示録】天に怒りの声が響いた。次月から七つの災厄が村を襲う。");
@@ -417,6 +420,7 @@ export function destroyBacchusGoldenStatue(village, options = {}) {
   removeGoldenStatueBuilding(village);
   removeVillageTrait(village, APOCALYPSE_TRAIT);
   removeVillageTrait(village, LOCUST_TRAIT);
+  village.apocalypseLocustMonths = null;
   village.apocalypseStarted = false;
   village.apocalypseStage = 0;
   const forced = !!options.forced;
@@ -443,6 +447,7 @@ function completeApocalypse(village) {
   removeVillageTrait(village, APOCALYPSE_TRAIT);
   removeVillageTrait(village, "異端");
   removeVillageTrait(village, LOCUST_TRAIT);
+  village.apocalypseLocustMonths = null;
   village.apocalypseStarted = false;
   village.apocalypseStage = 0;
   village.apocalypseCleared = true;
@@ -494,4 +499,20 @@ export function advanceSaltPillarMonths(village) {
     refreshAfterSaltPillarRecovery(person, village);
     village.log(`${person.name}の塩の身体が崩れ、人の姿へ戻った。`);
   });
+}
+
+export function advanceApocalypseLocustMonths(village) {
+  if (village?.apocalypseLocustMonths == null) return false;
+  if (!Array.isArray(village.villageTraits) || !village.villageTraits.includes(LOCUST_TRAIT)) {
+    village.apocalypseLocustMonths = null;
+    return false;
+  }
+
+  village.apocalypseLocustMonths = Math.max(0, Number(village.apocalypseLocustMonths) || 0) + 1;
+  if (village.apocalypseLocustMonths < APOCALYPSE_LOCUST_DURATION_MONTHS) return false;
+
+  removeVillageTrait(village, LOCUST_TRAIT);
+  village.apocalypseLocustMonths = null;
+  village.log("天を覆っていた飛蝗の群れが去った。");
+  return true;
 }

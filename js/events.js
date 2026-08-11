@@ -39,7 +39,7 @@ import { BUILDINGS } from "./buildings.js";
 import { advanceBuildingRequestMonth, tryStartBuildingRequest } from "./buildingRequests.js";
 import { tryTriggerHeresyInquisition } from "./heresyInquisition.js";
 import { tryTriggerBacchusGoldenStatueEvent } from "./bacchusGoldenStatue.js";
-import { advanceSaltPillarMonths, processApocalypseMonthStart } from "./apocalypse.js";
+import { advanceApocalypseLocustMonths, advanceSaltPillarMonths, processApocalypseMonthStart } from "./apocalypse.js";
 import { getActiveVillagers, isSaltPillar } from "./domain/apocalypseRules.js";
 import {
   clearCaptiveFailedTraits,
@@ -298,6 +298,7 @@ function restoreRecoveredForcedActions(village) {
 
 export function runMonthStartPhase(village) {
   advanceSaltPillarMonths(village);
+  advanceApocalypseLocustMonths(village);
   const monthStartSeason = [3,6,9,12].includes(village.month)
     ? updateSeason(village, { showDialog: false, logChange: false })
     : "";

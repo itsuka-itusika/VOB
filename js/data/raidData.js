@@ -1427,10 +1427,10 @@ export const RAID_MODULES = [
       { raiderType: "聖女" }
     ],
     enemyGroups: [
-      { raiderType: "重装兵", minCount: 6, maxCount: 8 },
-      { raiderType: "上級騎士", minCount: 4, maxCount: 6 },
-      { raiderType: "聖騎士", minCount: 2, maxCount: 3 },
-      { raiderType: "聖女", minCount: 2, maxCount: 3 },
+      { raiderType: "重装兵", minCount: 3, maxCount: 3 },
+      { raiderType: "上級騎士", minCount: 2, maxCount: 3 },
+      { raiderType: "聖騎士", minCount: 1, maxCount: 1 },
+      { raiderType: "聖女", minCount: 1, maxCount: 2 },
       { raiderType: "黙示録の騎士・戦争", minCount: 1, maxCount: 1 }
     ],
     defense: { surviveTurns: 7 },

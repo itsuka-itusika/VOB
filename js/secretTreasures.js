@@ -171,6 +171,7 @@ function restoreLowVitals(person) {
 
 function applyEverSpring(village) {
   village.villageTraits = (village.villageTraits || []).filter(trait => !SEASON_TRAITS_TO_REMOVE.includes(trait));
+  village.apocalypseLocustMonths = null;
   if (!village.villageTraits.includes("春")) village.villageTraits.push("春");
   village.log("【秘宝】冥王妃の神像を使いました。村に常春の気配が定着しました");
   showSecretTreasureResult(village, "冥王妃の神像", "村に穏やかな春の気配が定着しました。", getVillagers(village));

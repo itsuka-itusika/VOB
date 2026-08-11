@@ -28,6 +28,7 @@ export class Village {
     this.apocalypseStarted = false;
     this.apocalypseStage = 0;
     this.apocalypseCleared = false;
+    this.apocalypseLocustMonths = null;
 
     this.villagers = [];
     this.pendingGoldenRainPregnancies = [];

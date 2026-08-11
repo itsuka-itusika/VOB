@@ -190,6 +190,9 @@ function convertVillageToObject(village) {
     apocalypseStarted: !!village.apocalypseStarted,
     apocalypseStage: Math.max(0, Math.min(7, Math.floor(normalizeFiniteNumber(village.apocalypseStage, 0)))),
     apocalypseCleared: !!village.apocalypseCleared,
+    apocalypseLocustMonths: village.apocalypseLocustMonths == null
+      ? null
+      : Math.max(0, Math.floor(normalizeFiniteNumber(village.apocalypseLocustMonths, 0))),
     lastHeadmanElectionYear: village.lastHeadmanElectionYear != null && Number.isFinite(Number(village.lastHeadmanElectionYear))
       ? Number(village.lastHeadmanElectionYear)
       : null,
@@ -406,6 +409,19 @@ function convertObjectToVillage(dataObj) {
   }
   v.apocalypseStarted = !!dataObj.apocalypseStarted || v.buildings.includes("bacchusGoldenStatue");
   v.apocalypseStage = Math.max(0, Math.min(7, Math.floor(normalizeFiniteNumber(dataObj.apocalypseStage, 0))));
+  const hasLocustTrait = v.villageTraits.includes("飛蝗");
+  const inferredLocustMonths = v.apocalypseStarted && v.apocalypseStage >= 2
+    ? v.apocalypseStage - 2
+    : null;
+  v.apocalypseLocustMonths = hasLocustTrait
+    ? (dataObj.apocalypseLocustMonths == null
+        ? inferredLocustMonths
+        : Math.max(0, Math.floor(normalizeFiniteNumber(dataObj.apocalypseLocustMonths, 0))))
+    : null;
+  if (v.apocalypseLocustMonths != null && v.apocalypseLocustMonths >= 3) {
+    v.villageTraits = v.villageTraits.filter(trait => trait !== "飛蝗");
+    v.apocalypseLocustMonths = null;
+  }
   if (v.apocalypseStarted && !v.villageTraits.includes("黙示録")) {
     v.villageTraits.push("黙示録");
   }

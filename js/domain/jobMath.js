@@ -57,6 +57,7 @@ export const JOB_COST_TYPES = {
 const ABUNDANCE_JOBS = ["農作業", "伐採", "狩猟", "漁", "採集"];
 const AUTUMN_JOBS = ["農作業", "採集"];
 const COLD_SUMMER_JOBS = ["農作業", "伐採"];
+const LOCUST_JOBS = ["農作業", "採集", "伐採", "醸造"];
 const GREEN_THUMB_JOBS = ["農作業", "伐採", "採集"];
 const FLYING_JOBS = ["狩猟", "採集"];
 const SWIFT_LEGS_JOBS = ["行商", "採集"];
@@ -153,6 +154,7 @@ export function getLaborYieldMultiplier(job, person = null, village = null) {
   if (hasVillageTrait(village, "冬") && job === "農作業") mul *= 0.5;
   if (hasVillageTrait(village, "冬") && job === "狩猟") mul *= 1.2;
   if (hasVillageTrait(village, "冷夏") && COLD_SUMMER_JOBS.includes(job)) mul *= 0.5;
+  if (hasVillageTrait(village, "飛蝗") && LOCUST_JOBS.includes(job)) mul *= 0.2;
   if (hasBodyTrait(person, "緑の指") && GREEN_THUMB_JOBS.includes(job)) mul *= 1.2;
   if (hasMindTrait(person, "熟練農夫") && job === "農作業") mul *= 1.3;
   if (hasMindTrait(person, "達人農夫") && job === "農作業") mul *= 1.5;

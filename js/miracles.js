@@ -697,6 +697,7 @@ export function performMiracle(village) {
         case "9": // 常春
           let rm=["夏","秋","冬","冷夏","飛蝗","厳冬","疫病流行"];
           village.villageTraits=village.villageTraits.filter(x=>!rm.includes(x));
+          village.apocalypseLocustMonths = null;
           if (!village.villageTraits.includes("春")) {
             village.villageTraits.push("春");
           }
