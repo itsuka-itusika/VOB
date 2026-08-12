@@ -1374,7 +1374,7 @@ function appendRaidStatSummaryCell(row, unit) {
 
 // 戦闘ダメージを受けた際の処理を追加
 function applyDamage(target, damage, village) {
-  target.hp = clampValue(target.hp - damage, 0, 100);
+  target.hp = Math.max(0, target.hp - damage);
 
   // HP0以下になった場合の処理
   if (target.hp <= 0) {

@@ -25,6 +25,7 @@ import {
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
+import { getBalanceSimulationOptions } from "./balance/simulationOptions.js";
 import { isWolf, OLD_WOLF_TRAIT, syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
 import {
   addDisappointmentState,
@@ -297,12 +298,13 @@ function restoreRecoveredForcedActions(village) {
 }
 
 export function runMonthStartPhase(village) {
+  const simulationOptions = getBalanceSimulationOptions(village);
   advanceSaltPillarMonths(village);
   advanceApocalypseLocustMonths(village);
   const monthStartSeason = [3,6,9,12].includes(village.month)
     ? updateSeason(village, { showDialog: false, logChange: false })
     : "";
-  doMonthStartProcess(village);
+  doMonthStartProcess(village, simulationOptions);
   if (village.gameOver) return;
   if (monthStartSeason) {
     showSeasonChangeDialog(monthStartSeason);
@@ -312,12 +314,12 @@ export function runMonthStartPhase(village) {
   handleBirthAndPostpartum(village);
   restoreRecoveredForcedActions(village);
   const apocalypseActive = processApocalypseMonthStart(village);
-  if (!apocalypseActive) doRandomEventPre(village);
-  tryStartBuildingRequest(village, BUILDINGS);
+  if (!apocalypseActive && !simulationOptions.suppressRandomEvents) doRandomEventPre(village);
+  if (!simulationOptions.suppressBuildingRequests) tryStartBuildingRequest(village, BUILDINGS);
   applyMonthStartRestrictions(village);
   runHeadmanElectionIfDue(village);
   tryTriggerHeresyInquisition(village);
-  if (!apocalypseActive) doRaidStartCheck(village);
+  if (!apocalypseActive && !simulationOptions.suppressRaids) doRaidStartCheck(village);
   tryTriggerBacchusGoldenStatueEvent(village);
 }
 
@@ -635,7 +637,7 @@ export function endOfMonthProcess(v) {
  *  - 訪問者生成
  *  - 行動テーブル再構築
  */
-export function doMonthStartProcess(v) {
+export function doMonthStartProcess(v, simulationOptions = {}) {
   v.log("【月初処理】");
   resetMonthlySocialAttemptFlags(v);
   processCaptiveReleaseDeadlines(v);
@@ -782,16 +784,18 @@ export function doMonthStartProcess(v) {
   v.visitorLimit = visitorLimit;
 
   // 各訪問者枠ごとに50%の確率で訪問者を生成
-  for (let i = 0; i < visitorLimit; i++) {
-    if (Math.random() < 0.5) {
-      let visitor = createRandomVisitor([
-        ...v.villagers.map(person => person.name),
-        ...v.visitors.map(person => person.name)
-      ], null, v);
-      v.visitors.push(visitor);
-      v.log(`訪問者 ${visitor.name} が村を訪れました`);
-      const arrivalLine = getVisitorArrivalLine(visitor);
-      if (arrivalLine) v.log(`${visitor.name}「${arrivalLine}」`);
+  if (!simulationOptions.suppressVisitors) {
+    for (let i = 0; i < visitorLimit; i++) {
+      if (Math.random() < 0.5) {
+        let visitor = createRandomVisitor([
+          ...v.villagers.map(person => person.name),
+          ...v.visitors.map(person => person.name)
+        ], null, v);
+        v.visitors.push(visitor);
+        v.log(`訪問者 ${visitor.name} が村を訪れました`);
+        const arrivalLine = getVisitorArrivalLine(visitor);
+        if (arrivalLine) v.log(`${visitor.name}「${arrivalLine}」`);
+      }
     }
   }
 

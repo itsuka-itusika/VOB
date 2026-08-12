@@ -24,6 +24,7 @@ import { closeDryadFruitModal, closeSecretTreasureModal, openSecretTreasureModal
 import { RAID_MODULES } from "./data/raidData.js";
 import { updateUI } from "./ui.js";
 import { getCaptives } from "./captives.js";
+import { setBalanceSimulationOptions } from "./balance/simulationOptions.js";
 
 const VIEW_MODE_STORAGE_KEY = "vob.viewMode";
 let debugTitleActionsEnabled = false;
@@ -322,6 +323,44 @@ function bindGlobalHandlers() {
   });
 }
 
+function exposeBalanceApi() {
+  if (typeof window === "undefined") return;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("balanceMode") !== "1" || !window.__vobBalanceSeed) return;
+
+  Object.defineProperty(window, "__vobBalance", {
+    configurable: false,
+    enumerable: false,
+    writable: false,
+    value: Object.freeze({
+      version: 1,
+      seed: window.__vobBalanceSeed || null,
+      getVillage: () => theVillage,
+      refreshUI: () => updateUI(theVillage),
+      setSimulationOptions: options => setBalanceSimulationOptions(theVillage, options),
+      autoAssignJobs: () => autoAssignJobs(theVillage),
+      autoAssignRaidActions: () => autoAssignRaidActions(theVillage),
+      nextTurn: onNextTurn,
+      openBuildingModal: () => openBuildingModal(theVillage),
+      openVisitorConversation: async visitorName => {
+        const visitor = theVillage.visitors.find(person => person.name === visitorName);
+        if (!visitor) return false;
+        const { openConversationModal } = await import("./conversation.js");
+        openConversationModal(visitor);
+        return true;
+      },
+      proceedRaidAction: () => proceedRaidAction(theVillage),
+      retreatRaid: () => retreatRaid(theVillage),
+      startRaidById: raidId => {
+        const raidDefinition = RAID_MODULES.find(raid => raid.id === raidId);
+        if (!raidDefinition) throw new Error(`Unknown raid id: ${raidId}`);
+        startRaidEvent(theVillage, { raidDefinition });
+      },
+      getRaidDefinitions: () => RAID_MODULES.slice()
+    })
+  });
+}
+
 function bindOverlayClickClose(overlayId, close) {
   const overlay = document.getElementById(overlayId);
   if (!overlay) return;
@@ -340,6 +379,7 @@ function bindModalOverlayClickClose() {
 }
 
 bindGlobalHandlers();
+exposeBalanceApi();
 bindModalOverlayClickClose();
 bindDebugTitleActions();
 initViewMode();
