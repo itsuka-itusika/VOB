@@ -86,6 +86,40 @@ export const RAIDER_TYPES = [
     ]
   },
   {
+    type: "傭兵射手",
+    weight: 0,
+    minCount: 1,
+    maxCount: 1,
+    race: "人間",
+    forcedSex: "男",
+    ageRange: { min: 18, max: 42 },
+    params: {
+      job: "傭兵射手",
+      action: "襲撃"
+    },
+    raidPosition: "middle",
+    raidTargeting: "frontFirst",
+    portraits: numberedPortraits("BAN", 20),
+    ranges: {
+      hp: [55, 75],
+      str: [14, 20],
+      vit: [10, 20],
+      dex: [20, 27],
+      mag: [5, 13],
+      chr: [5, 16],
+      int: [10, 20],
+      ind: [10, 20],
+      eth: [2, 10],
+      cou: [18, 25],
+      sexdr: [10, 22]
+    },
+    dialogues: [
+      "前は任せた。こっちは射線を通す！",
+      "盾の陰に隠れても無駄だ。動けば射抜くぞ。",
+      "足を止めろ。近づかれる前に数を減らす！"
+    ]
+  },
+  {
     type: "ゴブリン",
     weight: 25,
     minCount: 4,
@@ -122,6 +156,76 @@ export const RAIDER_TYPES = [
       "ゴブリン族の力を思い知るのだ！",
       "人間の村を奪うのだ！ここはゴブリンの新しい巣になるのだ！",
       "食料をよこせ！さもなくば皆殺しにするのだ！"
+    ]
+  },
+  {
+    type: "ゴブリンリーダー",
+    role: "leader",
+    weight: 0,
+    minCount: 1,
+    maxCount: 1,
+    race: "ゴブリン",
+    forcedSex: "男",
+    ageRange: { min: 24, max: 38 },
+    params: {
+      job: "ゴブリンリーダー",
+      action: "襲撃"
+    },
+    raidPosition: "front",
+    raidTargeting: "weakestHighChance",
+    portraits: numberedPortraits("GOB", 13),
+    ranges: {
+      hp: [50, 70],
+      str: [15, 21],
+      vit: [10, 20],
+      dex: [18, 26],
+      mag: [5, 12],
+      chr: [8, 16],
+      int: [15, 24],
+      ind: [10, 18],
+      eth: [1, 6],
+      cou: [18, 26],
+      sexdr: [16, 25]
+    },
+    mindTraits: ["首長"],
+    dialogues: [
+      "弱ったやつから囲め！強いのは後回しなのだ！",
+      "弓を散らすな！倒せるやつへ狙いを集めるのだ！",
+      "頭を使え！列を崩せば人間どもにも勝てるのだ！"
+    ]
+  },
+  {
+    type: "ゴブリン射手",
+    weight: 0,
+    minCount: 2,
+    maxCount: 3,
+    race: "ゴブリン",
+    forcedSex: "男",
+    ageRange: { min: 16, max: 32 },
+    params: {
+      job: "ゴブリン射手",
+      action: "襲撃"
+    },
+    raidPosition: "middle",
+    raidTargeting: "frontFirst",
+    portraits: numberedPortraits("GOB", 13),
+    ranges: {
+      hp: [35, 55],
+      str: [10, 16],
+      vit: [6, 16],
+      dex: [24, 32],
+      mag: [5, 11],
+      chr: [3, 10],
+      int: [7, 15],
+      ind: [6, 14],
+      eth: [1, 5],
+      cou: [15, 23],
+      sexdr: [18, 25]
+    },
+    dialogues: [
+      "前のやつらが押さえている間に射るのだ！",
+      "逃げても背中を射抜くのだ！",
+      "矢はまだある！次もすぐに射るのだ！"
     ]
   },
   {
@@ -758,6 +862,7 @@ export const RAIDER_TYPES = [
   {
     type: "黙示録の騎士・支配",
     displayType: "白の騎士",
+    fixedName: "《支配》",
     weight: 0,
     minCount: 1,
     maxCount: 1,
@@ -766,7 +871,7 @@ export const RAIDER_TYPES = [
     params: { job: "黙示録の騎士・支配", action: "襲撃" },
     raidPosition: "middle",
     raidTargeting: "frontMiddleRandom",
-    useDefaultPortrait: true,
+    portraits: ["REVELATION.png"],
     exchangeImmune: true,
     uncapturable: true,
     ranges: {
@@ -793,6 +898,7 @@ export const RAIDER_TYPES = [
   {
     type: "黙示録の騎士・戦争",
     displayType: "赤の騎士",
+    fixedName: "《戦争》",
     weight: 0,
     minCount: 1,
     maxCount: 1,
@@ -801,7 +907,7 @@ export const RAIDER_TYPES = [
     params: { job: "黙示録の騎士・戦争", action: "襲撃" },
     raidPosition: "front",
     raidTargeting: "frontFirst",
-    useDefaultPortrait: true,
+    portraits: ["WAR.png"],
     exchangeImmune: true,
     uncapturable: true,
     ranges: {
@@ -1011,7 +1117,11 @@ export const RAID_MODULES = [
       fundsRate: 0.2
     }
   }),
-  createExistingRaiderRaid("mercenary-band", "傭兵団", {
+  createCompositeRaiderRaid({
+    id: "mercenary-band",
+    name: "傭兵団の襲撃",
+    warningName: "傭兵団",
+    weight: 18,
     avoidance: {
       type: "resourcePayment",
       resource: "funds",
@@ -1019,6 +1129,22 @@ export const RAID_MODULES = [
       rate: 0.4,
       minAmount: 200
     },
+    representative: { raiderType: "傭兵団" },
+    enemyGroupVariants: [
+      {
+        weight: 70,
+        enemyGroups: [
+          { raiderType: "傭兵団", minCount: 3, maxCount: 4 }
+        ]
+      },
+      {
+        weight: 30,
+        enemyGroups: [
+          { raiderType: "傭兵団", minCount: 3, maxCount: 4 },
+          { raiderType: "傭兵射手", minCount: 1, maxCount: 1 }
+        ]
+      }
+    ],
     failurePenalty: {
       fundsRate: 0.3
     },
@@ -1077,6 +1203,28 @@ export const RAID_MODULES = [
     }
   }),
   createCompositeRaiderRaid({
+    id: "goblin-army",
+    name: "ゴブリン軍団の襲撃",
+    warningName: "ゴブリン軍団",
+    weight: 10,
+    representative: { raiderType: "ゴブリンリーダー", role: "leader" },
+    enemyGroups: [
+      { raiderType: "ゴブリンリーダー", minCount: 1, maxCount: 1 },
+      { raiderType: "ゴブリン射手", minCount: 2, maxCount: 3 },
+      { raiderType: "ゴブリン", minCount: 2, maxCount: 3 }
+    ],
+    defense: { surviveTurns: 6 },
+    failurePenalty: {
+      foodRate: 0.35,
+      fundsRate: 0.2
+    },
+    introDialogues: [
+      "弱った者から倒せ！弓隊は狙いを合わせるのだ！",
+      "食料も金も奪う！今日は群れではなく、軍団の戦なのだ！",
+      "前へ出る者と射る者を分けた！人間どもの列を崩すのだ！"
+    ]
+  }),
+  createCompositeRaiderRaid({
     id: "starving-wolves",
     name: "餓狼の群れ",
     warningName: "餓狼の群れ",
@@ -1100,6 +1248,39 @@ export const RAID_MODULES = [
       foodRate: 0.3,
       buildingDamage: true
     }
+  }),
+  createCompositeRaiderRaid({
+    id: "monster-stampede",
+    name: "モンスター・スタンビード",
+    warningName: "モンスター・スタンビード",
+    weight: 5,
+    representative: [
+      { raiderType: "ゴブリンリーダー", role: "leader" },
+      { raiderType: "ハーピーの長", role: "leader" }
+    ],
+    enemyGroups: [
+      { raiderType: "ゴブリンリーダー", minCount: 1, maxCount: 1 },
+      { raiderType: "ゴブリン射手", minCount: 2, maxCount: 2 },
+      { raiderType: "キュクロプス", minCount: 2, maxCount: 3 },
+      { raiderType: "ハーピーの長", minCount: 1, maxCount: 1 },
+      { raiderType: "セントール", minCount: 1, maxCount: 2 },
+      { raiderType: "餓狼", minCount: 1, maxCount: 2 }
+    ],
+    defense: { surviveTurns: 7 },
+    failurePenalty: {
+      foodRate: 0.45,
+      materialsRate: 0.35,
+      security: 28,
+      villagerHpRange: [18, 35],
+      villagerHappiness: 55,
+      buildingDamage: true,
+      severeInjury: true
+    },
+    introDialogues: [
+      "森も空も街道も騒いでいる。異なる群れが一つの奔流となって村へ迫る。",
+      "角笛も号令もない。ただ飢えと怒号の波が、柵を目がけて押し寄せる。",
+      "巨人の足音、翼の叫び、蹄と牙――魔物の大群が村を呑み込もうとしている。"
+    ]
   }),
   createCompositeRaiderRaid({
     id: "grassland-people",
@@ -1510,6 +1691,7 @@ export const RAID_SCALE_TABLES = [
     scaleStageIndexes: [3],
     entries: [
       { raidId: "goblin", weight: 5 },
+      { raidId: "goblin-army", weight: 5 },
       { raidId: "wolf", weight: 5 },
       { raidId: "mercenary-band", weight: 10 },
       { raidId: "harpy", weight: 10 },
@@ -1522,6 +1704,7 @@ export const RAID_SCALE_TABLES = [
     scaleStageIndexes: [4],
     entries: [
       { raidId: "starving-wolves", weight: 10 },
+      { raidId: "goblin-army", weight: 10 },
       { raidId: "mercenary-band", weight: 10 },
       { raidId: "harpy", weight: 5 },
       { raidId: "grassland-people", weight: 5 },
@@ -1536,6 +1719,7 @@ export const RAID_SCALE_TABLES = [
     excludedVillageTrait: "異端",
     entries: [
       { raidId: "mercenary-band", weight: 5 },
+      { raidId: "goblin-army", weight: 10 },
       { raidId: "pilgrimage-knights", weight: 10 },
       { raidId: "harpy-swarm", weight: 10 },
       { raidId: "starving-wolves", weight: 10 },
@@ -1549,6 +1733,8 @@ export const RAID_SCALE_TABLES = [
     excludedVillageTrait: "異端",
     entries: [
       { raidId: "pilgrimage-knights", weight: 10 },
+      { raidId: "goblin-army", weight: 5 },
+      { raidId: "monster-stampede", weight: 5 },
       { raidId: "harpy-swarm", weight: 10 },
       { raidId: "starving-wolves", weight: 5 },
       { raidId: "horse-nomad-raid", weight: 10 },
@@ -1563,6 +1749,7 @@ export const RAID_SCALE_TABLES = [
     entries: [
       { raidId: "holy-crusade", weight: 15 },
       { raidId: "winged-punishment", weight: 15 },
+      { raidId: "goblin-army", weight: 5 },
       { raidId: "harpy-swarm", weight: 10 },
       { raidId: "horse-nomad-raid", weight: 10 },
       { raidId: "cyclops", weight: 10 }
@@ -1575,6 +1762,8 @@ export const RAID_SCALE_TABLES = [
     entries: [
       { raidId: "holy-crusade-strong", weight: 15 },
       { raidId: "winged-punishment-strong", weight: 15 },
+      { raidId: "goblin-army", weight: 5 },
+      { raidId: "monster-stampede", weight: 5 },
       { raidId: "harpy-swarm", weight: 5 },
       { raidId: "horse-nomad-raid", weight: 10 },
       { raidId: "cyclops-band", weight: 10 },

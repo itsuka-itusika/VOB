@@ -2,6 +2,8 @@ export const DEFAULT_PORTRAIT_KEY = "default.png";
 export const BABY_MALE_PORTRAIT_KEY = "malebaby.png";
 export const BABY_FEMALE_PORTRAIT_KEY = "femalebaby.png";
 export const WOLF_PUP_PORTRAIT_KEY = "WOLF_PUP.png";
+export const WAR_PORTRAIT_KEY = "WAR.png";
+export const REVELATION_PORTRAIT_KEY = "REVELATION.png";
 const LEGACY_ARACHNID_PORTRAIT_FILES = [
   "Arachnid/ChatGPT Image 2026年6月4日 01_41_09.png",
   "Arachnid/ChatGPT Image 2026年6月4日 01_41_23.png",
@@ -25,7 +27,12 @@ export const GOBLIN_PORTRAIT_FILES = Array.from({ length: 13 }, (_, index) => `G
 
 const PORTRAIT_ROOT = "images/portraits";
 const CHILD_SHADOW_PORTRAIT_KEYS = new Set(["CHILD_SHADOW.svg", "CHILD_SHADOW_BABY.svg"]);
-const SYSTEM_PORTRAIT_KEYS = new Set([DEFAULT_PORTRAIT_KEY, ...CHILD_SHADOW_PORTRAIT_KEYS]);
+const SYSTEM_PORTRAIT_KEYS = new Set([
+  DEFAULT_PORTRAIT_KEY,
+  WAR_PORTRAIT_KEY,
+  REVELATION_PORTRAIT_KEY,
+  ...CHILD_SHADOW_PORTRAIT_KEYS
+]);
 const BABY_PORTRAIT_KEYS = new Set([BABY_MALE_PORTRAIT_KEY, BABY_FEMALE_PORTRAIT_KEY]);
 const LEGACY_ARACHNID_PORTRAIT_KEY_MAP = new Map();
 LEGACY_ARACHNID_PORTRAIT_FILES.forEach((key, index) => {

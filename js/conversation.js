@@ -15,8 +15,8 @@ import { initializeNewVillagerFriendships } from "./relationships.js";
 import { isAtPopulationLimit } from "./domain/speciesTraits.js";
 import {
   CAPTIVE_FAILED_TRAIT,
-  CAPTIVE_SOCIAL_COEFFICIENT,
   formatCaptiveReleaseDeadline,
+  getCaptiveSocialCoefficient,
   isCaptive,
   normalizeFormerCaptive,
   releaseCaptive
@@ -31,7 +31,7 @@ import {
 
 const DEFAULT_PORTRAIT_PATH = getPortraitAssetPath(DEFAULT_PORTRAIT_KEY);
 const SEDUCTION_MIN_LUST = 18;
-const TARGET_LUST_MULTIPLIER_MAX = 1.2;
+const TARGET_LUST_MULTIPLIER_MAX = 1.5;
 
 // 訪問者タイプごとの勧誘成功率係数
 const RECRUITMENT_COEFFICIENTS = {
@@ -354,17 +354,19 @@ function getVisitorSocialCandidates() {
 }
 
 function calculateCaptivePersuasionSuccessRate(captive, persuader) {
+  const coefficient = getCaptiveSocialCoefficient(captive);
   return Math.min(100, Math.max(0,
-    CAPTIVE_SOCIAL_COEFFICIENT * (persuader.chr / 20) * (persuader.int / 20) * 100
+    coefficient * (persuader.chr / 20) * (persuader.int / 20) * 100
   ));
 }
 
 function calculateCaptiveSeductionSuccessRate(captive, seducer) {
   const check = canAttemptSeduction(captive, seducer);
   if (!check.ok) return 0;
+  const coefficient = getCaptiveSocialCoefficient(captive);
   const targetLustMultiplier = getSeductionTargetLustMultiplier(captive);
   return Math.min(100, Math.max(0,
-    CAPTIVE_SOCIAL_COEFFICIENT * (seducer.chr / 20) * (seducer.sexdr / 20) * targetLustMultiplier * 100
+    coefficient * (seducer.chr / 20) * (seducer.sexdr / 20) * targetLustMultiplier * 100
   ));
 }
 

@@ -9,6 +9,31 @@ export const ACTION_CAPTIVE = "虜囚";
 export const CAPTIVE_TRAIT = "捕虜";
 export const CAPTIVE_FAILED_TRAIT = "懐柔失敗";
 export const CAPTIVE_SOCIAL_COEFFICIENT = 0.1;
+export const CAPTIVE_SOCIAL_COEFFICIENTS = Object.freeze({
+  "野盗": 0.3,
+  "傭兵団": 0.3,
+  "傭兵射手": 0.2,
+  "ゴブリン": 0.4,
+  "ゴブリン射手": 0.3,
+  "ゴブリンリーダー": 0.2,
+  "狼": 0.4,
+  "餓狼": 0.2,
+  "キュクロプス": 0.2,
+  "ハーピー": 0.3,
+  "ハーピーの長": 0.2,
+  "遊牧民": 0.3,
+  "強遊牧民": 0.08,
+  "セントール": 0.2,
+  "下級騎士": 0.2,
+  "重装兵": 0.08,
+  "上級騎士": 0.08,
+  "聖騎士": 0.06,
+  "聖女": 0.06,
+  "スフィンクス": 0.2,
+  "翼人兵": 0.06,
+  "上位翼人": 0.04,
+  "騎馬兵団兵": 0.06
+});
 export const MAX_CAPTIVES = 3;
 export const HOLDING_CELL_MAX_CAPTIVES = 1;
 export const CAPTIVE_RELEASE_MONTHS = 6;
@@ -56,6 +81,11 @@ export function isCaptive(person, village) {
     getCaptives(village).includes(person) ||
     (Array.isArray(person.mindTraits) && person.mindTraits.includes(CAPTIVE_TRAIT))
   );
+}
+
+export function getCaptiveSocialCoefficient(person) {
+  const raiderType = String(person?.raiderType || person?.job || "");
+  return CAPTIVE_SOCIAL_COEFFICIENTS[raiderType] ?? CAPTIVE_SOCIAL_COEFFICIENT;
 }
 
 export function normalizeCaptive(person) {

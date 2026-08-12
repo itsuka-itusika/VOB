@@ -1,6 +1,7 @@
 const ROUGH_RAIDER_TYPES = new Set([
   "野盗",
   "傭兵団",
+  "傭兵射手",
   "キュクロプス",
   "遊牧民",
   "強遊牧民",
@@ -26,7 +27,7 @@ export function getRaiderSpeechType(person) {
     ? person
     : String(person?.raiderType || person?.job || person?.type || "");
   if (raiderType === "狼" || raiderType === "餓狼") return "狼";
-  if (raiderType === "ゴブリン") return "ゴブリン";
+  if (["ゴブリン", "ゴブリンリーダー", "ゴブリン射手"].includes(raiderType)) return "ゴブリン";
   if (ROUGH_RAIDER_TYPES.has(raiderType)) return "乱暴";
   if (POLITE_MALE_RAIDER_TYPES.has(raiderType)) return "丁寧Ｍ";
   if (POLITE_FEMALE_RAIDER_TYPES.has(raiderType)) return "丁寧Ｆ";

@@ -80,19 +80,28 @@ const HALF_HORSE_BLOCKED_ACTIONS = new Set([
   "機織り",
   ...MASSAGE_ACTIONS
 ]);
-const HUMAN_BEAST_ALLOWED_ACTIONS = new Set([
-  "研究",
-  "神官",
-  "シスター",
-  "警備",
-  ACTION_REST,
-  ACTION_LEISURE,
-  ACTION_HEAL,
-  "研究助手",
-  "遊び",
-  ACTION_CRADLE,
-  ACTION_DEFEND,
-  ACTION_FORTIFY
+const HUMAN_BEAST_BLOCKED_ACTIONS = new Set([
+  "農作業",
+  "狩猟",
+  "漁",
+  "伐採",
+  "採集",
+  "内職",
+  "行商",
+  "看護",
+  ...MASSAGE_ACTIONS,
+  "写本",
+  "醸造",
+  "錬金術",
+  "機織り",
+  "詩人",
+  "踊り子",
+  "バニー",
+  "巫女",
+  "お手伝い",
+  "丁稚",
+  ACTION_SHOOT,
+  ACTION_TRAP
 ]);
 const FOUR_LEGGED_BLOCKED_ACTIONS = new Set([
   "農作業",
@@ -230,8 +239,8 @@ function applyHalfHorseBodyFilter(person) {
 
 function applyHumanBeastBodyFilter(person) {
   if (!traitList(person, "bodyTraits").includes("人面獣身")) return;
-  person.jobTable = person.jobTable.filter(action => HUMAN_BEAST_ALLOWED_ACTIONS.has(action));
-  person.actionTable = person.actionTable.filter(action => HUMAN_BEAST_ALLOWED_ACTIONS.has(action));
+  person.jobTable = person.jobTable.filter(action => !HUMAN_BEAST_BLOCKED_ACTIONS.has(action));
+  person.actionTable = person.actionTable.filter(action => !HUMAN_BEAST_BLOCKED_ACTIONS.has(action));
 }
 
 function applyFourLeggedBodyFilter(person) {
@@ -437,7 +446,6 @@ export function refreshJobTable(v, village = {}) {
     applyHumanBeastBodyFilter(v);
     normalizePreferredForTable(v, v.jobTable, { defaultPreferred: "遊び" });
     addRaidActionsIfAllowed(v, village);
-    applyHumanBeastBodyFilter(v);
     normalizeCurrentAction(v);
     return;
   }
@@ -454,7 +462,6 @@ export function refreshJobTable(v, village = {}) {
     applyHumanBeastBodyFilter(v);
     normalizePreferredForTable(v, v.jobTable, { defaultPreferred: "遊び" });
     addRaidActionsIfAllowed(v, village);
-    applyHumanBeastBodyFilter(v);
     normalizeCurrentAction(v);
     return;
   }
@@ -470,6 +477,5 @@ export function refreshJobTable(v, village = {}) {
   applyHumanBeastBodyFilter(v);
   normalizePreferredForTable(v, v.jobTable);
   addRaidActionsIfAllowed(v, village);
-  applyHumanBeastBodyFilter(v);
   normalizeCurrentAction(v);
 }

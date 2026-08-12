@@ -26,6 +26,7 @@ const RAID_BODY_BLOCK_REASONS = [
   "過労",
   "産褥"
 ];
+const HUMAN_BEAST_TRAIT = "人面獣身";
 
 function traitList(person, key) {
   return Array.isArray(person?.[key]) ? person[key] : [];
@@ -57,6 +58,9 @@ export function getRaidActionBlockReason(person, action = "", { ignoreRoleTraits
   if ((action === ACTION_TRAP || action === ACTION_SHOOT) && bodyTraits.includes(FOUR_LEGGED_TRAIT)) {
     return FOUR_LEGGED_TRAIT;
   }
+  if ((action === ACTION_TRAP || action === ACTION_SHOOT) && bodyTraits.includes(HUMAN_BEAST_TRAIT)) {
+    return HUMAN_BEAST_TRAIT;
+  }
   if ((action === ACTION_TRAP || action === ACTION_SHOOT || action === ACTION_FORTIFY) && mindTraits.includes(WILD_MIND_TRAIT)) {
     return WILD_MIND_TRAIT;
   }
@@ -83,6 +87,7 @@ export function getRaidActionSkipMessage(person, action = "戦闘", options = {}
     "萌芽": `${name}はまだ幼く、戦いに参加できない。`,
     "思春期": `${name}は前衛で迎撃できず、行動しない。`,
     [FOUR_LEGGED_TRAIT]: `${name}は四足の身体で${label}の道具を扱えない。`,
+    [HUMAN_BEAST_TRAIT]: `${name}は獣身では${label}の道具を扱えない。`,
     [WILD_MIND_TRAIT]: `${name}は野生の本能に従い、${label}の指示を受け付けない。`,
     "体力尽き": `${name}は体力が尽きており、行動できない。`
   };
@@ -97,6 +102,7 @@ export function canDefendInRaid(person) {
 export function canMakeTrapInRaid(person) {
   if (hasCommonRaidBlockingCondition(person)) return false;
   return !traitList(person, "bodyTraits").includes(FOUR_LEGGED_TRAIT) &&
+    !traitList(person, "bodyTraits").includes(HUMAN_BEAST_TRAIT) &&
     !traitList(person, "mindTraits").includes(WILD_MIND_TRAIT);
 }
 
@@ -149,6 +155,7 @@ export function canShootInRaid(person, village = null) {
   return canDefendInRaid(person) &&
     getRaidShooterSlotCount(village) > 0 &&
     !traitList(person, "bodyTraits").includes(FOUR_LEGGED_TRAIT) &&
+    !traitList(person, "bodyTraits").includes(HUMAN_BEAST_TRAIT) &&
     !traitList(person, "mindTraits").includes(WILD_MIND_TRAIT);
 }
 

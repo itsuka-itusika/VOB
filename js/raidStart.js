@@ -285,7 +285,12 @@ function createRaidEnemy(village, raiderType, existingNames) {
   if (speechType) {
     e.speechType = speechType;
   }
-  e.name = `${displayType}の${e.name}`;
+  if (raiderType.fixedName) {
+    e.name = raiderType.fixedName;
+    e.bodyOwner = raiderType.fixedName;
+  } else {
+    e.name = `${displayType}の${e.name}`;
+  }
 
   // 襲撃者として矛盾するランダム精神特性は外す。
   e.mindTraits = e.mindTraits.filter(trait => trait !== "ニート" && trait !== "非戦主義");

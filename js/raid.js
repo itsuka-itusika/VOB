@@ -44,6 +44,8 @@ const RAID_TARGET_FRONT_FIRST = "frontFirst";
 const RAID_TARGET_MIDDLE_FIRST = "middleFirst";
 const RAID_TARGET_MIDDLE_ONLY = "middleOnly";
 const RAID_TARGET_FRONT_MIDDLE_RANDOM = "frontMiddleRandom";
+const RAID_TARGET_WEAKEST_HIGH_CHANCE = "weakestHighChance";
+const RAID_WEAKEST_TARGET_CHANCE = 0.8;
 const TRAIT_INJURED = "負傷";
 const TRAIT_SERIOUS_INJURY = "重体";
 const TRAIT_CRITICAL = "危篤";
@@ -506,6 +508,7 @@ function getTargetCandidates(actor, village) {
   const front = candidates.filter(unit => getCombatPosition(unit, village) === RAID_POSITION_FRONT);
   const middle = candidates.filter(unit => getCombatPosition(unit, village) === RAID_POSITION_MIDDLE);
 
+  if (targeting === RAID_TARGET_WEAKEST_HIGH_CHANCE) return candidates;
   if (targeting === RAID_TARGET_MIDDLE_ONLY) return middle.length > 0 ? middle : [];
   if (targeting === RAID_TARGET_MIDDLE_FIRST) return middle.length > 0 ? middle : front;
   if (targeting === RAID_TARGET_FRONT_MIDDLE_RANDOM) {
@@ -516,7 +519,28 @@ function getTargetCandidates(actor, village) {
 }
 
 function selectTarget(actor, village) {
-  return randChoice(getTargetCandidates(actor, village));
+  const candidates = getTargetCandidates(actor, village);
+  if (
+    isEnemyUnit(actor, village) &&
+    actor.raidTargeting === RAID_TARGET_WEAKEST_HIGH_CHANCE &&
+    candidates.length > 0 &&
+    Math.random() < RAID_WEAKEST_TARGET_CHANCE
+  ) {
+    const lowestHp = Math.min(...candidates.map(target => Number(target.hp) || 0));
+    return randChoice(candidates.filter(target => (Number(target.hp) || 0) === lowestHp));
+  }
+  return randChoice(candidates);
+}
+
+function applyRaidDamage(target, damage) {
+  const amount = Math.max(0, Math.floor(Number(damage) || 0));
+  const saltPillarShattered = amount > 0 && isSaltPillar(target);
+  target.hp = saltPillarShattered ? 0 : Math.max(0, (Number(target.hp) || 0) - amount);
+  return saltPillarShattered;
+}
+
+function addSaltPillarShatterLog(result, target) {
+  addRaidActionLog(result, `【塩の柱】${target.name}の塩の柱は砕け散った！`);
 }
 
 function scheduleDefeatedEnemyDeparture(enemy) {
@@ -683,10 +707,11 @@ function doOneTrapAction(action, village) {
     return result;
   }
   let dmg = Math.floor((p.dex*p.int/400)*30);
-  e.hp = clampValue(e.hp - dmg, 0, 100);
+  const saltPillarShattered = applyRaidDamage(e, dmg);
   recordRaidFriendshipDamage(village, p, dmg);
   addRaidDamageAnimation(result, p, e, dmg, false, "罠発動");
   addRaidActionLog(result, `【罠作成】${p.name}→${e.name}に${dmg}ダメージ`);
+  if (saltPillarShattered) addSaltPillarShatterLog(result, e);
   if (e.hp<=0) {
     addRaidActionLog(result, `　　→ ${e.name}は倒れた！`);
     addRaidDepartureAnimation(result, e, "撃退");
@@ -701,7 +726,8 @@ export function setupCombatPhase(village) {
   const logDiv=document.getElementById("raidLogArea");
 
   village.raidPhase = RAID_PHASE_COMBAT;
-  if (!Number.isFinite(Number(village.raidTurnCount)) || village.raidTurnCount < 1) {
+  const isCombatStarting = !Number.isFinite(Number(village.raidTurnCount)) || village.raidTurnCount < 1;
+  if (isCombatStarting) {
     village.raidTurnCount = 1;
   }
 
@@ -722,6 +748,13 @@ export function setupCombatPhase(village) {
   }
 
   logDiv.innerHTML+=`<hr><br>【戦闘フェーズ】ターン ${village.raidTurnCount} 開始`;
+  if (isCombatStarting) {
+    getAliveEnemies(village)
+      .filter(enemy => enemy.raidTargeting === RAID_TARGET_WEAKEST_HIGH_CHANCE)
+      .forEach(enemy => {
+        logDiv.innerHTML += `<br>【弱者狙い】${enemy.name}は体力の低い村人へ狙いを定めた！`;
+      });
+  }
 
   village.raidActionQueue=createCombatActions(village);
   village.currentActionIndex=0;
@@ -771,12 +804,13 @@ function doOneCombatAction(action, village) {
   dmg = applyIncomingDamageModifiers(dmg, target, village);
 
   const atkTypeText = attackResult.isMagic ? "魔法攻撃" : attackResult.attackText;
-  target.hp = clampValue(target.hp - dmg, 0, 100);
+  const saltPillarShattered = applyRaidDamage(target, dmg);
   if (!isEnemyUnit(actor, village)) {
     recordRaidFriendshipDamage(village, actor, dmg);
   }
   addRaidDamageAnimation(result, actor, target, dmg, false, getAttackActionPopLabel(attackResult, isRanged));
   addRaidActionLog(result, `${label}${actor.name}の${atkTypeText}→${target.name}に ${dmg}ダメージ`);
+  if (saltPillarShattered) addSaltPillarShatterLog(result, target);
 
   if (target.hp<=0) {
     handleCombatDefeat(target, village, result);
@@ -854,9 +888,10 @@ function doCounterAttack(counterActor, target, village, result) {
   let ret=calcAttackDamage(counterActor, target, true);
   let rdmg=Math.floor(ret.damage*0.5);
   let retTypeText=ret.isMagic? "魔法攻撃":"物理攻撃";
-  target.hp = clampValue(target.hp - rdmg, 0, 100);
+  const saltPillarShattered = applyRaidDamage(target, rdmg);
   addRaidDamageAnimation(result, counterActor, target, rdmg, true, ret.isMagic ? "魔法で反撃" : "反撃");
   addRaidActionLog(result, `　　→ 反撃(${retTypeText}):${counterActor.name}→${target.name}に${rdmg}ダメージ`);
+  if (saltPillarShattered) addSaltPillarShatterLog(result, target);
   if (target.hp<=0) {
     handleCombatDefeat(target, village, result);
   }
@@ -1270,6 +1305,7 @@ function appendRaidNameCell(row, unit) {
 function getRaidVisibleEffects(unit) {
   const sources = [unit?.raidEffects, unit?.statusEffects, unit?.buffs, unit?.debuffs];
   const names = [];
+  if (unit?.raidTargeting === RAID_TARGET_WEAKEST_HIGH_CHANCE) names.push("弱者狙い");
   sources.forEach(source => {
     if (!Array.isArray(source)) return;
     source.forEach(effect => {

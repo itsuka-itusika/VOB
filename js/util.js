@@ -1,7 +1,7 @@
 // util.js
 
 import { getPortraitAssetPathForCharacter } from "./data/portraitPaths.js";
-import { isGoblin, isWolf } from "./domain/speciesTraits.js";
+import { isGoblin, isWolf, YOUNG_WOLF_TRAIT } from "./domain/speciesTraits.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
 
 /** 乱数系/Clamp/シャッフルなどのユーティリティ */
@@ -100,6 +100,7 @@ export function getVillagerFoodConsumption(character) {
   if (isSaltPillar(character)) return 0;
   const bodyTraits = Array.isArray(character?.bodyTraits) ? character.bodyTraits : [];
   const mindTraits = Array.isArray(character?.mindTraits) ? character.mindTraits : [];
+  if (bodyTraits.includes(YOUNG_WOLF_TRAIT)) return 2;
   if (isWolf(character)) return 4;
   if (isGoblin(character)) return 4;
   if (bodyTraits.includes("光合成")) return 0;

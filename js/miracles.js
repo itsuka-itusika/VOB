@@ -17,7 +17,7 @@ import { getVisitorArrivalLine } from "./data/dialogue/visitorLines.js";
 import { getActiveVillagers, isSaltPillar } from "./domain/apocalypseRules.js";
 import { startRaidEvent } from "./raidStart.js";
 import { completeTutorialTask } from "./tutorial.js";
-import { getCaptives } from "./captives.js";
+import { getCaptives, normalizeCaptive } from "./captives.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import {
   addDivineMight,
@@ -218,8 +218,8 @@ function getMiracleTargetCount(mid) {
 function getMiracleTargetOptions(mid) {
   if (mid === "17") return { raidersOnly: true };
   if (mid === "12") return { normalExchangeOnly: true, includeSaltPillar: true };
-  if (mid === "6") return { villagersOnly: true };
-  if (mid === "3" || mid === "7" || mid === "11" || mid === "16") return { villagersOnly: true };
+  if (mid === "6" || mid === "16") return { villagersOnly: true, includeCaptives: true };
+  if (mid === "3" || mid === "7" || mid === "11") return { villagersOnly: true };
   if (mid === "13") return { includeSaltPillar: true, excludeExchangeImmune: true };
   return {};
 }
@@ -482,6 +482,17 @@ function createVillagerSelect(id, village, options = {}) {
     });
   }
 
+  if (options.includeCaptives) {
+    getCaptives(village)
+      .filter(vv => options.includeSaltPillar || !isSaltPillar(vv))
+      .forEach(vv=>{
+      let opp=document.createElement("option");
+      opp.value=vv.name;
+      opp.textContent=`${vv.name}(捕虜)`;
+      sel.appendChild(opp);
+      });
+  }
+
   if (options.normalExchangeOnly || options.villagersOnly) {
     return sel;
   }
@@ -650,7 +661,7 @@ export function performMiracle(village) {
           forceMarriage(vA,vB,village);
           break;
         case "6": // 癒し(1人回復)
-          if (!vA || !village.villagers.includes(vA)) {
+          if (!vA || (!village.villagers.includes(vA) && !getCaptives(village).includes(vA))) {
             village.log("【癒し】対象1人を選択");
             refundMiracleMana(village, cost);
             return;
@@ -663,7 +674,7 @@ export function performMiracle(village) {
           healMiracle(vA,village);
           break;
         case "16": // 酒杯(1人回復)
-          if (!vA || !village.villagers.includes(vA)) {
+          if (!vA || (!village.villagers.includes(vA) && !getCaptives(village).includes(vA))) {
             village.log("【酒杯】対象1人を選択");
             refundMiracleMana(village, cost);
             return;
@@ -802,7 +813,8 @@ function healMiracle(p,v) {
   });
 
   syncEffectiveStats(p);
-  refreshJobTable(p, v);
+  if (getCaptives(v).includes(p)) normalizeCaptive(p);
+  else refreshJobTable(p, v);
 
   p.hp=clampValue(p.hp+50,0,100);
 
@@ -830,7 +842,8 @@ function gobletMiracle(p,v) {
   }
 
   syncEffectiveStats(p);
-  refreshJobTable(p, v);
+  if (getCaptives(v).includes(p)) normalizeCaptive(p);
+  else refreshJobTable(p, v);
 
   const recoveryMsg = recoveredTraits.length > 0 ?
     `${recoveredTraits.join(",")}を回復,` : "";

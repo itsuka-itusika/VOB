@@ -281,7 +281,7 @@ function getBraveSaltPillarTargets(village) {
   const candidates = getActiveVillagers(village)
     .sort((a, b) => (Number(b.cou) || 0) - (Number(a.cou) || 0));
   const poolSize = Math.min(candidates.length, Math.max(2, Math.ceil(candidates.length / 2)));
-  return chooseRandom(candidates.slice(0, poolSize), 2);
+  return chooseRandom(candidates.slice(0, poolSize), 3);
 }
 
 function applyFifthCalamity(village) {
