@@ -1083,6 +1083,7 @@ function createCompositeRaiderRaid({
   representative = null,
   introDialogues = [],
   defense = null,
+  enemyProfile = null,
   successRewards = null,
   failurePenalty = null
 }) {
@@ -1098,6 +1099,7 @@ function createCompositeRaiderRaid({
       ...cloneRaidRules(DEFAULT_RAID_DEFENSE),
       ...(defense || {})
     },
+    enemyProfile,
     enemyGroups,
     enemyGroupVariants,
     successRewards: {
@@ -1482,9 +1484,13 @@ export const RAID_MODULES = [
     weight: 15,
     representative: { raiderType: "翼人兵" },
     enemyGroups: [
-      { raiderType: "翼人兵", minCount: 6, maxCount: 8 }
+      { raiderType: "翼人兵", minCount: 11, maxCount: 11 }
     ],
     defense: { surviveTurns: 6 },
+    enemyProfile: {
+      bodyStatMultipliers: { str: 0.75, dex: 0.75, mag: 0.75 },
+      addMindTraits: ["秘蹟：盾", "戦慣れ"]
+    },
     failurePenalty: {
       security: 22,
       villagerHpRange: [12, 28],
@@ -1513,6 +1519,10 @@ export const RAID_MODULES = [
       { raiderType: "聖女", minCount: 1, maxCount: 2 }
     ],
     defense: { surviveTurns: 6 },
+    enemyProfile: {
+      bodyStatMultipliers: { str: 0.8, dex: 0.8, mag: 0.8 },
+      addMindTraits: ["秘蹟：盾"]
+    },
     failurePenalty: {
       materialsRate: 0.4,
       fundsRate: 0.4,

@@ -333,7 +333,7 @@ function exposeBalanceApi() {
     enumerable: false,
     writable: false,
     value: Object.freeze({
-      version: 1,
+      version: 2,
       seed: window.__vobBalanceSeed || null,
       getVillage: () => theVillage,
       refreshUI: () => updateUI(theVillage),
@@ -351,10 +351,13 @@ function exposeBalanceApi() {
       },
       proceedRaidAction: () => proceedRaidAction(theVillage),
       retreatRaid: () => retreatRaid(theVillage),
-      startRaidById: raidId => {
+      startRaidById: (raidId, enemyGroups = null) => {
         const raidDefinition = RAID_MODULES.find(raid => raid.id === raidId);
         if (!raidDefinition) throw new Error(`Unknown raid id: ${raidId}`);
-        startRaidEvent(theVillage, { raidDefinition });
+        const pendingRaid = Array.isArray(enemyGroups)
+          ? { raidId, enemyGroups }
+          : null;
+        startRaidEvent(theVillage, { raidDefinition, pendingRaid });
       },
       getRaidDefinitions: () => RAID_MODULES.slice()
     })

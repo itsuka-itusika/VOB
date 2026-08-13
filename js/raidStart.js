@@ -8,7 +8,7 @@ import {
 } from "./data/raidData.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { getRaiderSpeechType } from "./domain/raiderSpeechTypes.js";
-import { syncEffectiveStats } from "./domain/statLayers.js";
+import { setBaseStats, syncEffectiveStats } from "./domain/statLayers.js";
 import { syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
 import { clearRaidWarningModal, showRaidWarningModal } from "./raidWarningModal.js";
 import { MESSENGER_PASS_SECRET_TREASURE_ID } from "./data/tutorialData.js";
@@ -193,7 +193,7 @@ function getResolvedEnemyGroups(raidDefinition, pendingRaid = null) {
     .filter(Boolean);
 }
 
-function createRaidEnemy(village, raiderType, existingNames) {
+function createRaidEnemy(village, raiderType, existingNames, enemyProfile = null) {
   const displayType = raiderType.displayType || raiderType.type;
   let e = createRandomVillager({
     sex: raiderType.forcedSex || (Math.random() < 0.5 ? "男" : "女"),
@@ -299,6 +299,17 @@ function createRaidEnemy(village, raiderType, existingNames) {
 
   // 襲撃者として矛盾するランダム精神特性は外す。
   e.mindTraits = e.mindTraits.filter(trait => trait !== "ニート" && trait !== "非戦主義");
+
+  if (enemyProfile) {
+    const bodyStats = {};
+    Object.entries(enemyProfile.bodyStatMultipliers || {}).forEach(([stat, multiplier]) => {
+      bodyStats[stat] = (Number(e.baseStats?.[stat]) || 0) * Number(multiplier);
+    });
+    if (Object.keys(bodyStats).length > 0) setBaseStats(e, bodyStats);
+    (enemyProfile.addMindTraits || []).forEach(trait => {
+      if (!e.mindTraits.includes(trait)) e.mindTraits.push(trait);
+    });
+  }
 
   syncWolfSpeciesTraits(e, { includeWildMindTrait: true });
   syncEffectiveStats(e);
@@ -598,7 +609,12 @@ export function startRaidEvent(village, options = {}) {
         ...getCaptives(village).map(person => person.name),
         ...village.raidEnemies.map(person => person.name)
       ];
-      village.raidEnemies.push(createRaidEnemy(village, group.raiderType, existingNames));
+      village.raidEnemies.push(createRaidEnemy(
+        village,
+        group.raiderType,
+        existingNames,
+        raidDefinition.enemyProfile
+      ));
     }
   });
 

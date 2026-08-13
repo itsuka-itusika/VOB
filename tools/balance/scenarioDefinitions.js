@@ -1,12 +1,12 @@
 import { Villager } from "../../js/classes.js";
 import { BUILDINGS } from "../../js/buildings.js";
-import { setBaseStats } from "../../js/domain/statLayers.js";
+import { setBaseStats, syncEffectiveStats } from "../../js/domain/statLayers.js";
 import { getVillagerFoodConsumption } from "../../js/util.js";
 import { getVillageScaleStage } from "../../js/villageScale.js";
-import { createVillageSnapshot } from "./resultSchema.js?v=20260813-balance-13";
-import { drainKnownModals, waitUntil } from "./modalDriver.js?v=20260813-balance-13";
+import { createVillageSnapshot } from "./resultSchema.js?v=20260813-balance-23";
+import { drainKnownModals, waitUntil } from "./modalDriver.js?v=20260813-balance-23";
 
-export const SCENARIO_VERSION = 4;
+export const SCENARIO_VERSION = 14;
 export const STANDARD_PLAYER_MODEL_VERSION = 1;
 export const RECOVERY_PLAYER_MODEL_VERSION = 1;
 
@@ -38,6 +38,121 @@ const UPPER_RAID_SENSITIVITY_CANDIDATES = Object.freeze([
   { id: "offense90", label: "敵攻撃能力-10%", enemyHpMultiplier: 1, enemyOffenseMultiplier: 0.9 },
   { id: "hp110-offense90", label: "敵HP+10%・攻撃能力-10%", enemyHpMultiplier: 1.1, enemyOffenseMultiplier: 0.9 }
 ]);
+function createCompositionCandidate(id, label, enemyGroups, profile = null) {
+  return {
+    id,
+    label,
+    enemyGroups,
+    ...(profile ? { profile } : {})
+  };
+}
+
+function createShieldProfile(bodyStatMultipliers) {
+  return {
+    bodyStatMultipliers,
+    addMindTraits: ["秘蹟：盾"]
+  };
+}
+
+function createHolyGroups([heavy, elite, holy, saint]) {
+  return [
+    { raiderType: "重装兵", count: heavy },
+    { raiderType: "上級騎士", count: elite },
+    { raiderType: "聖騎士", count: holy },
+    { raiderType: "聖女", count: saint }
+  ];
+}
+
+const HOLY_COMPOSITION_CANDIDATES = [
+  ["fixed-9", "重装4・上級3・聖騎士1・聖女1", [4, 3, 1, 1]],
+  ["fixed-10", "重装5・上級3・聖騎士1・聖女1", [5, 3, 1, 1]],
+  ["fixed-11", "重装5・上級4・聖騎士1・聖女1", [5, 4, 1, 1]],
+  ["fixed-12", "重装6・上級4・聖騎士1・聖女1", [6, 4, 1, 1]],
+  ["fixed-13", "重装6・上級5・聖騎士1・聖女1", [6, 5, 1, 1]]
+].map(([id, label, counts]) =>
+  createCompositionCandidate(id, label, createHolyGroups(counts))
+);
+
+HOLY_COMPOSITION_CANDIDATES.push(
+  ...[
+    ["fixed-10-shield-offense80", "10人・盾付与・身体攻撃能力80%", [5, 3, 1, 1], 0.8],
+    ["fixed-11-shield-offense75", "11人・盾付与・身体攻撃能力75%", [5, 4, 1, 1], 0.75],
+    ["fixed-12-shield-offense70", "12人・盾付与・身体攻撃能力70%", [6, 4, 1, 1], 0.7],
+    ["fixed-14-shield-offense70", "14人・盾付与・身体攻撃能力70%", [7, 5, 1, 1], 0.7],
+    ["fixed-16-shield-offense70", "16人・盾付与・身体攻撃能力70%", [8, 6, 1, 1], 0.7],
+    ["fixed-18-shield-offense70", "18人・盾付与・身体攻撃能力70%", [9, 7, 1, 1], 0.7],
+    ["fixed-15-shield-offense60", "15人・盾付与・身体攻撃能力60%", [7, 6, 1, 1], 0.6],
+    ["fixed-16-shield-offense60", "16人・盾付与・身体攻撃能力60%", [8, 6, 1, 1], 0.6],
+    ["fixed-18-shield-offense60", "18人・盾付与・身体攻撃能力60%", [9, 7, 1, 1], 0.6],
+    ["fixed-20-shield-offense60", "20人・盾付与・身体攻撃能力60%", [10, 8, 1, 1], 0.6],
+    ["fixed-20-shield-offense50", "20人・盾付与・身体攻撃能力50%", [10, 8, 1, 1], 0.5],
+    ["fixed-22-shield-offense50", "22人・盾付与・身体攻撃能力50%", [11, 9, 1, 1], 0.5],
+    ["fixed-20-shield-offense55", "20人・盾付与・身体攻撃能力55%", [10, 8, 1, 1], 0.55],
+    ["fixed-22-shield-offense55", "22人・盾付与・身体攻撃能力55%", [11, 9, 1, 1], 0.55]
+  ].map(([id, label, counts, multiplier]) =>
+    createCompositionCandidate(
+      id,
+      label,
+      createHolyGroups(counts),
+      createShieldProfile({ str: multiplier, dex: multiplier, mag: multiplier })
+    )
+  )
+);
+
+const WINGED_COMPOSITION_CANDIDATES = [9, 10, 11, 12, 16, 13, 14, 15]
+  .map(count => createCompositionCandidate(
+    `winged-${count}`,
+    `翼人兵${count}`,
+    [{ raiderType: "翼人兵", count }]
+  ));
+
+WINGED_COMPOSITION_CANDIDATES.push(
+  createCompositionCandidate(
+    "upper-1-winged-8",
+    "上位翼人1・翼人兵8",
+    [{ raiderType: "上位翼人", count: 1 }, { raiderType: "翼人兵", count: 8 }]
+  ),
+  createCompositionCandidate(
+    "upper-1-winged-11",
+    "上位翼人1・翼人兵11",
+    [{ raiderType: "上位翼人", count: 1 }, { raiderType: "翼人兵", count: 11 }]
+  ),
+  createCompositionCandidate(
+    "upper-1-winged-15",
+    "上位翼人1・翼人兵15",
+    [{ raiderType: "上位翼人", count: 1 }, { raiderType: "翼人兵", count: 15 }]
+  ),
+  ...[
+    ["winged-11-shield-dex80", "翼人兵11・盾付与・身体器用80%", 11, { dex: 0.8 }],
+    ["winged-12-shield-dex70", "翼人兵12・盾付与・身体器用70%", 12, { dex: 0.7 }],
+    ["winged-13-shield-dex60", "翼人兵13・盾付与・身体器用60%", 13, { dex: 0.6 }],
+    ["winged-16-shield-dex60", "翼人兵16・盾付与・身体器用60%", 16, { dex: 0.6 }],
+    ["winged-18-shield-dex60", "翼人兵18・盾付与・身体器用60%", 18, { dex: 0.6 }],
+    ["winged-20-shield-dex60", "翼人兵20・盾付与・身体器用60%", 20, { dex: 0.6 }],
+    ["winged-18-shield-body75-dex70", "翼人兵18・盾付与・身体筋魔75%・器用70%", 18, { str: 0.75, dex: 0.7, mag: 0.75 }],
+    ["winged-20-shield-body75-dex70", "翼人兵20・盾付与・身体筋魔75%・器用70%", 20, { str: 0.75, dex: 0.7, mag: 0.75 }],
+    ["winged-22-shield-body75-dex70", "翼人兵22・盾付与・身体筋魔75%・器用70%", 22, { str: 0.75, dex: 0.7, mag: 0.75 }],
+    ["winged-19-shield-body75-dex70", "翼人兵19・盾付与・身体筋魔75%・器用70%", 19, { str: 0.75, dex: 0.7, mag: 0.75 }],
+    ["winged-20-shield-body75-dex65", "翼人兵20・盾付与・身体筋魔75%・器用65%", 20, { str: 0.75, dex: 0.65, mag: 0.75 }],
+    ["winged-21-shield-body75-dex65", "翼人兵21・盾付与・身体筋魔75%・器用65%", 21, { str: 0.75, dex: 0.65, mag: 0.75 }],
+    ["winged-22-shield-body75-dex625", "翼人兵22・盾付与・身体筋魔75%・器用62.5%", 22, { str: 0.75, dex: 0.625, mag: 0.75 }],
+    ["winged-23-shield-body75-dex60", "翼人兵23・盾付与・身体筋魔75%・器用60%", 23, { str: 0.75, dex: 0.6, mag: 0.75 }],
+    ["winged-24-shield-body75-dex60", "翼人兵24・盾付与・身体筋魔75%・器用60%", 24, { str: 0.75, dex: 0.6, mag: 0.75 }],
+    ["winged-25-shield-body70-dex55", "翼人兵25・盾付与・身体筋魔70%・器用55%", 25, { str: 0.7, dex: 0.55, mag: 0.7 }]
+  ].map(([id, label, count, multipliers]) =>
+    createCompositionCandidate(
+      id,
+      label,
+      [{ raiderType: "翼人兵", count }],
+      createShieldProfile(multipliers)
+    )
+  )
+);
+
+const UPPER_RAID_COMPOSITION_CANDIDATES = Object.freeze({
+  "holy-crusade-strong": HOLY_COMPOSITION_CANDIDATES,
+  "winged-punishment-strong": WINGED_COMPOSITION_CANDIDATES
+});
 const RECRUITMENT_TRAITS = new Set(["達人農夫", "歴戦", "緑の指"]);
 
 function countTrait(people, trait) {
@@ -181,6 +296,46 @@ function applyUpperRaidSensitivity(village, candidate) {
   });
 }
 
+function applyCompositionProfile(village, candidate) {
+  const profile = candidate?.profile;
+  if (!profile) return;
+  village.raidEnemies.forEach(enemy => {
+    const bodyStats = {};
+    Object.entries(profile.bodyStatMultipliers || {}).forEach(([key, multiplier]) => {
+      bodyStats[key] = (Number(enemy.baseStats?.[key]) || 0) * Number(multiplier);
+    });
+    if (Object.keys(bodyStats).length > 0) setBaseStats(enemy, bodyStats);
+    enemy.mindTraits = Array.isArray(enemy.mindTraits) ? enemy.mindTraits : [];
+    (profile.addMindTraits || []).forEach(trait => {
+      if (!enemy.mindTraits.includes(trait)) enemy.mindTraits.push(trait);
+    });
+    syncEffectiveStats(enemy);
+  });
+}
+
+function summarizeEnemyStrength(enemies) {
+  const stats = ["hp", "str", "vit", "dex", "mag", "chr"];
+  const summarize = getValue => Object.fromEntries(stats.map(stat => {
+    const values = enemies.map(enemy => Number(getValue(enemy, stat)) || 0);
+    return [stat, {
+      average: values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : 0,
+      maximum: values.length > 0 ? Math.max(...values) : 0
+    }];
+  }));
+  return {
+    transferableBody: summarize((enemy, stat) => stat === "hp" ? enemy.hp : enemy.baseStats?.[stat]),
+    transferableBodyTraits: countBy(
+      enemies.flatMap(enemy => enemy.bodyTraits || []),
+      trait => trait
+    ),
+    effective: summarize((enemy, stat) => enemy[stat]),
+    mindTraits: countBy(
+      enemies.flatMap(enemy => enemy.mindTraits || []),
+      trait => trait
+    )
+  };
+}
+
 function applyDirectedRecovery(village) {
   village.villagers.forEach(person => {
     if (person.action === "療養" || (person.hp >= 80 && person.mp >= 80)) return;
@@ -247,13 +402,15 @@ async function runUpperRaid({
   month,
   recovery = false,
   recoveryPolicy = "auto",
-  sensitivityCandidate = null
+  sensitivityCandidate = null,
+  compositionCandidate = null
 }) {
   const village = applyUpperRaidFixture(api, month);
   const randomCallsAfterFixture = api.seed?.calls ?? null;
   if (recovery) api.setSimulationOptions(RECOVERY_OPTIONS);
   const initial = createVillageSnapshot(village);
-  api.startRaidById(raidId);
+  api.startRaidById(raidId, compositionCandidate?.enemyGroups || null);
+  applyCompositionProfile(village, compositionCandidate);
   applyUpperRaidSensitivity(village, sensitivityCandidate);
   const randomCallsAfterRaidCreation = api.seed?.calls ?? null;
   assignPreparedRaidActions(village);
@@ -261,7 +418,8 @@ async function runUpperRaid({
   const villagerRefs = village.villagers.slice();
   const enemyInitial = {
     types: countBy(enemyRefs, enemy => enemy.raiderType),
-    hp: enemyRefs.reduce((sum, enemy) => sum + (Number(enemy.hp) || 0), 0)
+    hp: enemyRefs.reduce((sum, enemy) => sum + (Number(enemy.hp) || 0), 0),
+    strength: summarizeEnemyStrength(enemyRefs)
   };
   const enemyCount = village.raidEnemies.length;
   const assignments = village.villagers.reduce((counts, person) => {
@@ -278,6 +436,7 @@ async function runUpperRaid({
     enemyCount,
     enemyTypes: enemyInitial.types,
     enemyInitialHp: enemyInitial.hp,
+    enemyStrength: enemyInitial.strength,
     enemyRemaining: outcome === "complete"
       ? 0
       : enemyRefs.filter(enemy => (Number(enemy.hp) || 0) > 0).length,
@@ -297,7 +456,8 @@ async function runUpperRaid({
     averageHp: postRaid.population.averageHp,
     averageMp: postRaid.population.averageMp,
     recoveryState: summarizeRecoveryState(village),
-    sensitivityCandidate: sensitivityCandidate?.id || null
+    sensitivityCandidate: sensitivityCandidate?.id || null,
+    compositionCandidate: compositionCandidate?.id || null
   };
   const randomCheckpoints = {
     afterFixture: randomCallsAfterFixture,
@@ -608,6 +768,29 @@ function createSensitivityScenario(raid, candidate) {
   };
 }
 
+function createCompositionScenario(raid, candidate) {
+  return {
+    id: `upper-composition-${raid.id}-4-${candidate.id}`,
+    name: `上位襲撃構成探索：${raid.label}・4月・${candidate.label}`,
+    async run(context) {
+      const result = await runUpperRaid({
+        ...context,
+        raidId: raid.id,
+        month: 4,
+        compositionCandidate: candidate
+      });
+      return {
+        status: "completed",
+        raidId: raid.id,
+        startMonth: 4,
+        compositionCandidate: candidate,
+        ...result,
+        final: createVillageSnapshot(context.api.getVillage())
+      };
+    }
+  };
+}
+
 const scenarioList = [
   {
     id: "initial-state",
@@ -630,6 +813,10 @@ const scenarioList = [
   ...UPPER_RAIDS.map(createDirectedRecoveryScenario),
   ...UPPER_RAIDS.flatMap(raid =>
     UPPER_RAID_SENSITIVITY_CANDIDATES.map(candidate => createSensitivityScenario(raid, candidate))
+  ),
+  ...UPPER_RAIDS.flatMap(raid =>
+    (UPPER_RAID_COMPOSITION_CANDIDATES[raid.id] || [])
+      .map(candidate => createCompositionScenario(raid, candidate))
   )
 ];
 

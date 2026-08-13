@@ -1,6 +1,6 @@
-import { SCENARIOS, SCENARIO_VERSION, getScenario } from "./scenarioDefinitions.js?v=20260813-balance-13";
-import { BALANCE_RESULT_SCHEMA_VERSION, summarizeBatch } from "./resultSchema.js?v=20260813-balance-13";
-import { installFrameControls } from "./modalDriver.js?v=20260813-balance-13";
+import { SCENARIOS, SCENARIO_VERSION, getScenario } from "./scenarioDefinitions.js?v=20260813-balance-23";
+import { BALANCE_RESULT_SCHEMA_VERSION, summarizeBatch } from "./resultSchema.js?v=20260813-balance-23";
+import { installFrameControls } from "./modalDriver.js?v=20260813-balance-23";
 
 const RUNNER_VERSION = 2;
 const API_WAIT_MS = 10000;
