@@ -36,6 +36,7 @@ const RARE_RACES = new Set([
   "メナス"
 ]);
 const RESEARCH_MIND_TRAITS = new Set(["マッド", "天才肌", "学者肌", "好奇心旺盛"]);
+const WISH_REQUESTER_EXCLUDED_MIND_TRAITS = new Set(["野生", "無垢", "神聖"]);
 const HUMANOID_RACES = new Set([
   "人間",
   "ゴブリン",
@@ -231,6 +232,8 @@ function getWishCandidates(village) {
   const hasRareRace = residents.some(isRareRace);
 
   villagers.forEach(requester => {
+    if (hasAnyMindTrait(requester, WISH_REQUESTER_EXCLUDED_MIND_TRAITS)) return;
+
     getRelationshipTargets(requester, "天敵")
       .filter(targetName => villagers.some(person => person.name === targetName))
       .forEach(targetName => candidates.push({ id: "avoid_enemy", requester, targetName }));
@@ -360,6 +363,10 @@ function isOneSidedAffection(requester, target) {
 
 function hasMindTrait(person, trait) {
   return Array.isArray(person?.mindTraits) && person.mindTraits.includes(trait);
+}
+
+function hasAnyMindTrait(person, traits) {
+  return Array.isArray(person?.mindTraits) && person.mindTraits.some(trait => traits.has(trait));
 }
 
 function hasAnyBodyTrait(person, traits) {
