@@ -38,6 +38,7 @@ import { getVisitorArrivalLine } from "./data/dialogue/visitorLines.js";
 import { addDivineMight, getDivineMightGainFromMonthlyMana, runAfterPendingDivineMightLevelUp } from "./divineMight.js";
 import { BUILDINGS } from "./buildings.js";
 import { advanceBuildingRequestMonth, tryStartBuildingRequest } from "./buildingRequests.js";
+import { advanceWishMonth, tryStartWish } from "./wishes.js";
 import { tryTriggerHeresyInquisition } from "./heresyInquisition.js";
 import { tryTriggerBacchusGoldenStatueEvent } from "./bacchusGoldenStatue.js";
 import { advanceApocalypseLocustMonths, advanceSaltPillarMonths, processApocalypseMonthStart } from "./apocalypse.js";
@@ -316,6 +317,7 @@ export function runMonthStartPhase(village) {
   const apocalypseActive = processApocalypseMonthStart(village);
   if (!apocalypseActive && !simulationOptions.suppressRandomEvents) doRandomEventPre(village);
   if (!simulationOptions.suppressBuildingRequests) tryStartBuildingRequest(village, BUILDINGS);
+  tryStartWish(village);
   applyMonthStartRestrictions(village);
   runHeadmanElectionIfDue(village);
   tryTriggerHeresyInquisition(village);
@@ -621,6 +623,8 @@ export function endOfMonthProcess(v) {
 
     if (changed) syncEffectiveStats(p);
   });
+
+  advanceWishMonth(v);
 
   // ログ出力を元に戻す処理を削除
   // v.log = originalLog;

@@ -210,6 +210,8 @@ function isDivineMightModalBlocked() {
     "#buildingModal",
     "#buildingRequestModal",
     "#buildingRequestCompleteModal",
+    "#wishModal",
+    "#wishCompleteModal",
     "#heresyInquisitionModal",
     "#inquisitionInsufficientFundsModal",
     "#inquisitionHospitalityResultModal",

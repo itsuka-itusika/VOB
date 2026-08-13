@@ -25,6 +25,8 @@ const PRIORITY_MODAL_SELECTORS = [
   "#seasonChangeDialog",
   "#festivalModal",
   "#randomEventModal",
+  "#wishModal",
+  "#wishCompleteModal",
   ".effect-result-modal",
   "#secretTreasureEventModal"
 ];

@@ -2282,14 +2282,16 @@ section h2 {
   z-index: 2100;
 }
 
-#buildingRequestOverlay {
+#buildingRequestOverlay,
+#wishOverlay {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.5);
   z-index: 2090;
 }
 
-#buildingRequestCompleteOverlay {
+#buildingRequestCompleteOverlay,
+#wishCompleteOverlay {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.5);
@@ -2314,7 +2316,9 @@ section h2 {
 }
 
 #buildingRequestModal,
-#buildingRequestCompleteModal {
+#buildingRequestCompleteModal,
+#wishModal,
+#wishCompleteModal {
   position: fixed;
   top: 50%;
   left: 50%;
@@ -2339,7 +2343,9 @@ section h2 {
 }
 
 #buildingRequestModal h2,
-#buildingRequestCompleteModal h2 {
+#buildingRequestCompleteModal h2,
+#wishModal h2,
+#wishCompleteModal h2 {
   margin: 0 0 12px;
   color: #6b4d19;
   font-size: 1.2rem;
@@ -2352,7 +2358,9 @@ section h2 {
 }
 
 #buildingRequestModal .building-request-text p,
-#buildingRequestCompleteModal .building-request-text p {
+#buildingRequestCompleteModal .building-request-text p,
+#wishModal .wish-text p,
+#wishCompleteModal .wish-text p {
   margin: 0 0 12px;
   line-height: 1.6;
 }
@@ -2367,7 +2375,9 @@ section h2 {
 }
 
 #buildingRequestModal .building-request-detail,
-#buildingRequestCompleteModal .building-request-detail {
+#buildingRequestCompleteModal .building-request-detail,
+#wishModal .wish-detail,
+#wishCompleteModal .wish-detail {
   margin-top: 12px;
   padding-top: 8px;
   border-top: 1px solid #ddd;
@@ -2384,7 +2394,9 @@ section h2 {
 }
 
 #buildingRequestModal .modal-buttons,
-#buildingRequestCompleteModal .modal-buttons {
+#buildingRequestCompleteModal .modal-buttons,
+#wishModal .modal-buttons,
+#wishCompleteModal .modal-buttons {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
@@ -2400,7 +2412,9 @@ section h2 {
 }
 
 #buildingRequestModal .modal-buttons button,
-#buildingRequestCompleteModal .modal-buttons button {
+#buildingRequestCompleteModal .modal-buttons button,
+#wishModal .modal-buttons button,
+#wishCompleteModal .modal-buttons button {
   min-width: 104px;
   padding: 8px 12px;
   border: 1px solid #ccc;
@@ -2413,7 +2427,9 @@ section h2 {
 }
 
 #buildingRequestModal .modal-buttons button:hover,
-#buildingRequestCompleteModal .modal-buttons button:hover {
+#buildingRequestCompleteModal .modal-buttons button:hover,
+#wishModal .modal-buttons button:hover,
+#wishCompleteModal .modal-buttons button:hover {
   background-color: #e0e0e0;
 }
 
@@ -3345,6 +3361,8 @@ body.mobile-mode #conversationModal,
 body.mobile-mode #raidWarningModal,
 body.mobile-mode #buildingRequestModal,
 body.mobile-mode #buildingRequestCompleteModal,
+body.mobile-mode #wishModal,
+body.mobile-mode #wishCompleteModal,
 body.mobile-mode #exchangeModal,
 body.mobile-mode #panFluteExchangeModal,
 body.mobile-mode #dryadFruitModal,

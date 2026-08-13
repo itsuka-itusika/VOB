@@ -14,6 +14,8 @@ const PRIORITY_MODAL_SELECTORS = [
   "#raidWarningModal",
   "#buildingRequestModal",
   "#buildingRequestCompleteModal",
+  "#wishModal",
+  "#wishCompleteModal",
   "#heresyInquisitionModal",
   "#inquisitionInsufficientFundsModal",
   "#inquisitionHospitalityResultModal",

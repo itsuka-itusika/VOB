@@ -58,6 +58,7 @@ import { applyVillageScaleArtClass, getVillageScaleTitle } from "./villageScale.
 import { getDivineMightStatus } from "./divineMight.js";
 import { RAID_ACTIONS, isRaidActionSlotAvailable } from "./raidRules.js";
 import { getBuildingRequestWarnings } from "./buildingRequests.js";
+import { checkWishCompletion, getWishWarnings } from "./wishes.js";
 import { hasDespairState, hasDisappointmentState } from "./domain/despair.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
 import { getActiveVillagers, isApocalypseActive, isSaltPillar } from "./domain/apocalypseRules.js";
@@ -312,6 +313,7 @@ function buildWarningMessages(village) {
   }
 
   warnings.push(...getBuildingRequestWarnings(village));
+  warnings.push(...getWishWarnings(village));
   warnings.push(...getTutorialWarnings(village));
 
   return warnings;
@@ -1102,6 +1104,7 @@ function setSectionVisible(section, visible) {
  * メイン画面(村人一覧,資源パネルなど)を更新
  */
 export function updateUI(v) {
+  checkWishCompletion(v);
   const rp = document.getElementById("resourcePanel");
   if (!rp) return;
   applyVillageScaleArtClass(v.building);

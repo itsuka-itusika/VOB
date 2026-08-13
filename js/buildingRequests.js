@@ -31,6 +31,8 @@ const PRIORITY_MODAL_SELECTORS = [
   "#miracleModal",
   "#buildingModal",
   "#buildingRequestCompleteModal",
+  "#wishModal",
+  "#wishCompleteModal",
   "#secretTreasureModal",
   "#conversationModal",
   "#exchangeModal",

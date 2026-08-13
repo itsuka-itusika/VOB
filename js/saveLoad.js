@@ -13,6 +13,7 @@ import { normalizeTutorialState } from "./tutorial.js";
 import { getInitialScaleStageIndex } from "./villageScale.js";
 import { ensureCaptiveReleaseDeadline, normalizeCaptive } from "./captives.js";
 import { normalizeBuildingRequestState } from "./buildingRequests.js";
+import { normalizeWishState } from "./wishes.js";
 import { hasActiveBuildingFlag, normalizeDamagedBuildings, recalculateBuildingDerivedState } from "./domain/buildingState.js";
 import { normalizeVillageRoleForPerson, normalizeVillageRoles } from "./domain/villageRoles.js";
 
@@ -204,6 +205,7 @@ function convertVillageToObject(village) {
     secretTreasures: normalizeSecretTreasures(village),
     buildingRequest: normalizeBuildingRequestState(village.buildingRequest),
     hasStartedBuildingRequest: !!village.hasStartedBuildingRequest || !!normalizeBuildingRequestState(village.buildingRequest),
+    wish: normalizeWishState(village.wish),
     festivalFlags: normalizeFestivalFlags(village.festivalFlags),
     tutorial: normalizeTutorialState(village.tutorial),
     logs: [...village.logs],
@@ -388,6 +390,7 @@ function convertObjectToVillage(dataObj) {
   v.secretTreasures = normalizeSecretTreasures(dataObj);
   v.buildingRequest = normalizeBuildingRequestState(dataObj.buildingRequest);
   v.hasStartedBuildingRequest = !!dataObj.hasStartedBuildingRequest || !!v.buildingRequest;
+  v.wish = normalizeWishState(dataObj.wish);
   v.festivalFlags = normalizeFestivalFlags(dataObj.festivalFlags);
   v.tutorial = normalizeTutorialState(dataObj.tutorial);
   v.logs = Array.isArray(dataObj.logs) ? [...dataObj.logs] : [];

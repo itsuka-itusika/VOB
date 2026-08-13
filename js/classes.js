@@ -37,6 +37,7 @@ export class Village {
     this.secretTreasures = [];
     this.buildingRequest = null;
     this.hasStartedBuildingRequest = false;
+    this.wish = null;
     this.festivalFlags = {
       pineconeStaffIntroShown: false
     };
