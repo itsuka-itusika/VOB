@@ -3,11 +3,13 @@ import { BUILDINGS } from "../../js/buildings.js";
 import { setBaseStats, syncEffectiveStats } from "../../js/domain/statLayers.js";
 import { getVillagerFoodConsumption } from "../../js/util.js";
 import { getVillageScaleStage } from "../../js/villageScale.js";
-import { createVillageSnapshot } from "./resultSchema.js?v=20260813-balance-23";
-import { drainKnownModals, waitUntil } from "./modalDriver.js?v=20260813-balance-23";
+import { createVillageSnapshot } from "./resultSchema.js?v=20260814-balance-24";
+import { drainKnownModals, waitUntil } from "./modalDriver.js?v=20260814-balance-24";
 
-export const SCENARIO_VERSION = 14;
+export const SCENARIO_VERSION = 15;
+export const BEGINNER_PLAYER_MODEL_VERSION = 1;
 export const STANDARD_PLAYER_MODEL_VERSION = 1;
+export const EXPERT_PLAYER_MODEL_VERSION = 1;
 export const RECOVERY_PLAYER_MODEL_VERSION = 1;
 
 const UPPER_RAIDS = [
@@ -532,14 +534,14 @@ function assignShortageWorkers(village, actionNames, requestedCount, score, assi
   return changed;
 }
 
-function correctObviousShortages(village) {
+function correctObviousShortages(village, { foodMonths = 3, workerShare = 0.5 } = {}) {
   const snapshot = createVillageSnapshot(village);
   const workingAdults = Math.max(1, snapshot.population.workingAdults);
   const assigned = new Set();
   let changed = 0;
-  const foodDeficit = Math.max(0, snapshot.stability.foodConsumption * 3 - village.food);
+  const foodDeficit = Math.max(0, snapshot.stability.foodConsumption * foodMonths - village.food);
   if (foodDeficit > 0) {
-    const requested = Math.min(Math.ceil(workingAdults / 2), Math.max(1, Math.ceil(foodDeficit / 20)));
+    const requested = Math.min(Math.ceil(workingAdults * workerShare), Math.max(1, Math.ceil(foodDeficit / 20)));
     changed += assignShortageWorkers(
       village,
       ["農作業", "漁", "狩猟"],
@@ -551,7 +553,7 @@ function correctObviousShortages(village) {
 
   const materialDeficit = Math.max(0, snapshot.stability.winterMaterialsTarget - village.materials);
   if (materialDeficit > 0) {
-    const requested = Math.min(Math.ceil(workingAdults / 2), Math.max(1, Math.ceil(materialDeficit / 20)));
+    const requested = Math.min(Math.ceil(workingAdults * workerShare), Math.max(1, Math.ceil(materialDeficit / 20)));
     changed += assignShortageWorkers(
       village,
       ["伐採"],
@@ -560,6 +562,26 @@ function correctObviousShortages(village) {
       assigned
     );
   }
+  return changed;
+}
+
+function getVisibleShortageWarnings(village, foodMonths = 3) {
+  const snapshot = createVillageSnapshot(village);
+  return {
+    food: village.food < snapshot.stability.foodConsumption * foodMonths,
+    materials: village.materials < snapshot.stability.winterMaterialsTarget
+  };
+}
+
+function assignExpertRecovery(village, { hpThreshold, mpThreshold }) {
+  let changed = 0;
+  village.villagers.forEach(person => {
+    if (person.hp <= 0 || person.action === "療養") return;
+    const nextAction = person.hp < hpThreshold ? "休養" : (person.mp < mpThreshold ? "余暇" : null);
+    if (!nextAction || !(person.actionTable || []).includes(nextAction) || person.action === nextAction) return;
+    person.action = nextAction;
+    changed++;
+  });
   return changed;
 }
 
@@ -620,10 +642,13 @@ function findBuildingItem(documentRef, buildingName) {
     .find(item => item.querySelector("h4")?.textContent.trim() === buildingName) || null;
 }
 
-async function maintainOrBuild({ api, frame }) {
+async function maintainOrBuild({ api, frame }, {
+  foodMonths = 3,
+  priorityOverride = null
+} = {}) {
   const village = api.getVillage();
   const snapshot = createVillageSnapshot(village);
-  if (!snapshot.stability.hasThreeMonthsFood) return false;
+  if (village.food < snapshot.stability.foodConsumption * foodMonths) return false;
   api.openBuildingModal();
   const documentRef = frame.contentDocument;
   const winterTarget = snapshot.stability.winterMaterialsTarget;
@@ -643,7 +668,10 @@ async function maintainOrBuild({ api, frame }) {
     }
   }
 
-  for (const buildingId of getSafeBuildingPriority(village)) {
+  const buildingPriority = priorityOverride
+    ? [...new Set([...priorityOverride, ...getSafeBuildingPriority(village)])]
+    : getSafeBuildingPriority(village);
+  for (const buildingId of buildingPriority) {
     if (EXCLUDED_UPPER_BUILDINGS.has(buildingId)) continue;
     const definition = BUILDINGS.find(building => building.id === buildingId);
     if (!definition || village.materials - (Number(definition.materials) || 0) < winterTarget) continue;
@@ -661,16 +689,53 @@ async function maintainOrBuild({ api, frame }) {
   return false;
 }
 
-async function runStandardProgression({ api, frame }) {
+const PROGRESSION_MODELS = Object.freeze({
+  beginner: {
+    version: BEGINNER_PLAYER_MODEL_VERSION,
+    label: "初心者",
+    shortageFoodMonths: 3,
+    shortageWorkerShare: 0.5,
+    delayShortageWarnings: true,
+    buildingFoodMonths: 3,
+    unnecessaryBuildMonths: new Set([6, 18, 30])
+  },
+  standard: {
+    version: STANDARD_PLAYER_MODEL_VERSION,
+    label: "標準プレイヤー",
+    shortageFoodMonths: 3,
+    shortageWorkerShare: 0.5,
+    delayShortageWarnings: false,
+    buildingFoodMonths: 3,
+    unnecessaryBuildMonths: new Set()
+  },
+  expert: {
+    version: EXPERT_PLAYER_MODEL_VERSION,
+    label: "熟練者",
+    shortageFoodMonths: 3.5,
+    shortageWorkerShare: 0.5,
+    delayShortageWarnings: false,
+    buildingFoodMonths: 3.5,
+    unnecessaryBuildMonths: new Set(),
+    directedRecovery: { hpThreshold: 50, mpThreshold: 40 }
+  }
+});
+
+async function runProgression({ api, frame }, modelId) {
+  const model = PROGRESSION_MODELS[modelId];
+  if (!model) throw new Error(`Unknown progression model: ${modelId}`);
   const village = api.getVillage();
   const initial = createVillageSnapshot(village);
   const checkpoints = [];
+  let previousWarnings = { food: false, materials: false };
   const counters = {
     raids: 0,
     raidOutcomes: { complete: 0, partial: 0, failure: 0 },
     recruitAttempts: 0,
     buildingActions: 0,
-    manualAssignments: 0
+    unnecessaryBuildingActions: 0,
+    manualAssignments: 0,
+    recoveryAssignments: 0,
+    delayedWarnings: 0
   };
 
   for (let elapsedMonths = 1; elapsedMonths <= 36 && !village.gameOver; elapsedMonths++) {
@@ -682,9 +747,32 @@ async function runStandardProgression({ api, frame }) {
       if (outcome) counters.raidOutcomes[outcome]++;
     } else {
       api.autoAssignJobs();
-      counters.manualAssignments += correctObviousShortages(village);
+      const warnings = getVisibleShortageWarnings(village, model.shortageFoodMonths);
+      const shouldCorrect = !model.delayShortageWarnings ||
+        (warnings.food && previousWarnings.food) ||
+        (warnings.materials && previousWarnings.materials);
+      if (shouldCorrect) {
+        counters.manualAssignments += correctObviousShortages(village, {
+          foodMonths: model.shortageFoodMonths,
+          workerShare: model.shortageWorkerShare
+        });
+      } else if (warnings.food || warnings.materials) {
+        counters.delayedWarnings++;
+      }
+      previousWarnings = warnings;
+      if (model.directedRecovery) {
+        counters.recoveryAssignments += assignExpertRecovery(village, model.directedRecovery);
+      }
       if (await tryRecruitUsefulVisitor({ api, frame })) counters.recruitAttempts++;
-      if (await maintainOrBuild({ api, frame })) counters.buildingActions++;
+      const unnecessaryBuild = model.unnecessaryBuildMonths.has(elapsedMonths);
+      const built = await maintainOrBuild({ api, frame }, {
+        foodMonths: model.buildingFoodMonths,
+        priorityOverride: unnecessaryBuild ? ["tavern", "fountain", "library", "church"] : null
+      });
+      if (built) {
+        counters.buildingActions++;
+        if (unnecessaryBuild) counters.unnecessaryBuildingActions++;
+      }
       api.nextTurn();
       await drainKnownModals(frame);
     }
@@ -696,11 +784,21 @@ async function runStandardProgression({ api, frame }) {
 
   return {
     status: "completed",
-    playerModelVersion: STANDARD_PLAYER_MODEL_VERSION,
+    playerModel: modelId,
+    playerModelVersion: model.version,
     initial,
     checkpoints,
     counters,
     final: createVillageSnapshot(village)
+  };
+}
+
+function createProgressionScenario(modelId) {
+  const model = PROGRESSION_MODELS[modelId];
+  return {
+    id: `normal-${modelId}-36`,
+    name: `通常進行：${model.label}・36か月`,
+    run: context => runProgression(context, modelId)
   };
 }
 
@@ -803,11 +901,7 @@ const scenarioList = [
       };
     }
   },
-  {
-    id: "normal-standard-36",
-    name: "通常進行：標準プレイヤー・36か月",
-    run: runStandardProgression
-  },
+  ...Object.keys(PROGRESSION_MODELS).map(createProgressionScenario),
   ...UPPER_RAIDS.flatMap(raid => UPPER_RAID_MONTHS.map(month => createUpperRaidScenario(raid, month, false))),
   ...UPPER_RAIDS.flatMap(raid => UPPER_RAID_MONTHS.map(month => createUpperRaidScenario(raid, month, true))),
   ...UPPER_RAIDS.map(createDirectedRecoveryScenario),

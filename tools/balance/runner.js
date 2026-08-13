@@ -1,6 +1,6 @@
-import { SCENARIOS, SCENARIO_VERSION, getScenario } from "./scenarioDefinitions.js?v=20260813-balance-23";
-import { BALANCE_RESULT_SCHEMA_VERSION, summarizeBatch } from "./resultSchema.js?v=20260813-balance-23";
-import { installFrameControls } from "./modalDriver.js?v=20260813-balance-23";
+import { SCENARIOS, SCENARIO_VERSION, getScenario } from "./scenarioDefinitions.js?v=20260814-balance-24";
+import { BALANCE_RESULT_SCHEMA_VERSION, summarizeBatch } from "./resultSchema.js?v=20260814-balance-24";
+import { installFrameControls } from "./modalDriver.js?v=20260814-balance-24";
 
 const RUNNER_VERSION = 2;
 const API_WAIT_MS = 10000;
@@ -75,6 +75,7 @@ async function runOne(scenario, seed, runIndex) {
   try {
     await waitForFrameLoad(frame);
     const api = await waitForBalanceApi(frame);
+    frame.contentWindow.console.log = () => {};
     const controls = installFrameControls(frame, { maxTimerDelayMs: TIMER_CAP_MS });
     api.seed?.reset?.();
     const scenarioResult = await scenario.run({ api, controls, frame, seed, runIndex });
