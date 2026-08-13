@@ -692,8 +692,8 @@ export const RAIDER_TYPES = [
       job: "聖女",
       action: "襲撃"
     },
-    raidPosition: "middle",
-    raidTargeting: "frontMiddleRandom",
+    raidPosition: "front",
+    raidTargeting: "frontFirst",
     portraits: numberedPortraits("SAINT", 21),
     ranges: {
       hp: [70, 95],
@@ -765,6 +765,7 @@ export const RAIDER_TYPES = [
     },
     raidPosition: "middle",
     raidTargeting: "frontMiddleRandom",
+    raidAttackType: "rangedMagic",
     portraits: numberedPortraits("ANGEL_FIGHTER", 16),
     ranges: {
       hp: [75, 100],
@@ -801,6 +802,7 @@ export const RAIDER_TYPES = [
     },
     raidPosition: "middle",
     raidTargeting: "frontMiddleRandom",
+    raidAttackType: "rangedMagic",
     portraits: numberedPortraits("ARCHANGEL", 13),
     ranges: {
       hp: [105, 135],
@@ -861,16 +863,18 @@ export const RAIDER_TYPES = [
   },
   {
     type: "黙示録の騎士・支配",
-    displayType: "白の騎士",
+    displayType: "《支配》",
     fixedName: "《支配》",
     weight: 0,
     minCount: 1,
     maxCount: 1,
-    race: "異形の大天使",
+    race: "黙示録の騎士",
+    uiSexDisplay: "無性",
     ageRange: { min: 100, max: 300 },
     params: { job: "黙示録の騎士・支配", action: "襲撃" },
     raidPosition: "middle",
     raidTargeting: "frontMiddleRandom",
+    raidAttackType: "rangedMagic",
     portraits: ["REVELATION.png"],
     exchangeImmune: true,
     uncapturable: true,
@@ -887,8 +891,11 @@ export const RAIDER_TYPES = [
       cou: [42, 50],
       sexdr: [0, 4]
     },
-    forcedBodyTraits: ["飛行", "光輪", "異形の大天使"],
-    mindTraits: ["神聖", "狂信", "歴戦"],
+    forcedBodyTraits: ["飛行", "光輪", "多翼多眼", "交換無効"],
+    replaceBodyTraits: true,
+    mindTraits: ["神聖", "狂信"],
+    replaceMindTraits: true,
+    hobbies: ["万象監視"],
     dialogues: [
       "白き冠の下にひれ伏せ。すべての地は、天のものとなる。",
       "おまえたちの奇跡で、この身を奪うことはできぬ。",
@@ -897,12 +904,13 @@ export const RAIDER_TYPES = [
   },
   {
     type: "黙示録の騎士・戦争",
-    displayType: "赤の騎士",
+    displayType: "《戦争》",
     fixedName: "《戦争》",
     weight: 0,
     minCount: 1,
     maxCount: 1,
-    race: "異形の大天使",
+    race: "黙示録の騎士",
+    uiSexDisplay: "無性",
     ageRange: { min: 100, max: 300 },
     params: { job: "黙示録の騎士・戦争", action: "襲撃" },
     raidPosition: "front",
@@ -923,8 +931,11 @@ export const RAIDER_TYPES = [
       cou: [52, 60],
       sexdr: [0, 4]
     },
-    forcedBodyTraits: ["飛行", "光輪", "異形の大天使"],
-    mindTraits: ["神聖", "狂信", "歴戦"],
+    forcedBodyTraits: ["飛行", "光輪", "機身", "交換無効"],
+    replaceBodyTraits: true,
+    mindTraits: ["神聖", "狂信"],
+    replaceMindTraits: true,
+    hobbies: ["異端討滅"],
     dialogues: [
       "赤き剣は、村と村人を分けては斬らぬ。すべてを戦場に変える。",
       "争え。憎め。そのたびに私の刃は重くなる。",
@@ -1572,7 +1583,7 @@ export const RAID_MODULES = [
   createCompositeRaiderRaid({
     id: "apocalypse-upper-winged",
     name: "第七の災厄・上位翼人兵と支配",
-    warningName: "上位翼人兵と白き騎士・支配",
+    warningName: "上位翼人兵と《支配》",
     weight: 0,
     representative: [
       { raiderType: "黙示録の騎士・支配" },
@@ -1599,8 +1610,8 @@ export const RAID_MODULES = [
   }),
   createCompositeRaiderRaid({
     id: "apocalypse-grand-crusade",
-    name: "第六の災厄・大規模聖征軍団と戦争",
-    warningName: "大規模聖征軍団と赤き騎士・戦争",
+    name: "第六の災厄・聖征軍団と戦争",
+    warningName: "聖征軍団と《戦争》",
     weight: 0,
     representative: [
       { raiderType: "黙示録の騎士・戦争" },
@@ -1690,8 +1701,8 @@ export const RAID_SCALE_TABLES = [
     id: "mapped-village",
     scaleStageIndexes: [3],
     entries: [
-      { raidId: "goblin", weight: 5 },
-      { raidId: "goblin-army", weight: 5 },
+      { raidId: "goblin", weight: 10 },
+      { raidId: "goblin-army", weight: 0 },
       { raidId: "wolf", weight: 5 },
       { raidId: "mercenary-band", weight: 10 },
       { raidId: "harpy", weight: 10 },

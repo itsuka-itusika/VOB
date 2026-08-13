@@ -244,7 +244,7 @@ function areMiracleTargetsReady(mid) {
 
 function describeMiracleTarget(person) {
   if (!person) return "";
-  const sex = person.bodySex || person.sex || "-";
+  const sex = person.uiSexDisplay || person.bodySex || person.sex || "-";
   const age = person.bodyAge ?? person.age ?? "-";
   return `${person.name}: ${person.race || "-"} / ${sex} / ${age}歳 / 筋${person.str} 耐${person.vit} 器${person.dex} 魔${person.mag} 魅${person.chr}`;
 }
@@ -266,7 +266,7 @@ function createExchangePreviewPerson(person) {
     ? person.bodyTraits[0]
     : "-";
   const details = document.createElement("div");
-  details.textContent = `${person.name}：${person.race || "-"} / ${person.bodySex || person.sex || "-"} / ${person.bodyAge ?? person.age ?? "-"}歳 / 筋${Math.floor(Number(person.str) || 0)} 耐${Math.floor(Number(person.vit) || 0)} 器${Math.floor(Number(person.dex) || 0)} 魔${Math.floor(Number(person.mag) || 0)} 魅${Math.floor(Number(person.chr) || 0)} /（${primaryBodyTrait}）`;
+  details.textContent = `${person.name}：${person.race || "-"} / ${person.uiSexDisplay || person.bodySex || person.sex || "-"} / ${person.bodyAge ?? person.age ?? "-"}歳 / 筋${Math.floor(Number(person.str) || 0)} 耐${Math.floor(Number(person.vit) || 0)} 器${Math.floor(Number(person.dex) || 0)} 魔${Math.floor(Number(person.mag) || 0)} 魅${Math.floor(Number(person.chr) || 0)} /（${primaryBodyTrait}）`;
 
   row.appendChild(portrait);
   row.appendChild(details);

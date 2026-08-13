@@ -69,16 +69,14 @@ const JOB_FUNDS_SET = new Set([
   "\u5199\u672c",
   "\u6a5f\u7e54\u308a"
 ]);
-const JOB_RECOVERY_SET = new Set([
+const OTHER_RECOVERY_JOB_SET = new Set([
   "\u770b\u8b77",
   ...MASSAGE_ACTIONS
 ]);
-const RECOVERY_ASSIGNMENT_SET = new Set([
+const SELF_RECOVERY_ACTION_SET = new Set([
   "\u7642\u990a",
   "\u4f11\u990a",
-  "\u4f59\u6687",
-  "\u770b\u8b77",
-  ...MASSAGE_ACTIONS
+  "\u4f59\u6687"
 ]);
 
 const JOB_WEIGHTS = {
@@ -125,12 +123,12 @@ const JOB_BASE_SCORES = {
   "\u6a5f\u7e54\u308a": 8,
   "\u91b8\u9020": 14,
   "\u8b66\u5099": -8,
-  "\u770b\u8b77": 8,
+  "\u770b\u8b77": 30,
   "\u8e0a\u308a\u5b50": -8,
   "\u30b7\u30b9\u30bf\u30fc": -8,
-  "\u3042\u3093\u307e": 8,
-  [ACTION_MASSAGE_MALE]: 8,
-  [ACTION_MASSAGE_FEMALE]: 8,
+  "\u3042\u3093\u307e": 30,
+  [ACTION_MASSAGE_MALE]: 30,
+  [ACTION_MASSAGE_FEMALE]: 30,
   "\u30d0\u30cb\u30fc": 8
 };
 
@@ -198,7 +196,7 @@ function getPriorityBonus(job, context) {
   if (JOB_FOOD_SET.has(job)) {
     bonus += context.foodSeverity * 120 * (JOB_FOOD_PRIORITY[job] || 1);
   }
-  if (JOB_RECOVERY_SET.has(job)) {
+  if (OTHER_RECOVERY_JOB_SET.has(job)) {
     bonus += context.recoverySeverity * 85;
   }
   if (JOB_MATERIAL_SET.has(job)) {
@@ -282,16 +280,10 @@ function scoreJob(person, job, context) {
   return rawScore * getJobTraitMultiplier(person, job, context?.village);
 }
 
-function hasLowRecoveryNeed(person) {
-  return (Number(person.hp) || 0) <= 33 || (Number(person.mp) || 0) <= 33;
-}
-
 function chooseBestJob(person, context) {
   const preferredTable = Array.isArray(person.jobTable) ? person.jobTable : [];
   const candidateJobs = preferredTable.filter(job => job !== JOB_NONE);
-  const workCandidates = hasLowRecoveryNeed(person)
-    ? candidateJobs
-    : candidateJobs.filter(job => !RECOVERY_ASSIGNMENT_SET.has(job));
+  const workCandidates = candidateJobs.filter(job => !SELF_RECOVERY_ACTION_SET.has(job));
   const candidates = workCandidates.length > 0 ? workCandidates : candidateJobs;
   let bestJob = candidates[0] || JOB_NONE;
   let bestScore = -Infinity;
@@ -310,7 +302,7 @@ function chooseBestJob(person, context) {
 function chooseWorkAction(person, actionTable, preferredAction) {
   if (actionTable.includes(preferredAction)) return preferredAction;
 
-  const nonRecoveryAction = actionTable.find(action => action !== JOB_NONE && !RECOVERY_ASSIGNMENT_SET.has(action));
+  const nonRecoveryAction = actionTable.find(action => action !== JOB_NONE && !SELF_RECOVERY_ACTION_SET.has(action));
   return nonRecoveryAction || actionTable[0] || preferredAction || JOB_NONE;
 }
 

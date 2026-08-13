@@ -822,6 +822,12 @@ function appendDictionaryCell(row, terms, options = {}) {
   row.appendChild(cell);
 }
 
+function getSpecialRaiderRowClass(person) {
+  if (person?.raiderType === "黙示録の騎士・支配") return "apocalypse-conquest-row";
+  if (person?.raiderType === "黙示録の騎士・戦争") return "apocalypse-war-row";
+  return "";
+}
+
 function appendIdentityCells(row, person) {
   appendPortraitCell(row, person);
 
@@ -834,12 +840,12 @@ function appendIdentityCells(row, person) {
   appendTextCell(row, person.bodyOwner);
   appendDictionaryCell(row, [person.race || "人間"], { category: "race" });
   // bodySex/bodyAge と spiritSex/spiritAge は別仕様。表示時も統合しない。
-  appendTextCell(row, person.bodySex);
+  appendTextCell(row, person.uiSexDisplay || person.bodySex);
   appendTextCell(row, person.bodyAge);
-  const spiritSexCell = appendTextCell(row, person.spiritSex, "spirit-column");
-  if (person.spiritSex === "男") {
+  const spiritSexCell = appendTextCell(row, person.uiSexDisplay || person.spiritSex, "spirit-column");
+  if (!person.uiSexDisplay && person.spiritSex === "男") {
     spiritSexCell.classList.add("male-basic");
-  } else if (person.spiritSex === "女") {
+  } else if (!person.uiSexDisplay && person.spiritSex === "女") {
     spiritSexCell.classList.add("female-basic");
   }
   appendTextCell(row, person.spiritAge, "spirit-column");
@@ -1039,12 +1045,17 @@ function appendStatCells(row, person, village, { showPersonalHistory = true } = 
   ["str", "vit", "dex", "mag", "chr"].forEach(stat => appendNumberCell(row, person[stat]));
   appendDictionaryCell(row, person.bodyTraits, { category: "trait" });
   ["int", "ind", "eth", "cou", "sexdr"].forEach(stat => appendNumberCell(row, person[stat]));
-  appendDictionaryCell(row, person.mindTraits, { category: "trait" });
+  const displayedMindTraits = getSpecialRaiderRowClass(person)
+    ? (person.mindTraits || []).filter(trait => trait !== "襲撃者")
+    : person.mindTraits;
+  appendDictionaryCell(row, displayedMindTraits, { category: "trait" });
   appendDictionaryCell(row, [person.hobby], { category: "hobby" });
   appendPersonalHistoryCell(row, person, village, showPersonalHistory);
 }
 
 function applyPersonRowStyle(row, person) {
+  const specialRowClass = getSpecialRaiderRowClass(person);
+  if (specialRowClass) row.classList.add(specialRowClass);
   for (let i = 0; i <= 14; i++) {
     const cell = row.cells[i];
     if (!cell) continue;
@@ -1053,9 +1064,9 @@ function applyPersonRowStyle(row, person) {
   const spiritSexCell = row.cells[6];
   if (spiritSexCell) {
     spiritSexCell.classList.remove("male-basic", "female-basic");
-    if (person.spiritSex === "男") {
+    if (!person.uiSexDisplay && person.spiritSex === "男") {
       spiritSexCell.classList.add("male-basic");
-    } else if (person.spiritSex === "女") {
+    } else if (!person.uiSexDisplay && person.spiritSex === "女") {
       spiritSexCell.classList.add("female-basic");
     }
   }

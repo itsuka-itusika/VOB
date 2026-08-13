@@ -21,6 +21,7 @@ import { getRaidModuleById } from "./data/raidData.js";
 import { updateUI } from "./ui.js";
 import { getDivineMightLevel, refreshDivineMightLevelUnlock } from "./divineMight.js";
 import { getCaptives, isCaptive, normalizeCaptive } from "./captives.js";
+import { grantTitle } from "./titles.js";
 
 export const APOCALYPSE_RAID_IDS = {
   SIXTH: "apocalypse-grand-crusade",
@@ -213,7 +214,7 @@ function applyFirstCalamity(village) {
   queueApocalypseModal({
     title: "第一の角笛が吹かれた",
     message: "川が血のように染まった。",
-    effect: `塩の柱ではない村人${targets.length}人のメンタルが10低下しました。`,
+    effect: `村人${targets.length}人のメンタルが10低下しました。`,
     image: stageImage(1)
   });
 }
@@ -273,7 +274,7 @@ function applyFourthCalamity(village) {
     effect: targets.length > 0
       ? `${targetNames}に身体特性「疫病」が付与されました。`
       : "疫病になる新たな村人はいませんでした。",
-    image: stageImage(7)
+    image: stageImage(4)
   });
 }
 
@@ -299,7 +300,7 @@ function applyFifthCalamity(village) {
     title: "第五の角笛が吹かれた",
     message: "天の光を振り仰いだ勇気ある者たちの身体が、白い塩へと変わった。",
     effect: targets.length > 0 ? `${targetNames}に身体特性「塩の柱」が付与されました。` : "塩の柱になる村人はいませんでした。",
-    image: stageImage(4)
+    image: "images/events/apocalypse/apocalypse-5-salt-pillars.png"
   });
 }
 
@@ -360,8 +361,8 @@ export function processApocalypseMonthStart(village) {
       applyRaidCalamity(village, {
         stage: 6,
         title: "第六の角笛が吹かれた",
-        message: "赤き騎士・戦争が、地平を埋め尽くす大規模聖征軍団を率いて進軍した。",
-        effect: "大規模聖征軍団と赤き騎士・戦争の襲撃が始まります。戦争のみ交換の奇跡が効きません。敗北すれば黄金像は破壊され、黙示録は終了します。",
+        message: "赤き騎士・戦争が、聖征軍団を率いて進軍した。",
+        effect: "聖征軍団と赤き騎士・戦争の襲撃が始まります。敗北すれば黄金像は破壊され、黙示録は終了します。",
         raidId: APOCALYPSE_RAID_IDS.SIXTH
       });
       break;
@@ -370,7 +371,7 @@ export function processApocalypseMonthStart(village) {
         stage: 7,
         title: "第七の角笛が吹かれた",
         message: "白き騎士・支配が、雲を裂いて降り立つ上位翼人兵を従え、最後の裁きを告げた。",
-        effect: "上位翼人兵と白き騎士・支配の襲撃が始まります。支配のみ交換の奇跡が効きません。敗北すれば黄金像は破壊され、黙示録は終了します。",
+        effect: "上位翼人兵と白き騎士・支配の襲撃が始まります。敗北すれば黄金像は破壊され、黙示録は終了します。",
         raidId: APOCALYPSE_RAID_IDS.SEVENTH,
         image: stageImage(5)
       });
@@ -457,20 +458,21 @@ function completeApocalypse(village) {
     person.saltPillarMonths = 0;
     refreshAfterSaltPillarRecovery(person, village);
   });
+  (village.villagers || []).forEach(person => grantTitle(person, "apocalypseCleared"));
   refreshDivineMightLevelUnlock(village, beforeDivineMightLevel);
-  village.log("【仮エンディング】黙示録の四騎士を退け、天の怒りと異端の記録は消え去った。");
+  village.log("【七つの災厄を越えて】黙示録の四騎士を退け、天の怒りと異端の記録は消え去った。");
   if (restoredSaltPillars.length > 0) {
     village.log(`塩の柱となっていた${restoredSaltPillars.length}人が元の姿へ戻った。`);
   }
   addHistoryEvent(village, {
     title: "四騎士の退却",
     text: "黙示録の四騎士を退け、村は七つの災厄を越えた。天の怒りと異端の記録は消え去った。",
-    tags: ["黙示録", "四騎士", "仮エンディング"]
+    tags: ["黙示録", "四騎士", "七つの災厄"]
   });
   queueApocalypseModal({
     title: "七つの災厄を越えて",
     message: "四騎士は傷ついた翼を翻し、割れた天の彼方へ退いていった。村には、長い災厄の後の静寂が戻った。",
-    effect: "仮エンディングに到達しました。村特性「黙示録」と「異端」、身体特性「塩の柱」が解除され、神威Lv6が解放されました。"
+    effect: "七つの災厄は退けられ、天はこの村への更なる干渉を断念した。<br>「黙示録」「異端」「塩の柱」が解除され、神威Lv6が解放されました。"
   });
 }
 

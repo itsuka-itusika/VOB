@@ -45,6 +45,7 @@ const RAID_TARGET_MIDDLE_FIRST = "middleFirst";
 const RAID_TARGET_MIDDLE_ONLY = "middleOnly";
 const RAID_TARGET_FRONT_MIDDLE_RANDOM = "frontMiddleRandom";
 const RAID_TARGET_WEAKEST_HIGH_CHANCE = "weakestHighChance";
+const RAID_ATTACK_RANGED_MAGIC = "rangedMagic";
 const RAID_WEAKEST_TARGET_CHANCE = 0.8;
 const TRAIT_INJURED = "負傷";
 const TRAIT_SERIOUS_INJURY = "重体";
@@ -798,12 +799,12 @@ function doOneCombatAction(action, village) {
 
   const isRanged = getCombatPosition(actor, village) === RAID_POSITION_MIDDLE;
   const attackResult = isRanged ? calcRangedDamage(actor, target) : calcAttackDamage(actor, target, false);
-  const label = getAttackLogLabel(actor, village, isRanged);
+  const label = getAttackLogLabel(actor, village, attackResult, isRanged);
   let dmg = attackResult.damage;
   dmg = applyOffensiveTraitModifiers(actor, dmg, label, result);
   dmg = applyIncomingDamageModifiers(dmg, target, village);
 
-  const atkTypeText = attackResult.isMagic ? "魔法攻撃" : attackResult.attackText;
+  const atkTypeText = attackResult.attackText;
   const saltPillarShattered = applyRaidDamage(target, dmg);
   if (!isEnemyUnit(actor, village)) {
     recordRaidFriendshipDamage(village, actor, dmg);
@@ -830,6 +831,13 @@ function canActInCombat(actor, village) {
 }
 
 function calcRangedDamage(atk, def) {
+  if (atk?.raidAttackType === RAID_ATTACK_RANGED_MAGIC) {
+    return {
+      damage: Math.max(0, Math.floor(((atk.mag * atk.cou) / 400) * 25)),
+      isMagic: true,
+      attackText: "遠距離魔法"
+    };
+  }
   const damage = Math.floor(((atk.dex * atk.cou) / 400) * 40 - def.vit * 1.5);
   return {
     damage: Math.max(0, damage),
@@ -838,12 +846,14 @@ function calcRangedDamage(atk, def) {
   };
 }
 
-function getAttackLogLabel(actor, village, isRanged) {
+function getAttackLogLabel(actor, village, attackResult, isRanged) {
+  if (isEnemyUnit(actor, village) && attackResult?.attackText === "遠距離魔法") return "【敵の攻撃】";
   if (isEnemyUnit(actor, village)) return isRanged ? "【敵の射撃】" : "【敵の攻撃】";
   return isRanged ? "【射撃】" : "【迎撃】";
 }
 
 function getAttackActionPopLabel(attackResult, isRanged) {
+  if (attackResult?.attackText === "遠距離魔法") return "遠距離魔法";
   if (attackResult?.isMagic) return "魔法で攻撃";
   return isRanged ? "射撃" : "攻撃";
 }
@@ -927,7 +937,11 @@ function calcAttackDamage(atk, def, isCounter) {
     finalDamage=mag;
     usedMagic=true;
   }
-  return {damage:Math.floor(finalDamage), isMagic:usedMagic, attackText:"物理攻撃"};
+  return {
+    damage: Math.floor(finalDamage),
+    isMagic: usedMagic,
+    attackText: usedMagic ? "魔法攻撃" : "物理攻撃"
+  };
 }
 
 /** 全アクション完了後にターン終了 */
@@ -1242,8 +1256,10 @@ function renderEnemyRaidUnits(village) {
 
 function createRaidUnitRow(unit, village = null) {
   const row = document.createElement("tr");
+  if (unit?.raiderType === "黙示録の騎士・支配") row.classList.add("apocalypse-conquest-row");
+  if (unit?.raiderType === "黙示録の騎士・戦争") row.classList.add("apocalypse-war-row");
   row.dataset.raidUnitId = getRaidUnitRenderId(unit);
-  if (isPendingRaidDeparture(unit)) row.className = "is-leaving";
+  if (isPendingRaidDeparture(unit)) row.classList.add("is-leaving");
   if (isRearRetreatingUnit(unit, village)) {
     row.classList.add("is-leaving", "is-retreating");
   }

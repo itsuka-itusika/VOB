@@ -523,6 +523,17 @@ body.scale-stage-6 .log-area,
   background: #f9d8e9; /* 薄赤 */
 }
 
+tr.apocalypse-conquest-row > td {
+  background: #fff !important;
+  border-color: #d4af37 !important;
+  color: #211805;
+}
+
+tr.apocalypse-war-row > td {
+  background: #f26649 !important;
+  color: #35120b;
+}
+
 /* ▼筋力～魅力 => 薄黄色 */
 .male-basic.happiness-cell {
   background: #d8e9f9;

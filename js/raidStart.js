@@ -208,6 +208,9 @@ function createRaidEnemy(village, raiderType, existingNames) {
   });
 
   // 襲撃者の特性とダイアログを設定
+  if (raiderType.replaceMindTraits) {
+    e.mindTraits = [];
+  }
   e.mindTraits.push("襲撃者");
   if (Array.isArray(raiderType.mindTraits)) {
     raiderType.mindTraits.forEach(trait => {
@@ -246,7 +249,7 @@ function createRaidEnemy(village, raiderType, existingNames) {
     // 強制的な肉体特性を追加
     if (raiderType.forcedBodyTraits) {
       // キュクロプスの場合は強制的な特性のみを持つ
-      if (raiderType.type === "キュクロプス") {
+      if (raiderType.type === "キュクロプス" || raiderType.replaceBodyTraits) {
         e.bodyTraits = [...raiderType.forcedBodyTraits];
       } else {
         raiderType.forcedBodyTraits.forEach(trait => {
@@ -279,6 +282,8 @@ function createRaidEnemy(village, raiderType, existingNames) {
   e.raiderRole = raiderType.role || "";
   e.raidPosition = raiderType.raidPosition || "front";
   e.raidTargeting = raiderType.raidTargeting || "frontFirst";
+  e.raidAttackType = raiderType.raidAttackType || "";
+  e.uiSexDisplay = raiderType.uiSexDisplay || "";
   e.exchangeImmune = !!raiderType.exchangeImmune;
   e.uncapturable = !!raiderType.uncapturable;
   const speechType = getRaiderSpeechType(e);

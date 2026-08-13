@@ -58,6 +58,11 @@ const TITLE_DEFINITIONS = Object.freeze({
     id: "survivedCritical",
     name: "死線を越えた者",
     description: "危篤を経験し、その後も生きている。"
+  },
+  apocalypseCleared: {
+    id: "apocalypseCleared",
+    name: "七災を越えし者",
+    description: "村とともに七つの災厄を退け、天の干渉を断念させた。"
   }
 });
 

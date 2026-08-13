@@ -248,6 +248,7 @@ function getRaidWarningLine({ representative, introDialogues, raidName }) {
 function getRepresentativeDisplayName(representative, fallbackName) {
   const name = representative?.name || fallbackName || "襲撃者";
   const raiderType = String(representative?.raiderType || "").trim();
+  if (/^《.+》$/.test(name)) return name;
   if (!raiderType || name === raiderType || name.startsWith(`${raiderType}の`)) {
     return name;
   }

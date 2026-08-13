@@ -338,6 +338,8 @@ function convertVillagerToObject(vill) {
     ...(vill.raiderRole ? { raiderRole: vill.raiderRole } : {}),
     ...(vill.raidPosition ? { raidPosition: vill.raidPosition } : {}),
     ...(vill.raidTargeting ? { raidTargeting: vill.raidTargeting } : {}),
+    ...(vill.raidAttackType ? { raidAttackType: vill.raidAttackType } : {}),
+    ...(vill.uiSexDisplay ? { uiSexDisplay: vill.uiSexDisplay } : {}),
     capturedYear: Number.isFinite(Number(vill.capturedYear)) ? Number(vill.capturedYear) : undefined,
     capturedMonth: Number.isFinite(Number(vill.capturedMonth)) ? Number(vill.capturedMonth) : undefined,
     releaseMonthIndex: Number.isFinite(Number(vill.releaseMonthIndex)) ? Number(vill.releaseMonthIndex) : undefined,
@@ -596,6 +598,37 @@ function convertObjectToVillager(obj) {
   }
   if (obj.raidTargeting) {
     vill.raidTargeting = obj.raidTargeting;
+  }
+  if (obj.raidAttackType) {
+    vill.raidAttackType = obj.raidAttackType;
+  }
+  if (obj.uiSexDisplay) {
+    vill.uiSexDisplay = obj.uiSexDisplay;
+  }
+  if (["翼人兵", "上位翼人", "黙示録の騎士・支配"].includes(vill.raiderType)) {
+    vill.raidAttackType = "rangedMagic";
+  }
+  if (vill.raiderType === "聖女") {
+    vill.raidPosition = "front";
+    vill.raidTargeting = "frontFirst";
+  }
+  if (vill.raiderType === "黙示録の騎士・支配") {
+    vill.race = "黙示録の騎士";
+    vill.uiSexDisplay = "無性";
+    vill.bodyTraits = ["飛行", "光輪", "多翼多眼", "交換無効"];
+    vill.mindTraits = ["襲撃者", "神聖", "狂信"];
+    vill.hobby = "万象監視";
+    vill.exchangeImmune = true;
+    vill.uncapturable = true;
+  }
+  if (vill.raiderType === "黙示録の騎士・戦争") {
+    vill.race = "黙示録の騎士";
+    vill.uiSexDisplay = "無性";
+    vill.bodyTraits = ["飛行", "光輪", "機身", "交換無効"];
+    vill.mindTraits = ["襲撃者", "神聖", "狂信"];
+    vill.hobby = "異端討滅";
+    vill.exchangeImmune = true;
+    vill.uncapturable = true;
   }
   vill.adultBodyTraits = normalizeBodyTraitList(obj.adultBodyTraits);
   vill.adultMindTraits = Array.isArray(obj.adultMindTraits) ? [...obj.adultMindTraits] : [];

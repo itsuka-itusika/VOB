@@ -144,7 +144,7 @@ export function openConversationModal(character) {
   const characterInfo = document.getElementById("characterInfo");
   if (characterInfo) {
     characterInfo.innerHTML = `
-      <div class="character-name">${character.name}｜${character.race}｜${character.bodySex}｜${character.bodyAge}歳</div>
+      <div class="character-name">${character.name}｜${character.race}｜${character.uiSexDisplay || character.bodySex}｜${character.bodyAge}歳</div>
     `;
   }
 
