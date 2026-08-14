@@ -666,7 +666,7 @@ export function endOfMonthProcess(v) {
   v.villagers.forEach(p => {
     if (isSaltPillar(p)) return;
     let changed = false;
-    let bodyTraitsToRemove = ["飢餓", "凍え", "疲労", "過労", "疫病", "負傷"];
+    let bodyTraitsToRemove = ["飢餓", "凍え", "疲労", "過労", "疫病"];
     bodyTraitsToRemove.forEach(trait => {
       if (p.bodyTraits.includes(trait)) {
         p.bodyTraits = p.bodyTraits.filter(t => t !== trait);

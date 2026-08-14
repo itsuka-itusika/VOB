@@ -547,6 +547,7 @@ function getTaskEstimateParts(person, task, village) {
       break;
     case "療養":
       parts = [`体力+${Math.floor(20 * ((hasTrait(person, "老人") || hasTrait(person, "老狼")) ? 0.6 : hasTrait(person, "中年") ? 0.8 : 1))}`, `メンタル+${Math.floor(20 * ((hasTrait(person, "老人") || hasTrait(person, "老狼")) ? 0.6 : hasTrait(person, "中年") ? 0.8 : 1))}`];
+      if (hasTrait(person, "負傷")) parts.push("負傷解除");
       break;
     case "虜囚":
       parts = ["体力+10", "メンタル+10"];
@@ -678,7 +679,7 @@ const ACTION_DESCRIPTIONS = {
   "揺籃": "無垢な精神が揺籃の中で守られ、成長を待つ行動。",
   "休養": "体力の回復を優先する一時行動。",
   "余暇": "趣味や息抜きでメンタルを回復する一時行動。",
-  "療養": "負傷・疫病・産褥などで行動不能のときに固定される回復行動。",
+  "療養": "負傷・疫病・産褥などで行動不能のときに固定される回復行動。負傷は療養実行時に解除される。",
   "虜囚": "牢獄の捕虜として過ごす固定行動。",
   "臨終": "危篤状態の固定行動。通常の作業には参加できない。",
   "遊び": "幼い精神が遊びを通じて心身を整える成長段階の行動。",

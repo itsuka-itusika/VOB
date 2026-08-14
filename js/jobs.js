@@ -816,7 +816,13 @@ function doHealingJob(p, v) {
   p.hp = clampValue(currentHp + hpG, 0, 100);
   p.mp = clampValue(currentMp + mpG, 0, 100);
 
-  v.log(`${p.name}療養:体力+${hpG},メンタル+${mpG}`);
+  const recoveredInjury = p.bodyTraits.includes("負傷");
+  if (recoveredInjury) {
+    p.bodyTraits = p.bodyTraits.filter(trait => trait !== "負傷");
+    refreshJobTable(p, v);
+  }
+
+  v.log(`${p.name}療養:体力+${hpG},メンタル+${mpG}${recoveredInjury ? ",負傷解除" : ""}`);
 }
 
 function doLastMomentsJob(p, v) {
