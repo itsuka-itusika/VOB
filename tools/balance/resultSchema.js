@@ -4,7 +4,7 @@ import {
   isForcedHealingAction
 } from "../../js/util.js";
 
-export const BALANCE_RESULT_SCHEMA_VERSION = 2;
+export const BALANCE_RESULT_SCHEMA_VERSION = 4;
 
 const CHILD_BODY_TRAITS = new Set(["赤子", "幼児", "少年", "少女"]);
 
@@ -128,11 +128,39 @@ export function summarizeBatch(results) {
     return counts;
   }, {});
   const recovered = completed.filter(result => result.recovery?.recovered);
+  const populationChanges = completed.reduce((counts, result) => {
+    const counters = result.counters || {};
+    counts.recruitmentSuccesses += Number(counters.recruitmentSuccesses) || 0;
+    counts.seductionSuccesses += Number(counters.seductionSuccesses) || 0;
+    counts.births += Number(counters.births) || 0;
+    counts.deaths += Number(counters.deaths) || 0;
+    counts.departures += Number(counters.departures) || 0;
+    counts.otherJoins += Number(counters.otherJoins) || 0;
+    return counts;
+  }, {
+    recruitmentSuccesses: 0,
+    seductionSuccesses: 0,
+    births: 0,
+    deaths: 0,
+    departures: 0,
+    otherJoins: 0
+  });
   return {
     requested: results.length,
     completed: completed.length,
     errors: errors.length,
     gameOvers: completed.filter(result => result.final?.gameOver).length,
+    economicBreakdowns: completed.filter(result =>
+      Array.isArray(result.economicBreakdowns) && result.economicBreakdowns.length > 0
+    ).length,
+    crisisCheckpoints: completed.reduce((counts, result) => {
+      asArray(result.crisisCheckpoints).forEach(point => {
+        const type = point?.type || "unknown";
+        counts[type] = (counts[type] || 0) + 1;
+      });
+      return counts;
+    }, {}),
+    populationChanges,
     raidOutcomes: outcomes,
     recovery: {
       eligible: completed.filter(result => result.recovery?.eligible).length,

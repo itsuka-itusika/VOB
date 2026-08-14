@@ -333,13 +333,17 @@ function exposeBalanceApi() {
     enumerable: false,
     writable: false,
     value: Object.freeze({
-      version: 2,
+      version: 3,
       seed: window.__vobBalanceSeed || null,
       getVillage: () => theVillage,
       refreshUI: () => updateUI(theVillage),
       setSimulationOptions: options => setBalanceSimulationOptions(theVillage, options),
       autoAssignJobs: () => autoAssignJobs(theVillage),
       autoAssignRaidActions: () => autoAssignRaidActions(theVillage),
+      openMiracleModal: () => openMiracleModal(theVillage),
+      closeMiracleModal,
+      onSelectMiracleChange: () => onSelectMiracleChange(theVillage),
+      performMiracle: () => performMiracle(theVillage),
       nextTurn: onNextTurn,
       openBuildingModal: () => openBuildingModal(theVillage),
       openVisitorConversation: async visitorName => {

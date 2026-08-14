@@ -1,16 +1,23 @@
 import { Villager } from "../../js/classes.js";
+import { getExpectedDefenderDamage } from "../../js/autoAssign.js";
 import { BUILDINGS } from "../../js/buildings.js";
+import { isSaltPillar } from "../../js/domain/apocalypseRules.js";
+import { isWolf } from "../../js/domain/speciesTraits.js";
 import { setBaseStats, syncEffectiveStats } from "../../js/domain/statLayers.js";
+import { canDefendInRaid, getRaidActionBlockReason } from "../../js/raidRules.js";
 import { getVillagerFoodConsumption } from "../../js/util.js";
 import { getVillageScaleStage } from "../../js/villageScale.js";
-import { createVillageSnapshot } from "./resultSchema.js?v=20260814-balance-24";
+import { createVillageSnapshot } from "./resultSchema.js?v=20260815-balance-29";
 import { drainKnownModals, waitUntil } from "./modalDriver.js?v=20260814-balance-24";
 
-export const SCENARIO_VERSION = 15;
+export const SCENARIO_VERSION = 18;
 export const BEGINNER_PLAYER_MODEL_VERSION = 1;
-export const STANDARD_PLAYER_MODEL_VERSION = 1;
-export const EXPERT_PLAYER_MODEL_VERSION = 1;
+export const STANDARD_PLAYER_MODEL_VERSION = 2;
+export const EXPERT_PLAYER_MODEL_VERSION = 2;
 export const RECOVERY_PLAYER_MODEL_VERSION = 1;
+
+const ECONOMIC_BREAKDOWN_MAX_POPULATION = 12;
+const ECONOMIC_BREAKDOWN_DESPAIR_DEPARTURES = 3;
 
 const UPPER_RAIDS = [
   { id: "holy-crusade-strong", label: "聖征騎士団（強）" },
@@ -585,6 +592,180 @@ function assignExpertRecovery(village, { hpThreshold, mpThreshold }) {
   return changed;
 }
 
+const RAID_PREPARATION_TARGET = 3;
+const RAID_DEFENDER_HP = 55;
+const RAID_DEFENDER_MP = 20;
+const RAID_RECOVERY_MIRACLES = Object.freeze({
+  feast: { id: "4", label: "宴会の奇跡", hp: 20, mp: 20 },
+  revel: { id: "5", label: "狂宴の奇跡", hp: 60, mp: 60 },
+  heal: { id: "6", label: "癒しの奇跡" },
+  goblet: { id: "16", label: "酒杯の奇跡" }
+});
+const RAID_HEALABLE_BODY_TRAITS = new Set(["負傷", "重体", "疲労", "過労", "飢餓", "疫病", "産褥", "凍え"]);
+const RAID_HEALABLE_MIND_TRAITS = new Set(["心労", "抑鬱", "失望", "絶望"]);
+const RAID_HEALABLE_BLOCK_REASONS = new Set(["体力尽き", "負傷", "重体", "過労", "疫病", "産褥", "抑鬱"]);
+
+function isPotentialRaidDefender(person) {
+  const blockReason = getRaidActionBlockReason(person, "迎撃");
+  return (!blockReason || RAID_HEALABLE_BLOCK_REASONS.has(blockReason)) &&
+    getExpectedDefenderDamage(person, { useBaseStats: true }) >= 8;
+}
+
+function isReadyRaidDefender(person, hpGain = 0, mpGain = 0) {
+  return canDefendInRaid(person) && getExpectedDefenderDamage(person) >= 8 &&
+    (Number(person.hp) || 0) + hpGain >= RAID_DEFENDER_HP &&
+    (Number(person.mp) || 0) + mpGain >= RAID_DEFENDER_MP;
+}
+
+function hasAnyTrait(person, key, traits) {
+  return (person[key] || []).some(trait => traits.has(trait));
+}
+
+function getReadyRaidDefenders(village, hpGain = 0, mpGain = 0) {
+  return village.villagers.filter(person => isReadyRaidDefender(person, hpGain, mpGain));
+}
+
+function getFatiguedRaidDefenders(village) {
+  return village.villagers
+    .filter(person => isPotentialRaidDefender(person) && !isReadyRaidDefender(person))
+    .sort((a, b) => {
+      const damage = getExpectedDefenderDamage(b, { useBaseStats: true }) -
+        getExpectedDefenderDamage(a, { useBaseStats: true });
+      if (damage !== 0) return damage;
+      return ((Number(b.hp) || 0) + (Number(b.mp) || 0)) -
+        ((Number(a.hp) || 0) + (Number(a.mp) || 0));
+    });
+}
+
+function summarizeRaidPreparation(village) {
+  const villagers = village.villagers || [];
+  const average = key => villagers.length > 0
+    ? villagers.reduce((sum, person) => sum + (Number(person[key]) || 0), 0) / villagers.length
+    : 0;
+  return {
+    readyDefenders: getReadyRaidDefenders(village).length,
+    fatiguedDefenders: getFatiguedRaidDefenders(village).length,
+    averageHp: average("hp"),
+    averageMp: average("mp"),
+    mana: Number(village.mana) || 0,
+    funds: Number(village.funds) || 0
+  };
+}
+
+function assignRaidWarningRecovery(village) {
+  const readyCount = getReadyRaidDefenders(village).length;
+  const needed = Math.max(0, RAID_PREPARATION_TARGET - readyCount);
+  const targets = [];
+  let changed = 0;
+
+  for (const person of getFatiguedRaidDefenders(village).slice(0, needed)) {
+    const actions = person.actionTable || [];
+    const recoveryAction = (Number(person.hp) || 0) < RAID_DEFENDER_HP && actions.includes("休養")
+      ? "休養"
+      : ((Number(person.mp) || 0) < RAID_DEFENDER_MP && actions.includes("余暇") ? "余暇" : null);
+    if (!recoveryAction) continue;
+    targets.push(person.name);
+    if (person.action !== recoveryAction) {
+      person.action = recoveryAction;
+      changed++;
+    }
+  }
+  return { changed, targets };
+}
+
+function closeMiracleModalIfOpen(api, frame) {
+  const modal = frame.contentDocument?.getElementById("miracleModal");
+  if (modal && modal.style.display !== "none") api.closeMiracleModal();
+}
+
+function getRaidRecoveryMiracleCost(miracle, village) {
+  if (miracle.id === RAID_RECOVERY_MIRACLES.feast.id) {
+    const cost = village.villagers.length * 15;
+    return { mana: cost, funds: cost };
+  }
+  if (miracle.id === RAID_RECOVERY_MIRACLES.revel.id) {
+    const cost = village.villagers.length * 30;
+    return { mana: cost, funds: cost };
+  }
+  if (miracle.id === RAID_RECOVERY_MIRACLES.heal.id) return { mana: 80, funds: 0 };
+  return { mana: 50, funds: 0 };
+}
+
+async function tryUseRaidRecoveryMiracle({ api, frame }, miracle, target = null) {
+  const village = api.getVillage();
+  const before = summarizeRaidPreparation(village);
+  const cost = getRaidRecoveryMiracleCost(miracle, village);
+  api.openMiracleModal();
+  const select = frame.contentDocument.getElementById("miracleSelect");
+  if (!select) {
+    closeMiracleModalIfOpen(api, frame);
+    return null;
+  }
+  select.value = miracle.id;
+  api.onSelectMiracleChange();
+
+  const targetSelect = frame.contentDocument.getElementById("targetA");
+  if (target && targetSelect) {
+    targetSelect.value = target.name;
+    targetSelect.dispatchEvent(new frame.contentWindow.Event("change", { bubbles: true }));
+  }
+
+  const button = frame.contentDocument.querySelector(".miracle-item.active .miracle-button");
+  if (!button || button.disabled) {
+    closeMiracleModalIfOpen(api, frame);
+    return null;
+  }
+
+  api.performMiracle();
+  await drainKnownModals(frame);
+  closeMiracleModalIfOpen(api, frame);
+  const after = summarizeRaidPreparation(village);
+  return {
+    id: miracle.id,
+    name: miracle.label,
+    target: target?.name || null,
+    manaSpent: cost.mana,
+    fundsSpent: cost.funds,
+    before,
+    after
+  };
+}
+
+async function useRaidPreparationMiracles(context) {
+  const village = context.api.getVillage();
+  const uses = [];
+  if (getReadyRaidDefenders(village).length >= RAID_PREPARATION_TARGET) return uses;
+
+  const fatiguedCount = getFatiguedRaidDefenders(village).length;
+  const groupCandidates = [RAID_RECOVERY_MIRACLES.feast, RAID_RECOVERY_MIRACLES.revel];
+  for (const miracle of groupCandidates) {
+    const projected = getReadyRaidDefenders(village, miracle.hp, miracle.mp).length;
+    if (fatiguedCount < 2 || projected < RAID_PREPARATION_TARGET) continue;
+    const used = await tryUseRaidRecoveryMiracle(context, miracle);
+    if (used) uses.push(used);
+    if (getReadyRaidDefenders(village).length >= RAID_PREPARATION_TARGET) return uses;
+  }
+
+  const attempted = new Set();
+  while (getReadyRaidDefenders(village).length < RAID_PREPARATION_TARGET) {
+    const target = getFatiguedRaidDefenders(village).find(person => !attempted.has(person));
+    if (!target) break;
+    attempted.add(target);
+    if ((Number(target.hp) || 0) < RAID_DEFENDER_HP || hasAnyTrait(target, "bodyTraits", RAID_HEALABLE_BODY_TRAITS)) {
+      const used = await tryUseRaidRecoveryMiracle(context, RAID_RECOVERY_MIRACLES.heal, target);
+      if (used) uses.push(used);
+    }
+    if (!isReadyRaidDefender(target) && (
+      (Number(target.mp) || 0) < RAID_DEFENDER_MP ||
+      hasAnyTrait(target, "mindTraits", RAID_HEALABLE_MIND_TRAITS)
+    )) {
+      const used = await tryUseRaidRecoveryMiracle(context, RAID_RECOVERY_MIRACLES.goblet, target);
+      if (used) uses.push(used);
+    }
+  }
+  return uses;
+}
+
 async function tryRecruitUsefulVisitor({ api, frame }) {
   const village = api.getVillage();
   if (village.villagers.length >= village.popLimit) return false;
@@ -689,6 +870,174 @@ async function maintainOrBuild({ api, frame }, {
   return false;
 }
 
+export function observeCrisisState(village) {
+  const villagers = Array.isArray(village.villagers) ? village.villagers : [];
+  return {
+    historyIndex: Array.isArray(village.historyEvents) ? village.historyEvents.length : 0,
+    logIndex: Array.isArray(village.logs) ? village.logs.length : 0,
+    populationBefore: villagers.length,
+    year: Number(village.year) || 0,
+    month: Number(village.month) || 0,
+    snapshotBefore: createVillageSnapshot(village),
+    villagersBefore: villagers.map(person => ({
+      person,
+      name: person.name,
+      freezing: Array.isArray(person.bodyTraits) && person.bodyTraits.includes("凍え"),
+      starvation: Array.isArray(person.bodyTraits) && person.bodyTraits.includes("飢餓"),
+      freezingEligible: !isSaltPillar(person) && !isWolf(person),
+      starvationEligible: !isSaltPillar(person) &&
+        !(Array.isArray(person.bodyTraits) && person.bodyTraits.includes("光合成"))
+    }))
+  };
+}
+
+export function collectCrisisState(village, observation, elapsedMonths) {
+  if (!observation) return { departureCount: 0, checkpoints: [], breakdown: null };
+  const historyEvents = Array.isArray(village.historyEvents) ? village.historyEvents : [];
+  const newLogs = (Array.isArray(village.logs) ? village.logs : []).slice(observation.logIndex);
+  const villagers = Array.isArray(village.villagers) ? village.villagers : [];
+  const departures = historyEvents.slice(observation.historyIndex).filter(event =>
+    event?.type === "villagerLeave" &&
+    Number(event.year) === observation.year &&
+    Number(event.month) === observation.month &&
+    Array.isArray(event.tags) &&
+    event.tags.includes("絶望")
+  );
+  const departureCount = departures.length;
+  const freezingEventOccurred = newLogs.some(log => String(log).includes("冬なのに資材0→凍え"));
+  const starvationEventOccurred = newLogs.some(log => String(log).includes("食料0→飢餓発生"));
+  const newlyFreezing = freezingEventOccurred
+    ? observation.villagersBefore.filter(entry => entry.freezingEligible && !entry.freezing)
+    : villagers
+      .filter(person => Array.isArray(person.bodyTraits) && person.bodyTraits.includes("凍え"))
+      .map(person => ({ person, name: person.name }))
+      .filter(entry => !observation.villagersBefore.find(before => before.person === entry.person)?.freezing);
+  const newlyStarving = starvationEventOccurred
+    ? observation.villagersBefore.filter(entry => entry.starvationEligible && !entry.starvation)
+    : villagers
+      .filter(person => Array.isArray(person.bodyTraits) && person.bodyTraits.includes("飢餓"))
+      .map(person => ({ person, name: person.name }))
+      .filter(entry => !observation.villagersBefore.find(before => before.person === entry.person)?.starvation);
+  const snapshot = departureCount > 0 || newlyFreezing.length > 0 || newlyStarving.length > 0
+    ? createVillageSnapshot(village)
+    : null;
+  const common = {
+    elapsedMonths,
+    year: observation.year,
+    month: observation.month,
+    populationBefore: observation.populationBefore,
+    populationAfter: villagers.length
+  };
+  const checkpoints = [];
+  if (departureCount > 0) {
+    checkpoints.push({
+      ...common,
+      type: "despairDeparture",
+      affectedCount: departureCount,
+      affectedVillagers: departures.flatMap(event => Array.isArray(event.people) ? event.people : []),
+      before: observation.snapshotBefore,
+      after: snapshot
+    });
+  }
+  if (newlyFreezing.length > 0) {
+    checkpoints.push({
+      ...common,
+      type: "freezing",
+      affectedCount: newlyFreezing.length,
+      affectedVillagers: newlyFreezing.map(entry => entry.name),
+      before: observation.snapshotBefore,
+      after: snapshot
+    });
+  }
+  if (newlyStarving.length > 0) {
+    checkpoints.push({
+      ...common,
+      type: "starvation",
+      affectedCount: newlyStarving.length,
+      affectedVillagers: newlyStarving.map(entry => entry.name),
+      before: observation.snapshotBefore,
+      after: snapshot
+    });
+  }
+  const isBreakdown = observation.populationBefore <= ECONOMIC_BREAKDOWN_MAX_POPULATION &&
+    departureCount >= ECONOMIC_BREAKDOWN_DESPAIR_DEPARTURES;
+
+  return {
+    departureCount,
+    checkpoints,
+    breakdown: isBreakdown ? {
+      ...common,
+      despairDepartureCount: departureCount,
+      departedVillagers: departures.flatMap(event => Array.isArray(event.people) ? event.people : []),
+      before: observation.snapshotBefore,
+      after: snapshot,
+      definition: {
+        maximumPopulation: ECONOMIC_BREAKDOWN_MAX_POPULATION,
+        minimumSameMonthDespairDepartures: ECONOMIC_BREAKDOWN_DESPAIR_DEPARTURES
+      }
+    } : null
+  };
+}
+
+export function collectPopulationChanges(village, historyIndex, elapsedMonths) {
+  const historyEvents = Array.isArray(village.historyEvents) ? village.historyEvents : [];
+  const counts = {
+    recruitmentSuccesses: 0,
+    seductionSuccesses: 0,
+    births: 0,
+    deaths: 0,
+    departures: 0,
+    otherJoins: 0
+  };
+  const events = [];
+
+  historyEvents.slice(historyIndex).forEach(event => {
+    const tags = Array.isArray(event?.tags) ? event.tags : [];
+    const people = Array.isArray(event?.people) ? event.people.slice() : [];
+    const source = tags.find((tag, index) => index > 0 && tag) || null;
+    let category = null;
+
+    if (event?.type === "villagerJoin") {
+      if (tags.includes("勧誘")) {
+        category = "recruitmentSuccess";
+        counts.recruitmentSuccesses++;
+      } else if (tags.includes("誘惑")) {
+        category = "seductionSuccess";
+        counts.seductionSuccesses++;
+      } else {
+        category = "otherJoin";
+        counts.otherJoins++;
+      }
+    } else if (event?.type === "birth") {
+      category = "birth";
+      counts.births++;
+    } else if (event?.type === "villagerDeath") {
+      category = "death";
+      counts.deaths++;
+    } else if (event?.type === "villagerLeave") {
+      category = "departure";
+      counts.departures++;
+    }
+
+    if (!category) return;
+    events.push({
+      elapsedMonths,
+      year: Number(event.year) || 0,
+      month: Number(event.month) || 0,
+      category,
+      source,
+      person: category === "birth" ? people.at(-1) || null : people[0] || null,
+      people
+    });
+  });
+
+  return {
+    historyIndex: historyEvents.length,
+    counts,
+    events
+  };
+}
+
 const PROGRESSION_MODELS = Object.freeze({
   beginner: {
     version: BEGINNER_PLAYER_MODEL_VERSION,
@@ -706,7 +1055,8 @@ const PROGRESSION_MODELS = Object.freeze({
     shortageWorkerShare: 0.5,
     delayShortageWarnings: false,
     buildingFoodMonths: 3,
-    unnecessaryBuildMonths: new Set()
+    unnecessaryBuildMonths: new Set(),
+    raidPreparation: true
   },
   expert: {
     version: EXPERT_PLAYER_MODEL_VERSION,
@@ -716,7 +1066,8 @@ const PROGRESSION_MODELS = Object.freeze({
     delayShortageWarnings: false,
     buildingFoodMonths: 3.5,
     unnecessaryBuildMonths: new Set(),
-    directedRecovery: { hpThreshold: 50, mpThreshold: 40 }
+    directedRecovery: { hpThreshold: 50, mpThreshold: 40 },
+    raidPreparation: true
   }
 });
 
@@ -726,22 +1077,64 @@ async function runProgression({ api, frame }, modelId) {
   const village = api.getVillage();
   const initial = createVillageSnapshot(village);
   const checkpoints = [];
+  const raidPreparations = [];
+  const crisisCheckpoints = [];
+  const economicBreakdowns = [];
+  const populationChanges = [];
+  let populationHistoryIndex = Array.isArray(village.historyEvents) ? village.historyEvents.length : 0;
   let previousWarnings = { food: false, materials: false };
   const counters = {
     raids: 0,
     raidOutcomes: { complete: 0, partial: 0, failure: 0 },
     recruitAttempts: 0,
+    recruitmentSuccesses: 0,
+    seductionSuccesses: 0,
+    births: 0,
+    deaths: 0,
+    departures: 0,
+    otherJoins: 0,
     buildingActions: 0,
     unnecessaryBuildingActions: 0,
     manualAssignments: 0,
     recoveryAssignments: 0,
+    raidPreparationAssignments: 0,
+    raidHealingMiracles: 0,
+    raidHealingManaSpent: 0,
+    raidHealingFundsSpent: 0,
+    despairDepartures: 0,
+    crisisCheckpoints: 0,
+    despairDepartureCrisisPoints: 0,
+    freezingCrisisPoints: 0,
+    starvationCrisisPoints: 0,
+    economicBreakdowns: 0,
     delayedWarnings: 0
   };
 
   for (let elapsedMonths = 1; elapsedMonths <= 36 && !village.gameOver; elapsedMonths++) {
     await drainKnownModals(frame);
+    let crisisObservation = null;
     if (village.villageTraits.includes("襲撃中")) {
+      const preparationBefore = summarizeRaidPreparation(village);
+      const miracles = model.raidPreparation
+        ? await useRaidPreparationMiracles({ api, frame })
+        : [];
+      counters.raidHealingMiracles += miracles.length;
+      counters.raidHealingManaSpent += miracles.reduce((sum, miracle) => sum + miracle.manaSpent, 0);
+      counters.raidHealingFundsSpent += miracles.reduce((sum, miracle) => sum + miracle.fundsSpent, 0);
       api.autoAssignRaidActions();
+      raidPreparations.push({
+        elapsedMonths,
+        phase: "active",
+        raidId: village.currentRaid?.id || null,
+        before: preparationBefore,
+        recoveryAssignments: 0,
+        recoveryTargets: [],
+        miracles,
+        after: summarizeRaidPreparation(village),
+        assignedCombatants: village.villagers.filter(person => ["迎撃", "籠城", "射撃"].includes(person.action)).length,
+        assignedTrapMakers: village.villagers.filter(person => person.action === "罠作成").length
+      });
+      crisisObservation = observeCrisisState(village);
       const outcome = await resolveActiveRaid({ api, frame });
       counters.raids++;
       if (outcome) counters.raidOutcomes[outcome]++;
@@ -763,7 +1156,28 @@ async function runProgression({ api, frame }, modelId) {
       if (model.directedRecovery) {
         counters.recoveryAssignments += assignExpertRecovery(village, model.directedRecovery);
       }
-      if (await tryRecruitUsefulVisitor({ api, frame })) counters.recruitAttempts++;
+      let defensePriority = false;
+      if (model.raidPreparation && village.pendingRaid) {
+        const preparationBefore = summarizeRaidPreparation(village);
+        defensePriority = preparationBefore.readyDefenders < RAID_PREPARATION_TARGET;
+        const recovery = defensePriority
+          ? assignRaidWarningRecovery(village)
+          : { changed: 0, targets: [] };
+        counters.raidPreparationAssignments += recovery.changed;
+        raidPreparations.push({
+          elapsedMonths,
+          phase: "warning",
+          raidId: village.pendingRaid?.raidId || village.pendingRaid?.id || null,
+          before: preparationBefore,
+          recoveryAssignments: recovery.changed,
+          recoveryTargets: recovery.targets,
+          miracles: [],
+          after: summarizeRaidPreparation(village),
+          assignedCombatants: null,
+          assignedTrapMakers: null
+        });
+      }
+      if (!defensePriority && await tryRecruitUsefulVisitor({ api, frame })) counters.recruitAttempts++;
       const unnecessaryBuild = model.unnecessaryBuildMonths.has(elapsedMonths);
       const built = await maintainOrBuild({ api, frame }, {
         foodMonths: model.buildingFoodMonths,
@@ -773,9 +1187,29 @@ async function runProgression({ api, frame }, modelId) {
         counters.buildingActions++;
         if (unnecessaryBuild) counters.unnecessaryBuildingActions++;
       }
+      crisisObservation = observeCrisisState(village);
       api.nextTurn();
       await drainKnownModals(frame);
     }
+
+    const crisisResult = collectCrisisState(village, crisisObservation, elapsedMonths);
+    counters.despairDepartures += crisisResult.departureCount;
+    counters.crisisCheckpoints += crisisResult.checkpoints.length;
+    counters.despairDepartureCrisisPoints += crisisResult.checkpoints.filter(point => point.type === "despairDeparture").length;
+    counters.freezingCrisisPoints += crisisResult.checkpoints.filter(point => point.type === "freezing").length;
+    counters.starvationCrisisPoints += crisisResult.checkpoints.filter(point => point.type === "starvation").length;
+    crisisCheckpoints.push(...crisisResult.checkpoints);
+    if (crisisResult.breakdown) {
+      counters.economicBreakdowns++;
+      economicBreakdowns.push(crisisResult.breakdown);
+    }
+
+    const populationResult = collectPopulationChanges(village, populationHistoryIndex, elapsedMonths);
+    populationHistoryIndex = populationResult.historyIndex;
+    Object.entries(populationResult.counts).forEach(([key, count]) => {
+      counters[key] += count;
+    });
+    populationChanges.push(...populationResult.events);
 
     if ([12, 24, 36].includes(elapsedMonths)) {
       checkpoints.push({ elapsedMonths, snapshot: createVillageSnapshot(village) });
@@ -789,6 +1223,10 @@ async function runProgression({ api, frame }, modelId) {
     initial,
     checkpoints,
     counters,
+    raidPreparations,
+    crisisCheckpoints,
+    economicBreakdowns,
+    populationChanges,
     final: createVillageSnapshot(village)
   };
 }

@@ -383,12 +383,13 @@ function chooseRaidFallbackAction(person, currentPreferred, currentAction) {
     JOB_NONE;
 }
 
-function getExpectedDefenderDamage(person) {
+export function getExpectedDefenderDamage(person, { useBaseStats = false } = {}) {
   const mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
   if (mindTraits.includes(TRAIT_PACIFIST) || mindTraits.includes(TRAIT_NO_KILLING)) return 0;
 
-  const physical = ((Number(person.str) || 0) * (Number(person.cou) || 0) / 400) * 50;
-  const magical = ((Number(person.mag) || 0) * (Number(person.cou) || 0) / 400) * 25;
+  const stats = useBaseStats && person.baseStats ? person.baseStats : person;
+  const physical = ((Number(stats.str) || 0) * (Number(stats.cou) || 0) / 400) * 50;
+  const magical = ((Number(stats.mag) || 0) * (Number(stats.cou) || 0) / 400) * 25;
   let traitMultiplier = 1;
   if (mindTraits.includes("歴戦")) traitMultiplier *= 1.2;
   else if (mindTraits.includes("戦慣れ")) traitMultiplier *= 1.1;
