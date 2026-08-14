@@ -10,7 +10,7 @@ import { getVillageScaleStage } from "../../js/villageScale.js";
 import { createVillageSnapshot } from "./resultSchema.js?v=20260815-balance-29";
 import { drainKnownModals, waitUntil } from "./modalDriver.js?v=20260814-balance-24";
 
-export const SCENARIO_VERSION = 18;
+export const SCENARIO_VERSION = 19;
 export const BEGINNER_PLAYER_MODEL_VERSION = 1;
 export const STANDARD_PLAYER_MODEL_VERSION = 2;
 export const EXPERT_PLAYER_MODEL_VERSION = 2;
@@ -898,8 +898,6 @@ export function collectCrisisState(village, observation, elapsedMonths) {
   const villagers = Array.isArray(village.villagers) ? village.villagers : [];
   const departures = historyEvents.slice(observation.historyIndex).filter(event =>
     event?.type === "villagerLeave" &&
-    Number(event.year) === observation.year &&
-    Number(event.month) === observation.month &&
     Array.isArray(event.tags) &&
     event.tags.includes("絶望")
   );
@@ -928,10 +926,15 @@ export function collectCrisisState(village, observation, elapsedMonths) {
     populationBefore: observation.populationBefore,
     populationAfter: villagers.length
   };
+  const departureCommon = {
+    ...common,
+    year: Number(departures[0]?.year) || common.year,
+    month: Number(departures[0]?.month) || common.month
+  };
   const checkpoints = [];
   if (departureCount > 0) {
     checkpoints.push({
-      ...common,
+      ...departureCommon,
       type: "despairDeparture",
       affectedCount: departureCount,
       affectedVillagers: departures.flatMap(event => Array.isArray(event.people) ? event.people : []),
@@ -966,7 +969,7 @@ export function collectCrisisState(village, observation, elapsedMonths) {
     departureCount,
     checkpoints,
     breakdown: isBreakdown ? {
-      ...common,
+      ...departureCommon,
       despairDepartureCount: departureCount,
       departedVillagers: departures.flatMap(event => Array.isArray(event.people) ? event.people : []),
       before: observation.snapshotBefore,
