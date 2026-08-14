@@ -13,9 +13,10 @@ import { syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
 import { clearRaidWarningModal, showRaidWarningModal } from "./raidWarningModal.js";
 import { MESSENGER_PASS_SECRET_TREASURE_ID } from "./data/tutorialData.js";
 import { updateUI } from "./ui.js";
-import { randChoice, randInt } from "./util.js";
+import { clampValue, randChoice, randInt } from "./util.js";
 import { getVillageScaleStage } from "./villageScale.js";
 import { clearDefeatedRaidEnemies, getCaptives } from "./captives.js";
+import { RAID_MENTAL_TRAIT_REACTIONS } from "./data/dialogue/raidStartLines.js";
 
 const AVOIDANCE_RESOURCE_LABELS = {
   food: "食料",
@@ -25,6 +26,21 @@ const AVOIDANCE_RESOURCE_LABELS = {
   fame: "名声",
   tech: "技術"
 };
+
+export function applyRaidMentalTraitReactions(village) {
+  const villagers = Array.isArray(village?.villagers) ? village.villagers : [];
+  villagers.forEach(person => {
+    const mindTraits = Array.isArray(person?.mindTraits) ? person.mindTraits : [];
+    const reaction = RAID_MENTAL_TRAIT_REACTIONS.reduce((best, entry) => {
+      if (!mindTraits.includes(entry.trait)) return best;
+      return !best || entry.mentalGain > best.mentalGain ? entry : best;
+    }, null);
+    if (!reaction) return;
+
+    person.mp = clampValue((Number(person.mp) || 0) + reaction.mentalGain, 0, 100);
+    village.log(`【${reaction.trait}】${reaction.line(person)}メンタル+${reaction.mentalGain}`);
+  });
+}
 
 function getVillageScaleStageIndex(village) {
   return getVillageScaleStage(village.building).index;
@@ -619,6 +635,8 @@ export function startRaidEvent(village, options = {}) {
   });
 
   const enemyCount = village.raidEnemies.length;
+
+  applyRaidMentalTraitReactions(village);
 
   // 生成された敵全体の確認ログ
   console.log('Created raiders:', village.raidEnemies.map(e => ({

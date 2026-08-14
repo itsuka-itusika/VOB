@@ -1832,6 +1832,16 @@ section h2 {
   font-size: 0.9em;
   margin-bottom: 10px;
 }
+.building-winter-warning {
+  color: #8a4b00;
+  background: #fff3cd;
+  border: 1px solid #e3bd65;
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 0.9em;
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
 .building-button {
   width: 100%;
   padding: 8px;

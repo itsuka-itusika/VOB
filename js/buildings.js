@@ -13,6 +13,7 @@ import {
 import { completeTutorialTask } from "./tutorial.js";
 import { getVillageScaleStage, showVillageScaleMilestones } from "./villageScale.js";
 import { fulfillBuildingRequest, getBuildingCostForVillage } from "./buildingRequests.js";
+import { getPostBuildWinterMaterialWarning } from "./domain/winterMaterials.js";
 import {
   BACCHUS_GOLDEN_STATUE_BUILDING_ID,
   BACCHUS_GOLDEN_STATUE_BUILT_FLAG,
@@ -383,6 +384,11 @@ function renderRepairCost(costs) {
   ].filter(Boolean).join(" / ") || "費用なし";
 }
 
+function formatPostBuildWinterWarning(warning) {
+  if (!warning) return "";
+  return `建設後の資材は${warning.remainingMaterials}となり、${warning.periodLabel}${warning.requiredMaterials}に対して${warning.shortfall}不足します。`;
+}
+
 function renderBuiltBuildings(builtList, village) {
   const buildings = village.buildings || [];
   if (buildings.length === 0) {
@@ -422,6 +428,7 @@ function createBuildingItem(building, village) {
     : builtCount;
   const reasonText = getBuildBlockReason(building, village, { isBuilt, reachedLimit, costs });
   const repairReasonText = getRepairBlockReason(village, repairCosts);
+  const winterWarning = canBuild ? getPostBuildWinterMaterialWarning(village, costs.materials) : null;
 
   div.innerHTML = `
     <div class="building-header">
@@ -439,6 +446,7 @@ function createBuildingItem(building, village) {
       ${renderCostLine("技術", costs.originalTech, costs.tech, costs.isDiscounted)}
     </div>
     ${!canBuild && !isBuilt ? `<div class="building-reason">${reasonText}</div>` : ""}
+    ${winterWarning ? `<div class="building-winter-warning">冬越し資材警告: ${formatPostBuildWinterWarning(winterWarning)}</div>` : ""}
     ${damagedCount > 0 ? `<div class="building-repair-cost">修繕費: ${renderRepairCost(repairCosts)}</div>` : ""}
     ${damagedCount > 0 && !canRepair ? `<div class="building-reason">${repairReasonText}</div>` : ""}
   `;
@@ -449,7 +457,11 @@ function createBuildingItem(building, village) {
   button.disabled = isBuilt || reachedLimit || !canBuild;
   if (canBuild) {
     button.onclick = () => {
-      const confirmMessage = building.confirmMessage || `${building.name}を建設しますか？`;
+      const baseConfirmMessage = building.confirmMessage || `${building.name}を建設しますか？`;
+      const currentWarning = getPostBuildWinterMaterialWarning(village, getBuildingCostForVillage(building, village).materials);
+      const confirmMessage = currentWarning
+        ? `${baseConfirmMessage}\n\n【冬越し資材警告】\n${formatPostBuildWinterWarning(currentWarning)}\nそれでも建設しますか？`
+        : baseConfirmMessage;
       if (confirm(confirmMessage)) constructBuilding(building, village);
     };
   }

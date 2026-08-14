@@ -45,11 +45,12 @@ import {
 } from "./domain/jobTables.js";
 import { getResourceStorageStatus, getResourceStorageWarningRatio } from "./domain/resourceLimits.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
+import { getWinterMaterialRequirement } from "./domain/winterMaterials.js";
 import { getPopulationCount } from "./domain/speciesTraits.js";
 import { isUnassignedActionVillager } from "./domain/rules.js";
 import { showDictionaryEntry } from "./dictionary.js";
 import { combinedDictionaryData } from "./data/dictionaryData.js";
-import { getPortraitPath, getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "./util.js";
+import { getPortraitPath, getVillagerFoodConsumption } from "./util.js";
 import { openPersonalHistoryModal } from "./history.js";
 import { formatRelationshipsForDisplay, normalizeRelationship } from "./relationships.js";
 import { getCaptives } from "./captives.js";
@@ -164,15 +165,6 @@ function getMonthlyFoodCost(village) {
   }, 0);
 }
 
-function getWinterMonthsToPrepare(month) {
-  if ([12, 1, 2].includes(month)) {
-    if (month === 12) return 3;
-    if (month === 1) return 2;
-    return 1;
-  }
-  return 3;
-}
-
 function formatWarningNames(people) {
   const names = people.slice(0, 4).map(person => person.name).join("、");
   return people.length > 4 ? `${names}ほか${people.length - 4}人` : names;
@@ -182,13 +174,12 @@ function buildWarningMessages(village) {
   const warnings = [];
   const villagers = Array.isArray(village.villagers) ? village.villagers : [];
   const activeVillagers = getActiveVillagers(village);
-  const peopleForConsumption = villagers.concat(getCaptives(village));
   const foodStorage = getResourceStorageStatus(village, "food");
   const materialStorage = getResourceStorageStatus(village, "materials");
   const storageWarningRatio = getResourceStorageWarningRatio(village);
   const foodCost = getMonthlyFoodCost(village);
   const monthsOfFood = foodCost > 0 ? village.food / foodCost : Infinity;
-  const winterNeed = peopleForConsumption.reduce((sum, person) => sum + getVillagerWinterMaterialConsumption(person), 0) * getWinterMonthsToPrepare(village.month);
+  const winterNeed = getWinterMaterialRequirement(village);
   const lowHpCount = activeVillagers.filter(person => Number(person.hp) <= 33).length;
   const lowMpCount = activeVillagers.filter(person => Number(person.mp) <= 33).length;
   const despairingVillagers = activeVillagers.filter(hasDespairState);
