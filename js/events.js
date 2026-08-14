@@ -59,10 +59,11 @@ const TRAIT_INJURED = "負傷";
 const TRAIT_SERIOUS_INJURY = "重体";
 const TRAIT_CRITICAL = "危篤";
 const TRAIT_EPIDEMIC = "疫病";
+const TRAIT_EXPOSURE = "曝露";
 const VILLAGE_TRAIT_CLEANLINESS = "清浄";
 const CLEANLINESS_DURATION_MONTHS = 3;
 const BATTLE_DEBUG_BODY_TRAITS_TO_REMOVE = new Set([
-  "負傷", "重体", "危篤", "疲労", "過労", "飢餓", "凍え", "疫病", "産褥"
+  "負傷", "重体", "危篤", "疲労", "過労", "飢餓", "凍え", "疫病", "曝露", "産褥"
 ]);
 const BATTLE_DEBUG_MIND_TRAITS_TO_REMOVE = new Set([
   "心労", "抑鬱", "失望", "絶望", "狂乱"
@@ -112,6 +113,23 @@ function processSeriousInjuryMonthStart(village) {
     }
     syncEffectiveStats(person);
     refreshJobTable(person, village);
+  });
+}
+
+function processExposureMonthStart(village) {
+  getPeopleForFoodAndWinterMaterials(village).forEach(person => {
+    if (isSaltPillar(person)) return;
+    if (!Array.isArray(person.bodyTraits) || !person.bodyTraits.includes(TRAIT_EXPOSURE)) return;
+
+    person.bodyTraits = person.bodyTraits.filter(trait => trait !== TRAIT_EXPOSURE);
+    if (!person.bodyTraits.includes(TRAIT_CRITICAL)) {
+      person.bodyTraits.push(TRAIT_CRITICAL);
+    }
+    person.criticalCause = TRAIT_EXPOSURE;
+    recordCriticalHistory(village, person, { reason: "光の柱への曝露" });
+    syncEffectiveStats(person);
+    refreshJobTable(person, village);
+    village.log(`${person.name}は光の柱への曝露のため、危篤状態になった...`);
   });
 }
 
@@ -572,7 +590,11 @@ export function endOfMonthProcess(v) {
   let deadPeople = getPeopleForFoodAndWinterMaterials(v).filter(p => !isSaltPillar(p) && p.bodyTraits.includes("危篤"));
   deadPeople.forEach(p => {
     if (removeResidentOrCaptive(v, p)) {
-      const deathReason = p.criticalCause === TRAIT_SERIOUS_INJURY ? "重体の悪化" : "老衰";
+      const deathReason = p.criticalCause === TRAIT_SERIOUS_INJURY
+        ? "重体の悪化"
+        : p.criticalCause === TRAIT_EXPOSURE
+          ? "光の柱への曝露"
+          : "老衰";
       recordVillagerDeathHistory(v, p, { reason: deathReason });
       clearRelationshipsForDepartedVillager(v, p);
       v.log(`${p.name}は${deathReason}により死亡した...`);
@@ -708,6 +730,7 @@ export function doMonthStartProcess(v, simulationOptions = {}) {
   processCaptiveReleaseDeadlines(v);
   processPendingEpidemicInfections(v);
   processSeriousInjuryMonthStart(v);
+  processExposureMonthStart(v);
 
   // 治安30以下で荒廃状態に
   if (v.security <= 30 && !v.villageTraits.includes("荒廃")) {

@@ -48,9 +48,14 @@ const RAID_TARGET_FRONT_MIDDLE_RANDOM = "frontMiddleRandom";
 const RAID_TARGET_WEAKEST_HIGH_CHANCE = "weakestHighChance";
 const RAID_ATTACK_RANGED_MAGIC = "rangedMagic";
 const RAID_WEAKEST_TARGET_CHANCE = 0.8;
+const APOCALYPSE_GRAND_CRUSADE_ID = "apocalypse-grand-crusade";
+const APOCALYPSE_WAR_RAIDER_TYPE = "黙示録の騎士・戦争";
+const WAR_LIGHT_PILLAR_TURN = 7;
+const WAR_LIGHT_PILLAR_DAMAGE = 666;
 const TRAIT_INJURED = "負傷";
 const TRAIT_SERIOUS_INJURY = "重体";
 const TRAIT_CRITICAL = "危篤";
+const TRAIT_EXPOSURE = "曝露";
 const pendingRaidDepartures = new WeakSet();
 const settlingRaidVillages = new WeakSet();
 const raidUnitRenderIds = new WeakMap();
@@ -640,6 +645,9 @@ export function proceedRaidAction(village) {
     case "COMBAT":
       actionResult = doOneCombatAction(action, village);
       break;
+    case "WAR_LIGHT_PILLAR":
+      actionResult = doWarLightPillarAction(action, village);
+      break;
     case "AUTO_FAIL":
       finalizeRaid(false, "戦闘部隊0", village);
       return;
@@ -769,7 +777,43 @@ function createCombatActions(village) {
   const allUnits = getVillageCombatants(village).concat(getAliveEnemies(village));
   const middleUnits = sortByCourage(allUnits.filter(unit => getCombatPosition(unit, village) === RAID_POSITION_MIDDLE));
   const frontUnits = sortByCourage(allUnits.filter(unit => getCombatPosition(unit, village) === RAID_POSITION_FRONT));
-  return middleUnits.concat(frontUnits).map(unit => ({ type:"COMBAT", actor:unit }));
+  return middleUnits.concat(frontUnits).map(unit => {
+    const isWarLightPillar = village.currentRaid?.id === APOCALYPSE_GRAND_CRUSADE_ID &&
+      village.raidTurnCount === WAR_LIGHT_PILLAR_TURN &&
+      unit?.raiderType === APOCALYPSE_WAR_RAIDER_TYPE;
+    return { type: isWarLightPillar ? "WAR_LIGHT_PILLAR" : "COMBAT", actor:unit };
+  });
+}
+
+/** 第六の災厄・7ターン目の《戦争》専用行動 */
+function doWarLightPillarAction(action, village) {
+  const actor = action.actor;
+  const result = createRaidActionResult(actor);
+  if (shouldSkipDefeatedEnemyAction(actor, village)) return result;
+
+  const candidates = getVillageCombatants(village).filter(person => {
+    const bodyTraits = Array.isArray(person.bodyTraits) ? person.bodyTraits : [];
+    return Number(person.hp) > 0 &&
+      !isSaltPillar(person) &&
+      !bodyTraits.includes(TRAIT_CRITICAL) &&
+      !bodyTraits.includes(TRAIT_EXPOSURE);
+  });
+  const target = randChoice(candidates);
+  if (!target) {
+    addRaidActionLog(result, `【光の柱】${actor.name}が裁きを下すべき村人は残っていない`);
+    return result;
+  }
+
+  if (!Array.isArray(target.bodyTraits)) target.bodyTraits = [];
+  applyRaidDamage(target, WAR_LIGHT_PILLAR_DAMAGE);
+  target.bodyTraits.push(TRAIT_EXPOSURE);
+  refreshJobTable(target, village);
+
+  addRaidDamageAnimation(result, actor, target, WAR_LIGHT_PILLAR_DAMAGE, false, "光の柱");
+  addRaidActionLog(result, `【光の柱】${actor.name}は天より光の柱を降ろし、${target.name}を焼いた！`);
+  addRaidActionLog(result, `　　→ ${target.name}に固定${WAR_LIGHT_PILLAR_DAMAGE}ダメージ、身体特性「${TRAIT_EXPOSURE}」を付与`);
+  if (target.hp <= 0) handleCombatDefeat(target, village, result);
+  return result;
 }
 
 /** 1件のCOMBAT行動 */
