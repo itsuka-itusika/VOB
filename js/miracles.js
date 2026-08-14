@@ -47,6 +47,7 @@ const EFFECT_RESULT_DIALOGUES = {
   "戦神の奇跡": { scene: "miracle", key: "warGod" },
   "雷霆の奇跡": { scene: "miracle", key: "thunderbolt" },
   "豊穣の奇跡": { scene: "miracle", key: "abundance" },
+  "豊穣の角": { scene: "miracle", key: "abundance" },
   "マナの奇跡": { scene: "miracle", key: "mana" },
   "ミダスの奇跡": { scene: "miracle", key: "midas" },
   "アンブロシア": { scene: "secretTreasure", key: "ambrosia" },
