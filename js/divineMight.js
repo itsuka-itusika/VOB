@@ -1,7 +1,7 @@
 import { clampValue } from "./util.js";
 
 export const DIVINE_MIGHT_LEVELS = [
-  { level: 0, threshold: 0, miracleIds: ["12", "2", "16", "6", "11"] },
+  { level: 0, threshold: 0, miracleIds: ["12", "2", "16", "6", "20", "11"] },
   { level: 1, threshold: 30, miracleIds: ["4", "10", "8"] },
   { level: 2, threshold: 90, miracleIds: ["1", "15", "3"] },
   { level: 3, threshold: 180, miracleIds: ["5", "7", "14"] },
@@ -33,7 +33,8 @@ const MIRACLE_SHORT_NAMES = {
   "16": "酒杯",
   "17": "雷霆",
   "18": "騒擾",
-  "19": "稀人"
+  "19": "稀人",
+  "20": "清拭"
 };
 
 export function getDivineMightAmount(village) {

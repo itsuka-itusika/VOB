@@ -16,6 +16,7 @@ import { JOB_LINES } from "../data/dialogue/jobLines.js";
 import { REPRODUCTION_LINES } from "../data/dialogue/reproductionLines.js";
 import { EXCHANGE_SITUATION_LINES } from "../data/dialogue/exchangeSituationLines.js";
 import { SECRET_TREASURE_LINES } from "../data/dialogue/secretTreasureLines.js";
+import { MIRACLE_RESULT_LINES } from "../data/dialogue/miracleLines.js";
 import { getVisitorLineKey, VISITOR_GENERIC_LINES, VISITOR_LINES } from "../data/dialogue/visitorLines.js";
 import {
   BUDDING_EVENT_LINES,
@@ -230,6 +231,8 @@ export function getDialogueLines({ character, scene, key, context = {} }) {
       return selectToneLines(EXCHANGE_SITUATION_LINES[key], character, context);
     case "secretTreasure":
       return selectToneLines(SECRET_TREASURE_LINES[key], character, context);
+    case "miracle":
+      return selectToneLines(MIRACLE_RESULT_LINES[key], character, context);
     case "visitor":
       return getVisitorLines(key);
     default:

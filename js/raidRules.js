@@ -26,6 +26,8 @@ const RAID_BODY_BLOCK_REASONS = [
   "過労",
   "産褥"
 ];
+const RAID_TRIPLE_DAMAGE_BODY_TRAITS = ["赤子", YOUNG_WOLF_TRAIT, "危篤", "重体"];
+const RAID_DOUBLE_DAMAGE_BODY_TRAITS = ["疫病", "負傷", "過労", "産褥"];
 const HUMAN_BEAST_TRAIT = "人面獣身";
 
 function traitList(person, key) {
@@ -92,6 +94,13 @@ export function getRaidActionSkipMessage(person, action = "戦闘", options = {}
     "体力尽き": `${name}は体力が尽きており、行動できない。`
   };
   return `【${label}】${messages[reason] || `${name}は行動不能。`}`;
+}
+
+export function getRaiderIncomingDamageMultiplier(person) {
+  const bodyTraits = traitList(person, "bodyTraits");
+  if (hasAnyTrait(bodyTraits, RAID_TRIPLE_DAMAGE_BODY_TRAITS)) return 3;
+  if (hasAnyTrait(bodyTraits, RAID_DOUBLE_DAMAGE_BODY_TRAITS)) return 2;
+  return 1;
 }
 
 export function canDefendInRaid(person) {

@@ -48,7 +48,6 @@ import { incrementTitleCounter, TITLE_COUNTER_KEYS } from "./titles.js";
 import { addDivineMight, showPendingDivineMightLevelUpModal } from "./divineMight.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
 
-const HEALING_RECOVERABLE_BODY_TRAITS = ["負傷", "疫病"];
 const BASE_JOB_STAT_GROWTH_CHANCE = 0.05;
 const PHYSICAL_JOB_GROWTH_STATS = new Set(["str", "vit", "dex", "mag", "chr"]);
 const MENTAL_JOB_GROWTH_STATS = new Set(["int", "ind", "eth", "cou", "sexdr"]);
@@ -812,24 +811,12 @@ function doHealingJob(p, v) {
     mpG = Math.floor(mpG * 0.6);
   }
 
-  const recoveredTraits = HEALING_RECOVERABLE_BODY_TRAITS.filter(trait => p.bodyTraits.includes(trait));
-  if (recoveredTraits.length > 0) {
-    p.bodyTraits = p.bodyTraits.filter(trait => !HEALING_RECOVERABLE_BODY_TRAITS.includes(trait));
-    syncEffectiveStats(p);
-    refreshJobTable(p, v);
-  }
-
   const currentHp = Math.max(0, Number(p.hp) || 0);
   const currentMp = Math.max(0, Number(p.mp) || 0);
   p.hp = clampValue(currentHp + hpG, 0, 100);
   p.mp = clampValue(currentMp + mpG, 0, 100);
 
-  let logMsg = `${p.name}療養:体力+${hpG},メンタル+${mpG}`;
-  if (recoveredTraits.length > 0) {
-    logMsg += `,${recoveredTraits.join(",")}が回復`;
-  }
-
-  v.log(logMsg);
+  v.log(`${p.name}療養:体力+${hpG},メンタル+${mpG}`);
 }
 
 function doLastMomentsJob(p, v) {

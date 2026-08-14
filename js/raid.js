@@ -20,6 +20,7 @@ import {
   canPerformRaidAction,
   getRaidActionBlockReason,
   getRaidActionSkipMessage,
+  getRaiderIncomingDamageMultiplier,
   getActiveRaidFrontliners,
   getActiveRaidShooters,
   getActiveRaidTrapMakers,
@@ -708,6 +709,7 @@ function doOneTrapAction(action, village) {
     return result;
   }
   let dmg = Math.floor((p.dex*p.int/400)*30);
+  dmg = applyIncomingDamageModifiers(dmg, e, village);
   const saltPillarShattered = applyRaidDamage(e, dmg);
   recordRaidFriendshipDamage(village, p, dmg);
   addRaidDamageAnimation(result, p, e, dmg, false, "罠発動");
@@ -881,6 +883,9 @@ function applyOffensiveTraitModifiers(actor, damage, label, result) {
 
 function applyIncomingDamageModifiers(damage, target, village) {
   let multiplier = 1;
+  if (isEnemyUnit(target, village)) {
+    multiplier *= getRaiderIncomingDamageMultiplier(target);
+  }
   if (getCombatPosition(target, village) === RAID_POSITION_MIDDLE) {
     multiplier *= 1.2;
   }
@@ -897,6 +902,7 @@ function canCounterAttack(target, village) {
 function doCounterAttack(counterActor, target, village, result) {
   let ret=calcAttackDamage(counterActor, target, true);
   let rdmg=Math.floor(ret.damage*0.5);
+  rdmg = applyIncomingDamageModifiers(rdmg, target, village);
   let retTypeText=ret.isMagic? "魔法攻撃":"物理攻撃";
   const saltPillarShattered = applyRaidDamage(target, rdmg);
   addRaidDamageAnimation(result, counterActor, target, rdmg, true, ret.isMagic ? "魔法で反撃" : "反撃");

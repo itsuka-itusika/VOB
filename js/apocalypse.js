@@ -261,7 +261,7 @@ function applyFourthCalamity(village) {
   const candidates = getActiveVillagers(village).filter(person => {
     return !Array.isArray(person.bodyTraits) || !person.bodyTraits.includes("疫病");
   });
-  const targets = chooseRandom(candidates, 2);
+  const targets = chooseRandom(candidates, 3);
   targets.forEach(person => {
     if (!Array.isArray(person.bodyTraits)) person.bodyTraits = [];
     person.bodyTraits.push("疫病");

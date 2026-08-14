@@ -29,7 +29,8 @@
 
 - `js/miracles.js`
   - 奇跡実行、奇跡結果モーダル、交換の奇跡モーダル。
-  - 現時点では、奇跡結果の口調別セリフをこのファイル内に持つ。
+  - 清拭の奇跡は発話者を村医優先、村医不在時は倫理が最も高い村人1人に絞る。専用セリフは `js/data/dialogue/miracleLines.js` に持つ。
+  - その他の一部の奇跡結果は、口調別セリフをこのファイル内に持つ。
   - 交換の奇跡モーダルの肉体交換反応は `exchangeLines.js` を参照する。
 
 ### 会話エンジン
@@ -51,6 +52,8 @@
 - `job`
 - `reproduction`
 - `exchangeSituation`
+- `secretTreasure`
+- `miracle`
 - `visitor`
 
 `randomEvent` と `randomEventSecond` は、通常の `getDialogueLines` ではなく `getDialogueLine` 内の専用分岐で処理する。
@@ -79,6 +82,9 @@
 
 - `js/data/dialogue/secretTreasureLines.js`
   - 秘宝の専用結果モーダルで使う口調別反応。
+
+- `js/data/dialogue/miracleLines.js`
+  - 分離済みの奇跡結果モーダル反応。現在は清拭の奇跡を扱う。
 
 - `js/data/dialogue/exchangeSituationLines.js`
   - 入れ替わり後の身体状況に応じた通常会話。

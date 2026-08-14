@@ -1604,7 +1604,7 @@ export const RAID_MODULES = [
       { raiderType: "翼人兵", minCount: 4, maxCount: 6 },
       { raiderType: "黙示録の騎士・支配", minCount: 1, maxCount: 1 }
     ],
-    defense: { surviveTurns: 6 },
+    defense: { surviveTurns: 7 },
     successRewards: { completeHappiness: 30, partialHappiness: 15 },
     failurePenalty: {
       security: 28,
@@ -1663,7 +1663,7 @@ export const RAID_MODULES = [
       { raiderType: "黙示録の騎士・飢餓", minCount: 1, maxCount: 1 },
       { raiderType: "黙示録の騎士・疫病", minCount: 1, maxCount: 1 }
     ],
-    defense: { surviveTurns: 8 },
+    defense: { surviveTurns: 7 },
     successRewards: { completeHappiness: 30, partialHappiness: 15 },
     failurePenalty: {
       foodRate: 0.6,

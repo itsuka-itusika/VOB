@@ -58,6 +58,9 @@ const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成"]);
 const TRAIT_INJURED = "負傷";
 const TRAIT_SERIOUS_INJURY = "重体";
 const TRAIT_CRITICAL = "危篤";
+const TRAIT_EPIDEMIC = "疫病";
+const VILLAGE_TRAIT_CLEANLINESS = "清浄";
+const CLEANLINESS_DURATION_MONTHS = 3;
 const BATTLE_DEBUG_BODY_TRAITS_TO_REMOVE = new Set([
   "負傷", "重体", "危篤", "疲労", "過労", "飢餓", "凍え", "病気", "疫病", "産褥"
 ]);
@@ -87,13 +90,14 @@ function recoverBattleDebugVillagers(village) {
 }
 
 function processSeriousInjuryMonthStart(village) {
+  const isClean = Array.isArray(village.villageTraits) && village.villageTraits.includes(VILLAGE_TRAIT_CLEANLINESS);
   getPeopleForFoodAndWinterMaterials(village).forEach(person => {
     if (isSaltPillar(person)) return;
     if (!Array.isArray(person.bodyTraits)) person.bodyTraits = [];
     if (!person.bodyTraits.includes(TRAIT_SERIOUS_INJURY)) return;
 
     person.bodyTraits = person.bodyTraits.filter(trait => trait !== TRAIT_SERIOUS_INJURY);
-    if (Math.random() < 0.8) {
+    if (isClean || Math.random() < 0.8) {
       if (!person.bodyTraits.includes(TRAIT_INJURED)) {
         person.bodyTraits.push(TRAIT_INJURED);
       }
@@ -101,6 +105,7 @@ function processSeriousInjuryMonthStart(village) {
     } else {
       if (!person.bodyTraits.includes(TRAIT_CRITICAL)) {
         person.bodyTraits.push(TRAIT_CRITICAL);
+        person.criticalCause = TRAIT_SERIOUS_INJURY;
         recordCriticalHistory(village, person, { reason: "重体" });
       }
       village.log(`${person.name}の重体が悪化し、危篤状態になった...`);
@@ -108,6 +113,58 @@ function processSeriousInjuryMonthStart(village) {
     syncEffectiveStats(person);
     refreshJobTable(person, village);
   });
+}
+
+function processPendingEpidemicInfections(village) {
+  const isClean = Array.isArray(village.villageTraits) && village.villageTraits.includes(VILLAGE_TRAIT_CLEANLINESS);
+  (village.villagers || []).forEach(person => {
+    if (!person.pendingEpidemicInfection) return;
+    person.pendingEpidemicInfection = false;
+    if (isClean) return;
+
+    if (!Array.isArray(person.bodyTraits)) person.bodyTraits = [];
+    if (!person.bodyTraits.includes(TRAIT_EPIDEMIC)) {
+      person.bodyTraits.push(TRAIT_EPIDEMIC);
+      syncEffectiveStats(person);
+      refreshJobTable(person, village);
+      village.log(`${person.name}は疫病に感染した`);
+    }
+  });
+}
+
+function processEpidemicSpreadAtMonthEnd(village) {
+  if (!Array.isArray(village.villagers) || village.villagers.length === 0) return;
+  if (village.villageTraits.includes(VILLAGE_TRAIT_CLEANLINESS)) return;
+
+  const epidemicCount = village.villagers.filter(person => {
+    return Array.isArray(person.bodyTraits) && person.bodyTraits.includes(TRAIT_EPIDEMIC);
+  }).length;
+  if (epidemicCount === 0) return;
+
+  const candidates = village.villagers.filter(person => {
+    const bodyTraits = Array.isArray(person.bodyTraits) ? person.bodyTraits : [];
+    return !bodyTraits.includes(TRAIT_EPIDEMIC) && !person.pendingEpidemicInfection;
+  });
+  const infectionCount = Math.min(candidates.length, randInt(0, epidemicCount * 2));
+  for (let i = 0; i < infectionCount; i++) {
+    const selectedIndex = randInt(0, candidates.length - 1);
+    const [person] = candidates.splice(selectedIndex, 1);
+    person.pendingEpidemicInfection = true;
+  }
+}
+
+function advanceCleanlinessMonth(village) {
+  if (!village.villageTraits.includes(VILLAGE_TRAIT_CLEANLINESS)) {
+    village.cleanlinessMonths = null;
+    return;
+  }
+
+  village.cleanlinessMonths = Math.max(0, Number(village.cleanlinessMonths) || 0) + 1;
+  if (village.cleanlinessMonths < CLEANLINESS_DURATION_MONTHS) return;
+
+  village.villageTraits = village.villageTraits.filter(trait => trait !== VILLAGE_TRAIT_CLEANLINESS);
+  village.cleanlinessMonths = null;
+  village.log("【清拭の奇跡終了】村の清浄効果が切れました");
 }
 
 function resetMonthlySocialAttemptFlags(village) {
@@ -515,9 +572,10 @@ export function endOfMonthProcess(v) {
   let deadPeople = getPeopleForFoodAndWinterMaterials(v).filter(p => !isSaltPillar(p) && p.bodyTraits.includes("危篤"));
   deadPeople.forEach(p => {
     if (removeResidentOrCaptive(v, p)) {
-      recordVillagerDeathHistory(v, p, { reason: "老衰" });
+      const deathReason = p.criticalCause === TRAIT_SERIOUS_INJURY ? "重体の悪化" : "老衰";
+      recordVillagerDeathHistory(v, p, { reason: deathReason });
       clearRelationshipsForDepartedVillager(v, p);
-      v.log(`${p.name}は老衰により死亡した...`);
+      v.log(`${p.name}は${deathReason}により死亡した...`);
     }
   });
 
@@ -601,11 +659,14 @@ export function endOfMonthProcess(v) {
     }
   });
 
+  processEpidemicSpreadAtMonthEnd(v);
+  advanceCleanlinessMonth(v);
+
   // 状態異常の解除処理
   v.villagers.forEach(p => {
     if (isSaltPillar(p)) return;
     let changed = false;
-    let bodyTraitsToRemove = ["飢餓", "凍え", "疲労", "過労", "病気", "疫病"];
+    let bodyTraitsToRemove = ["飢餓", "凍え", "疲労", "過労", "病気", "疫病", "負傷"];
     bodyTraitsToRemove.forEach(trait => {
       if (p.bodyTraits.includes(trait)) {
         p.bodyTraits = p.bodyTraits.filter(t => t !== trait);
@@ -645,6 +706,7 @@ export function doMonthStartProcess(v, simulationOptions = {}) {
   v.log("【月初処理】");
   resetMonthlySocialAttemptFlags(v);
   processCaptiveReleaseDeadlines(v);
+  processPendingEpidemicInfections(v);
   processSeriousInjuryMonthStart(v);
 
   // 治安30以下で荒廃状態に
@@ -659,6 +721,7 @@ export function doMonthStartProcess(v, simulationOptions = {}) {
     if ((p.bodyTraits.includes("老人") || p.bodyTraits.includes(OLD_WOLF_TRAIT)) && !p.bodyTraits.includes("危篤")) {
       if (Math.random() < 0.05) {  // 5%の確率
         p.bodyTraits.push("危篤");
+        p.criticalCause = "老衰";
         recordCriticalHistory(v, p, { reason: "老衰" });
         v.log(`${p.name}は老衰により危篤状態になった...`);
       }

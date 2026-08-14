@@ -138,6 +138,8 @@ export function doExchange(a, b, v, isLightning = false, historySource = null, o
     visitorPortrait: a.visitorPortrait,
     hp: a.hp,
     saltPillarMonths: getSaltPillarMonths(a),
+    criticalCause: String(a.criticalCause || ""),
+    pendingEpidemicInfection: !!a.pendingEpidemicInfection,
     baseStats: pickStats(a.baseStats, PHYSICAL_ABILITY_STATS),
     acquiredStatMods: pickStats(a.acquiredStatMods, PHYSICAL_ABILITY_STATS),
     bodyTraits: [...a.bodyTraits],
@@ -158,6 +160,8 @@ export function doExchange(a, b, v, isLightning = false, historySource = null, o
   a.visitorPortrait = b.visitorPortrait;
   a.hp = b.hp;
   a.saltPillarMonths = saltPillarMonthsB;
+  a.criticalCause = String(b.criticalCause || "");
+  a.pendingEpidemicInfection = !!b.pendingEpidemicInfection;
   applyStats(a.baseStats, pickStats(b.baseStats, PHYSICAL_ABILITY_STATS));
   applyStats(a.acquiredStatMods, pickStats(b.acquiredStatMods, PHYSICAL_ABILITY_STATS));
   a.bodyTraits = [...b.bodyTraits];
@@ -177,6 +181,8 @@ export function doExchange(a, b, v, isLightning = false, historySource = null, o
   b.visitorPortrait = exchangeParams.visitorPortrait;
   b.hp = exchangeParams.hp;
   b.saltPillarMonths = exchangeParams.saltPillarMonths;
+  b.criticalCause = exchangeParams.criticalCause;
+  b.pendingEpidemicInfection = exchangeParams.pendingEpidemicInfection;
   applyStats(b.baseStats, exchangeParams.baseStats);
   applyStats(b.acquiredStatMods, exchangeParams.acquiredStatMods);
   b.bodyTraits = [...exchangeParams.bodyTraits];

@@ -128,7 +128,7 @@
 
 通常会話は `js/dialogue/dialogueEngine.js` が入口です。表示側の `js/conversation.js` は `getConversationLine({ character, village })` を呼び、会話エンジンが口調、状態、通常時の行動、季節などから候補を集めて 1 行を選びます。
 
-会話データは `js/data/dialogue/` 配下に分割されています。状態会話、季節会話、行動会話、妊娠・成長会話、訪問者会話、秘宝専用反応、ランダムイベント会話、口調定義を別ファイルで持ちます。
+会話データは `js/data/dialogue/` 配下に分割されています。状態会話、季節会話、行動会話、妊娠・成長会話、訪問者会話、秘宝・奇跡の専用反応、ランダムイベント会話、口調定義を別ファイルで持ちます。
 肉体交換への反応は `js/data/dialogue/exchangeLines.js` に置き、交換の奇跡と落雷による肉体交換で共有します。
 
 詳細な追加ルールは `DIALOGUE_RULES.md` を参照してください。
@@ -148,7 +148,7 @@
 
 `tutorial` を持たない既存セーブデータは、読み込み時に未達成状態として初期化します。警告欄には通常警告の後に、食料生産、資材生産、納屋建築、奇跡使用の順で最初の未達成項目だけを表示します。全項目達成後は `tutorial.complete` が true になり、警告欄には表示されません。
 
-黄金像建立イベントの解放状態は buildingFlags.canBuildBacchusGoldenStatue、建築済み状態は建築物配列と buildingFlags.hasBacchusGoldenStatue、黙示録突入状態と進行段階は apocalypseStarted / apocalypseStage、四騎士撃退済み状態は apocalypseCleared に保存します。塩の柱の経過は村人ごとの saltPillarMonths、四騎士の交換耐性・捕縛不可は exchangeImmune / uncapturable に保存します。危篤経験は村人ごとの hasBeenCritical に保存し、旧セーブでは村史から補完します。これらを持たない既存セーブデータは、四騎士撃退の村史がある場合を除いて未発生状態として読み込みます。
+黄金像建立イベントの解放状態は buildingFlags.canBuildBacchusGoldenStatue、建築済み状態は建築物配列と buildingFlags.hasBacchusGoldenStatue、黙示録突入状態と進行段階は apocalypseStarted / apocalypseStage、四騎士撃退済み状態は apocalypseCleared に保存します。塩の柱の経過は村人ごとの saltPillarMonths、四騎士の交換耐性・捕縛不可は exchangeImmune / uncapturable に保存します。清浄の経過は cleanlinessMonths、疫病の感染予約は村人ごとの pendingEpidemicInfection に保存します。危篤経験と原因は村人ごとの hasBeenCritical / criticalCause に保存し、旧セーブでは村史から補完します。これらを持たない既存セーブデータは、四騎士撃退の村史がある場合を除いて未発生状態として読み込みます。
 
 ## 顔グラフィック画像
 

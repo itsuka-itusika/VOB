@@ -12,20 +12,22 @@ import { recordMarriageHistory, recordVillagerLeaveHistory } from "./history.js"
 import { DEFAULT_PORTRAIT_KEY, getPortraitAssetPath } from "./data/portraitPaths.js";
 import { clearHopeLossTraits, DESPAIR_TRAIT, DISAPPOINTMENT_TRAIT } from "./domain/despair.js";
 import { resolveDialogueTone } from "./data/dialogue/toneProfiles.js";
+import { getDialogueLine } from "./dialogue/dialogueEngine.js";
 import { BODY_EXCHANGE_SOURCE_RACE_LINE_KEYS, BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
 import { getVisitorArrivalLine } from "./data/dialogue/visitorLines.js";
 import { getActiveVillagers, isSaltPillar } from "./domain/apocalypseRules.js";
 import { startRaidEvent } from "./raidStart.js";
+import { getRaiderIncomingDamageMultiplier } from "./raidRules.js";
 import { completeTutorialTask } from "./tutorial.js";
 import { getCaptives, normalizeCaptive } from "./captives.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
+import { getVillageRole, VILLAGE_ROLE_DOCTOR } from "./domain/villageRoles.js";
 import {
   addDivineMight,
   DIVINE_MIGHT_LEVELS,
   getDivineMightGainFromMiracleCost,
   getDivineMightStatus,
   getMiracleUnlockInfo,
-  getMiracleUnlockReason,
   showPendingDivineMightLevelUpModal,
   subtractDivineMight
 } from "./divineMight.js";
@@ -47,6 +49,7 @@ export const MIRACLES = [
   {id:"4",  name:"宴会の奇跡(人数×15)", cost:-1, desc:"全員体力/メンタル+20,幸福+20,失望/絶望解除 (資金×人数分も要)"},
   {id:"5",  name:"狂宴の奇跡(人数×30)", cost:-2, desc:"全員体力/メンタル+60,幸福+50,失望/絶望解除,倫理↓,好色+15"},
   {id:"6",  name:"癒しの奇跡(80)", cost:80, desc:"1人の負傷/重体/疫病/疲労等回復,体力+50"},
+  {id:"20", name:"清拭の奇跡(60)", cost:60, desc:"3ヶ月間、村特性「清浄」を付与し、疫病の感染と重体の危篤化を防ぐ"},
   {id:"16", name:"酒杯の奇跡(50)", cost:50, desc:"1人の心労/抑鬱/失望/絶望回復,メンタル+50,幸福+30,酩酊付与"},
   {id:"7",  name:"戦神の奇跡(80)", cost:80, desc:"1人に火星の加護(3ヶ月,筋力/耐久/勇気+7,知力/勤勉/倫理*0.2)"},
   {id:"8",  name:"竈女神の奇跡(40)", cost:40, desc:"恋人を結婚100%(対象なしなら使用不可)"},
@@ -61,6 +64,13 @@ export const MIRACLES = [
 ];
 
 const MIRACLE_UNLOCK_ORDER = DIVINE_MIGHT_LEVELS.flatMap(entry => entry.miracleIds);
+
+function getVillageMiracleUnlockInfo(miracleId, village) {
+  const unlockInfo = getMiracleUnlockInfo(miracleId, village);
+  if (!unlockInfo.unlocked || miracleId !== "20") return unlockInfo;
+  if (hasActiveBuildingFlag(village, "hasBrewery", "brewery")) return unlockInfo;
+  return { ...unlockInfo, unlocked: false, reason: "醸造所建設で解放" };
+}
 
 function getMiraclesForModal(village) {
   const byId = new Map(MIRACLES.map(miracle => [miracle.id, miracle]));
@@ -153,7 +163,7 @@ function getMiracleCostInfo(miracle, village) {
 
 function getMiracleBlockReason(costInfo, village, miracleId = "") {
   const reasons = [];
-  const unlockReason = getMiracleUnlockReason(miracleId, village);
+  const unlockReason = getVillageMiracleUnlockInfo(miracleId, village).reason;
   if (unlockReason) reasons.push(unlockReason);
   if (village.mana < costInfo.mana) reasons.push("魔素不足");
   if (village.funds < costInfo.funds) reasons.push("資金不足");
@@ -358,7 +368,7 @@ function setSelectedMiracle(id, village) {
 function createMiracleItem(miracle, village, selectedId) {
   const div = document.createElement("div");
   const isActive = miracle.id === selectedId;
-  const unlockInfo = getMiracleUnlockInfo(miracle.id, village);
+  const unlockInfo = getVillageMiracleUnlockInfo(miracle.id, village);
   const isLocked = !unlockInfo.unlocked;
   const costInfo = getMiracleCostInfo(miracle, village);
   const reasonText = getMiracleBlockReason(costInfo, village, miracle.id);
@@ -420,9 +430,9 @@ function renderMiracleCards(village, selectedId = "12") {
   const content = document.getElementById("miracleOptions");
   if (!content) return;
   const miraclesForModal = getMiraclesForModal(village);
-  const fallbackId = miraclesForModal.find(m => getMiracleUnlockInfo(m.id, village).unlocked)?.id || "12";
+  const fallbackId = miraclesForModal.find(m => getVillageMiracleUnlockInfo(m.id, village).unlocked)?.id || "12";
   const selectedMiracle = MIRACLES.find(m => m.id === selectedId);
-  const currentId = selectedMiracle && getMiracleUnlockInfo(selectedMiracle.id, village).unlocked
+  const currentId = selectedMiracle && getVillageMiracleUnlockInfo(selectedMiracle.id, village).unlocked
     ? selectedId
     : fallbackId;
   const select = document.getElementById("miracleSelect");
@@ -538,7 +548,7 @@ export function performMiracle(village) {
   let mid=sel.value;
   let info=MIRACLES.find(x=>x.id===mid);
   if (!info) return;
-  const unlockReason = getMiracleUnlockReason(info.id, village);
+  const unlockReason = getVillageMiracleUnlockInfo(info.id, village).reason;
   if (unlockReason) {
     village.log(`【奇跡】${info.name}は${unlockReason}`);
     return;
@@ -672,6 +682,23 @@ export function performMiracle(village) {
             return;
           }
           healMiracle(vA,village);
+          break;
+        case "20": // 清拭
+          if (!village.villageTraits.includes("清浄")) {
+            village.villageTraits.push("清浄");
+          }
+          village.cleanlinessMonths = 0;
+          village.log("【清拭の奇跡】3ヶ月間、村特性「清浄」を付与");
+          {
+            const speaker = getCleanlinessMiracleSpeaker(village);
+            showMiracleResultModal(
+              village,
+              "清拭の奇跡",
+              "清めの香草酒の香りが村を満たしました。",
+              speaker ? [speaker] : [],
+              { allowEmpty: true }
+            );
+          }
           break;
         case "16": // 酒杯(1人回復)
           if (!vA || (!village.villagers.includes(vA) && !getCaptives(village).includes(vA))) {
@@ -867,7 +894,8 @@ function warMiracle(p, v) {
 
 function thunderboltMiracle(target, village) {
   const beforeHp = Number(target.hp) || 0;
-  target.hp = beforeHp <= 1 ? beforeHp : Math.max(1, beforeHp - THUNDERBOLT_MIRACLE_DAMAGE);
+  const damage = THUNDERBOLT_MIRACLE_DAMAGE * getRaiderIncomingDamageMultiplier(target);
+  target.hp = beforeHp <= 1 ? beforeHp : Math.max(1, beforeHp - damage);
   village.lastThunderboltMiracleMonth = getVillageMonthKey(village);
   const actualDamage = Math.max(0, beforeHp - target.hp);
   village.log(`【雷霆の奇跡】${target.name}に雷霆を落としました。体力-${actualDamage}`);
@@ -1007,6 +1035,9 @@ function getGrotesquePortraitLine(person) {
 
 function getGenericMiracleLine(person, miracleName) {
   if (miracleName === "悍ましい肖像画") return getGrotesquePortraitLine(person);
+  if (miracleName === "清拭の奇跡") {
+    return getDialogueLine({ character: person, scene: "miracle", key: "cleanliness" });
+  }
   const childLine = getChildlikeMiracleLine(person);
   if (childLine) return childLine;
   if (miracleName === "市場の奇跡") return getMarketMiracleLine(person);
@@ -1028,6 +1059,16 @@ function getGenericMiracleLine(person, miracleName) {
     "老人": ["ありがたいことじゃのう。", "長く生きても、奇跡には驚かされるわい。"]
   };
   return randFrom(lines[type] || lines[person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
+}
+
+function getCleanlinessMiracleSpeaker(village) {
+  const villagers = getActiveVillagers(village);
+  const doctor = villagers.find(person => getVillageRole(person) === VILLAGE_ROLE_DOCTOR);
+  if (doctor) return doctor;
+  return villagers.reduce((best, person) => {
+    if (!best) return person;
+    return (Number(person.eth) || 0) > (Number(best.eth) || 0) ? person : best;
+  }, null);
 }
 
 function getTravelerMiracleLine(person) {

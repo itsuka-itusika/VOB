@@ -194,6 +194,9 @@ function convertVillageToObject(village) {
     apocalypseLocustMonths: village.apocalypseLocustMonths == null
       ? null
       : Math.max(0, Math.floor(normalizeFiniteNumber(village.apocalypseLocustMonths, 0))),
+    cleanlinessMonths: village.cleanlinessMonths == null
+      ? null
+      : Math.max(0, Math.floor(normalizeFiniteNumber(village.cleanlinessMonths, 0))),
     lastHeadmanElectionYear: village.lastHeadmanElectionYear != null && Number.isFinite(Number(village.lastHeadmanElectionYear))
       ? Number(village.lastHeadmanElectionYear)
       : null,
@@ -302,6 +305,8 @@ function convertVillagerToObject(vill) {
     titleIds: Array.isArray(vill.titleIds) ? [...vill.titleIds] : [],
     titleStats: vill.titleStats ? { ...vill.titleStats } : {},
     hasBeenCritical: !!vill.hasBeenCritical,
+    criticalCause: String(vill.criticalCause || ""),
+    pendingEpidemicInfection: !!vill.pendingEpidemicInfection,
 
     preferredAction: vill.preferredAction || vill.job || "なし",
     job: vill.job,
@@ -427,6 +432,10 @@ function convertObjectToVillage(dataObj) {
     v.villageTraits = v.villageTraits.filter(trait => trait !== "飛蝗");
     v.apocalypseLocustMonths = null;
   }
+  const hasCleanlinessTrait = v.villageTraits.includes("清浄");
+  v.cleanlinessMonths = hasCleanlinessTrait
+    ? Math.max(0, Math.min(2, Math.floor(normalizeFiniteNumber(dataObj.cleanlinessMonths, 0))))
+    : null;
   if (v.apocalypseStarted && !v.villageTraits.includes("黙示録")) {
     v.villageTraits.push("黙示録");
   }
@@ -478,11 +487,20 @@ function convertObjectToVillage(dataObj) {
     v.captives = dataObj.captives.map(o => normalizeCaptive(convertObjectToVillager(o)));
     v.captives.forEach(captive => ensureCaptiveReleaseDeadline(v, captive));
   }
-  const criticalNames = new Set(v.historyEvents
-    .filter(event => event.type === HISTORY_EVENT_TYPES.CRITICAL || event.tags.includes("危篤"))
-    .flatMap(event => event.people));
+  const criticalEvents = v.historyEvents.filter(event => {
+    return event.type === HISTORY_EVENT_TYPES.CRITICAL || event.tags.includes("危篤");
+  });
+  const criticalNames = new Set(criticalEvents.flatMap(event => event.people));
+  const criticalCauseByName = new Map();
+  criticalEvents.forEach(event => {
+    const cause = event.tags.find(tag => tag === "重体" || tag === "老衰") || "";
+    event.people.forEach(name => criticalCauseByName.set(name, cause));
+  });
   [...v.villagers, ...v.visitors, ...v.captives, ...v.raidEnemies].forEach(person => {
     if (criticalNames.has(person.name)) person.hasBeenCritical = true;
+    if (!person.criticalCause && person.bodyTraits.includes("危篤")) {
+      person.criticalCause = criticalCauseByName.get(person.name) || "";
+    }
     evaluateTitles(person, { getPermanentStat });
   });
   normalizeVillageRoles(v);
@@ -546,6 +564,8 @@ function convertObjectToVillager(obj) {
   vill.titleIds = Array.isArray(obj.titleIds) ? [...obj.titleIds] : [];
   vill.titleStats = obj.titleStats && typeof obj.titleStats === "object" ? { ...obj.titleStats } : {};
   vill.hasBeenCritical = !!obj.hasBeenCritical;
+  vill.criticalCause = String(obj.criticalCause || "");
+  vill.pendingEpidemicInfection = !!obj.pendingEpidemicInfection;
   ensureTitleState(vill);
   registerUsedName(vill.name);
 

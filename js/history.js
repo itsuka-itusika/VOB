@@ -241,12 +241,15 @@ export function recordVillagerLeaveHistory(village, person, options = {}) {
 
 export function recordVillagerDeathHistory(village, person, options = {}) {
   if (!person) return;
+  const reason = options.reason || "死亡";
   addHistoryEvent(village, {
     type: HISTORY_EVENT_TYPES.VILLAGER_DEATH,
     title: `${person.name}、逝く`,
-    text: `${person.name}が村での生を終えた。`,
+    text: reason === "死亡"
+      ? `${person.name}が村での生を終えた。`
+      : `${person.name}が${reason}により村での生を終えた。`,
     people: [person],
-    tags: ["死別", options.reason || "死亡"]
+    tags: ["死別", reason]
   });
 }
 
@@ -533,7 +536,12 @@ function getVillageHistoryText(event) {
       if (personA) return `${personA}が村を去った。`;
       break;
     case HISTORY_EVENT_TYPES.VILLAGER_DEATH:
-      if (personA) return `${personA}が村での生を終えた。`;
+      if (personA) {
+        const reason = getEventSource(event);
+        return reason && reason !== "死亡"
+          ? `${personA}が${reason}により村での生を終えた。`
+          : `${personA}が村での生を終えた。`;
+      }
       break;
     case HISTORY_EVENT_TYPES.MARRIAGE:
       if (personA && personB) return `${personA}と${personB}が夫婦となった。`;
@@ -617,7 +625,9 @@ function getPersonalHistoryText(event, personName) {
     case HISTORY_EVENT_TYPES.VILLAGER_LEAVE:
       return "村を去った。";
     case HISTORY_EVENT_TYPES.VILLAGER_DEATH:
-      return "村での生を終えた。";
+      return getEventSource(event) && getEventSource(event) !== "死亡"
+        ? `${getEventSource(event)}により村での生を終えた。`
+        : "村での生を終えた。";
     case HISTORY_EVENT_TYPES.ADULTHOOD:
       return "成人した。";
     case HISTORY_EVENT_TYPES.CRITICAL:

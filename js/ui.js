@@ -195,6 +195,9 @@ function buildWarningMessages(village) {
   const disappointedVillagers = activeVillagers.filter(person =>
     hasDisappointmentState(person) && !hasDespairState(person) && (Number(person.happiness) || 0) <= 0
   );
+  const epidemicVillagers = villagers.filter(person => {
+    return Array.isArray(person.bodyTraits) && person.bodyTraits.includes("疫病");
+  });
   const noActionCount = activeVillagers.filter(isUnassignedActionVillager).length;
   const assemblyHallBuilt = hasActiveBuildingFlag(village, "hasAssemblyHall", "assemblyHall");
 
@@ -266,6 +269,13 @@ function buildWarningMessages(village) {
     warnings.push({
       level: lowHpCount + lowMpCount >= Math.max(2, Math.ceil(villagers.length / 3)) ? "danger" : "warning",
       text: `消耗している村人がいます。体力低下${lowHpCount}人、メンタル低下${lowMpCount}人。`
+    });
+  }
+
+  if (epidemicVillagers.length > 0) {
+    warnings.push({
+      level: "danger",
+      text: "疫病の村人がいます。治療しない場合<br>翌月感染が広がる可能性があります。"
     });
   }
 
