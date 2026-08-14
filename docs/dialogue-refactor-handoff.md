@@ -72,7 +72,7 @@
   - 春、夏、秋、冬の季節会話。
 
 - `js/data/dialogue/conditionLines.js`
-  - 危篤、負傷、疫病、病気、過労、飢餓、凍え、抑鬱、狂乱、心労など。
+  - 危篤、負傷、疫病、過労、飢餓、凍え、抑鬱、狂乱、心労など。
 
 - `js/data/dialogue/jobLines.js`
   - 警備、踊り子、バニーなど、仕事に応じた通常会話。
@@ -81,10 +81,10 @@
   - 妊娠、臨月、産褥、成人など、肉体状態や成長に関する会話。
 
 - `js/data/dialogue/secretTreasureLines.js`
-  - 秘宝の専用結果モーダルで使う口調別反応。
+  - 秘宝の専用結果モーダルで使う口調別反応。ドライアドの果実、アンブロシア、ネクタル、奇妙な計算機械、蛇の巻き付いた杖、クロノスの秘薬を扱う。
 
 - `js/data/dialogue/miracleLines.js`
-  - 分離済みの奇跡結果モーダル反応。現在は清拭の奇跡を扱う。
+  - 分離済みの奇跡結果モーダル反応。清拭、常春、宴会、狂宴、酒杯、戦神、雷霆、豊穣、マナ、ミダスの各奇跡を扱う。
 
 - `js/data/dialogue/exchangeSituationLines.js`
   - 入れ替わり後の身体状況に応じた通常会話。
@@ -119,7 +119,7 @@
 
 - 村特性 `襲撃中`: `status/raid`, `EMERGENCY`
 - 肉体特性 `危篤`: `condition/critical`, `CRITICAL`
-- 肉体特性 `負傷`, `疫病`, `病気`, `過労`, `飢餓`, `凍え`: `SEVERE`
+- 肉体特性 `負傷`, `疫病`, `過労`, `飢餓`, `凍え`: `SEVERE`
 - 肉体特性 `産褥`: `reproduction/postpartumConversation`, `NORMAL`
 - 肉体特性 `疲労`: `status/tired`, `NORMAL`
 - 精神特性 `抑鬱`: `condition/depression`, `SEVERE`

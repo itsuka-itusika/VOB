@@ -87,8 +87,7 @@ export function isForcedHealingAction(character) {
   if (!character) return false;
   const bodyTraits = Array.isArray(character.bodyTraits) ? character.bodyTraits : [];
   const mindTraits = Array.isArray(character.mindTraits) ? character.mindTraits : [];
-  return bodyTraits.includes("病気") ||
-    bodyTraits.includes("疫病") ||
+  return bodyTraits.includes("疫病") ||
     bodyTraits.includes("負傷") ||
     bodyTraits.includes("重体") ||
     bodyTraits.includes("過労") ||

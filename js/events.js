@@ -62,7 +62,7 @@ const TRAIT_EPIDEMIC = "疫病";
 const VILLAGE_TRAIT_CLEANLINESS = "清浄";
 const CLEANLINESS_DURATION_MONTHS = 3;
 const BATTLE_DEBUG_BODY_TRAITS_TO_REMOVE = new Set([
-  "負傷", "重体", "危篤", "疲労", "過労", "飢餓", "凍え", "病気", "疫病", "産褥"
+  "負傷", "重体", "危篤", "疲労", "過労", "飢餓", "凍え", "疫病", "産褥"
 ]);
 const BATTLE_DEBUG_MIND_TRAITS_TO_REMOVE = new Set([
   "心労", "抑鬱", "失望", "絶望", "狂乱"
@@ -666,7 +666,7 @@ export function endOfMonthProcess(v) {
   v.villagers.forEach(p => {
     if (isSaltPillar(p)) return;
     let changed = false;
-    let bodyTraitsToRemove = ["飢餓", "凍え", "疲労", "過労", "病気", "疫病", "負傷"];
+    let bodyTraitsToRemove = ["飢餓", "凍え", "疲労", "過労", "疫病", "負傷"];
     bodyTraitsToRemove.forEach(trait => {
       if (p.bodyTraits.includes(trait)) {
         p.bodyTraits = p.bodyTraits.filter(t => t !== trait);

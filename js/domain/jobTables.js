@@ -354,7 +354,7 @@ export function applyForcedActionRestriction(person) {
 
   if (isForcedHealingAction(person)) {
     const reasons = [];
-    ["病気", "疫病", "負傷", "重体", "過労", "産褥"].forEach(trait => {
+    ["疫病", "負傷", "重体", "過労", "産褥"].forEach(trait => {
       if (bodyTraits.includes(trait)) reasons.push(trait);
     });
     if (mindTraits.includes("抑鬱")) reasons.push("抑鬱");

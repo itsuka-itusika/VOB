@@ -37,6 +37,24 @@ const AUTONOMOUS_SETTLEMENT_SCALE = 350;
 const THUNDERBOLT_MIRACLE_DAMAGE = 80;
 let pendingExchangeResultVillage = null;
 const POST_CLEAR_MIRACLE_IDS = new Set(["18", "19"]);
+const EFFECT_RESULT_DIALOGUES = {
+  "清拭の奇跡": { scene: "miracle", key: "cleanliness" },
+  "常春の奇跡": { scene: "miracle", key: "everSpring" },
+  "冥王妃の神像": { scene: "miracle", key: "everSpring" },
+  "宴会の奇跡": { scene: "miracle", key: "feast" },
+  "狂宴の奇跡": { scene: "miracle", key: "revel" },
+  "酒杯の奇跡": { scene: "miracle", key: "goblet" },
+  "戦神の奇跡": { scene: "miracle", key: "warGod" },
+  "雷霆の奇跡": { scene: "miracle", key: "thunderbolt" },
+  "豊穣の奇跡": { scene: "miracle", key: "abundance" },
+  "マナの奇跡": { scene: "miracle", key: "mana" },
+  "ミダスの奇跡": { scene: "miracle", key: "midas" },
+  "アンブロシア": { scene: "secretTreasure", key: "ambrosia" },
+  "ネクタル": { scene: "secretTreasure", key: "nectar" },
+  "奇妙な計算機械": { scene: "secretTreasure", key: "strangeCalculator" },
+  "蛇の巻き付いた杖": { scene: "secretTreasure", key: "serpentStaff" },
+  "クロノスの秘薬": { scene: "secretTreasure", key: "chronosElixir" }
+};
 /**
  * 奇跡リスト
  */
@@ -1035,8 +1053,9 @@ function getGrotesquePortraitLine(person) {
 
 function getGenericMiracleLine(person, miracleName) {
   if (miracleName === "悍ましい肖像画") return getGrotesquePortraitLine(person);
-  if (miracleName === "清拭の奇跡") {
-    return getDialogueLine({ character: person, scene: "miracle", key: "cleanliness" });
+  const dedicatedDialogue = EFFECT_RESULT_DIALOGUES[miracleName];
+  if (dedicatedDialogue) {
+    return getDialogueLine({ character: person, ...dedicatedDialogue });
   }
   const childLine = getChildlikeMiracleLine(person);
   if (childLine) return childLine;
@@ -1141,7 +1160,7 @@ export function showMiracleResultModal(village, miracleName, message, people = [
   overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;";
   const modal = document.createElement("div");
   modal.className = "effect-result-modal";
-  modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;max-width:620px;width:calc(100% - 32px);max-height:min(80vh,720px);overflow:auto;border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
+  modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);box-sizing:border-box;background:#fff;padding:20px;max-width:620px;width:calc(100% - 32px);max-height:min(80vh,720px);overflow:auto;border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
   const rows = entries.map(person => `
     <div style="display:grid;grid-template-columns:72px 1fr;gap:12px;margin:12px 0;align-items:center;">
       <img src="${getPortraitPath(person)}" alt="${person.name}" style="width:72px;height:72px;object-fit:cover;border:1px solid #ddd;background:#f6f0e6;">
