@@ -941,76 +941,6 @@ export const RAIDER_TYPES = [
       "争え。憎め。そのたびに私の刃は重くなる。",
       "黄金の像を守る腕ごと、地へ落とそう。"
     ]
-  },
-  {
-    type: "黙示録の騎士・飢餓",
-    displayType: "黒の騎士",
-    weight: 0,
-    minCount: 1,
-    maxCount: 1,
-    race: "異形の大天使",
-    ageRange: { min: 100, max: 300 },
-    params: { job: "黙示録の騎士・飢餓", action: "襲撃" },
-    raidPosition: "middle",
-    raidTargeting: "frontMiddleRandom",
-    useDefaultPortrait: true,
-    exchangeImmune: true,
-    uncapturable: true,
-    ranges: {
-      hp: [220, 250],
-      str: [34, 42],
-      vit: [38, 46],
-      dex: [42, 50],
-      mag: [54, 64],
-      chr: [32, 40],
-      int: [48, 58],
-      ind: [44, 52],
-      eth: [38, 46],
-      cou: [40, 48],
-      sexdr: [0, 4]
-    },
-    forcedBodyTraits: ["飛行", "光輪", "異形の大天使"],
-    mindTraits: ["神聖", "狂信", "歴戦"],
-    dialogues: [
-      "黒き秤に麦を載せよ。おまえたちの一日を、一粒ずつ量ろう。",
-      "倉は空となり、腹は祈りのほか何も受けつけなくなる。",
-      "飢えに肉体はない。ゆえに、交換の奇跡も届かぬ。"
-    ]
-  },
-  {
-    type: "黙示録の騎士・疫病",
-    displayType: "青白い騎士",
-    weight: 0,
-    minCount: 1,
-    maxCount: 1,
-    race: "異形の大天使",
-    ageRange: { min: 100, max: 300 },
-    params: { job: "黙示録の騎士・疫病", action: "襲撃" },
-    raidPosition: "front",
-    raidTargeting: "lowestHp",
-    useDefaultPortrait: true,
-    exchangeImmune: true,
-    uncapturable: true,
-    ranges: {
-      hp: [240, 280],
-      str: [46, 56],
-      vit: [42, 50],
-      dex: [46, 56],
-      mag: [50, 60],
-      chr: [30, 38],
-      int: [46, 54],
-      ind: [50, 60],
-      eth: [34, 42],
-      cou: [48, 58],
-      sexdr: [0, 4]
-    },
-    forcedBodyTraits: ["飛行", "光輪", "異形の大天使"],
-    mindTraits: ["神聖", "狂信", "歴戦"],
-    dialogues: [
-      "青白き翼が触れた名を、村の記録から消そう。",
-      "私は急がぬ。七つ目の角笛は、すでに鳴り終えた。",
-      "肉体を替えても、死の順番は替わらぬ。"
-    ]
   }
 
 ];
@@ -1649,36 +1579,6 @@ export const RAID_MODULES = [
       "第六の角笛は鳴った。赤き騎士の下、聖征の全軍をもってこの村を地図から消す。",
       "戦争の剣に抗う者よ、盾を並べよ。悔い改めの時は終わった。",
       "黄金の偶像を砕くまで、赤き刃も聖なる軍靴も止まらない。"
-    ]
-  }),
-  createCompositeRaiderRaid({
-    id: "apocalypse-four-horsemen",
-    name: "第七の災厄・黙示録の四騎士",
-    warningName: "黙示録の四騎士",
-    weight: 0,
-    representative: { raiderType: "黙示録の騎士・支配" },
-    enemyGroups: [
-      { raiderType: "黙示録の騎士・支配", minCount: 1, maxCount: 1 },
-      { raiderType: "黙示録の騎士・戦争", minCount: 1, maxCount: 1 },
-      { raiderType: "黙示録の騎士・飢餓", minCount: 1, maxCount: 1 },
-      { raiderType: "黙示録の騎士・疫病", minCount: 1, maxCount: 1 }
-    ],
-    defense: { surviveTurns: 7 },
-    successRewards: { completeHappiness: 30, partialHappiness: 15 },
-    failurePenalty: {
-      foodRate: 0.6,
-      materialsRate: 0.6,
-      fundsRate: 0.6,
-      security: 45,
-      villagerHpRange: [30, 55],
-      villagerHappiness: 75,
-      buildingDamage: true,
-      severeInjury: true
-    },
-    introDialogues: [
-      "第七の角笛は鳴った。支配、戦争、飢餓、疫病――四つの裁きがここに揃う。",
-      "肉体を取り替える奇跡など、天の使いには届かぬ。",
-      "我らを退けるか、黄金の偶像とともに砕かれるか。選べ。"
     ]
   })
 ];

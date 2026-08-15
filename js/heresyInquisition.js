@@ -39,6 +39,7 @@ export function canTriggerHeresyInquisition(village) {
   const villageTraits = Array.isArray(village.villageTraits) ? village.villageTraits : [];
   return getVillageScaleStage(village.building).index >= MIN_SCALE_STAGE_INDEX
     && getDivineMightLevel(village) >= MIN_DIVINE_MIGHT_LEVEL
+    && village.apocalypseCleared !== true
     && !villageTraits.includes(HERESY_TRAIT);
 }
 

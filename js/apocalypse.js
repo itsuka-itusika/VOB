@@ -25,8 +25,7 @@ import { grantTitle } from "./titles.js";
 
 export const APOCALYPSE_RAID_IDS = {
   SIXTH: "apocalypse-grand-crusade",
-  SEVENTH: "apocalypse-upper-winged",
-  LEGACY_SEVENTH: "apocalypse-four-horsemen"
+  SEVENTH: "apocalypse-upper-winged"
 };
 
 const GOLDEN_STATUE_ID = "bacchusGoldenStatue";

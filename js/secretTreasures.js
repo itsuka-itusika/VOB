@@ -40,11 +40,9 @@ const SECRET_TREASURE_SELL_PRICES = {
   pan_flute: 100,
   grotesque_portrait: 200,
   golden_mask: 500,
-  blue_stone_tablet: 150,
   [MESSENGER_PASS_SECRET_TREASURE_ID]: 50
 };
 const DISABLED_RANDOM_SECRET_TREASURE_IDS = new Set([
-  "blue_stone_tablet",
   MESSENGER_PASS_SECRET_TREASURE_ID,
   PINECONE_STAFF_SECRET_TREASURE_ID
 ]);
@@ -511,14 +509,6 @@ export const SECRET_TREASURES = [
     name: "黄金の仮面",
     desc: "使用効果はないが、高く売ることができる秘宝。",
     sellPrice: SECRET_TREASURE_SELL_PRICES.golden_mask,
-    canUse: () => false,
-    blockedReason: "使用効果はありません"
-  },
-  {
-    id: "blue_stone_tablet",
-    name: "青石の石板",
-    desc: "使用効果はないが、売ることができる秘宝。",
-    sellPrice: SECRET_TREASURE_SELL_PRICES.blue_stone_tablet,
     canUse: () => false,
     blockedReason: "使用効果はありません"
   }

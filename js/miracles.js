@@ -223,10 +223,10 @@ function getHearthMiraclePairs(village) {
   const pairs = [];
   const done = new Set();
   village.villagers.forEach(a => {
-    if (done.has(a) || !checkHasRelationship(a, "恋人") || checkHasRelationship(a, "既婚")) return;
+    if (done.has(a) || isSaltPillar(a) || !checkHasRelationship(a, "恋人") || checkHasRelationship(a, "既婚")) return;
     const bName = getRelationshipTargetName(a, "恋人");
     const b = bName ? village.villagers.find(person => person.name === bName) : null;
-    if (!b || done.has(b) || checkHasRelationship(b, "既婚")) return;
+    if (!b || done.has(b) || isSaltPillar(b) || checkHasRelationship(b, "既婚")) return;
     pairs.push([a, b]);
     done.add(a);
     done.add(b);
@@ -684,6 +684,11 @@ export function performMiracle(village) {
           }
           if (!village.villagers.includes(vA) || !village.villagers.includes(vB)) {
             village.log("【クピド】村人以外は対象外です");
+            refundMiracleMana(village, cost);
+            return;
+          }
+          if (isSaltPillar(vA) || isSaltPillar(vB)) {
+            village.log("【クピド】塩の柱状態の村人は対象外です");
             refundMiracleMana(village, cost);
             return;
           }
