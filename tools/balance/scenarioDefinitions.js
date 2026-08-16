@@ -1,19 +1,20 @@
 import { Villager } from "../../js/classes.js";
 import { getExpectedDefenderDamage } from "../../js/autoAssign.js";
 import { BUILDINGS } from "../../js/buildings.js";
+import { getRaidModuleById, getRaidRulesById, RAID_SCALE_TABLES } from "../../js/data/raidData.js";
 import { isSaltPillar } from "../../js/domain/apocalypseRules.js";
 import { isWolf } from "../../js/domain/speciesTraits.js";
 import { setBaseStats, syncEffectiveStats } from "../../js/domain/statLayers.js";
 import { canDefendInRaid, getRaidActionBlockReason } from "../../js/raidRules.js";
-import { getVillagerFoodConsumption } from "../../js/util.js";
+import { getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "../../js/util.js";
 import { getVillageScaleStage } from "../../js/villageScale.js";
-import { createVillageSnapshot } from "./resultSchema.js?v=20260815-balance-29";
+import { createVillageSnapshot } from "./resultSchema.js?v=20260815-balance-37";
 import { drainKnownModals, waitUntil } from "./modalDriver.js?v=20260814-balance-24";
 
-export const SCENARIO_VERSION = 19;
-export const BEGINNER_PLAYER_MODEL_VERSION = 1;
-export const STANDARD_PLAYER_MODEL_VERSION = 2;
-export const EXPERT_PLAYER_MODEL_VERSION = 2;
+export const SCENARIO_VERSION = 23;
+export const BEGINNER_PLAYER_MODEL_VERSION = 2;
+export const STANDARD_PLAYER_MODEL_VERSION = 3;
+export const EXPERT_PLAYER_MODEL_VERSION = 4;
 export const RECOVERY_PLAYER_MODEL_VERSION = 1;
 
 const ECONOMIC_BREAKDOWN_MAX_POPULATION = 12;
@@ -24,6 +25,34 @@ const UPPER_RAIDS = [
   { id: "winged-punishment-strong", label: "翼人兵（強）" }
 ];
 const UPPER_RAID_MONTHS = [2, 4, 7, 9];
+const RAID_STRESS_SCALES = Object.freeze([
+  { id: "mapped-village", label: "旅人の立ち寄る村", stage: 3, scale: 120, heresy: false },
+  { id: "rich-village", label: "豊かな村", stage: 4, scale: 180, heresy: false },
+  { id: "prosperous-village", label: "繁栄した郷村", stage: 5, scale: 250, heresy: false },
+  { id: "autonomous-settlement", label: "自治集落", stage: 6, scale: 350, heresy: false },
+  { id: "heresy-prosperous-village", label: "繁栄した郷村（異端）", stage: 5, scale: 250, heresy: true },
+  { id: "heresy-autonomous-settlement", label: "自治集落（異端）", stage: 6, scale: 350, heresy: true }
+]);
+const RAID_STRESS_PREPARATIONS = Object.freeze({
+  full: {
+    id: "full",
+    label: "万全",
+    hpRange: [70, 100],
+    mpRange: [70, 100],
+    foodMonths: 6,
+    materialMonths: 6,
+    fundsPerVillager: 100
+  },
+  normal: {
+    id: "normal",
+    label: "普通",
+    hpRange: [50, 80],
+    mpRange: [50, 80],
+    foodMonths: 3,
+    materialMonths: 3,
+    fundsPerVillager: 50
+  }
+});
 const SEASON_BY_MONTH = new Map([
   [2, "冬"],
   [4, "春"],
@@ -272,6 +301,184 @@ function assignPreparedRaidActions(village) {
   });
 }
 
+function getStressRoleCounts(scale, preparation) {
+  const maximumShooters = scale.stage - 2;
+  if (preparation.id === "full") {
+    return {
+      front: scale.stage === 3 ? 7 : 8,
+      middle: maximumShooters,
+      rear: 3
+    };
+  }
+  return {
+    front: scale.stage === 3 ? 5 : 6,
+    middle: Math.max(1, maximumShooters - 1),
+    rear: 2
+  };
+}
+
+function getStressValue(range, index, offset) {
+  const [minimum, maximum] = range;
+  return minimum + ((index * 5 + offset * 3) % (maximum - minimum + 1));
+}
+
+function createRaidStressVillager(index, role, preparation) {
+  const person = new Villager(
+    `負荷試験${role === "front" ? "前衛" : (role === "middle" ? "中衛" : "後衛")}${String(index + 1).padStart(2, "0")}`,
+    index % 2 === 0 ? "男" : "女",
+    20 + (index % 20)
+  );
+  const stats = {
+    str: 18,
+    vit: 18,
+    dex: 18,
+    mag: 18,
+    chr: 18,
+    int: 18,
+    ind: 18,
+    eth: 18,
+    cou: 18,
+    sexdr: 18
+  };
+  const relatedStats = role === "front"
+    ? ["str", "vit", "cou"]
+    : (role === "middle" ? ["dex", "vit", "cou"] : ["dex", "int"]);
+  relatedStats.forEach((stat, statIndex) => {
+    stats[stat] = 18 + ((index * 2 + statIndex * 3) % 7);
+  });
+  setBaseStats(person, stats);
+  person.action = role === "front" ? "迎撃" : (role === "middle" ? "射撃" : "罠作成");
+  person.preferredAction = "なし";
+  person.job = "なし";
+  person.hp = getStressValue(preparation.hpRange, index, role === "front" ? 0 : (role === "middle" ? 1 : 2));
+  person.mp = getStressValue(preparation.mpRange, index, role === "front" ? 2 : (role === "middle" ? 1 : 0));
+  person.happiness = 50;
+  person.bodyTraits = [];
+  person.mindTraits = [];
+  return person;
+}
+
+function applyRaidStressBuildings(village, scale, preparation) {
+  const maximumWatchtowers = scale.stage - 2;
+  const watchtowerCount = preparation.id === "full"
+    ? maximumWatchtowers
+    : Math.max(1, maximumWatchtowers - 1);
+  village.buildings = ["woodenFence"];
+  if (scale.stage >= 4) village.buildings.push("moat");
+  for (let index = 0; index < watchtowerCount; index++) village.buildings.push("watchtower");
+  village.damagedBuildings = [];
+  village.buildingFlags = {
+    hasWoodenFence: true,
+    hasMoat: scale.stage >= 4,
+    hasWatchtower: watchtowerCount > 0
+  };
+  village.building = scale.scale;
+  village.scaleTitleStage = scale.stage;
+  village.nonHousePopLimitBonus = 0;
+}
+
+function applyRaidStressFixture(api, scale, preparation) {
+  const village = api.getVillage();
+  const roleCounts = getStressRoleCounts(scale, preparation);
+  const roles = [
+    ...Array.from({ length: roleCounts.front }, () => "front"),
+    ...Array.from({ length: roleCounts.middle }, () => "middle"),
+    ...Array.from({ length: roleCounts.rear }, () => "rear")
+  ];
+  village.year = 1195;
+  village.month = 4;
+  village.gameOver = false;
+  village.villagers = roles.map((role, index) => createRaidStressVillager(index, role, preparation));
+  village.visitors = [];
+  village.captives = [];
+  village.secretTreasures = [];
+  village.villageTraits = scale.heresy ? ["春", "異端"] : ["春"];
+  village.pendingRaid = null;
+  village.raidEnemies = [];
+  village.currentRaid = null;
+  village.isRaidProcessDone = false;
+  village.isRaidFinalizing = false;
+  village.raidTurnCount = 0;
+  village.raidActionQueue = [];
+  village.raidPhase = "";
+  village.currentActionIndex = 0;
+  village.defeatedRaidEnemies = [];
+  village.apocalypseStarted = false;
+  village.apocalypseStage = 0;
+  village.apocalypseCleared = false;
+  applyRaidStressBuildings(village, scale, preparation);
+  village.popLimit = village.villagers.length;
+  const foodConsumption = village.villagers.reduce(
+    (sum, person) => sum + getVillagerFoodConsumption(person),
+    0
+  );
+  const materialConsumption = village.villagers.reduce(
+    (sum, person) => sum + getVillagerWinterMaterialConsumption(person),
+    0
+  );
+  village.food = foodConsumption * preparation.foodMonths;
+  village.materials = materialConsumption * preparation.materialMonths;
+  village.funds = village.villagers.length * preparation.fundsPerVillager;
+  village.tech = 0;
+  village.mana = 0;
+  village.divineMight = 0;
+  village.security = 60;
+  village.logs = [];
+  village.historyEvents = [];
+  api.refreshUI();
+  return { village, roleCounts };
+}
+
+function assignRaidStressActions(village, roleCounts) {
+  village.villagers.forEach((person, index) => {
+    person.action = index < roleCounts.front
+      ? "迎撃"
+      : (index < roleCounts.front + roleCounts.middle ? "射撃" : "罠作成");
+  });
+}
+
+function sumUnitHp(units) {
+  return units.reduce((sum, unit) => sum + Math.max(0, Number(unit?.hp) || 0), 0);
+}
+
+function captureRoleHp(telemetry) {
+  return Object.fromEntries(["front", "middle", "rear"].map(role => [
+    role,
+    sumUnitHp(telemetry.villagerRefs.filter(person => telemetry.roleByVillager.get(person) === role))
+  ]));
+}
+
+function recordRaidStressStep(telemetry, actor, enemyHpBefore, roleHpBefore) {
+  const enemyHpLost = Math.max(0, enemyHpBefore - sumUnitHp(telemetry.enemyRefs));
+  if (enemyHpLost > 0) {
+    const actorRole = telemetry.roleByVillager.get(actor);
+    const role = actorRole || (actor?.raiderType ? "front" : null);
+    if (role) {
+      telemetry.damageByRole[role] += enemyHpLost;
+      telemetry.actionsByRole[role]++;
+    }
+  }
+  const roleHpAfter = captureRoleHp(telemetry);
+  ["front", "middle", "rear"].forEach(role => {
+    telemetry.hpLossByRole[role] += Math.max(0, roleHpBefore[role] - roleHpAfter[role]);
+  });
+}
+
+function createRaidStressTelemetry(villagerRefs, enemyRefs) {
+  const roleByVillager = new Map(villagerRefs.map(person => [
+    person,
+    person.action === "迎撃" ? "front" : (person.action === "射撃" ? "middle" : "rear")
+  ]));
+  return {
+    villagerRefs,
+    enemyRefs,
+    roleByVillager,
+    damageByRole: { front: 0, middle: 0, rear: 0 },
+    hpLossByRole: { front: 0, middle: 0, rear: 0 },
+    actionsByRole: { front: 0, middle: 0, rear: 0 }
+  };
+}
+
 function countBy(values, getKey) {
   return values.reduce((counts, value) => {
     const key = getKey(value) || "unknown";
@@ -371,7 +578,7 @@ function getRaidResultReason(village) {
     .find(log => String(log).startsWith("【襲撃結果】")) || null;
 }
 
-async function resolveActiveRaid({ api, frame }) {
+async function resolveActiveRaid({ api, frame, telemetry = null }) {
   const village = api.getVillage();
   await drainKnownModals(frame);
   api.nextTurn();
@@ -389,11 +596,15 @@ async function resolveActiveRaid({ api, frame }) {
       });
       break;
     }
+    const action = village.raidActionQueue[village.currentActionIndex];
+    const enemyHpBefore = telemetry ? sumUnitHp(telemetry.enemyRefs) : 0;
+    const roleHpBefore = telemetry ? captureRoleHp(telemetry) : null;
     api.proceedRaidAction();
     await waitUntil(() => {
       const button = frame.contentDocument?.getElementById("raidStepButton");
       return village.isRaidFinalizing || village.isRaidProcessDone || !button || !button.disabled;
     }, { timeoutMs: 10000, reason: "raid_action_timeout" });
+    if (telemetry) recordRaidStressStep(telemetry, action?.actor, enemyHpBefore, roleHpBefore);
   }
 
   await waitUntil(
@@ -510,6 +721,123 @@ async function runUpperRaid({
   };
 }
 
+function summarizeStressRole(role, telemetry, villagerRefs, initialRoleHp) {
+  const roleVillagers = villagerRefs.filter(person => telemetry.roleByVillager.get(person) === role);
+  const effectiveDamage = telemetry.damageByRole[role];
+  const totalDamage = Object.values(telemetry.damageByRole).reduce((sum, value) => sum + value, 0);
+  return {
+    participants: roleVillagers.length,
+    effectiveDamage,
+    damageShare: totalDamage > 0 ? effectiveDamage / totalDamage : 0,
+    damagingActions: telemetry.actionsByRole[role],
+    hpLost: Math.max(telemetry.hpLossByRole[role], initialRoleHp - sumUnitHp(roleVillagers)),
+    down: roleVillagers.filter(person => (Number(person.hp) || 0) <= 0).length
+  };
+}
+
+async function runRaidStressModule({ api, frame, scale, preparation, entry }) {
+  api.seed?.reset?.();
+  const { village, roleCounts } = applyRaidStressFixture(api, scale, preparation);
+  const initial = createVillageSnapshot(village);
+  api.seed?.reset?.();
+  api.startRaidById(entry.raidId);
+  assignRaidStressActions(village, roleCounts);
+  const enemyRefs = village.raidEnemies.slice();
+  const villagerRefs = village.villagers.slice();
+  const telemetry = createRaidStressTelemetry(villagerRefs, enemyRefs);
+  const initialRoleHp = captureRoleHp(telemetry);
+  const enemyInitialHp = sumUnitHp(enemyRefs);
+  const enemyTypes = countBy(enemyRefs, enemy => enemy.raiderType);
+  const enemyStrength = summarizeEnemyStrength(enemyRefs);
+  const outcome = await resolveActiveRaid({ api, frame, telemetry });
+  if (!outcome) throw new Error(`raid_outcome_missing:${entry.raidId}`);
+  const postRaid = createVillageSnapshot(village);
+  const failurePenalty = getRaidRulesById(entry.raidId).failurePenalty || {};
+  const lostResource = (resource, rate) => outcome === "failure"
+    ? Math.floor((Number(initial.resources[resource]) || 0) * (Number(rate) || 0))
+    : 0;
+  const roles = Object.fromEntries(["front", "middle", "rear"].map(role => [
+    role,
+    summarizeStressRole(role, telemetry, villagerRefs, initialRoleHp[role])
+  ]));
+  const raidDefinition = getRaidModuleById(entry.raidId);
+  return {
+    raidId: entry.raidId,
+    raidName: raidDefinition?.name || entry.raidId,
+    tableWeight: entry.weight,
+    outcome,
+    resultReason: getRaidResultReason(village),
+    roleCounts,
+    enemyCount: enemyRefs.length,
+    enemyTypes,
+    enemyInitialHp,
+    enemyRemaining: enemyRefs.filter(enemy => (Number(enemy.hp) || 0) > 0).length,
+    enemyRemainingHp: sumUnitHp(enemyRefs),
+    enemyStrength,
+    turns: Number(village.raidTurnCount) || 0,
+    damageContribution: {
+      definition: "各行動で実際に減少した敵HP。前衛は反撃分を含む。",
+      total: Object.values(telemetry.damageByRole).reduce((sum, value) => sum + value, 0),
+      roles
+    },
+    damageTaken: {
+      definition: "戦闘開始から襲撃終了処理後までの役割別HP損失。敗北時の全村被害を含む。",
+      totalHpLost: Object.values(roles).reduce((sum, role) => sum + role.hpLost, 0),
+      roles: Object.fromEntries(Object.entries(roles).map(([role, values]) => [role, {
+        hpLost: values.hpLost,
+        down: values.down
+      }]))
+    },
+    casualties: {
+      injured: countTrait(village.villagers, "負傷"),
+      critical: countTrait(village.villagers, "重体"),
+      dying: countTrait(village.villagers, "危篤"),
+      villagersRemaining: village.villagers.length
+    },
+    losses: {
+      definition: "襲撃失敗ペナルティだけを記録し、通常の月末消費は含めない。",
+      food: lostResource("food", failurePenalty.foodRate),
+      materials: lostResource("materials", failurePenalty.materialsRate),
+      funds: lostResource("funds", failurePenalty.fundsRate),
+      security: outcome === "failure" ? (Number(failurePenalty.security) || 0) : 0,
+      happinessPerVillager: outcome === "failure" ? (Number(failurePenalty.villagerHappiness) || 0) : 0,
+      damagedBuildings: postRaid.damagedBuildings.length
+    },
+    initial,
+    postRaid,
+    randomCalls: api.seed?.calls ?? null
+  };
+}
+
+async function runRaidStress(context, scale, preparation) {
+  const table = RAID_SCALE_TABLES.find(candidate => candidate.id === scale.id);
+  if (!table) throw new Error(`raid_scale_table_missing:${scale.id}`);
+  const entries = table.entries.filter(entry => Number(entry.weight) > 0);
+  const modules = [];
+  for (const entry of entries) {
+    modules.push(await runRaidStressModule({
+      ...context,
+      scale,
+      preparation,
+      entry
+    }));
+  }
+  return {
+    status: "completed",
+    raidStress: {
+      scaleId: scale.id,
+      scaleLabel: scale.label,
+      scaleStage: scale.stage,
+      heresy: scale.heresy,
+      preparation: preparation.id,
+      preparationLabel: preparation.label,
+      relatedStatRange: [18, 24],
+      modules
+    },
+    final: createVillageSnapshot(context.api.getVillage())
+  };
+}
+
 function isRecovered(village) {
   return countTrait(village.villagers, "負傷") === 0 &&
     village.villagers.every(person => person.hp >= 80 && person.mp >= 80);
@@ -580,15 +908,16 @@ function getVisibleShortageWarnings(village, foodMonths = 3) {
   };
 }
 
-function assignExpertRecovery(village, { hpThreshold, mpThreshold }) {
+function assignExpertRecovery(village, { hpThreshold, mpThreshold, maxAssignments }) {
   let changed = 0;
-  village.villagers.forEach(person => {
-    if (person.hp <= 0 || person.action === "療養") return;
+  for (const person of village.villagers) {
+    if (changed >= maxAssignments) break;
+    if (person.hp <= 0 || person.action === "療養") continue;
     const nextAction = person.hp < hpThreshold ? "休養" : (person.mp < mpThreshold ? "余暇" : null);
-    if (!nextAction || !(person.actionTable || []).includes(nextAction) || person.action === nextAction) return;
+    if (!nextAction || !(person.actionTable || []).includes(nextAction) || person.action === nextAction) continue;
     person.action = nextAction;
     changed++;
-  });
+  }
   return changed;
 }
 
@@ -601,6 +930,15 @@ const RAID_RECOVERY_MIRACLES = Object.freeze({
   heal: { id: "6", label: "癒しの奇跡" },
   goblet: { id: "16", label: "酒杯の奇跡" }
 });
+const ROUTINE_MIRACLES = Object.freeze({
+  abundance: { id: "1", label: "豊穣の奇跡", mana: 100 },
+  mana: { id: "2", label: "マナの奇跡", mana: 40 },
+  feast: RAID_RECOVERY_MIRACLES.feast,
+  heal: RAID_RECOVERY_MIRACLES.heal,
+  goblet: RAID_RECOVERY_MIRACLES.goblet
+});
+const ABUNDANCE_FOOD_ACTIONS = new Set(["農作業", "狩猟", "漁", "採集", "醸造"]);
+const ABUNDANCE_MATERIAL_ACTIONS = new Set(["伐採", "採集"]);
 const RAID_HEALABLE_BODY_TRAITS = new Set(["負傷", "重体", "疲労", "過労", "飢餓", "疫病", "産褥", "凍え"]);
 const RAID_HEALABLE_MIND_TRAITS = new Set(["心労", "抑鬱", "失望", "絶望"]);
 const RAID_HEALABLE_BLOCK_REASONS = new Set(["体力尽き", "負傷", "重体", "過労", "疫病", "産褥", "抑鬱"]);
@@ -678,23 +1016,10 @@ function closeMiracleModalIfOpen(api, frame) {
   if (modal && modal.style.display !== "none") api.closeMiracleModal();
 }
 
-function getRaidRecoveryMiracleCost(miracle, village) {
-  if (miracle.id === RAID_RECOVERY_MIRACLES.feast.id) {
-    const cost = village.villagers.length * 15;
-    return { mana: cost, funds: cost };
-  }
-  if (miracle.id === RAID_RECOVERY_MIRACLES.revel.id) {
-    const cost = village.villagers.length * 30;
-    return { mana: cost, funds: cost };
-  }
-  if (miracle.id === RAID_RECOVERY_MIRACLES.heal.id) return { mana: 80, funds: 0 };
-  return { mana: 50, funds: 0 };
-}
-
-async function tryUseRaidRecoveryMiracle({ api, frame }, miracle, target = null) {
+async function tryPerformMiracle({ api, frame }, miracle, target = null) {
   const village = api.getVillage();
-  const before = summarizeRaidPreparation(village);
-  const cost = getRaidRecoveryMiracleCost(miracle, village);
+  const manaBefore = Number(village.mana) || 0;
+  const fundsBefore = Number(village.funds) || 0;
   api.openMiracleModal();
   const select = frame.contentDocument.getElementById("miracleSelect");
   if (!select) {
@@ -719,16 +1044,92 @@ async function tryUseRaidRecoveryMiracle({ api, frame }, miracle, target = null)
   api.performMiracle();
   await drainKnownModals(frame);
   closeMiracleModalIfOpen(api, frame);
-  const after = summarizeRaidPreparation(village);
+  const manaSpent = Math.max(0, manaBefore - (Number(village.mana) || 0));
+  const fundsSpent = Math.max(0, fundsBefore - (Number(village.funds) || 0));
+  if (manaSpent === 0 && fundsSpent === 0) return null;
   return {
     id: miracle.id,
     name: miracle.label,
     target: target?.name || null,
-    manaSpent: cost.mana,
-    fundsSpent: cost.funds,
-    before,
-    after
+    manaSpent,
+    fundsSpent,
+    manaBefore,
+    manaAfter: Number(village.mana) || 0
   };
+}
+
+async function tryUseRaidRecoveryMiracle(context, miracle, target = null) {
+  const village = context.api.getVillage();
+  const before = summarizeRaidPreparation(village);
+  const used = await tryPerformMiracle(context, miracle, target);
+  return used ? { ...used, before, after: summarizeRaidPreparation(village) } : null;
+}
+
+function canSpendSurplusMana(village, cost, reserve, fundsCost = 0) {
+  return (Number(village.mana) || 0) - cost >= reserve &&
+    (Number(village.funds) || 0) >= fundsCost;
+}
+
+function recoveryNeedScore(person, traitKey, traits, statKey) {
+  return (hasAnyTrait(person, traitKey, traits) ? 100 : 0) +
+    Math.max(0, 100 - (Number(person[statKey]) || 0));
+}
+
+async function useRoutineRecoveryMiracle(context, reserve) {
+  const village = context.api.getVillage();
+  const villagers = village.villagers.filter(person => !isSaltPillar(person));
+  const bodyTarget = villagers
+    .filter(person => hasAnyTrait(person, "bodyTraits", RAID_HEALABLE_BODY_TRAITS) || (Number(person.hp) || 0) < 40)
+    .sort((a, b) => recoveryNeedScore(b, "bodyTraits", RAID_HEALABLE_BODY_TRAITS, "hp") -
+      recoveryNeedScore(a, "bodyTraits", RAID_HEALABLE_BODY_TRAITS, "hp"))[0];
+  const mindTarget = villagers
+    .filter(person => hasAnyTrait(person, "mindTraits", RAID_HEALABLE_MIND_TRAITS) || (Number(person.mp) || 0) < 35)
+    .sort((a, b) => recoveryNeedScore(b, "mindTraits", RAID_HEALABLE_MIND_TRAITS, "mp") -
+      recoveryNeedScore(a, "mindTraits", RAID_HEALABLE_MIND_TRAITS, "mp"))[0];
+
+  if (bodyTarget && canSpendSurplusMana(village, 80, reserve)) {
+    const used = await tryPerformMiracle(context, ROUTINE_MIRACLES.heal, bodyTarget);
+    if (used) return used;
+  }
+  if (mindTarget && canSpendSurplusMana(village, 50, reserve)) {
+    const used = await tryPerformMiracle(context, ROUTINE_MIRACLES.goblet, mindTarget);
+    if (used) return used;
+  }
+
+  const strained = villagers.filter(person =>
+    (Number(person.hp) || 0) < 60 || (Number(person.mp) || 0) < 50
+  );
+  const feastCost = village.villagers.length * 15;
+  if (strained.length >= 3 && canSpendSurplusMana(village, feastCost, reserve, feastCost)) {
+    return tryPerformMiracle(context, ROUTINE_MIRACLES.feast);
+  }
+  return null;
+}
+
+async function useRoutineFoodMiracle(context, reserve, foodMonths) {
+  const village = context.api.getVillage();
+  const snapshot = createVillageSnapshot(village);
+  if (snapshot.stability.foodConsumption === 0 ||
+      village.food >= snapshot.stability.foodConsumption * foodMonths ||
+      !canSpendSurplusMana(village, ROUTINE_MIRACLES.mana.mana, reserve)) {
+    return null;
+  }
+  return tryPerformMiracle(context, ROUTINE_MIRACLES.mana);
+}
+
+async function useRoutineAbundanceMiracle(context, reserve) {
+  const village = context.api.getVillage();
+  const snapshot = createVillageSnapshot(village);
+  const foodWorkers = village.villagers.filter(person => ABUNDANCE_FOOD_ACTIONS.has(person.action)).length;
+  const materialWorkers = village.villagers.filter(person => ABUNDANCE_MATERIAL_ACTIONS.has(person.action)).length;
+  const needsFoodBoost = snapshot.stability.foodConsumption > 0 &&
+    village.food < snapshot.stability.foodConsumption * 4 && foodWorkers >= 2;
+  const needsMaterialBoost = village.materials < snapshot.stability.winterMaterialsTarget && materialWorkers >= 2;
+  if (village.villageTraits.includes("豊穣") || (!needsFoodBoost && !needsMaterialBoost) ||
+      !canSpendSurplusMana(village, ROUTINE_MIRACLES.abundance.mana, reserve)) {
+    return null;
+  }
+  return tryPerformMiracle(context, ROUTINE_MIRACLES.abundance);
 }
 
 async function useRaidPreparationMiracles(context) {
@@ -1049,7 +1450,8 @@ const PROGRESSION_MODELS = Object.freeze({
     shortageWorkerShare: 0.5,
     delayShortageWarnings: true,
     buildingFoodMonths: 3,
-    unnecessaryBuildMonths: new Set([6, 18, 30])
+    unnecessaryBuildMonths: new Set([6, 18, 30]),
+    surplusManaReserve: 300
   },
   standard: {
     version: STANDARD_PLAYER_MODEL_VERSION,
@@ -1059,7 +1461,8 @@ const PROGRESSION_MODELS = Object.freeze({
     delayShortageWarnings: false,
     buildingFoodMonths: 3,
     unnecessaryBuildMonths: new Set(),
-    raidPreparation: true
+    raidPreparation: true,
+    surplusManaReserve: 300
   },
   expert: {
     version: EXPERT_PLAYER_MODEL_VERSION,
@@ -1069,8 +1472,9 @@ const PROGRESSION_MODELS = Object.freeze({
     delayShortageWarnings: false,
     buildingFoodMonths: 3.5,
     unnecessaryBuildMonths: new Set(),
-    directedRecovery: { hpThreshold: 50, mpThreshold: 40 },
-    raidPreparation: true
+    directedRecovery: { hpThreshold: 35, mpThreshold: 25, maxAssignments: 1 },
+    raidPreparation: true,
+    surplusManaReserve: 600
   }
 });
 
@@ -1081,6 +1485,7 @@ async function runProgression({ api, frame }, modelId) {
   const initial = createVillageSnapshot(village);
   const checkpoints = [];
   const raidPreparations = [];
+  const routineMiracles = [];
   const crisisCheckpoints = [];
   const economicBreakdowns = [];
   const populationChanges = [];
@@ -1104,6 +1509,12 @@ async function runProgression({ api, frame }, modelId) {
     raidHealingMiracles: 0,
     raidHealingManaSpent: 0,
     raidHealingFundsSpent: 0,
+    routineMiracles: 0,
+    routineHealingMiracles: 0,
+    routineManaMiracles: 0,
+    routineAbundanceMiracles: 0,
+    routineMiracleManaSpent: 0,
+    routineMiracleFundsSpent: 0,
     despairDepartures: 0,
     crisisCheckpoints: 0,
     despairDepartureCrisisPoints: 0,
@@ -1142,7 +1553,23 @@ async function runProgression({ api, frame }, modelId) {
       counters.raids++;
       if (outcome) counters.raidOutcomes[outcome]++;
     } else {
+      const recordRoutineMiracle = (used, category) => {
+        if (!used) return;
+        routineMiracles.push({ elapsedMonths, category, ...used });
+        counters.routineMiracles++;
+        counters.routineMiracleManaSpent += used.manaSpent;
+        counters.routineMiracleFundsSpent += used.fundsSpent;
+        counters[category]++;
+      };
+      recordRoutineMiracle(
+        await useRoutineRecoveryMiracle({ api, frame }, model.surplusManaReserve),
+        "routineHealingMiracles"
+      );
       api.autoAssignJobs();
+      recordRoutineMiracle(
+        await useRoutineFoodMiracle({ api, frame }, model.surplusManaReserve, model.shortageFoodMonths),
+        "routineManaMiracles"
+      );
       const warnings = getVisibleShortageWarnings(village, model.shortageFoodMonths);
       const shouldCorrect = !model.delayShortageWarnings ||
         (warnings.food && previousWarnings.food) ||
@@ -1156,7 +1583,7 @@ async function runProgression({ api, frame }, modelId) {
         counters.delayedWarnings++;
       }
       previousWarnings = warnings;
-      if (model.directedRecovery) {
+      if (model.directedRecovery && !warnings.food && !warnings.materials) {
         counters.recoveryAssignments += assignExpertRecovery(village, model.directedRecovery);
       }
       let defensePriority = false;
@@ -1180,6 +1607,10 @@ async function runProgression({ api, frame }, modelId) {
           assignedTrapMakers: null
         });
       }
+      recordRoutineMiracle(
+        await useRoutineAbundanceMiracle({ api, frame }, model.surplusManaReserve),
+        "routineAbundanceMiracles"
+      );
       if (!defensePriority && await tryRecruitUsefulVisitor({ api, frame })) counters.recruitAttempts++;
       const unnecessaryBuild = model.unnecessaryBuildMonths.has(elapsedMonths);
       const built = await maintainOrBuild({ api, frame }, {
@@ -1227,6 +1658,7 @@ async function runProgression({ api, frame }, modelId) {
     checkpoints,
     counters,
     raidPreparations,
+    routineMiracles,
     crisisCheckpoints,
     economicBreakdowns,
     populationChanges,
@@ -1240,6 +1672,14 @@ function createProgressionScenario(modelId) {
     id: `normal-${modelId}-36`,
     name: `通常進行：${model.label}・36か月`,
     run: context => runProgression(context, modelId)
+  };
+}
+
+function createRaidStressScenario(scale, preparation) {
+  return {
+    id: `raid-stress-${scale.id}-${preparation.id}`,
+    name: `規模別襲撃ストレス：${scale.label}・${preparation.label}`,
+    run: context => runRaidStress(context, scale, preparation)
   };
 }
 
@@ -1343,6 +1783,9 @@ const scenarioList = [
     }
   },
   ...Object.keys(PROGRESSION_MODELS).map(createProgressionScenario),
+  ...RAID_STRESS_SCALES.flatMap(scale =>
+    Object.values(RAID_STRESS_PREPARATIONS).map(preparation => createRaidStressScenario(scale, preparation))
+  ),
   ...UPPER_RAIDS.flatMap(raid => UPPER_RAID_MONTHS.map(month => createUpperRaidScenario(raid, month, false))),
   ...UPPER_RAIDS.flatMap(raid => UPPER_RAID_MONTHS.map(month => createUpperRaidScenario(raid, month, true))),
   ...UPPER_RAIDS.map(createDirectedRecoveryScenario),

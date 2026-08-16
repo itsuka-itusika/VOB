@@ -4,7 +4,7 @@ import {
   isForcedHealingAction
 } from "../../js/util.js";
 
-export const BALANCE_RESULT_SCHEMA_VERSION = 4;
+export const BALANCE_RESULT_SCHEMA_VERSION = 6;
 
 const CHILD_BODY_TRAITS = new Set(["赤子", "幼児", "少年", "少女"]);
 
@@ -119,6 +119,98 @@ export function createVillageSnapshot(village) {
   };
 }
 
+function summarizeRaidStressResults(completed) {
+  const moduleResults = completed.flatMap(result => asArray(result.raidStress?.modules));
+  if (moduleResults.length === 0) return null;
+  const groups = new Map();
+  moduleResults.forEach(module => {
+    if (!groups.has(module.raidId)) groups.set(module.raidId, []);
+    groups.get(module.raidId).push(module);
+  });
+  return {
+    scaleId: completed.find(result => result.raidStress)?.raidStress?.scaleId || null,
+    scaleLabel: completed.find(result => result.raidStress)?.raidStress?.scaleLabel || null,
+    preparation: completed.find(result => result.raidStress)?.raidStress?.preparation || null,
+    preparationLabel: completed.find(result => result.raidStress)?.raidStress?.preparationLabel || null,
+    modules: Array.from(groups.values()).map(values => {
+      const outcomeCounts = values.reduce((counts, value) => {
+        counts[value.outcome] = (counts[value.outcome] || 0) + 1;
+        return counts;
+      }, { complete: 0, partial: 0, failure: 0 });
+      const totalEffectiveDamage = values.reduce(
+        (sum, value) => sum + (Number(value.damageContribution?.total) || 0),
+        0
+      );
+      const roles = Object.fromEntries(["front", "middle", "rear"].map(role => {
+        const effectiveDamage = values.reduce(
+          (sum, value) => sum + (Number(value.damageContribution?.roles?.[role]?.effectiveDamage) || 0),
+          0
+        );
+        return [role, {
+          effectiveDamage,
+          damageShare: totalEffectiveDamage > 0 ? effectiveDamage / totalEffectiveDamage : 0,
+          averageHpLost: values.reduce(
+            (sum, value) => sum + (Number(value.damageTaken?.roles?.[role]?.hpLost) || 0),
+            0
+          ) / values.length,
+          averageDown: values.reduce(
+            (sum, value) => sum + (Number(value.damageTaken?.roles?.[role]?.down) || 0),
+            0
+          ) / values.length
+        }];
+      }));
+      return {
+        raidId: values[0].raidId,
+        raidName: values[0].raidName,
+        tableWeight: values[0].tableWeight,
+        trials: values.length,
+        outcomes: outcomeCounts,
+        outcomeRates: Object.fromEntries(Object.entries(outcomeCounts).map(([key, count]) => [
+          key,
+          count / values.length
+        ])),
+        averageEnemyCount: values.reduce((sum, value) => sum + (Number(value.enemyCount) || 0), 0) / values.length,
+        averageTurns: values.reduce((sum, value) => sum + (Number(value.turns) || 0), 0) / values.length,
+        averageEnemyRemainingHp: values.reduce(
+          (sum, value) => sum + (Number(value.enemyRemainingHp) || 0),
+          0
+        ) / values.length,
+        damageContribution: {
+          totalEffectiveDamage,
+          roles
+        },
+        damageTaken: {
+          averageTotalHpLost: values.reduce(
+            (sum, value) => sum + (Number(value.damageTaken?.totalHpLost) || 0),
+            0
+          ) / values.length
+        },
+        casualties: {
+          averageInjured: values.reduce(
+            (sum, value) => sum + (Number(value.casualties?.injured) || 0),
+            0
+          ) / values.length,
+          averageCritical: values.reduce(
+            (sum, value) => sum + (Number(value.casualties?.critical) || 0),
+            0
+          ) / values.length,
+          averageDying: values.reduce(
+            (sum, value) => sum + (Number(value.casualties?.dying) || 0),
+            0
+          ) / values.length
+        },
+        losses: {
+          averageFood: values.reduce((sum, value) => sum + (Number(value.losses?.food) || 0), 0) / values.length,
+          averageMaterials: values.reduce((sum, value) => sum + (Number(value.losses?.materials) || 0), 0) / values.length,
+          averageFunds: values.reduce((sum, value) => sum + (Number(value.losses?.funds) || 0), 0) / values.length,
+          averageSecurity: values.reduce((sum, value) => sum + (Number(value.losses?.security) || 0), 0) / values.length,
+          damagedBuildingTrials: values.filter(value => (Number(value.losses?.damagedBuildings) || 0) > 0).length
+        }
+      };
+    })
+  };
+}
+
 export function summarizeBatch(results) {
   const completed = results.filter(result => result.status === "completed");
   const errors = results.filter(result => result.status !== "completed");
@@ -145,6 +237,28 @@ export function summarizeBatch(results) {
     departures: 0,
     otherJoins: 0
   });
+  const miracleUsage = completed.reduce((summary, result) => {
+    const counters = result.counters || {};
+    summary.raidHealingUses += Number(counters.raidHealingMiracles) || 0;
+    summary.raidHealingManaSpent += Number(counters.raidHealingManaSpent) || 0;
+    summary.routineUses += Number(counters.routineMiracles) || 0;
+    summary.routineHealingUses += Number(counters.routineHealingMiracles) || 0;
+    summary.routineManaUses += Number(counters.routineManaMiracles) || 0;
+    summary.routineAbundanceUses += Number(counters.routineAbundanceMiracles) || 0;
+    summary.routineManaSpent += Number(counters.routineMiracleManaSpent) || 0;
+    summary.routineFundsSpent += Number(counters.routineMiracleFundsSpent) || 0;
+    return summary;
+  }, {
+    raidHealingUses: 0,
+    raidHealingManaSpent: 0,
+    routineUses: 0,
+    routineHealingUses: 0,
+    routineManaUses: 0,
+    routineAbundanceUses: 0,
+    routineManaSpent: 0,
+    routineFundsSpent: 0
+  });
+  const finalMana = completed.map(result => Number(result.final?.resources?.mana) || 0);
   return {
     requested: results.length,
     completed: completed.length,
@@ -161,7 +275,16 @@ export function summarizeBatch(results) {
       return counts;
     }, {}),
     populationChanges,
+    miracleUsage,
+    mana: {
+      averageFinal: finalMana.length > 0
+        ? finalMana.reduce((sum, value) => sum + value, 0) / finalMana.length
+        : null,
+      minimumFinal: finalMana.length > 0 ? Math.min(...finalMana) : null,
+      maximumFinal: finalMana.length > 0 ? Math.max(...finalMana) : null
+    },
     raidOutcomes: outcomes,
+    raidStress: summarizeRaidStressResults(completed),
     recovery: {
       eligible: completed.filter(result => result.recovery?.eligible).length,
       recovered: recovered.length,
