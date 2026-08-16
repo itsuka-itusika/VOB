@@ -28,6 +28,11 @@ import {
   MERCHANT_SECRET_TREASURE_PRICE,
   showSecretTreasureEventModals
 } from "./secretTreasureEvents.js";
+import {
+  hasAcceptedAdventurerQuest,
+  isAdventurerVisitor,
+  openAdventurerQuestModal
+} from "./adventurerQuests.js";
 
 const DEFAULT_PORTRAIT_PATH = getPortraitAssetPath(DEFAULT_PORTRAIT_KEY);
 const SEDUCTION_MIN_LUST = 18;
@@ -160,6 +165,7 @@ export function openConversationModal(character) {
   const isUnderRaid = theVillage.villageTraits.includes("襲撃中");
   const isVisitor = character.mindTraits && character.mindTraits.includes("訪問者");
   const hasFailedRecruitment = character.mindTraits && character.mindTraits.includes("勧誘失敗");
+  const hasAcceptedQuest = hasAcceptedAdventurerQuest(character);
   const isCaptiveCharacter = isCaptive(character, theVillage);
   const hasFailedCaptiveSocial = character.mindTraits && character.mindTraits.includes(CAPTIVE_FAILED_TRAIT);
 
@@ -205,9 +211,12 @@ export function openConversationModal(character) {
   } else if (isVisitor) {
     // 訪問者で、かつ勧誘失敗フラグがない場合は勧誘と誘惑ボタンを表示
     const buttons = [];
-    if (!hasFailedRecruitment) {
+    if (!hasFailedRecruitment && !hasAcceptedQuest) {
       buttons.push('<button id="recruitButton">勧誘する</button>');
       buttons.push('<button id="seduceButton">誘惑する</button>');
+    }
+    if (isAdventurerVisitor(character) && !hasAcceptedQuest) {
+      buttons.push('<button id="adventurerQuestButton">クエスト依頼</button>');
     }
     if (isMerchantVisitor(character)) {
       ensureMerchantStock(character);
@@ -229,6 +238,18 @@ export function openConversationModal(character) {
     if (seduceButton) {
       seduceButton.addEventListener("click", () => {
         openSeductionModal(character);
+      });
+    }
+
+    const adventurerQuestButton = document.getElementById("adventurerQuestButton");
+    if (adventurerQuestButton) {
+      adventurerQuestButton.addEventListener("click", () => {
+        openAdventurerQuestModal(theVillage, character, {
+          onAccepted: () => {
+            closeConversationModal();
+            updateUI(theVillage);
+          }
+        });
       });
     }
 

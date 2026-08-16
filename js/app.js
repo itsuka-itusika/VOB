@@ -120,6 +120,9 @@ function getExistingNames() {
     ...(Array.isArray(theVillage.villagers) ? theVillage.villagers : []),
     ...getCaptives(theVillage),
     ...(Array.isArray(theVillage.visitors) ? theVillage.visitors : []),
+    ...(Array.isArray(theVillage.activeAdventurerQuests)
+      ? theVillage.activeAdventurerQuests.map(quest => quest?.adventurer).filter(Boolean)
+      : []),
     ...(Array.isArray(theVillage.raidEnemies) ? theVillage.raidEnemies : [])
   ].map(person => person.name).filter(Boolean);
 }

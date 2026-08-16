@@ -46,6 +46,8 @@ const TURN_BLOCKING_MODAL_SELECTORS = [
   "#apocalypseStartModal",
   "#apocalypseEventModal",
   "#secretTreasureEventModal",
+  "#adventurerQuestModal",
+  "#adventurerQuestResultModal",
   ".effect-result-modal",
   "#recruitmentModal",
   "#seductionModal",

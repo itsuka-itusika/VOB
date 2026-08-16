@@ -244,6 +244,10 @@ function convertVillageToObject(village) {
 
     // 訪問者情報を追加
     visitors: village.visitors.map(vill => convertVillagerToObject(vill)),
+    activeAdventurerQuests: (village.activeAdventurerQuests || []).map(quest => ({
+      ...quest,
+      adventurer: convertVillagerToObject(quest.adventurer)
+    })),
     captives: (village.captives || []).map(vill => convertVillagerToObject(vill))
   };
 }
@@ -323,6 +327,9 @@ function convertVillagerToObject(vill) {
     pastPortraitFiles: normalizePastPortraitFiles(vill.pastPortraitFiles),
     ...(vill.rareVisitorType ? { rareVisitorType: vill.rareVisitorType } : {}),
     merchantStock: vill.merchantStock ? { ...vill.merchantStock } : undefined,
+    adventurerQuestOffers: Array.isArray(vill.adventurerQuestOffers)
+      ? JSON.parse(JSON.stringify(vill.adventurerQuestOffers))
+      : null,
     pregnancy: normalizePregnancyState(vill.pregnancy),
     postpartumMonths: vill.postpartumMonths || 0,
     ares: normalizeFiniteNumber(vill.ares, 0),
@@ -483,6 +490,14 @@ function convertObjectToVillage(dataObj) {
   if (Array.isArray(dataObj.visitors)) {
     v.visitors = dataObj.visitors.map(o => convertObjectToVillager(o));
   }
+  if (Array.isArray(dataObj.activeAdventurerQuests)) {
+    v.activeAdventurerQuests = dataObj.activeAdventurerQuests
+      .filter(quest => quest?.adventurer)
+      .map(quest => ({
+        ...quest,
+        adventurer: convertObjectToVillager(quest.adventurer)
+      }));
+  }
   if (Array.isArray(dataObj.captives)) {
     v.captives = dataObj.captives.map(o => normalizeCaptive(convertObjectToVillager(o)));
     v.captives.forEach(captive => ensureCaptiveReleaseDeadline(v, captive));
@@ -496,7 +511,8 @@ function convertObjectToVillage(dataObj) {
     const cause = event.tags.find(tag => tag === "重体" || tag === "老衰") || "";
     event.people.forEach(name => criticalCauseByName.set(name, cause));
   });
-  [...v.villagers, ...v.visitors, ...v.captives, ...v.raidEnemies].forEach(person => {
+  const questAdventurers = v.activeAdventurerQuests.map(quest => quest.adventurer).filter(Boolean);
+  [...v.villagers, ...v.visitors, ...v.captives, ...v.raidEnemies, ...questAdventurers].forEach(person => {
     if (criticalNames.has(person.name)) person.hasBeenCritical = true;
     if (!person.criticalCause && person.bodyTraits.includes("危篤")) {
       person.criticalCause = criticalCauseByName.get(person.name) || "";
@@ -591,6 +607,9 @@ function convertObjectToVillager(obj) {
   if (obj.merchantStock) {
     vill.merchantStock = { ...obj.merchantStock };
   }
+  vill.adventurerQuestOffers = Array.isArray(obj.adventurerQuestOffers)
+    ? JSON.parse(JSON.stringify(obj.adventurerQuestOffers))
+    : null;
   vill.pregnancy = normalizePregnancyState(obj.pregnancy);
   vill.postpartumMonths = obj.postpartumMonths || 0;
   vill.ares = normalizeFiniteNumber(obj.ares, 0);

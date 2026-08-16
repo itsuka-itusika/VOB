@@ -523,10 +523,14 @@ export function grantSecretTreasure(village, id) {
 }
 
 export function grantRandomSecretTreasure(village) {
-  const candidates = SECRET_TREASURES.filter(definition => !DISABLED_RANDOM_SECRET_TREASURE_IDS.has(definition.id));
-  const definition = randFrom(candidates);
+  const [definition] = pickRandomSecretTreasureDefinitions(1);
   if (!definition) return null;
   return grantSecretTreasure(village, definition.id);
+}
+
+export function pickRandomSecretTreasureDefinitions(count = 1) {
+  const candidates = SECRET_TREASURES.filter(definition => !DISABLED_RANDOM_SECRET_TREASURE_IDS.has(definition.id));
+  return shuffled(candidates).slice(0, Math.max(0, Math.floor(Number(count) || 0)));
 }
 
 function ensureSecretTreasures(village) {

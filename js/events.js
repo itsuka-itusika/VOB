@@ -50,6 +50,7 @@ import {
   processCaptiveActionRecovery,
   processCaptiveReleaseDeadlines
 } from "./captives.js";
+import { processAdventurerQuestReturns, showAdventurerQuestResultModals } from "./adventurerQuests.js";
 
 const OPENING_RAID_GRACE_YEAR = 1195;
 const OPENING_RAID_GRACE_LAST_MONTH = 6;
@@ -398,6 +399,8 @@ export function runMonthStartPhase(village) {
   tryTriggerHeresyInquisition(village);
   if (!apocalypseActive && !simulationOptions.suppressRaids) doRaidStartCheck(village);
   tryTriggerBacchusGoldenStatueEvent(village);
+  showAdventurerQuestResultModals(village.pendingAdventurerQuestReports);
+  village.pendingAdventurerQuestReports = [];
 }
 
 function getVisitorLimit(village) {
@@ -869,6 +872,7 @@ export function doMonthStartProcess(v, simulationOptions = {}) {
   });
   // 既存の訪問者をクリア
   v.visitors = [];
+  v.pendingAdventurerQuestReports = processAdventurerQuestReturns(v);
 
   const visitorLimit = getVisitorLimit(v);
   v.visitorLimit = visitorLimit;
@@ -879,7 +883,10 @@ export function doMonthStartProcess(v, simulationOptions = {}) {
       if (Math.random() < 0.5) {
         let visitor = createRandomVisitor([
           ...v.villagers.map(person => person.name),
-          ...v.visitors.map(person => person.name)
+          ...v.visitors.map(person => person.name),
+          ...(Array.isArray(v.activeAdventurerQuests)
+            ? v.activeAdventurerQuests.map(quest => quest?.adventurer?.name).filter(Boolean)
+            : [])
         ], null, v);
         v.visitors.push(visitor);
         v.log(`訪問者 ${visitor.name} が村を訪れました`);

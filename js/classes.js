@@ -71,6 +71,7 @@ export class Village {
     // 訪問者配列を追加
     this.visitors = [];
     this.visitorLimit = 1;
+    this.activeAdventurerQuests = [];
 
     // 捕虜配列
     this.captives = [];
@@ -166,6 +167,7 @@ export class Villager {
     this.hasBeenCritical = false;
     this.criticalCause = "";
     this.pendingEpidemicInfection = false;
+    this.adventurerQuestOffers = null;
 
     /** 行動割り当て関連 */
     // preferredAction は通常時の復帰先。job は旧セーブ・旧コード互換の別名として同期する。

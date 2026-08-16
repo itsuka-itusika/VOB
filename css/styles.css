@@ -1543,6 +1543,87 @@ section h2 {
   text-align: right;
 }
 
+.adventurer-quest-modal {
+  width: min(840px, calc(100vw - 32px));
+}
+
+.adventurer-quest-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.adventurer-quest-card {
+  padding: 12px;
+  border: 1px solid #b99a68;
+  border-radius: 5px;
+  background: #fffaf0;
+}
+
+.adventurer-quest-card.is-disabled {
+  color: #777;
+  border-color: #bbb;
+  background: #e7e7e7;
+}
+
+.adventurer-quest-card h4,
+.adventurer-quest-card p {
+  margin: 0 0 8px;
+}
+
+.adventurer-quest-card dl {
+  margin: 8px 0;
+}
+
+.adventurer-quest-card dl div {
+  display: grid;
+  grid-template-columns: 7em minmax(0, 1fr);
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.adventurer-quest-card dt {
+  font-weight: bold;
+}
+
+.adventurer-quest-card dd {
+  margin: 0;
+}
+
+.adventurer-quest-card button {
+  min-height: 36px;
+}
+
+.adventurer-quest-requirement,
+.adventurer-quest-disabled-reason {
+  color: #8a2a2a;
+  font-weight: bold;
+}
+
+.adventurer-quest-result-overlay {
+  z-index: 2800;
+}
+
+.adventurer-quest-result-modal {
+  width: min(560px, calc(100vw - 32px));
+  z-index: 2801;
+}
+
+.adventurer-quest-report-person {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.adventurer-quest-report-person img {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  background: #eee;
+}
+
 .heresy-inquisition-modal {
   width: min(640px, calc(100vw - 32px));
   border-color: #5b1f1f;
@@ -3392,6 +3473,15 @@ body.mobile-mode .event-modal {
 }
 body.mobile-mode .apocalypse-event-image {
   max-height: min(48vh, 220px);
+}
+body.mobile-mode .adventurer-quest-list {
+  gap: 8px;
+}
+body.mobile-mode .adventurer-quest-card {
+  padding: 8px;
+}
+body.mobile-mode .adventurer-quest-card dl div {
+  grid-template-columns: 6.5em minmax(0, 1fr);
 }
 body.mobile-mode .heresy-inquisition-body {
   padding: 4px;
