@@ -4,6 +4,7 @@ import { installFrameControls } from "./modalDriver.js?v=20260818-balance-25";
 
 const RUNNER_VERSION = 2;
 const API_WAIT_MS = 10000;
+const GAME_ASSET_REVISION = "20260818-relationship-events-5";
 const timerCapText = new URLSearchParams(window.location.search).get("timerCapMs");
 const timerCapParam = Number(timerCapText);
 const TIMER_CAP_MS = timerCapText !== null && Number.isFinite(timerCapParam) && timerCapParam >= 0
@@ -63,6 +64,7 @@ function createFrame(seed) {
   const url = new URL("../../index.html", window.location.href);
   url.searchParams.set("balanceMode", "1");
   url.searchParams.set("balanceSeed", String(seed));
+  url.searchParams.set("balanceRevision", GAME_ASSET_REVISION);
   frame.src = url.href;
   return frame;
 }

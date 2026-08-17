@@ -111,7 +111,7 @@ function isLoverCandidate(a, b) {
 function getLoverSuccessRate(a, b) {
   let pA=Math.min(100, (Number(a.sexdr) || 0)*4);
   let pB=Math.min(100, (Number(b.sexdr) || 0)*4);
-  return clampValue((pA*pB)/10000, 0.1, 0.5);
+  return clampValue((pA*pB)/10000, 0.2, 1);
 }
 
 function hasMindTrait(person, trait) {
@@ -146,7 +146,7 @@ export function doMarriageCheck(village) {
 
   let rA = Math.min(100, (a.ind+a.eth)*2);
   let rB = Math.min(100, (b.ind+b.eth)*2);
-  let sc = (rA*rB)/10000;
+  let sc = clampValue((rA*rB)/10000, 0.2, 1);
 
   if (Math.random()<=sc) {
     removeRelationship(a,`恋人:${b.name}`);

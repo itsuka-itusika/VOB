@@ -298,7 +298,7 @@ export class RandomEvents {
    * グッドイベント(24%)
    */
   static doGoodEvent(v) {
-    let ev = this.randChoice(EVENT_POOLS.good);
+    let ev = this.chooseGoodEvent();
 
     switch (ev) {
       case "wolfChild": {
@@ -594,6 +594,25 @@ export class RandomEvents {
     return ev;
   }
 
+  static chooseGoodEvent() {
+    const events = EVENT_POOLS.good;
+    const otherEvents = events.filter(key => key !== "lover");
+    if (!events.includes("lover") || otherEvents.length === 0) {
+      return this.randChoice(events);
+    }
+
+    // 通常の均等抽選（1 / events.length）に対し、「恋の気配」だけを正確に2倍にする。
+    const loverChance = Math.min(1, 2 / events.length);
+    const roll = Math.random();
+    if (roll < loverChance) return "lover";
+
+    const otherIndex = Math.min(
+      otherEvents.length - 1,
+      Math.floor(((roll - loverChance) / (1 - loverChance)) * otherEvents.length)
+    );
+    return otherEvents[otherIndex];
+  }
+
   static getCurrentSeason(village) {
     const traits = Array.isArray(village?.villageTraits) ? village.villageTraits : [];
     const season = ["春", "夏", "秋", "冬"].find(value => traits.includes(value));
@@ -750,16 +769,40 @@ export class RandomEvents {
           v.security = clampValue(v.security - 12, 0, 100);
 
           const friendship = adjustMutualFriendship(a, b, -30);
-          if (friendship <= -31) {
+          let friendshipLoss = 30;
+          if (friendship <= -1) {
             this.addRelationship(a, `天敵:${b.name}`);
             this.addRelationship(b, `天敵:${a.name}`);
+            adjustMutualFriendship(a, b, -30);
+            friendshipLoss += 30;
             recordSocialRelationHistory(v, a, b, "天敵");
           }
 
-          v.log(`喧嘩イベント:${a.name}と${b.name}は殴り合いの大喧嘩をした！ 体力-20,治安-12,好感度-30`);
+          v.log(`喧嘩イベント:${a.name}と${b.name}は殴り合いの大喧嘩をした！ 体力-20,治安-12,好感度-${friendshipLoss}`);
         } else {
           return null;
         }
+        break;
+      }
+      case "loverArgument": {
+        const villagers = getActiveVillagers(v);
+        const pairs = [];
+        villagers.forEach((a, index) => {
+          villagers.slice(index + 1).forEach(b => {
+            if (this.hasMutualRelationship(a, b, "恋人")) {
+              pairs.push([a, b]);
+            }
+          });
+        });
+        if (pairs.length === 0) {
+          return null;
+        }
+
+        const [a, b] = this.randChoice(pairs);
+        adjustMutualFriendship(a, b, -20);
+        this.addForcedSpeaker(a);
+        this.addForcedSpeaker(b);
+        v.log(`痴話喧嘩:${a.name}と${b.name}は言葉をぶつけ合った。好感度-20`);
         break;
       }
       case "argument": {
