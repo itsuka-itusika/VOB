@@ -55,7 +55,7 @@ const TEMP_BODY_TRAIT_EFFECTS = Object.freeze({
   "疫病": { mul: { str: 0.5, vit: 0.5, dex: 0.5 } },
   "臨月": { mul: { str: 0.5, vit: 0.5 } },
   "産褥": { mul: { str: 0.5, vit: 0.5 } },
-  [YOUNG_WOLF_TRAIT]: { mul: Object.freeze(Object.fromEntries(ABILITY_STATS.map(stat => [stat, 0.25]))) }
+  [YOUNG_WOLF_TRAIT]: { mul: Object.freeze(Object.fromEntries(PHYSICAL_ABILITY_STATS.map(stat => [stat, 0.25]))) }
 });
 
 const TEMP_MIND_TRAIT_EFFECTS = Object.freeze({

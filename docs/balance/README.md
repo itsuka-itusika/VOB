@@ -25,6 +25,7 @@
 - [measurement-foundation-plan.md](measurement-foundation-plan.md): 最小測定基盤の段階的な実装計画。
 - [baseline-results.md](baseline-results.md): 現行実装の予備調査と将来の基準測定結果。
 - [raid-stress-results.md](raid-stress-results.md): 6規模×万全・普通の襲撃モジュール別ストレス結果。
+- [relationship-simulation-results.md](relationship-simulation-results.md): 標準プレイヤー50村・60か月の好感度と人間関係イベント結果。
 - [experiment-log.md](experiment-log.md): 変更候補と比較結果の履歴。
 - [unresolved-questions.md](unresolved-questions.md): 未決定事項と測定上の障害。
 

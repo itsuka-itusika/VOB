@@ -4,7 +4,7 @@ import {
   isForcedHealingAction
 } from "../../js/util.js";
 
-export const BALANCE_RESULT_SCHEMA_VERSION = 6;
+export const BALANCE_RESULT_SCHEMA_VERSION = 7;
 
 const CHILD_BODY_TRAITS = new Set(["赤子", "幼児", "少年", "少女"]);
 
@@ -211,6 +211,102 @@ function summarizeRaidStressResults(completed) {
   };
 }
 
+function median(values) {
+  if (values.length === 0) return null;
+  const sorted = values.slice().sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? (sorted[middle - 1] + sorted[middle]) / 2
+    : sorted[middle];
+}
+
+function summarizeRelationshipResults(completed) {
+  const tracked = completed.filter(result => result.relationships);
+  if (tracked.length === 0) return null;
+  const categories = ["bestFriend", "nemesis", "lover", "breakup", "marriage", "birth"];
+  const eventSummary = Object.fromEntries(categories.map(category => {
+    const counts = tracked.map(result =>
+      asArray(result.relationships?.events).filter(event => event.category === category).length
+    );
+    const firstMonths = tracked
+      .map(result => asArray(result.relationships?.events).find(event => event.category === category)?.elapsedMonths)
+      .filter(value => Number.isFinite(Number(value)))
+      .map(Number);
+    const monthlyCounts = {};
+    tracked.forEach(result => {
+      asArray(result.relationships?.events)
+        .filter(event => event.category === category)
+        .forEach(event => {
+          const month = String(Number(event.elapsedMonths) || 0);
+          monthlyCounts[month] = (monthlyCounts[month] || 0) + 1;
+        });
+    });
+    const total = counts.reduce((sum, value) => sum + value, 0);
+    return [category, {
+      total,
+      averagePerRun: total / tracked.length,
+      runsWithEvent: counts.filter(value => value > 0).length,
+      firstOccurrence: {
+        averageMonth: firstMonths.length > 0
+          ? firstMonths.reduce((sum, value) => sum + value, 0) / firstMonths.length
+          : null,
+        medianMonth: median(firstMonths),
+        minimumMonth: firstMonths.length > 0 ? Math.min(...firstMonths) : null,
+        maximumMonth: firstMonths.length > 0 ? Math.max(...firstMonths) : null
+      },
+      monthlyCounts
+    }];
+  }));
+
+  const monthGroups = new Map();
+  tracked.forEach(result => {
+    asArray(result.relationships?.timeline).forEach(snapshot => {
+      const elapsedMonths = Number(snapshot.elapsedMonths) || 0;
+      if (!monthGroups.has(elapsedMonths)) monthGroups.set(elapsedMonths, []);
+      monthGroups.get(elapsedMonths).push(snapshot);
+    });
+  });
+  const timeline = Array.from(monthGroups.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([elapsedMonths, snapshots]) => {
+      const averageField = key => {
+        const values = snapshots
+          .map(snapshot => snapshot[key])
+          .filter(value => value != null && Number.isFinite(Number(value)))
+          .map(Number);
+        return values.length > 0
+          ? values.reduce((sum, value) => sum + value, 0) / values.length
+          : null;
+      };
+      const averageActive = key => snapshots.reduce(
+        (sum, snapshot) => sum + (Number(snapshot.activeRelationships?.[key]) || 0),
+        0
+      ) / snapshots.length;
+      return {
+        elapsedMonths,
+        runs: snapshots.length,
+        averageVillagers: averageField("villagers"),
+        averagePairCount: averageField("pairCount"),
+        averageFriendship: averageField("averageFriendship"),
+        averagePairMinimum: averageField("averagePairMinimum"),
+        averageFoundingPairMinimum: averageField("foundingAveragePairMinimum"),
+        activeRelationships: {
+          averageBestFriends: averageActive("bestFriends"),
+          averageNemeses: averageActive("nemeses"),
+          averageLovers: averageActive("lovers"),
+          averageSpouses: averageActive("spouses")
+        }
+      };
+    });
+
+  return {
+    runs: tracked.length,
+    reached60Months: tracked.filter(result => (Number(result.monthsSimulated) || 0) >= 60).length,
+    events: eventSummary,
+    timeline
+  };
+}
+
 export function summarizeBatch(results) {
   const completed = results.filter(result => result.status === "completed");
   const errors = results.filter(result => result.status !== "completed");
@@ -285,6 +381,7 @@ export function summarizeBatch(results) {
     },
     raidOutcomes: outcomes,
     raidStress: summarizeRaidStressResults(completed),
+    relationships: summarizeRelationshipResults(completed),
     recovery: {
       eligible: completed.filter(result => result.recovery?.eligible).length,
       recovered: recovered.length,

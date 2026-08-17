@@ -360,7 +360,7 @@ function getDebuffedStats(person) {
   if (hasTrait(person, "凍え")) add("str", "vit", "dex");
   if (hasTrait(person, "疲労")) add("str", "vit", "dex");
   if (hasTrait(person, "過労")) add("str", "vit", "dex");
-  if (hasTrait(person, "幼狼")) add("str", "vit", "dex", "mag", "chr", "int", "ind", "eth", "cou", "sexdr");
+  if (hasTrait(person, "幼狼")) add("str", "vit", "dex", "mag", "chr");
   if (hasTrait(person, "臨月")) add("str", "vit");
   if (hasTrait(person, "産褥")) add("str", "vit");
   if (hasTrait(person, "心労")) add("int", "ind", "eth", "cou", "sexdr");

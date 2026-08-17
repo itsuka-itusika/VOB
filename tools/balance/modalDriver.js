@@ -19,7 +19,8 @@ const BLOCKING_MODAL_SELECTORS = [
   "#divineMightLevelUpModal",
   "#headmanElectionModal",
   "[data-close-relationship-modal]",
-  "[data-close-reproduction-modal]"
+  "[data-close-reproduction-modal]",
+  "[data-close-pinecone-staff-intro]"
 ];
 
 const CLOSE_LABELS = new Set(["閉じる", "戻る", "確認", "OK"]);

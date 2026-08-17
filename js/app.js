@@ -1,7 +1,9 @@
 import { autoAssignJobs, autoAssignRaidActions } from "./autoAssign.js";
+import { BACCHUS_GOLDEN_STATUE_UNLOCK_FLAG } from "./bacchusGoldenStatue.js";
 import { openBuildingModal, closeBuildingModal } from "./buildings.js";
-import { createRandomVisitor, getVisitorTypeChoices } from "./createVillagers.js";
+import { createRandomVillager, createRandomVisitor, getVisitorTypeChoices } from "./createVillagers.js";
 import "./dictionary.js";
+import { addNonHousePopLimitBonus } from "./domain/buildingState.js";
 import { closeHistoryModal, closePersonalHistoryModal, openHistoryModal } from "./history.js";
 import { theVillage, onNextTurn } from "./main.js";
 import {
@@ -27,6 +29,8 @@ import { getCaptives } from "./captives.js";
 import { setBalanceSimulationOptions } from "./balance/simulationOptions.js";
 
 const VIEW_MODE_STORAGE_KEY = "vob.viewMode";
+const APOCALYPSE_DEBUG_VILLAGER_COUNT = 15;
+const APOCALYPSE_DEBUG_RESOURCE_AMOUNT = 10000;
 let debugTitleActionsEnabled = false;
 
 function replaceVillageState(nextVillage, loadedMessage) {
@@ -89,6 +93,37 @@ function unlockVobDebugFeatures() {
   debugTitleActionsEnabled = true;
 }
 
+function prepareApocalypseDebugState() {
+  unlockVobDebugFeatures();
+  theVillage.mana = APOCALYPSE_DEBUG_RESOURCE_AMOUNT;
+
+  if (!Array.isArray(theVillage.villagers)) theVillage.villagers = [];
+  const addedVillagers = [];
+  while (theVillage.villagers.length < APOCALYPSE_DEBUG_VILLAGER_COUNT) {
+    const villager = createRandomVillager({
+      sex: theVillage.villagers.length % 2 === 0 ? "男" : "女",
+      minAge: 20,
+      maxAge: 39,
+      ranges: {
+        str: [20, 25], vit: [20, 25], dex: [20, 25], mag: [20, 25], chr: [20, 25],
+        int: [20, 25], ind: [20, 25], eth: [20, 25], cou: [20, 25], sexdr: [20, 25]
+      },
+      existingNames: getExistingNames()
+    });
+    theVillage.villagers.push(villager);
+    addedVillagers.push(villager);
+  }
+
+  const populationShortfall = theVillage.villagers.length - theVillage.popLimit;
+  if (populationShortfall > 0) addNonHousePopLimitBonus(theVillage, populationShortfall);
+
+  if (!theVillage.buildingFlags || typeof theVillage.buildingFlags !== "object") {
+    theVillage.buildingFlags = {};
+  }
+  theVillage.buildingFlags[BACCHUS_GOLDEN_STATUE_UNLOCK_FLAG] = true;
+  return addedVillagers.length;
+}
+
 function runDebugAction() {
   const command = window.prompt("パスワードを入力してください")?.trim().toUpperCase();
   if (command === "END") {
@@ -98,8 +133,15 @@ function runDebugAction() {
     return;
   }
 
-  if (command !== "VOB" && command !== "BATTLE") {
+  if (command !== "VOB" && command !== "BATTLE" && command !== "APO") {
     alert("パスワードが違います。");
+    return;
+  }
+
+  if (command === "APO") {
+    const addedCount = prepareApocalypseDebugState();
+    theVillage.log(`【デバッグ】APO準備を完了しました。資源と魔素を10000にし、全秘宝を入手、村人を15人まで補充（追加${addedCount}人）、バッカスの黄金像を建築可能にしました`);
+    updateUI(theVillage);
     return;
   }
 

@@ -6,12 +6,13 @@ import { isSaltPillar } from "../../js/domain/apocalypseRules.js";
 import { isWolf } from "../../js/domain/speciesTraits.js";
 import { setBaseStats, syncEffectiveStats } from "../../js/domain/statLayers.js";
 import { canDefendInRaid, getRaidActionBlockReason } from "../../js/raidRules.js";
+import { getFriendshipScore, parseRelationship } from "../../js/relationships.js";
 import { getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "../../js/util.js";
 import { getVillageScaleStage } from "../../js/villageScale.js";
-import { createVillageSnapshot } from "./resultSchema.js?v=20260815-balance-37";
-import { drainKnownModals, waitUntil } from "./modalDriver.js?v=20260814-balance-24";
+import { createVillageSnapshot } from "./resultSchema.js?v=20260818-balance-48";
+import { drainKnownModals, waitUntil } from "./modalDriver.js?v=20260818-balance-25";
 
-export const SCENARIO_VERSION = 23;
+export const SCENARIO_VERSION = 24;
 export const BEGINNER_PLAYER_MODEL_VERSION = 2;
 export const STANDARD_PLAYER_MODEL_VERSION = 3;
 export const EXPERT_PLAYER_MODEL_VERSION = 4;
@@ -1442,6 +1443,138 @@ export function collectPopulationChanges(village, historyIndex, elapsedMonths) {
   };
 }
 
+const TRACKED_RELATIONSHIP_PREFIXES = Object.freeze({
+  bestFriends: new Set(["親友"]),
+  nemeses: new Set(["天敵"]),
+  lovers: new Set(["恋人"]),
+  spouses: new Set(["夫", "妻"])
+});
+
+function averageNumbers(values) {
+  return values.length > 0
+    ? values.reduce((sum, value) => sum + value, 0) / values.length
+    : null;
+}
+
+function medianNumbers(values) {
+  if (values.length === 0) return null;
+  const sorted = values.slice().sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? (sorted[middle - 1] + sorted[middle]) / 2
+    : sorted[middle];
+}
+
+function collectActiveRelationshipPairs(villagers, prefixes) {
+  const activeNames = new Set(villagers.map(person => person.name));
+  const pairs = new Set();
+  villagers.forEach(person => {
+    (Array.isArray(person.relationships) ? person.relationships : []).forEach(raw => {
+      const parsed = parseRelationship(raw);
+      if (!parsed?.target || !prefixes.has(parsed.prefix) || !activeNames.has(parsed.target)) return;
+      pairs.add([person.name, parsed.target].sort().join("\u0000"));
+    });
+  });
+  return pairs.size;
+}
+
+function collectFriendshipBands(pairMinimums) {
+  const bands = {
+    hatred: 0,
+    dislike: 0,
+    avoidance: 0,
+    neutral: 0,
+    friendly: 0,
+    favorable: 0,
+    intimate: 0,
+    soulmates: 0
+  };
+  pairMinimums.forEach(value => {
+    if (value <= -60) bands.hatred++;
+    else if (value <= -30) bands.dislike++;
+    else if (value <= -1) bands.avoidance++;
+    else if (value <= 19) bands.neutral++;
+    else if (value <= 39) bands.friendly++;
+    else if (value <= 59) bands.favorable++;
+    else if (value <= 79) bands.intimate++;
+    else bands.soulmates++;
+  });
+  return bands;
+}
+
+function collectRelationshipSnapshot(village, elapsedMonths, foundingNames) {
+  const villagers = Array.isArray(village.villagers) ? village.villagers : [];
+  const directedScores = [];
+  const pairMinimums = [];
+  const foundingPairMinimums = [];
+
+  villagers.forEach((a, index) => {
+    villagers.slice(index + 1).forEach(b => {
+      const scoreA = getFriendshipScore(a, b);
+      const scoreB = getFriendshipScore(b, a);
+      directedScores.push(scoreA, scoreB);
+      pairMinimums.push(Math.min(scoreA, scoreB));
+      if (foundingNames.has(a.name) && foundingNames.has(b.name)) {
+        foundingPairMinimums.push(Math.min(scoreA, scoreB));
+      }
+    });
+  });
+
+  return {
+    elapsedMonths,
+    year: Number(village.year) || 0,
+    month: Number(village.month) || 0,
+    villagers: villagers.length,
+    pairCount: pairMinimums.length,
+    averageFriendship: averageNumbers(directedScores),
+    averagePairMinimum: averageNumbers(pairMinimums),
+    medianPairMinimum: medianNumbers(pairMinimums),
+    minimumPairMinimum: pairMinimums.length > 0 ? Math.min(...pairMinimums) : null,
+    maximumPairMinimum: pairMinimums.length > 0 ? Math.max(...pairMinimums) : null,
+    foundingPairCount: foundingPairMinimums.length,
+    foundingAveragePairMinimum: averageNumbers(foundingPairMinimums),
+    bands: collectFriendshipBands(pairMinimums),
+    activeRelationships: Object.fromEntries(
+      Object.entries(TRACKED_RELATIONSHIP_PREFIXES).map(([key, prefixes]) => [
+        key,
+        collectActiveRelationshipPairs(villagers, prefixes)
+      ])
+    )
+  };
+}
+
+function collectRelationshipEvents(village, historyIndex, elapsedMonths) {
+  const historyEvents = Array.isArray(village.historyEvents) ? village.historyEvents : [];
+  const events = [];
+
+  historyEvents.slice(historyIndex).forEach(event => {
+    const tags = Array.isArray(event?.tags) ? event.tags : [];
+    let category = null;
+    if (event?.type === "lover") category = "lover";
+    else if (event?.type === "marriage") category = "marriage";
+    else if (event?.type === "birth") category = "birth";
+    else if (event?.type === "socialRelation" && tags.includes("親友")) category = "bestFriend";
+    else if (event?.type === "socialRelation" && tags.includes("天敵")) category = "nemesis";
+    else if (event?.type === "socialRelation" && tags.includes("元恋人") && tags.includes("破局")) category = "breakup";
+    if (!category) return;
+
+    events.push({
+      elapsedMonths,
+      year: Number(event.year) || 0,
+      month: Number(event.month) || 0,
+      category,
+      people: Array.isArray(event.people) ? event.people.slice() : [],
+      source: tags.at(-1) || null,
+      title: String(event.title || "")
+    });
+  });
+
+  return {
+    historyIndex: historyEvents.length,
+    events
+  };
+}
+
 const PROGRESSION_MODELS = Object.freeze({
   beginner: {
     version: BEGINNER_PLAYER_MODEL_VERSION,
@@ -1478,9 +1611,11 @@ const PROGRESSION_MODELS = Object.freeze({
   }
 });
 
-async function runProgression({ api, frame }, modelId) {
+async function runProgression({ api, frame }, modelId, options = {}) {
   const model = PROGRESSION_MODELS[modelId];
   if (!model) throw new Error(`Unknown progression model: ${modelId}`);
+  const durationMonths = Math.max(1, Math.floor(Number(options.durationMonths) || 36));
+  const trackRelationships = options.trackRelationships === true;
   const village = api.getVillage();
   const initial = createVillageSnapshot(village);
   const checkpoints = [];
@@ -1490,6 +1625,12 @@ async function runProgression({ api, frame }, modelId) {
   const economicBreakdowns = [];
   const populationChanges = [];
   let populationHistoryIndex = Array.isArray(village.historyEvents) ? village.historyEvents.length : 0;
+  const foundingNames = new Set(village.villagers.map(person => person.name));
+  const relationshipTimeline = trackRelationships
+    ? [collectRelationshipSnapshot(village, 0, foundingNames)]
+    : [];
+  const relationshipEvents = [];
+  let relationshipHistoryIndex = Array.isArray(village.historyEvents) ? village.historyEvents.length : 0;
   let previousWarnings = { food: false, materials: false };
   const counters = {
     raids: 0,
@@ -1524,7 +1665,7 @@ async function runProgression({ api, frame }, modelId) {
     delayedWarnings: 0
   };
 
-  for (let elapsedMonths = 1; elapsedMonths <= 36 && !village.gameOver; elapsedMonths++) {
+  for (let elapsedMonths = 1; elapsedMonths <= durationMonths && !village.gameOver; elapsedMonths++) {
     await drainKnownModals(frame);
     let crisisObservation = null;
     if (village.villageTraits.includes("襲撃中")) {
@@ -1645,7 +1786,14 @@ async function runProgression({ api, frame }, modelId) {
     });
     populationChanges.push(...populationResult.events);
 
-    if ([12, 24, 36].includes(elapsedMonths)) {
+    if (trackRelationships) {
+      const relationshipResult = collectRelationshipEvents(village, relationshipHistoryIndex, elapsedMonths);
+      relationshipHistoryIndex = relationshipResult.historyIndex;
+      relationshipEvents.push(...relationshipResult.events);
+      relationshipTimeline.push(collectRelationshipSnapshot(village, elapsedMonths, foundingNames));
+    }
+
+    if (elapsedMonths % 12 === 0 || elapsedMonths === durationMonths) {
       checkpoints.push({ elapsedMonths, snapshot: createVillageSnapshot(village) });
     }
   }
@@ -1662,6 +1810,15 @@ async function runProgression({ api, frame }, modelId) {
     crisisCheckpoints,
     economicBreakdowns,
     populationChanges,
+    durationMonths,
+    monthsSimulated: relationshipTimeline.at(-1)?.elapsedMonths ?? checkpoints.at(-1)?.elapsedMonths ?? 0,
+    ...(trackRelationships ? {
+      relationships: {
+        foundingVillagers: [...foundingNames],
+        timeline: relationshipTimeline,
+        events: relationshipEvents
+      }
+    } : {}),
     final: createVillageSnapshot(village)
   };
 }
@@ -1672,6 +1829,17 @@ function createProgressionScenario(modelId) {
     id: `normal-${modelId}-36`,
     name: `通常進行：${model.label}・36か月`,
     run: context => runProgression(context, modelId)
+  };
+}
+
+function createRelationshipProgressionScenario() {
+  return {
+    id: "normal-standard-60-relationships",
+    name: "通常進行：標準プレイヤー・60か月（人間関係）",
+    run: context => runProgression(context, "standard", {
+      durationMonths: 60,
+      trackRelationships: true
+    })
   };
 }
 
@@ -1783,6 +1951,7 @@ const scenarioList = [
     }
   },
   ...Object.keys(PROGRESSION_MODELS).map(createProgressionScenario),
+  createRelationshipProgressionScenario(),
   ...RAID_STRESS_SCALES.flatMap(scale =>
     Object.values(RAID_STRESS_PREPARATIONS).map(preparation => createRaidStressScenario(scale, preparation))
   ),
