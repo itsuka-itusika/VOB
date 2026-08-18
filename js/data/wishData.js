@@ -222,6 +222,14 @@ export const WISH_DEFINITIONS = [
       requesterPregnant: () => "この身体に新しい命が宿っている。家族が増える日が待ち遠しい。",
       spousePregnant: ({ targetName }) => `${targetName}に新しい命が宿った。家族が増える日が待ち遠しい。`
     }
+  },
+  {
+    id: "celebrate",
+    name: "パーッと騒ぎたい",
+    startLine: () => "たまには村のみんなで、酒を飲んでパーッと騒ぎたい。",
+    completionLines: {
+      celebration: () => "思いきり飲んで騒げた。胸のつかえまで吹き飛んだよ。"
+    }
   }
 ];
 

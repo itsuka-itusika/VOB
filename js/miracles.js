@@ -22,6 +22,7 @@ import { completeTutorialTask } from "./tutorial.js";
 import { getCaptives, normalizeCaptive } from "./captives.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { getVillageRole, VILLAGE_ROLE_DOCTOR } from "./domain/villageRoles.js";
+import { checkWishCompletion } from "./wishes.js";
 import {
   addDivineMight,
   DIVINE_MIGHT_LEVELS,
@@ -35,6 +36,7 @@ import {
 const DEFAULT_PORTRAIT_PATH = getPortraitAssetPath(DEFAULT_PORTRAIT_KEY);
 const AUTONOMOUS_SETTLEMENT_SCALE = 350;
 const THUNDERBOLT_MIRACLE_DAMAGE = 80;
+const HEAVY_DRINKER_TRAIT = "酒豪";
 let pendingExchangeResultVillage = null;
 const POST_CLEAR_MIRACLE_IDS = new Set(["18", "19"]);
 const EFFECT_RESULT_DIALOGUES = {
@@ -56,6 +58,12 @@ const EFFECT_RESULT_DIALOGUES = {
   "蛇の巻き付いた杖": { scene: "secretTreasure", key: "serpentStaff" },
   "クロノスの秘薬": { scene: "secretTreasure", key: "chronosElixir" }
 };
+
+function getAlcoholMiracleRecoveryAmount(person, baseAmount) {
+  const mindTraits = Array.isArray(person?.mindTraits) ? person.mindTraits : [];
+  const multiplier = mindTraits.includes(HEAVY_DRINKER_TRAIT) ? 1.5 : 1;
+  return Math.round((Number(baseAmount) || 0) * multiplier);
+}
 /**
  * 奇跡リスト
  */
@@ -65,11 +73,11 @@ export const MIRACLES = [
   {id:"1",  name:"豊穣の奇跡(100)", cost:100, desc:"今月のみ、農作業・伐採・狩猟・漁・採集の成果と醸造の食料獲得2倍"},
   {id:"2",  name:"マナの奇跡(40)",  cost:40,  desc:"食料+80"},
   {id:"3",  name:"クピドの奇跡(80)", cost:80, desc:"2人を強制結婚(条件無視)"},
-  {id:"4",  name:"宴会の奇跡(人数×15)", cost:-1, desc:"全員体力/メンタル+20,幸福+20,失望/絶望解除 (資金×人数分も要)"},
-  {id:"5",  name:"狂宴の奇跡(人数×30)", cost:-2, desc:"全員体力/メンタル+60,幸福+50,失望/絶望解除,倫理↓,好色+15"},
+  {id:"4",  name:"宴会の奇跡(人数×15)", cost:-1, desc:"全員体力/メンタル+20,幸福+20,失望/絶望解除。酒豪は回復量1.5倍 (資金×人数分も要)"},
+  {id:"5",  name:"狂宴の奇跡(人数×30)", cost:-2, desc:"全員体力/メンタル+60,幸福+50,失望/絶望解除,倫理↓,好色+15。酒豪は回復量1.5倍"},
   {id:"6",  name:"癒しの奇跡(80)", cost:80, desc:"1人の負傷/重体/疫病/疲労等回復,体力+50"},
   {id:"20", name:"清拭の奇跡(60)", cost:60, desc:"3ヶ月間、村特性「清浄」を付与し、疫病の感染と重体の危篤化を防ぐ"},
-  {id:"16", name:"酒杯の奇跡(50)", cost:50, desc:"1人の心労/抑鬱/失望/絶望回復,メンタル+50,幸福+30,酩酊付与"},
+  {id:"16", name:"酒杯の奇跡(50)", cost:50, desc:"1人の心労/抑鬱/失望/絶望回復,メンタル+50,幸福+30,酩酊付与。酒豪は回復量1.5倍"},
   {id:"7",  name:"戦神の奇跡(80)", cost:80, desc:"1人に火星の加護(3ヶ月,筋力/耐久/勇気+7,知力/勤勉/倫理*0.2)"},
   {id:"8",  name:"竈女神の奇跡(40)", cost:40, desc:"恋人を結婚100%(対象なしなら使用不可)"},
   {id:"9",  name:"常春の奇跡(300)", cost:300,desc:"村特性→春に固定。次の季節まで継続"},
@@ -631,14 +639,19 @@ export function performMiracle(village) {
       spendMiracleMana(village, cost);
       village.funds-=cost;
       let feastRecoveredCount = 0;
+      let feastHeavyDrinkerCount = 0;
       village.villagers.forEach(p=>{
         if (isSaltPillar(p)) return;
-        p.hp=clampValue(p.hp+20,0,100);
-        p.mp=clampValue(p.mp+20,0,100);
-        p.happiness=clampValue(p.happiness+20,0,100);
+        const hpRecovery = getAlcoholMiracleRecoveryAmount(p, 20);
+        const mpRecovery = getAlcoholMiracleRecoveryAmount(p, 20);
+        const happinessRecovery = getAlcoholMiracleRecoveryAmount(p, 20);
+        p.hp=clampValue(p.hp+hpRecovery,0,100);
+        p.mp=clampValue(p.mp+mpRecovery,0,100);
+        p.happiness=clampValue(p.happiness+happinessRecovery,0,100);
+        if (hpRecovery > 20) feastHeavyDrinkerCount++;
         if (clearHopeLossByMiracle(p, village).length > 0) feastRecoveredCount++;
       });
-      village.log(`【宴会】全員体力/メンタル+20,幸福+20(費用:${cost})${feastRecoveredCount > 0 ? `,失望・絶望${feastRecoveredCount}人解除` : ""}`);
+      village.log(`【宴会】全員体力/メンタル+20,幸福+20(費用:${cost})${feastHeavyDrinkerCount > 0 ? `,酒豪${feastHeavyDrinkerCount}人は回復量1.5倍` : ""}${feastRecoveredCount > 0 ? `,失望・絶望${feastRecoveredCount}人解除` : ""}`);
       showMiracleResultModal(village, "宴会の奇跡", "村中に賑やかな宴が開かれました。", getActiveVillagers(village));
       break;
 
@@ -646,11 +659,16 @@ export function performMiracle(village) {
       spendMiracleMana(village, cost);
       village.funds-=cost;
       let revelRecoveredCount = 0;
+      let revelHeavyDrinkerCount = 0;
       village.villagers.forEach(p=>{
         if (isSaltPillar(p)) return;
-        p.hp=clampValue(p.hp+60,0,100);
-        p.mp=clampValue(p.mp+60,0,100);
-        p.happiness=clampValue(p.happiness+50,0,100);
+        const hpRecovery = getAlcoholMiracleRecoveryAmount(p, 60);
+        const mpRecovery = getAlcoholMiracleRecoveryAmount(p, 60);
+        const happinessRecovery = getAlcoholMiracleRecoveryAmount(p, 50);
+        p.hp=clampValue(p.hp+hpRecovery,0,100);
+        p.mp=clampValue(p.mp+mpRecovery,0,100);
+        p.happiness=clampValue(p.happiness+happinessRecovery,0,100);
+        if (hpRecovery > 60) revelHeavyDrinkerCount++;
         if (clearHopeLossByMiracle(p, village).length > 0) revelRecoveredCount++;
         // 狂乱特性を付与（まだ持っていない場合のみ）
         if (!p.mindTraits.includes("狂乱")) {
@@ -658,7 +676,7 @@ export function performMiracle(village) {
           syncEffectiveStats(p);
         }
       });
-      village.log(`【狂宴】全員体力/メンタル+60,幸福+50,狂乱付与(倫理*0.2,好色+15)${revelRecoveredCount > 0 ? `,失望・絶望${revelRecoveredCount}人解除` : ""}`);
+      village.log(`【狂宴】全員体力/メンタル+60,幸福+50,狂乱付与(倫理*0.2,好色+15)${revelHeavyDrinkerCount > 0 ? `,酒豪${revelHeavyDrinkerCount}人は回復量1.5倍` : ""}${revelRecoveredCount > 0 ? `,失望・絶望${revelRecoveredCount}人解除` : ""}`);
       showMiracleResultModal(village, "狂宴の奇跡", "理性を揺らす熱気が村を満たしました。", getActiveVillagers(village));
       break;
 
@@ -828,6 +846,7 @@ export function performMiracle(village) {
       break;
   }
 
+  checkWishCompletion(village, { miracleId: mid });
   completeTutorialTask(village, "use_miracle");
   updateUI(village);
   closeMiracleModal();
@@ -886,8 +905,10 @@ function gobletMiracle(p,v) {
     }
   });
 
-  p.mp=clampValue(p.mp+50,0,100);
-  p.happiness=clampValue(p.happiness+30,0,100);
+  const mentalRecovery = getAlcoholMiracleRecoveryAmount(p, 50);
+  const happinessRecovery = getAlcoholMiracleRecoveryAmount(p, 30);
+  p.mp=clampValue(p.mp+mentalRecovery,0,100);
+  p.happiness=clampValue(p.happiness+happinessRecovery,0,100);
   if (!p.mindTraits.includes("酩酊")) {
     p.mindTraits.push("酩酊");
   }
@@ -898,7 +919,7 @@ function gobletMiracle(p,v) {
 
   const recoveryMsg = recoveredTraits.length > 0 ?
     `${recoveredTraits.join(",")}を回復,` : "";
-  v.log(`【酒杯の奇跡】${p.name}${recoveryMsg}メンタル+50,幸福+30,酩酊付与`);
+  v.log(`【酒杯の奇跡】${p.name}${recoveryMsg}メンタル+${mentalRecovery},幸福+${happinessRecovery},酩酊付与`);
   showMiracleResultModal(v, "酒杯の奇跡", `${p.name}の心に甘い酔いが満ちました。`, [p]);
 }
 

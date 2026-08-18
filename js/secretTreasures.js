@@ -3,7 +3,7 @@ import { createRandomVisitorOfType } from "./createVillagers.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { recordDryadFruitHistory, recordMarriageHistory } from "./history.js";
 import { openExchangeModal, openPanFluteExchangeModal, showMarriageMiracleModal, showMiracleResultModal } from "./miracles.js";
-import { avoidCurrentRaidWithMessengerPass, canAvoidCurrentRaidWithMessengerPass, startRaidEvent } from "./raidStart.js";
+import { avoidCurrentRaidWithMessengerPass, canAvoidCurrentRaidWithMessengerPass, isMessengerPassBlockedByApocalypse, startRaidEvent } from "./raidStart.js";
 import { addRelationship, removeRelationship, addSpouseRelationships, raiseMutualFriendshipTo } from "./relationships.js";
 import { updateChildGrowthStage } from "./reproduction.js";
 import { clampValue, getPortraitPath, round3 } from "./util.js";
@@ -369,10 +369,12 @@ export const SECRET_TREASURES = [
   {
     id: MESSENGER_PASS_SECRET_TREASURE_ID,
     name: "伝令神の手形",
-    desc: "襲撃発生時に使用できる。使用すると、その襲撃をなかったことにする。",
+    desc: "襲撃発生時に使用できる。使用すると、その襲撃をなかったことにする。黙示録の第六・第七の災厄では使用不可。",
     sellPrice: SECRET_TREASURE_SELL_PRICES[MESSENGER_PASS_SECRET_TREASURE_ID],
     canUse: canAvoidCurrentRaidWithMessengerPass,
-    blockedReason: "襲撃発生中のみ使用できます",
+    blockedReason: (village) => isMessengerPassBlockedByApocalypse(village)
+      ? "黙示録の第六・第七の災厄では使用できません"
+      : "襲撃発生中のみ使用できます",
     use: (village) => avoidCurrentRaidWithMessengerPass(village, { consumeTreasure: false })
   },
   {

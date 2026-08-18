@@ -12,6 +12,7 @@ const ACTION_MASSAGE_FEMALE = "あんま女";
 const SWEATY_TRAIT = "汗かき";
 const COLD_SENSITIVE_TRAIT = "寒がり";
 const WORKAHOLIC_TRAIT = "ワーカホリック";
+const SENSITIVE_FINGERS_TRAIT = "繊細な指";
 const SUMMER_TRAIT = "夏";
 const WINTER_TRAIT = "冬";
 const SEASONAL_COST_MULTIPLIER = 1.2;
@@ -177,6 +178,7 @@ export function getLaborYieldMultiplier(job, person = null, village = null) {
   if (hasBodyTrait(person, "半人半馬") && HALF_HORSE_JOBS.includes(job)) mul *= 1.2;
   if (hasMindTrait(person, "森の知恵") && job === "採集") mul *= 1.2;
   if (hasMindTrait(person, "海の知恵") && job === "漁") mul *= 1.2;
+  if (hasBodyTrait(person, SENSITIVE_FINGERS_TRAIT) && job === "内職") mul *= 1.2;
   if ((person?.hobby === "ハンティング" || person?.hobby === "狩猟" || person?.hobby === "狩り") && job === "狩猟") mul *= 1.1;
   if (hasMindTrait(person, MID_TEEN_TRAIT) && YOUTH_WORK_JOBS.includes(job)) mul *= 0.8;
   return mul;
@@ -314,9 +316,12 @@ export function getMassageMindStat(person, action = person?.action) {
 }
 
 export function calculateMassageHeal(person, action = person?.action) {
-  const amount = isMaleMassageAction(action, person)
+  let amount = isMaleMassageAction(action, person)
     ? Math.round(25 * statProduct(person, "str", "int"))
     : Math.round(25 * statProduct(person, "chr", "sexdr"));
+  if (hasBodyTrait(person, SENSITIVE_FINGERS_TRAIT)) {
+    amount = Math.round(amount * 1.2);
+  }
   return applyVillageRoleMultiplier(amount, person, VILLAGE_ROLE_DOCTOR);
 }
 
@@ -344,6 +349,9 @@ export function calculateCopyBookYield(person) {
 
 export function calculateWeavingYield(person) {
   let amount = Math.round(42 * statProduct(person, "dex", "ind"));
+  if (hasBodyTrait(person, SENSITIVE_FINGERS_TRAIT)) {
+    amount = Math.round(amount * 1.2);
+  }
   if (hasBodyTrait(person, "糸吐き")) {
     amount = Math.round(amount * 2);
   }

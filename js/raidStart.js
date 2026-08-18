@@ -8,7 +8,7 @@ import {
 } from "./data/raidData.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { getRaiderSpeechType } from "./domain/raiderSpeechTypes.js";
-import { setBaseStats, syncEffectiveStats } from "./domain/statLayers.js";
+import { syncEffectiveStats } from "./domain/statLayers.js";
 import { syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
 import { clearRaidWarningModal, showRaidWarningModal } from "./raidWarningModal.js";
 import { MESSENGER_PASS_SECRET_TREASURE_ID } from "./data/tutorialData.js";
@@ -77,6 +77,24 @@ function getAllRaidEnemyGroups(raidDefinition) {
     });
   }
   return groups;
+}
+
+function cloneEnemyGroupTraitOptions(group, fallbackGroup = null) {
+  const mindTraits = Array.isArray(group?.mindTraits)
+    ? group.mindTraits
+    : fallbackGroup?.mindTraits;
+  const mindTraitChances = Array.isArray(group?.mindTraitChances)
+    ? group.mindTraitChances
+    : fallbackGroup?.mindTraitChances;
+  const options = {};
+
+  if (Array.isArray(mindTraits)) {
+    options.mindTraits = [...mindTraits];
+  }
+  if (Array.isArray(mindTraitChances)) {
+    options.mindTraitChances = mindTraitChances.map(entry => ({ ...entry }));
+  }
+  return options;
 }
 
 function selectRaidEnemyGroups(raidDefinition) {
@@ -160,7 +178,8 @@ function createPendingRaidEnemyGroups(raidDefinition) {
     const maxCount = group.maxCount ?? raiderType.maxCount;
     return {
       raiderType: group.raiderType,
-      count: randInt(minCount, maxCount)
+      count: randInt(minCount, maxCount),
+      ...cloneEnemyGroupTraitOptions(group)
     };
   }).filter(Boolean);
 }
@@ -184,12 +203,18 @@ function getRaidDefinitionFromPendingRaid(pendingRaid) {
 
 function getResolvedEnemyGroups(raidDefinition, pendingRaid = null) {
   if (Array.isArray(pendingRaid?.enemyGroups) && pendingRaid.enemyGroups.length > 0) {
+    const currentEnemyGroups = getAllRaidEnemyGroups(raidDefinition);
     return pendingRaid.enemyGroups
       .map(group => {
         const raiderType = getRaiderTypeByType(group.raiderType);
         if (!raiderType) return null;
         const count = Math.max(0, Math.floor(Number(group.count) || 0));
-        return count > 0 ? { raiderType, count } : null;
+        const currentGroup = currentEnemyGroups.find(entry => entry.raiderType === group.raiderType);
+        return count > 0 ? {
+          raiderType,
+          count,
+          ...cloneEnemyGroupTraitOptions(group, currentGroup)
+        } : null;
       })
       .filter(Boolean);
   }
@@ -203,13 +228,14 @@ function getResolvedEnemyGroups(raidDefinition, pendingRaid = null) {
       const maxCount = group.maxCount ?? raiderType.maxCount;
       return {
         raiderType,
-        count: randInt(minCount, maxCount)
+        count: randInt(minCount, maxCount),
+        ...cloneEnemyGroupTraitOptions(group)
       };
     })
     .filter(Boolean);
 }
 
-function createRaidEnemy(village, raiderType, existingNames, enemyProfile = null) {
+function createRaidEnemy(village, raiderType, existingNames, enemyGroup = null) {
   const displayType = raiderType.displayType || raiderType.type;
   let e = createRandomVillager({
     sex: raiderType.forcedSex || (Math.random() < 0.5 ? "男" : "女"),
@@ -228,9 +254,21 @@ function createRaidEnemy(village, raiderType, existingNames, enemyProfile = null
     e.mindTraits = [];
   }
   e.mindTraits.push("襲撃者");
-  if (Array.isArray(raiderType.mindTraits)) {
-    raiderType.mindTraits.forEach(trait => {
+  const fixedMindTraits = Array.isArray(enemyGroup?.mindTraits)
+    ? enemyGroup.mindTraits
+    : raiderType.mindTraits;
+  if (Array.isArray(fixedMindTraits)) {
+    fixedMindTraits.forEach(trait => {
       if (!e.mindTraits.includes(trait)) {
+        e.mindTraits.push(trait);
+      }
+    });
+  }
+  if (Array.isArray(enemyGroup?.mindTraitChances)) {
+    enemyGroup.mindTraitChances.forEach(entry => {
+      const trait = typeof entry?.trait === "string" ? entry.trait : "";
+      const chance = Math.max(0, Math.min(1, Number(entry?.chance) || 0));
+      if (trait && Math.random() < chance && !e.mindTraits.includes(trait)) {
         e.mindTraits.push(trait);
       }
     });
@@ -316,17 +354,6 @@ function createRaidEnemy(village, raiderType, existingNames, enemyProfile = null
   // 襲撃者として矛盾するランダム精神特性は外す。
   e.mindTraits = e.mindTraits.filter(trait => trait !== "ニート" && trait !== "非戦主義");
 
-  if (enemyProfile) {
-    const bodyStats = {};
-    Object.entries(enemyProfile.bodyStatMultipliers || {}).forEach(([stat, multiplier]) => {
-      bodyStats[stat] = (Number(e.baseStats?.[stat]) || 0) * Number(multiplier);
-    });
-    if (Object.keys(bodyStats).length > 0) setBaseStats(e, bodyStats);
-    (enemyProfile.addMindTraits || []).forEach(trait => {
-      if (!e.mindTraits.includes(trait)) e.mindTraits.push(trait);
-    });
-  }
-
   syncWolfSpeciesTraits(e, { includeWildMindTrait: true });
   syncEffectiveStats(e);
   return e;
@@ -393,11 +420,13 @@ function createAvoidanceOption(village, avoidance) {
 
 function createMessengerPassAvoidanceOption(village) {
   if (!hasMessengerPass(village)) return null;
+  const blockedByApocalypse = isMessengerPassBlockedByApocalypse(village);
   return {
     type: "messengerPass",
     label: "伝令神の手形を使う",
     detail: "秘宝「伝令神の手形」を使うと、この襲撃をなかったことにします。",
-    disabled: false
+    disabled: blockedByApocalypse,
+    disabledReason: blockedByApocalypse ? "黙示録の第六・第七の災厄では使用できません" : ""
   };
 }
 
@@ -438,12 +467,24 @@ function getActiveRaidDefinition(village) {
 
 export function canAvoidCurrentRaidWithMessengerPass(village) {
   return isRaidActive(village) &&
-    hasMessengerPass(village);
+    hasMessengerPass(village) &&
+    !isMessengerPassBlockedByApocalypse(village);
+}
+
+export function isMessengerPassBlockedByApocalypse(village) {
+  if (village?.apocalypseStarted !== true) return false;
+  const stage = Number(village.apocalypseStage) || 0;
+  return stage === 6 || stage === 7;
 }
 
 export function avoidCurrentRaidWithMessengerPass(village, { consumeTreasure = true } = {}) {
   if (!isRaidActive(village)) {
     village?.log?.("【秘宝】伝令神の手形は襲撃発生中のみ使用できます。");
+    return false;
+  }
+
+  if (isMessengerPassBlockedByApocalypse(village)) {
+    village?.log?.("【秘宝】伝令神の手形は黙示録の第六・第七の災厄では使用できません。");
     return false;
   }
 
@@ -629,7 +670,7 @@ export function startRaidEvent(village, options = {}) {
         village,
         group.raiderType,
         existingNames,
-        raidDefinition.enemyProfile
+        group
       ));
     }
   });

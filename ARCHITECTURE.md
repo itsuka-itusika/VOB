@@ -125,7 +125,7 @@
   - `js/data/tutorialData.js` はチュートリアル項目と報酬データを持つ。
   - `js/data/raidData.js` は襲撃者の能力定義、襲撃モジュール、代表襲撃者定義、回避手段、規模別襲撃テーブルを持つ。
   - `js/data/dialogue/raidStartLines.js` は襲撃発生時の精神特性別反応文とメンタル回復量を持つ。
-  - 襲撃テーブルは規模段階ごとに分かれ、`requiredVillageTrait` / `excludedVillageTrait` によって村特性「異端」の専用テーブルへ切り替わる。襲撃モジュールは通常の `enemyGroups` に加え、重み付きの `enemyGroupVariants` で確率分岐する編成を定義できる。
+  - 襲撃テーブルは規模段階ごとに分かれ、`requiredVillageTrait` / `excludedVillageTrait` によって村特性「異端」の専用テーブルへ切り替わる。襲撃モジュールは通常の `enemyGroups` に加え、重み付きの `enemyGroupVariants` で確率分岐する編成を定義できる。敵グループごとの `mindTraits` / `mindTraitChances` で、そのモジュールに限った固定精神特性と確率精神特性を指定する。
 
 新しい行動、資源、建築、奇跡、状態異常、特性、イベント、襲撃者、ルールなどを追加したり、既存仕様を変更した場合は、必要に応じて `js/data/dictionaryData.js` の用語説明も追加・更新します。プレイヤーが用語検索で確認できる情報と、実装上の仕様がずれないようにしてください。
 

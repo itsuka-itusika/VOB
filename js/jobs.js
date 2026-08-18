@@ -1071,7 +1071,7 @@ function doMassage(p, v) {
   const mc = calcJobMindCost(jobName, p[mindStat], p, v);
   const heal = calculateMassageHeal(p, jobName);
   const hiddenHappinessGain = jobName === ACTION_MASSAGE_FEMALE
-    ? Math.round(3 * (p.chr / 20) * (p.sexdr / 20))
+    ? Math.round(3 * (p.chr / 20) * (p.sexdr / 20) * (p.bodyTraits.includes("繊細な指") ? 1.2 : 1))
     : 0;
   let logMsg = `${p.name}${getActionDisplayName(jobName)}:体力-${tc},メンタル-${mc}`;
 

@@ -7,6 +7,7 @@ import {
   damageBuilding,
   getActiveBuildingIds,
   hasActiveBuilding,
+  isBuildingDamageable,
   recalculateBuildingDerivedState,
   repairDamagedBuilding
 } from "./domain/buildingState.js";
@@ -582,7 +583,7 @@ function constructBuilding(building, village) {
 }
 
 export function damageRandomBuilding(village) {
-  const candidates = getActiveBuildingIds(village);
+  const candidates = getActiveBuildingIds(village).filter(isBuildingDamageable);
   if (candidates.length === 0) {
     village.log("損壊する建築物はありませんでした");
     return null;

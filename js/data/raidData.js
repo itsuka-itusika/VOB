@@ -104,7 +104,7 @@ export const RAIDER_TYPES = [
       hp: [55, 75],
       str: [14, 20],
       vit: [10, 20],
-      dex: [20, 27],
+      dex: [18, 24],
       mag: [5, 13],
       chr: [5, 16],
       int: [10, 20],
@@ -527,15 +527,15 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("CENTAUR", 9),
     ranges: {
       hp: [95, 125],
-      str: [20, 25],
-      vit: [20, 25],
+      str: [18, 23],
+      vit: [18, 23],
       dex: [18, 28],
       mag: [5, 14],
       chr: [10, 20],
       int: [8, 18],
       ind: [10, 22],
       eth: [8, 16],
-      cou: [26, 36],
+      cou: [18, 24],
       sexdr: [10, 22]
     },
     forcedBodyTraits: ["半人半馬"],
@@ -731,16 +731,16 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("MINOTAUR", 4),
     ranges: {
       hp: [160, 200],
-      str: [32, 44],
-      vit: [30, 42],
+      str: [25, 32],
+      vit: [25, 32],
       dex: [18, 28],
       mag: [34, 46],
-      chr: [26, 38],
-      int: [34, 46],
+      chr: [16, 24],
+      int: [28, 36],
       ind: [18, 30],
       eth: [5, 18],
-      cou: [28, 40],
-      sexdr: [5, 16]
+      cou: [20, 32],
+      sexdr: [5, 12]
     },
     forcedBodyTraits: ["人面獣身"],
     mindTraits: ["古代知識"],
@@ -771,7 +771,7 @@ export const RAIDER_TYPES = [
       hp: [75, 100],
       str: [16, 23],
       vit: [16, 23],
-      dex: [20, 27],
+      dex: [16, 23],
       mag: [24, 32],
       chr: [20, 28],
       int: [16, 24],
@@ -806,9 +806,9 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("ARCHANGEL", 13),
     ranges: {
       hp: [105, 135],
-      str: [20, 25],
-      vit: [20, 25],
-      dex: [22, 28],
+      str: [18, 25],
+      vit: [18, 25],
+      dex: [16, 23],
       mag: [28, 36],
       chr: [25, 35],
       int: [22, 30],
@@ -1013,7 +1013,6 @@ function createCompositeRaiderRaid({
   representative = null,
   introDialogues = [],
   defense = null,
-  enemyProfile = null,
   successRewards = null,
   failurePenalty = null
 }) {
@@ -1029,7 +1028,6 @@ function createCompositeRaiderRaid({
       ...cloneRaidRules(DEFAULT_RAID_DEFENSE),
       ...(defense || {})
     },
-    enemyProfile,
     enemyGroups,
     enemyGroupVariants,
     successRewards: {
@@ -1204,10 +1202,9 @@ export const RAID_MODULES = [
     enemyGroups: [
       { raiderType: "ゴブリンリーダー", minCount: 1, maxCount: 1 },
       { raiderType: "ゴブリン射手", minCount: 2, maxCount: 2 },
-      { raiderType: "キュクロプス", minCount: 2, maxCount: 3 },
+      { raiderType: "キュクロプス", minCount: 1, maxCount: 1 },
       { raiderType: "ハーピーの長", minCount: 1, maxCount: 1 },
-      { raiderType: "セントール", minCount: 1, maxCount: 2 },
-      { raiderType: "餓狼", minCount: 1, maxCount: 2 }
+      { raiderType: "餓狼", minCount: 2, maxCount: 2 }
     ],
     defense: { surviveTurns: 7 },
     failurePenalty: {
@@ -1310,18 +1307,18 @@ export const RAID_MODULES = [
       {
         weight: 80,
         enemyGroups: [
-          { raiderType: "下級騎士", minCount: 2, maxCount: 3 },
-          { raiderType: "重装兵", minCount: 1, maxCount: 2 },
-          { raiderType: "上級騎士", minCount: 1, maxCount: 1 }
+          { raiderType: "下級騎士", minCount: 3, maxCount: 3 },
+          { raiderType: "重装兵", minCount: 2, maxCount: 2, mindTraits: ["戦慣れ"] },
+          { raiderType: "上級騎士", minCount: 1, maxCount: 1, mindTraits: ["歴戦"] }
         ]
       },
       {
         weight: 20,
         enemyGroups: [
-          { raiderType: "下級騎士", minCount: 1, maxCount: 2 },
-          { raiderType: "重装兵", minCount: 1, maxCount: 2 },
-          { raiderType: "上級騎士", minCount: 1, maxCount: 1 },
-          { raiderType: "聖女", minCount: 1, maxCount: 1 }
+          { raiderType: "下級騎士", minCount: 2, maxCount: 2 },
+          { raiderType: "重装兵", minCount: 2, maxCount: 2, mindTraits: ["戦慣れ"] },
+          { raiderType: "上級騎士", minCount: 1, maxCount: 1, mindTraits: ["歴戦"] },
+          { raiderType: "聖女", minCount: 1, maxCount: 1, mindTraits: [] }
         ]
       }
     ],
@@ -1364,7 +1361,7 @@ export const RAID_MODULES = [
     weight: 12,
     representative: { raiderType: "翼人兵" },
     enemyGroups: [
-      { raiderType: "翼人兵", minCount: 3, maxCount: 5 }
+      { raiderType: "翼人兵", minCount: 5, maxCount: 5, mindTraits: ["神聖"] }
     ],
     failurePenalty: {
       security: 18,
@@ -1388,10 +1385,10 @@ export const RAID_MODULES = [
       { raiderType: "聖女" }
     ],
     enemyGroups: [
-      { raiderType: "重装兵", minCount: 2, maxCount: 3 },
-      { raiderType: "上級騎士", minCount: 1, maxCount: 2 },
-      { raiderType: "聖騎士", minCount: 1, maxCount: 1 },
-      { raiderType: "聖女", minCount: 1, maxCount: 1 }
+      { raiderType: "下級騎士", minCount: 2, maxCount: 2 },
+      { raiderType: "重装兵", minCount: 2, maxCount: 2, mindTraits: ["戦慣れ"] },
+      { raiderType: "上級騎士", minCount: 2, maxCount: 2, mindTraits: ["歴戦"] },
+      { raiderType: "聖女", minCount: 1, maxCount: 1, mindTraits: [] }
     ],
     failurePenalty: {
       materialsRate: 0.3,
@@ -1414,13 +1411,10 @@ export const RAID_MODULES = [
     weight: 15,
     representative: { raiderType: "翼人兵" },
     enemyGroups: [
-      { raiderType: "翼人兵", minCount: 11, maxCount: 11 }
+      { raiderType: "翼人兵", minCount: 5, maxCount: 5, mindTraits: ["神聖", "戦慣れ"] },
+      { raiderType: "上位翼人", minCount: 1, maxCount: 1, mindTraits: ["神聖", "歴戦", "狂信"] }
     ],
     defense: { surviveTurns: 6 },
-    enemyProfile: {
-      bodyStatMultipliers: { str: 0.75, dex: 0.75, mag: 0.75 },
-      addMindTraits: ["秘蹟：盾", "戦慣れ"]
-    },
     failurePenalty: {
       security: 22,
       villagerHpRange: [12, 28],
@@ -1443,16 +1437,39 @@ export const RAID_MODULES = [
       { raiderType: "聖女" }
     ],
     enemyGroups: [
-      { raiderType: "重装兵", minCount: 3, maxCount: 4 },
-      { raiderType: "上級騎士", minCount: 2, maxCount: 3 },
-      { raiderType: "聖騎士", minCount: 1, maxCount: 2 },
-      { raiderType: "聖女", minCount: 1, maxCount: 2 }
+      {
+        raiderType: "重装兵",
+        minCount: 3,
+        maxCount: 3,
+        mindTraits: ["戦慣れ"],
+        mindTraitChances: [
+          { trait: "秘蹟：盾", chance: 0.2 },
+          { trait: "狂信", chance: 0.2 }
+        ]
+      },
+      {
+        raiderType: "上級騎士",
+        minCount: 2,
+        maxCount: 2,
+        mindTraits: ["歴戦"],
+        mindTraitChances: [{ trait: "狂信", chance: 0.2 }]
+      },
+      {
+        raiderType: "聖女",
+        minCount: 1,
+        maxCount: 1,
+        mindTraits: ["戦慣れ"],
+        mindTraitChances: [{ trait: "狂信", chance: 0.2 }]
+      },
+      {
+        raiderType: "聖騎士",
+        minCount: 1,
+        maxCount: 1,
+        mindTraits: ["歴戦", "秘蹟：剣"],
+        mindTraitChances: [{ trait: "狂信", chance: 0.2 }]
+      }
     ],
     defense: { surviveTurns: 6 },
-    enemyProfile: {
-      bodyStatMultipliers: { str: 0.8, dex: 0.8, mag: 0.8 },
-      addMindTraits: ["秘蹟：盾"]
-    },
     failurePenalty: {
       materialsRate: 0.4,
       fundsRate: 0.4,

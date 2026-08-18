@@ -192,7 +192,7 @@ export function advanceWishMonth(village) {
   return wish;
 }
 
-export function checkWishCompletion(village) {
+export function checkWishCompletion(village, context = {}) {
   const wish = getActiveWish(village);
   if (!wish) return null;
 
@@ -204,7 +204,7 @@ export function checkWishCompletion(village) {
     return { wish, requester: null, canceled: true };
   }
 
-  const reason = getWishCompletionReason(wish, requester, villagers);
+  const reason = getWishCompletionReason(wish, requester, villagers, context);
   if (!reason) return null;
 
   const definition = WISH_DEFINITION_BY_ID.get(wish.id);
@@ -271,6 +271,9 @@ function getWishCandidates(village) {
     if (isResearcher(requester) && !hasRareRace) {
       candidates.push({ id: "research_rare_races", requester });
     }
+    if (hasMindTrait(requester, "酒豪")) {
+      candidates.push({ id: "celebrate", requester });
+    }
 
     const spouse = getSpouse(requester, villagers);
     if (spouse && cannotHaveChildByBody(requester, spouse) && !hasPregnancy(requester) && !hasPregnancy(spouse)) {
@@ -281,7 +284,7 @@ function getWishCandidates(village) {
   return candidates;
 }
 
-function getWishCompletionReason(wish, requester, villagers) {
+function getWishCompletionReason(wish, requester, villagers, context = {}) {
   const target = villagers.find(person => person.name === wish.targetName);
   switch (wish.id) {
     case "avoid_enemy":
@@ -310,6 +313,8 @@ function getWishCompletionReason(wish, requester, villagers) {
       return villagers.some(isMonster) ? "monsterPresent" : null;
     case "research_rare_races":
       return villagers.some(isRareRace) ? "rareRacePresent" : null;
+    case "celebrate":
+      return ["4", "5"].includes(String(context.miracleId || "")) ? "celebration" : null;
     case "want_child": {
       if (hasPregnancy(requester)) return "requesterPregnant";
       const spouse = getSpouse(requester, villagers);

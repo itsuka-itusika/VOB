@@ -1,5 +1,6 @@
 const BASE_POP_LIMIT = 8;
 const HOUSE_POP_LIMIT_BONUS = 2;
+const DAMAGE_PROTECTED_BUILDING_IDS = new Set(["bacchusGoldenStatue"]);
 
 function normalizeBuildingId(id) {
   return String(id || "").trim();
@@ -59,9 +60,14 @@ export function getActiveBuildingIds(village) {
 
 export function damageBuilding(village, buildingId) {
   const id = normalizeBuildingId(buildingId);
-  if (!id || countActiveBuildings(village, id) <= 0) return false;
+  if (!id || DAMAGE_PROTECTED_BUILDING_IDS.has(id) || countActiveBuildings(village, id) <= 0) return false;
   normalizeDamagedBuildings(village).push(id);
   return true;
+}
+
+export function isBuildingDamageable(buildingId) {
+  const id = normalizeBuildingId(buildingId);
+  return !!id && !DAMAGE_PROTECTED_BUILDING_IDS.has(id);
 }
 
 export function repairDamagedBuilding(village, buildingId) {

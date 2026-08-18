@@ -943,7 +943,7 @@ export function assignBodyMindTraits(v) {
     { name: "通る声", condition: (v)=>(v.chr>=20 && v.cou>=20 && v.eth>=20), chance:0.3, target:"body" },
     { name: "非戦主義", condition: (v)=>(v.eth>=25), chance:0.5, target:"mind" },
     { name: "聖女の輝き", condition: (v)=>(v.bodySex==="女" && v.eth>=23 && v.sexdr<=12), chance:0.5, target:"body" },
-    { name: "酒豪", condition: (v)=>(v.vit>=25 && v.chr>=16 && v.sexdr>=18), chance:0.1, target:"body" },
+    { name: "酒豪", condition: (v)=>(v.vit>=20 && v.sexdr>=18), chance:0.1, target:"mind" },
     { name: "繊細な指", condition: (v)=>(v.dex>=22 && v.chr>=22), chance:0.1, target:"body" },
     { name: "緑の指", condition: (v)=>(v.mag>=21), chance:0.15, target:"body" },
     { name: "夜目", condition: (v)=>(v.mag>=18 && v.cou>=20), chance:0.1, target:"body" },
