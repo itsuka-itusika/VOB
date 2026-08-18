@@ -1,0 +1,623 @@
+- main [ref=e2]:
+  - heading "VOB バランス測定ランナー" [level=1] [ref=e3]
+  - paragraph [ref=e4]: 同一生成元のゲーム画面を試行ごとに作り直し、シード付きで結果を収集します。
+  - group [ref=e5]:
+    - generic [ref=e6]:
+      - text: シナリオ
+      - combobox "シナリオ" [disabled] [ref=e7]:
+        - option "初期状態の再現確認"
+        - option "通常進行：初心者・36か月"
+        - option "通常進行：標準プレイヤー・36か月"
+        - option "通常進行：熟練者・36か月"
+        - option "通常進行：標準プレイヤー・60か月（人間関係）"
+        - option "規模別襲撃ストレス：旅人の立ち寄る村・万全"
+        - option "規模別襲撃ストレス：旅人の立ち寄る村・普通" [selected]
+        - option "規模別襲撃ストレス：豊かな村・万全"
+        - option "規模別襲撃ストレス：豊かな村・普通"
+        - option "規模別襲撃ストレス：繁栄した郷村・万全"
+        - option "規模別襲撃ストレス：繁栄した郷村・普通"
+        - option "規模別襲撃ストレス：自治集落・万全"
+        - option "規模別襲撃ストレス：自治集落・普通"
+        - option "規模別襲撃ストレス：繁栄した郷村（異端）・万全"
+        - option "規模別襲撃ストレス：繁栄した郷村（異端）・普通"
+        - option "規模別襲撃ストレス：自治集落（異端）・万全"
+        - option "規模別襲撃ストレス：自治集落（異端）・普通"
+        - option "上位襲撃：聖征騎士団（強）・2月"
+        - option "上位襲撃：聖征騎士団（強）・4月"
+        - option "上位襲撃：聖征騎士団（強）・7月"
+        - option "上位襲撃：聖征騎士団（強）・9月"
+        - option "上位襲撃：翼人兵（強）・2月"
+        - option "上位襲撃：翼人兵（強）・4月"
+        - option "上位襲撃：翼人兵（強）・7月"
+        - option "上位襲撃：翼人兵（強）・9月"
+        - option "上位襲撃後復旧：聖征騎士団（強）・2月"
+        - option "上位襲撃後復旧：聖征騎士団（強）・4月"
+        - option "上位襲撃後復旧：聖征騎士団（強）・7月"
+        - option "上位襲撃後復旧：聖征騎士団（強）・9月"
+        - option "上位襲撃後復旧：翼人兵（強）・2月"
+        - option "上位襲撃後復旧：翼人兵（強）・4月"
+        - option "上位襲撃後復旧：翼人兵（強）・7月"
+        - option "上位襲撃後復旧：翼人兵（強）・9月"
+        - option "上位襲撃後復旧（80まで休養）：聖征騎士団（強）・4月"
+        - option "上位襲撃後復旧（80まで休養）：翼人兵（強）・4月"
+        - option "上位襲撃感度：聖征騎士団（強）・4月・敵HP+10%"
+        - option "上位襲撃感度：聖征騎士団（強）・4月・敵攻撃能力-10%"
+        - option "上位襲撃感度：聖征騎士団（強）・4月・敵HP+10%・攻撃能力-10%"
+        - option "上位襲撃感度：翼人兵（強）・4月・敵HP+10%"
+        - option "上位襲撃感度：翼人兵（強）・4月・敵攻撃能力-10%"
+        - option "上位襲撃感度：翼人兵（強）・4月・敵HP+10%・攻撃能力-10%"
+        - option "上位襲撃構成探索：聖征騎士団（強）・4月・重装4・上級3・聖騎士1・聖女1"
+        - option "上位襲撃構成探索：聖征騎士団（強）・4月・重装5・上級3・聖騎士1・聖女1"
+        - option "上位襲撃構成探索：聖征騎士団（強）・4月・重装5・上級4・聖騎士1・聖女1"
+        - option "上位襲撃構成探索：聖征騎士団（強）・4月・重装6・上級4・聖騎士1・聖女1"
+        - option "上位襲撃構成探索：聖征騎士団（強）・4月・重装6・上級5・聖騎士1・聖女1"
+        - option "上位襲撃構成探索：聖征騎士団（強）・4月・10人・盾付与・身体攻撃能力80%"
+        - option "上位襲撃構成探索：聖征騎士団（強）・4月・11人・盾付与・身体攻撃能力75%"
+        - option "上位襲撃構成探索：聖征騎士団（強）・4月・12人・盾付与・身体攻撃能力70%"
+        - option "上位襲撃構成探索：聖征騎士団（強）・4月・14人・盾付与・身体攻撃能力70%"
+        - option "上位襲撃構成探索：聖征騎士団（強）・4月・16人・盾付与・身体攻撃能力70%"
+        - option "上位襲撃構成探索：聖征騎士団（強）・4月・18人・盾付与・身体攻撃能力70%"
+        - option "上位襲撃構成探索：聖征騎士団（強）・4月・15人・盾付与・身体攻撃能力60%"
+        - option "上位襲撃構成探索：聖征騎士団（強）・4月・16人・盾付与・身体攻撃能力60%"
+        - option "上位襲撃構成探索：聖征騎士団（強）・4月・18人・盾付与・身体攻撃能力60%"
+        - option "上位襲撃構成探索：聖征騎士団（強）・4月・20人・盾付与・身体攻撃能力60%"
+        - option "上位襲撃構成探索：聖征騎士団（強）・4月・20人・盾付与・身体攻撃能力50%"
+        - option "上位襲撃構成探索：聖征騎士団（強）・4月・22人・盾付与・身体攻撃能力50%"
+        - option "上位襲撃構成探索：聖征騎士団（強）・4月・20人・盾付与・身体攻撃能力55%"
+        - option "上位襲撃構成探索：聖征騎士団（強）・4月・22人・盾付与・身体攻撃能力55%"
+        - option "上位襲撃構成探索：翼人兵（強）・4月・翼人兵9"
+        - option "上位襲撃構成探索：翼人兵（強）・4月・翼人兵10"
+        - option "上位襲撃構成探索：翼人兵（強）・4月・翼人兵11"
+        - option "上位襲撃構成探索：翼人兵（強）・4月・翼人兵12"
+        - option "上位襲撃構成探索：翼人兵（強）・4月・翼人兵16"
+        - option "上位襲撃構成探索：翼人兵（強）・4月・翼人兵13"
+        - option "上位襲撃構成探索：翼人兵（強）・4月・翼人兵14"
+        - option "上位襲撃構成探索：翼人兵（強）・4月・翼人兵15"
+        - option "上位襲撃構成探索：翼人兵（強）・4月・上位翼人1・翼人兵8"
+        - option "上位襲撃構成探索：翼人兵（強）・4月・上位翼人1・翼人兵11"
+        - option "上位襲撃構成探索：翼人兵（強）・4月・上位翼人1・翼人兵15"
+        - option "上位襲撃構成探索：翼人兵（強）・4月・翼人兵11・盾付与・身体器用80%"
+        - option "上位襲撃構成探索：翼人兵（強）・4月・翼人兵12・盾付与・身体器用70%"
+        - option "上位襲撃構成探索：翼人兵（強）・4月・翼人兵13・盾付与・身体器用60%"
+        - option "上位襲撃構成探索：翼人兵（強）・4月・翼人兵16・盾付与・身体器用60%"
+        - option "上位襲撃構成探索：翼人兵（強）・4月・翼人兵18・盾付与・身体器用60%"
+        - option "上位襲撃構成探索：翼人兵（強）・4月・翼人兵20・盾付与・身体器用60%"
+        - option "上位襲撃構成探索：翼人兵（強）・4月・翼人兵18・盾付与・身体筋魔75%・器用70%"
+        - option "上位襲撃構成探索：翼人兵（強）・4月・翼人兵20・盾付与・身体筋魔75%・器用70%"
+        - option "上位襲撃構成探索：翼人兵（強）・4月・翼人兵22・盾付与・身体筋魔75%・器用70%"
+        - option "上位襲撃構成探索：翼人兵（強）・4月・翼人兵19・盾付与・身体筋魔75%・器用70%"
+        - option "上位襲撃構成探索：翼人兵（強）・4月・翼人兵20・盾付与・身体筋魔75%・器用65%"
+        - option "上位襲撃構成探索：翼人兵（強）・4月・翼人兵21・盾付与・身体筋魔75%・器用65%"
+        - option "上位襲撃構成探索：翼人兵（強）・4月・翼人兵22・盾付与・身体筋魔75%・器用62.5%"
+        - option "上位襲撃構成探索：翼人兵（強）・4月・翼人兵23・盾付与・身体筋魔75%・器用60%"
+        - option "上位襲撃構成探索：翼人兵（強）・4月・翼人兵24・盾付与・身体筋魔75%・器用60%"
+        - option "上位襲撃構成探索：翼人兵（強）・4月・翼人兵25・盾付与・身体筋魔70%・器用55%"
+    - generic [ref=e8]:
+      - text: 開始シード
+      - spinbutton "開始シード" [disabled] [ref=e9]: "1"
+    - generic [ref=e10]:
+      - text: 試行数
+      - spinbutton "試行数" [disabled] [ref=e11]: "20"
+    - generic [ref=e12]:
+      - generic [ref=e13]: 実行画面
+      - generic [ref=e14]:
+        - checkbox "実行画面 表示する" [ref=e15]
+        - text: 表示する
+  - generic [ref=e16]:
+    - button "測定開始" [disabled] [ref=e17]
+    - button "中止" [ref=e18]
+    - button "JSON保存" [disabled] [ref=e19]
+  - generic [ref=e20]: 1/20 実行中（seed 1）
+  - generic [ref=e21]: "{ \"requested\": 20, \"completed\": 20, \"errors\": 0, \"gameOvers\": 0, \"economicBreakdowns\": 0, \"crisisCheckpoints\": {}, \"populationChanges\": { \"recruitmentSuccesses\": 0, \"seductionSuccesses\": 0, \"births\": 0, \"deaths\": 0, \"departures\": 0, \"otherJoins\": 0 }, \"miracleUsage\": { \"raidHealingUses\": 0, \"raidHealingManaSpent\": 0, \"routineUses\": 0, \"routineHealingUses\": 0, \"routineManaUses\": 0, \"routineAbundanceUses\": 0, \"routineManaSpent\": 0, \"routineFundsSpent\": 0 }, \"mana\": { \"averageFinal\": 44, \"minimumFinal\": 13, \"maximumFinal\": 46 }, \"raidOutcomes\": {}, \"raidStress\": { \"scaleId\": \"mapped-village\", \"scaleLabel\": \"旅人の立ち寄る村\", \"preparation\": \"full\", \"preparationLabel\": \"万全\", \"modules\": [ { \"raidId\": \"goblin\", \"raidName\": \"ゴブリンの襲撃\", \"tableWeight\": 10, \"trials\": 20, \"outcomes\": { \"complete\": 20, \"partial\": 0, \"failure\": 0 }, \"outcomeRates\": { \"complete\": 1, \"partial\": 0, \"failure\": 0 }, \"averageEnemyCount\": 4.6, \"averageTurns\": 1, \"averageEnemyRemainingHp\": 0, \"damageContribution\": { \"totalEffectiveDamage\": 3626, \"roles\": { \"front\": { \"effectiveDamage\": 1498, \"damageShare\": 0.41312741312741313, \"averageHpLost\": 2.1, \"averageDown\": 0 }, \"middle\": { \"effectiveDamage\": 391, \"damageShare\": 0.10783232211803641, \"averageHpLost\": 0.25, \"averageDown\": 0 }, \"rear\": { \"effectiveDamage\": 1737, \"damageShare\": 0.47904026475455047, \"averageHpLost\": 0.75, \"averageDown\": 0 } } }, \"damageTaken\": { \"averageTotalHpLost\": 3.1 }, \"casualties\": { \"averageInjured\": 0, \"averageCritical\": 0, \"averageDying\": 0 }, \"losses\": { \"averageFood\": 0, \"averageMaterials\": 0, \"averageFunds\": 0, \"averageSecurity\": 0, \"damagedBuildingTrials\": 0 } }, { \"raidId\": \"wolf\", \"raidName\": \"狼の襲撃\", \"tableWeight\": 5, \"trials\": 20, \"outcomes\": { \"complete\": 20, \"partial\": 0, \"failure\": 0 }, \"outcomeRates\": { \"complete\": 1, \"partial\": 0, \"failure\": 0 }, \"averageEnemyCount\": 2.6, \"averageTurns\": 0.9, \"averageEnemyRemainingHp\": 0, \"damageContribution\": { \"totalEffectiveDamage\": 2106, \"roles\": { \"front\": { \"effectiveDamage\": 300, \"damageShare\": 0.14245014245014245, \"averageHpLost\": 8.05, \"averageDown\": 0 }, \"middle\": { \"effectiveDamage\": 232, \"damageShare\": 0.11016144349477683, \"averageHpLost\": 0.25, \"averageDown\": 0 }, \"rear\": { \"effectiveDamage\": 1574, \"damageShare\": 0.7473884140550807, \"averageHpLost\": 0.75, \"averageDown\": 0 } } }, \"damageTaken\": { \"averageTotalHpLost\": 9.05 }, \"casualties\": { \"averageInjured\": 0, \"averageCritical\": 0, \"averageDying\": 0 }, \"losses\": { \"averageFood\": 0, \"averageMaterials\": 0, \"averageFunds\": 0, \"averageSecurity\": 0, \"damagedBuildingTrials\": 0 } }, { \"raidId\": \"mercenary-band\", \"raidName\": \"傭兵団の襲撃\", \"tableWeight\": 10, \"trials\": 20, \"outcomes\": { \"complete\": 20, \"partial\": 0, \"failure\": 0 }, \"outcomeRates\": { \"complete\": 1, \"partial\": 0, \"failure\": 0 }, \"averageEnemyCount\": 3.5, \"averageTurns\": 1.05, \"averageEnemyRemainingHp\": 0, \"damageContribution\": { \"totalEffectiveDamage\": 5238, \"roles\": { \"front\": { \"effectiveDamage\": 3042, \"damageShare\": 0.5807560137457045, \"averageHpLost\": 57.8, \"averageDown\": 0 }, \"middle\": { \"effectiveDamage\": 246, \"damageShare\": 0.046964490263459335, \"averageHpLost\": 0.25, \"averageDown\": 0 }, \"rear\": { \"effectiveDamage\": 1950, \"damageShare\": 0.3722794959908362, \"averageHpLost\": 0.75, \"averageDown\": 0 } } }, \"damageTaken\": { \"averageTotalHpLost\": 58.8 }, \"casualties\": { \"averageInjured\": 0, \"averageCritical\": 0, \"averageDying\": 0 }, \"losses\": { \"averageFood\": 0, \"averageMaterials\": 0, \"averageFunds\": 0, \"averageSecurity\": 0, \"damagedBuildingTrials\": 0 } }, { \"raidId\": \"harpy\", \"raidName\": \"ハーピーの襲撃\", \"tableWeight\": 10, \"trials\": 20, \"outcomes\": { \"complete\": 20, \"partial\": 0, \"failure\": 0 }, \"outcomeRates\": { \"complete\": 1, \"partial\": 0, \"failure\": 0 }, \"averageEnemyCount\": 2.6, \"averageTurns\": 1, \"averageEnemyRemainingHp\": 0, \"damageContribution\": { \"totalEffectiveDamage\": 3116, \"roles\": { \"front\": { \"effectiveDamage\": 848, \"damageShare\": 0.27214377406931967, \"averageHpLost\": 5.7, \"averageDown\": 0 }, \"middle\": { \"effectiveDamage\": 409, \"damageShare\": 0.13125802310654686, \"averageHpLost\": 0.25, \"averageDown\": 0 }, \"rear\": { \"effectiveDamage\": 1859, \"damageShare\": 0.5965982028241335, \"averageHpLost\": 0.75, \"averageDown\": 0 } } }, \"damageTaken\": { \"averageTotalHpLost\": 6.7 }, \"casualties\": { \"averageInjured\": 0, \"averageCritical\": 0, \"averageDying\": 0 }, \"losses\": { \"averageFood\": 0, \"averageMaterials\": 0, \"averageFunds\": 0, \"averageSecurity\": 0, \"damagedBuildingTrials\": 0 } }, { \"raidId\": \"grassland-people\", \"raidName\": \"草原の民の襲撃\", \"tableWeight\": 10, \"trials\": 20, \"outcomes\": { \"complete\": 20, \"partial\": 0, \"failure\": 0 }, \"outcomeRates\": { \"complete\": 1, \"partial\": 0, \"failure\": 0 }, \"averageEnemyCount\": 3.35, \"averageTurns\": 1, \"averageEnemyRemainingHp\": 0, \"damageContribution\": { \"totalEffectiveDamage\": 3568, \"roles\": { \"front\": { \"effectiveDamage\": 1579, \"damageShare\": 0.44254484304932734, \"averageHpLost\": 48.55, \"averageDown\": 0 }, \"middle\": { \"effectiveDamage\": 251, \"damageShare\": 0.07034753363228699, \"averageHpLost\": 0.25, \"averageDown\": 0 }, \"rear\": { \"effectiveDamage\": 1738, \"damageShare\": 0.48710762331838564, \"averageHpLost\": 0.75, \"averageDown\": 0 } } }, \"damageTaken\": { \"averageTotalHpLost\": 49.55 }, \"casualties\": { \"averageInjured\": 0, \"averageCritical\": 0, \"averageDying\": 0 }, \"losses\": { \"averageFood\": 0, \"averageMaterials\": 0, \"averageFunds\": 0, \"averageSecurity\": 0, \"damagedBuildingTrials\": 0 } }, { \"raidId\": \"pilgrimage-knights\", \"raidName\": \"巡礼騎士団の来襲\", \"tableWeight\": 5, \"trials\": 20, \"outcomes\": { \"complete\": 18, \"partial\": 1, \"failure\": 1 }, \"outcomeRates\": { \"complete\": 0.9, \"partial\": 0.05, \"failure\": 0.05 }, \"averageEnemyCount\": 6, \"averageTurns\": 2.8, \"averageEnemyRemainingHp\": 3.05, \"damageContribution\": { \"totalEffectiveDamage\": 11179, \"roles\": { \"front\": { \"effectiveDamage\": 8622, \"damageShare\": 0.7712675552374989, \"averageHpLost\": 444.3, \"averageDown\": 3.2 }, \"middle\": { \"effectiveDamage\": 577, \"damageShare\": 0.05161463458269971, \"averageHpLost\": 6.15, \"averageDown\": 0.05 }, \"rear\": { \"effectiveDamage\": 1980, \"damageShare\": 0.1771178101798014, \"averageHpLost\": 0, \"averageDown\": 0 } } }, \"damageTaken\": { \"averageTotalHpLost\": 450.45 }, \"casualties\": { \"averageInjured\": 3.25, \"averageCritical\": 0, \"averageDying\": 0 }, \"losses\": { \"averageFood\": 0, \"averageMaterials\": 0, \"averageFunds\": 22, \"averageSecurity\": 0.5, \"damagedBuildingTrials\": 0 } } ] }, \"relationships\": null, \"recovery\": { \"eligible\": 0, \"recovered\": 0, \"averageMonths\": null }, \"errorReasons\": {} }"
+  - generic "測定中のゲーム画面":
+    - iframe [active] [ref=e23]:
+      - generic [active] [ref=f21e1]:
+        - banner [ref=f21e2]:
+          - heading "Village of Bacchus ver.2.1" [level=1] [ref=f21e3]
+        - main [ref=f21e4]:
+          - generic [ref=f21e5]:
+            - heading "旅人の立ち寄る村 神威 Lv0（12/30）" [level=2] [ref=f21e6]
+            - generic [ref=f21e7]:
+              - generic [ref=f21e8]:
+                - generic [ref=f21e9]: 年/月
+                - generic [ref=f21e10]: 1195年5月
+              - generic [ref=f21e11]:
+                - generic [ref=f21e12]: 食料
+                - generic [ref=f21e13]: 160/400
+              - generic [ref=f21e14]:
+                - generic [ref=f21e15]: 資材
+                - generic [ref=f21e16]: 240/400
+              - generic [ref=f21e17]:
+                - generic [ref=f21e18]: 資金
+                - generic [ref=f21e19]: "400"
+              - generic [ref=f21e20]:
+                - generic [ref=f21e21]: 魔素
+                - generic [ref=f21e22]: "33"
+              - generic [ref=f21e23]:
+                - generic [ref=f21e24]: 技術
+                - generic [ref=f21e25]: "0"
+              - generic [ref=f21e26]:
+                - generic [ref=f21e27]: 治安
+                - generic [ref=f21e28]: "60"
+              - generic [ref=f21e29]:
+                - generic [ref=f21e30]: 規模
+                - generic [ref=f21e31]: "120"
+              - generic [ref=f21e32]:
+                - generic [ref=f21e33]: 人口/上限
+                - generic [ref=f21e34]: 8/8
+              - generic [ref=f21e35]:
+                - generic [ref=f21e36]: 村特性
+                - generic [ref=f21e37]: 春
+            - generic [ref=f21e38]:
+              - generic [ref=f21e39]:
+                - button "自動割り振り" [ref=f21e40] [cursor=pointer]
+                - button "次の月へ" [ref=f21e41] [cursor=pointer]
+                - generic [ref=f21e42]:
+                  - button "奇跡の行使" [ref=f21e43] [cursor=pointer]
+                  - button "建築" [ref=f21e44] [cursor=pointer]
+                  - button "秘宝" [ref=f21e45] [cursor=pointer]
+                  - button "村史" [ref=f21e46] [cursor=pointer]
+                - generic [ref=f21e47]:
+                  - combobox "保存・読込操作" [ref=f21e48]:
+                    - option "保存/読込/説明" [selected]
+                    - option "JSON保存"
+                    - option "JSON読込"
+                    - option "ローカル保存"
+                    - option "ローカル読込"
+                    - option "更新履歴・説明"
+                    - option "デバッグ用"
+                  - button "実行" [ref=f21e49] [cursor=pointer]
+                - group "表示モード" [ref=f21e50]:
+                  - button "PC" [pressed] [ref=f21e51] [cursor=pointer]
+                  - button "スマホ仮" [ref=f21e52] [cursor=pointer]
+              - generic [ref=f21e53]:
+                - generic [ref=f21e54]: 食料が尽きそうです。このペースでは約2.0か月で枯渇する可能性があります。
+                - generic [ref=f21e55]: 人口が上限に達しています。新規加入には家屋が必要です。
+                - generic [ref=f21e56]: 行動が未設定の村人が7人います。必要なら自動割り振りを使えます。
+                - generic [ref=f21e57]: 辺境の村として認められる規模になりました。村の声を一つに束ねる集会所を建てれば、里長を選べるようになります。
+                - generic [ref=f21e58]: "チュートリアル: 食料の生産∶農作業、狩猟、漁、採集で食料を生産しましょう"
+          - generic [ref=f21e59]:
+            - heading "村人一覧" [level=2] [ref=f21e60]
+            - table [ref=f21e61]:
+              - rowgroup [ref=f21e62]:
+                - row [ref=f21e63]:
+                  - columnheader "顔" [ref=f21e64]
+                  - columnheader "名前" [ref=f21e65]
+                  - columnheader "肉体" [ref=f21e66]
+                  - columnheader "種族" [ref=f21e67]
+                  - columnheader "性別" [ref=f21e68] [cursor=pointer]
+                  - columnheader "年齢" [ref=f21e69] [cursor=pointer]
+                  - columnheader "体力" [ref=f21e70] [cursor=pointer]
+                  - columnheader "メンタル" [ref=f21e71] [cursor=pointer]
+                  - columnheader "幸福" [ref=f21e72] [cursor=pointer]
+                  - columnheader "行動" [ref=f21e73] [cursor=pointer]
+                  - columnheader "役職" [ref=f21e74] [cursor=pointer]
+                  - columnheader "筋力" [ref=f21e75] [cursor=pointer]
+                  - columnheader "耐久" [ref=f21e76] [cursor=pointer]
+                  - columnheader "器用" [ref=f21e77] [cursor=pointer]
+                  - columnheader "魔力" [ref=f21e78] [cursor=pointer]
+                  - columnheader "魅力" [ref=f21e79]
+                  - columnheader "肉体特性" [ref=f21e80] [cursor=pointer]
+                  - columnheader "知力" [ref=f21e81] [cursor=pointer]
+                  - columnheader "勤勉" [ref=f21e82] [cursor=pointer]
+                  - columnheader "倫理" [ref=f21e83] [cursor=pointer]
+                  - columnheader "勇気" [ref=f21e84] [cursor=pointer]
+                  - columnheader "好色" [ref=f21e85]
+                  - columnheader "精神特性" [ref=f21e86]
+                  - columnheader "趣味" [ref=f21e87]
+                  - columnheader "記録" [ref=f21e88]
+              - rowgroup [ref=f21e89]:
+                - row [ref=f21e90]:
+                  - cell [ref=f21e91] [cursor=pointer]:
+                    - img "負荷試験前衛01" [ref=f21e93]
+                  - cell "負荷試験前衛01" [ref=f21e94] [cursor=pointer]
+                  - cell "負荷試験前衛01" [ref=f21e95]
+                  - cell "人間" [ref=f21e96]
+                  - cell "男" [ref=f21e97]
+                  - cell "20" [ref=f21e98]
+                  - cell "50" [ref=f21e99]
+                  - cell "56" [ref=f21e100]
+                  - cell "66" [ref=f21e101]
+                  - cell [ref=f21e102]:
+                    - generic [ref=f21e103]:
+                      - 'combobox "体力の回復を優先する一時行動。 予想獲得報酬: 体力+52, メンタル+20 予想体力・メンタル消費: なし" [ref=f21e104]':
+                        - option "休養 体力 +52,ﾒﾝﾀﾙ +20" [selected]
+                        - option "余暇 ﾒﾝﾀﾙ +50"
+                        - option "農作業(耐×勤) 食料+28"
+                        - option "狩猟(筋×勇) 食料+32"
+                        - option "漁(耐×勇) 食料+38"
+                        - option "伐採(筋×勤) 資材+24"
+                        - option "採集(器×知) 食料+12,資材+12"
+                        - option "内職(器×勤) 資金+24"
+                        - option "行商(魅×知) 資金+24"
+                        - option "研究(魔×知) 技術+24"
+                        - option "警備(筋×倫) 治安+10"
+                        - option "看護(魔×倫) 体力回復+20"
+                        - option "詩人(魅×知) 女性4人幸 +8"
+                        - option "神官(魅×倫) 全員ﾒﾝﾀﾙ +6"
+                      - button "自動割り振り対象" [ref=f21e105] [cursor=pointer]
+                  - cell "なし" [ref=f21e107]:
+                    - combobox [ref=f21e108]:
+                      - option "なし" [selected]
+                  - cell "18" [ref=f21e109]
+                  - cell "21" [ref=f21e110]
+                  - cell "18" [ref=f21e111]
+                  - cell "18" [ref=f21e112]
+                  - cell "18" [ref=f21e113]
+                  - cell [ref=f21e114]
+                  - cell "18" [ref=f21e115]
+                  - cell "18" [ref=f21e116]
+                  - cell "18" [ref=f21e117]
+                  - cell "24" [ref=f21e118]
+                  - cell "18" [ref=f21e119]
+                  - cell [ref=f21e120]
+                  - cell [ref=f21e121]
+                  - cell [ref=f21e122]:
+                    - button "記録" [ref=f21e123] [cursor=pointer]
+                - row [ref=f21e124]:
+                  - cell [ref=f21e125] [cursor=pointer]:
+                    - img "負荷試験前衛02" [ref=f21e127]
+                  - cell "負荷試験前衛02" [ref=f21e128] [cursor=pointer]
+                  - cell "負荷試験前衛02" [ref=f21e129]
+                  - cell "人間" [ref=f21e130]
+                  - cell "女" [ref=f21e131]
+                  - cell "21" [ref=f21e132]
+                  - cell "55" [ref=f21e133]
+                  - cell "61" [ref=f21e134]
+                  - cell "63" [ref=f21e135]
+                  - cell [ref=f21e136]:
+                    - generic [ref=f21e137]:
+                      - combobox [ref=f21e138]:
+                        - option "未設定" [disabled] [selected]
+                        - option "休養 体力 +52,ﾒﾝﾀﾙ +20"
+                        - option "余暇 ﾒﾝﾀﾙ +50"
+                        - option "農作業(耐×勤) 食料+31"
+                        - option "狩猟(筋×勇) 食料+29"
+                        - option "漁(耐×勇) 食料+33"
+                        - option "伐採(筋×勤) 資材+27"
+                        - option "採集(器×知) 食料+12,資材+12"
+                        - option "内職(器×勤) 資金+24"
+                        - option "行商(魅×知) 資金+24"
+                        - option "研究(魔×知) 技術+24"
+                        - option "警備(筋×倫) 治安+11"
+                        - option "看護(魔×倫) 体力回復+20"
+                        - option "踊り子(魅×色) 男性4人幸 +8"
+                        - option "シスター(魅×倫) 全員ﾒﾝﾀﾙ +6"
+                      - button "自動割り振り対象" [ref=f21e139] [cursor=pointer]
+                  - cell "なし" [ref=f21e141]:
+                    - combobox [ref=f21e142]:
+                      - option "なし" [selected]
+                  - cell "20" [ref=f21e143]
+                  - cell "23" [ref=f21e144]
+                  - cell "18" [ref=f21e145]
+                  - cell "18" [ref=f21e146]
+                  - cell "18" [ref=f21e147]
+                  - cell [ref=f21e148]
+                  - cell "18" [ref=f21e149]
+                  - cell "18" [ref=f21e150]
+                  - cell "18" [ref=f21e151]
+                  - cell "19" [ref=f21e152]
+                  - cell "18" [ref=f21e153]
+                  - cell [ref=f21e154]
+                  - cell [ref=f21e155]
+                  - cell [ref=f21e156]:
+                    - button "記録" [ref=f21e157] [cursor=pointer]
+                - row [ref=f21e158]:
+                  - cell [ref=f21e159] [cursor=pointer]:
+                    - img "負荷試験前衛03" [ref=f21e161]
+                  - cell "負荷試験前衛03" [ref=f21e162] [cursor=pointer]
+                  - cell "負荷試験前衛03" [ref=f21e163]
+                  - cell "人間" [ref=f21e164]
+                  - cell "男" [ref=f21e165]
+                  - cell "22" [ref=f21e166]
+                  - cell "60" [ref=f21e167]
+                  - cell "66" [ref=f21e168]
+                  - cell "64" [ref=f21e169]
+                  - cell [ref=f21e170]:
+                    - generic [ref=f21e171]:
+                      - combobox [ref=f21e172]:
+                        - option "未設定" [disabled] [selected]
+                        - option "休養 体力 +52,ﾒﾝﾀﾙ +20"
+                        - option "余暇 ﾒﾝﾀﾙ +50"
+                        - option "農作業(耐×勤) 食料+24"
+                        - option "狩猟(筋×勇) 食料+35"
+                        - option "漁(耐×勇) 食料+28"
+                        - option "伐採(筋×勤) 資材+30"
+                        - option "採集(器×知) 食料+12,資材+12"
+                        - option "内職(器×勤) 資金+24"
+                        - option "行商(魅×知) 資金+24"
+                        - option "研究(魔×知) 技術+24"
+                        - option "警備(筋×倫) 治安+12"
+                        - option "看護(魔×倫) 体力回復+20"
+                        - option "詩人(魅×知) 女性4人幸 +8"
+                        - option "神官(魅×倫) 全員ﾒﾝﾀﾙ +6"
+                      - button "自動割り振り対象" [ref=f21e173] [cursor=pointer]
+                  - cell "なし" [ref=f21e175]:
+                    - combobox [ref=f21e176]:
+                      - option "なし" [selected]
+                  - cell "22" [ref=f21e177]
+                  - cell "18" [ref=f21e178]
+                  - cell "18" [ref=f21e179]
+                  - cell "18" [ref=f21e180]
+                  - cell "18" [ref=f21e181]
+                  - cell [ref=f21e182]
+                  - cell "18" [ref=f21e183]
+                  - cell "18" [ref=f21e184]
+                  - cell "18" [ref=f21e185]
+                  - cell "21" [ref=f21e186]
+                  - cell "18" [ref=f21e187]
+                  - cell [ref=f21e188]
+                  - cell [ref=f21e189]
+                  - cell [ref=f21e190]:
+                    - button "記録" [ref=f21e191] [cursor=pointer]
+                - row [ref=f21e192]:
+                  - cell [ref=f21e193] [cursor=pointer]:
+                    - img "負荷試験前衛04" [ref=f21e195]
+                  - cell "負荷試験前衛04" [ref=f21e196] [cursor=pointer]
+                  - cell "負荷試験前衛04" [ref=f21e197]
+                  - cell "人間" [ref=f21e198]
+                  - cell "女" [ref=f21e199]
+                  - cell "23" [ref=f21e200]
+                  - cell "65" [ref=f21e201]
+                  - cell "71" [ref=f21e202]
+                  - cell "66" [ref=f21e203]
+                  - cell [ref=f21e204]:
+                    - generic [ref=f21e205]:
+                      - combobox [ref=f21e206]:
+                        - option "未設定" [disabled] [selected]
+                        - option "休養 体力 +52,ﾒﾝﾀﾙ +20"
+                        - option "余暇 ﾒﾝﾀﾙ +50"
+                        - option "農作業(耐×勤) 食料+27"
+                        - option "狩猟(筋×勇) 食料+41"
+                        - option "漁(耐×勇) 食料+35"
+                        - option "伐採(筋×勤) 資材+32"
+                        - option "採集(器×知) 食料+12,資材+12"
+                        - option "内職(器×勤) 資金+24"
+                        - option "行商(魅×知) 資金+24"
+                        - option "研究(魔×知) 技術+24"
+                        - option "警備(筋×倫) 治安+13"
+                        - option "看護(魔×倫) 体力回復+20"
+                        - option "踊り子(魅×色) 男性4人幸 +8"
+                        - option "シスター(魅×倫) 全員ﾒﾝﾀﾙ +6"
+                      - button "自動割り振り対象" [ref=f21e207] [cursor=pointer]
+                  - cell "なし" [ref=f21e209]:
+                    - combobox [ref=f21e210]:
+                      - option "なし" [selected]
+                  - cell "24" [ref=f21e211]
+                  - cell "20" [ref=f21e212]
+                  - cell "18" [ref=f21e213]
+                  - cell "18" [ref=f21e214]
+                  - cell "18" [ref=f21e215]
+                  - cell [ref=f21e216]
+                  - cell "18" [ref=f21e217]
+                  - cell "18" [ref=f21e218]
+                  - cell "18" [ref=f21e219]
+                  - cell "23" [ref=f21e220]
+                  - cell "18" [ref=f21e221]
+                  - cell [ref=f21e222]
+                  - cell [ref=f21e223]
+                  - cell [ref=f21e224]:
+                    - button "記録" [ref=f21e225] [cursor=pointer]
+                - row [ref=f21e226]:
+                  - cell [ref=f21e227] [cursor=pointer]:
+                    - img "負荷試験前衛05" [ref=f21e229]
+                  - cell "負荷試験前衛05" [ref=f21e230] [cursor=pointer]
+                  - cell "負荷試験前衛05" [ref=f21e231]
+                  - cell "人間" [ref=f21e232]
+                  - cell "男" [ref=f21e233]
+                  - cell "24" [ref=f21e234]
+                  - cell "70" [ref=f21e235]
+                  - cell "76" [ref=f21e236]
+                  - cell "65" [ref=f21e237]
+                  - cell [ref=f21e238]:
+                    - generic [ref=f21e239]:
+                      - combobox [ref=f21e240]:
+                        - option "未設定" [disabled] [selected]
+                        - option "休養 体力 +52,ﾒﾝﾀﾙ +20"
+                        - option "余暇 ﾒﾝﾀﾙ +50"
+                        - option "農作業(耐×勤) 食料+30"
+                        - option "狩猟(筋×勇) 食料+26"
+                        - option "漁(耐×勇) 食料+30"
+                        - option "伐採(筋×勤) 資材+26"
+                        - option "採集(器×知) 食料+12,資材+12"
+                        - option "内職(器×勤) 資金+24"
+                        - option "行商(魅×知) 資金+24"
+                        - option "研究(魔×知) 技術+24"
+                        - option "警備(筋×倫) 治安+10"
+                        - option "看護(魔×倫) 体力回復+20"
+                        - option "詩人(魅×知) 女性4人幸 +8"
+                        - option "神官(魅×倫) 全員ﾒﾝﾀﾙ +6"
+                      - button "自動割り振り対象" [ref=f21e241] [cursor=pointer]
+                  - cell "なし" [ref=f21e243]:
+                    - combobox [ref=f21e244]:
+                      - option "なし" [selected]
+                  - cell "19" [ref=f21e245]
+                  - cell "22" [ref=f21e246]
+                  - cell "18" [ref=f21e247]
+                  - cell "18" [ref=f21e248]
+                  - cell "18" [ref=f21e249]
+                  - cell [ref=f21e250]
+                  - cell "18" [ref=f21e251]
+                  - cell "18" [ref=f21e252]
+                  - cell "18" [ref=f21e253]
+                  - cell "18" [ref=f21e254]
+                  - cell "18" [ref=f21e255]
+                  - cell [ref=f21e256]
+                  - cell [ref=f21e257]
+                  - cell [ref=f21e258]:
+                    - button "記録" [ref=f21e259] [cursor=pointer]
+                - row [ref=f21e260]:
+                  - cell [ref=f21e261] [cursor=pointer]:
+                    - img "負荷試験中衛06" [ref=f21e263]
+                  - cell "負荷試験中衛06" [ref=f21e264] [cursor=pointer]
+                  - cell "負荷試験中衛06" [ref=f21e265]
+                  - cell "人間" [ref=f21e266]
+                  - cell "女" [ref=f21e267]
+                  - cell "25" [ref=f21e268]
+                  - cell "78" [ref=f21e269]
+                  - cell "78" [ref=f21e270]
+                  - cell "66" [ref=f21e271]
+                  - cell [ref=f21e272]:
+                    - generic [ref=f21e273]:
+                      - combobox [ref=f21e274]:
+                        - option "未設定" [disabled] [selected]
+                        - option "休養 体力 +52,ﾒﾝﾀﾙ +20"
+                        - option "余暇 ﾒﾝﾀﾙ +50"
+                        - option "農作業(耐×勤) 食料+32"
+                        - option "狩猟(筋×勇) 食料+27"
+                        - option "漁(耐×勇) 食料+36"
+                        - option "伐採(筋×勤) 資材+24"
+                        - option "採集(器×知) 食料+14,資材+14"
+                        - option "内職(器×勤) 資金+28"
+                        - option "行商(魅×知) 資金+24"
+                        - option "研究(魔×知) 技術+24"
+                        - option "警備(筋×倫) 治安+10"
+                        - option "看護(魔×倫) 体力回復+20"
+                        - option "踊り子(魅×色) 男性4人幸 +8"
+                        - option "シスター(魅×倫) 全員ﾒﾝﾀﾙ +6"
+                      - button "自動割り振り対象" [ref=f21e275] [cursor=pointer]
+                  - cell "なし" [ref=f21e277]:
+                    - combobox [ref=f21e278]:
+                      - option "なし" [selected]
+                  - cell "18" [ref=f21e279]
+                  - cell "24" [ref=f21e280]
+                  - cell "21" [ref=f21e281]
+                  - cell "18" [ref=f21e282]
+                  - cell "18" [ref=f21e283]
+                  - cell [ref=f21e284]
+                  - cell "18" [ref=f21e285]
+                  - cell "18" [ref=f21e286]
+                  - cell "18" [ref=f21e287]
+                  - cell "20" [ref=f21e288]
+                  - cell "18" [ref=f21e289]
+                  - cell [ref=f21e290]
+                  - cell [ref=f21e291]
+                  - cell [ref=f21e292]:
+                    - button "記録" [ref=f21e293] [cursor=pointer]
+                - row [ref=f21e294]:
+                  - cell [ref=f21e295] [cursor=pointer]:
+                    - img "負荷試験後衛07" [ref=f21e297]
+                  - cell "負荷試験後衛07" [ref=f21e298] [cursor=pointer]
+                  - cell "負荷試験後衛07" [ref=f21e299]
+                  - cell "人間" [ref=f21e300]
+                  - cell "男" [ref=f21e301]
+                  - cell "26" [ref=f21e302]
+                  - cell "55" [ref=f21e303]
+                  - cell "80" [ref=f21e304]
+                  - cell "66" [ref=f21e305]
+                  - cell [ref=f21e306]:
+                    - generic [ref=f21e307]:
+                      - combobox [ref=f21e308]:
+                        - option "未設定" [disabled] [selected]
+                        - option "休養 体力 +52,ﾒﾝﾀﾙ +20"
+                        - option "余暇 ﾒﾝﾀﾙ +50"
+                        - option "農作業(耐×勤) 食料+24"
+                        - option "狩猟(筋×勇) 食料+24"
+                        - option "漁(耐×勇) 食料+24"
+                        - option "伐採(筋×勤) 資材+24"
+                        - option "採集(器×知) 食料+16,資材+16"
+                        - option "内職(器×勤) 資金+31"
+                        - option "行商(魅×知) 資金+26"
+                        - option "研究(魔×知) 技術+26"
+                        - option "警備(筋×倫) 治安+10"
+                        - option "看護(魔×倫) 体力回復+20"
+                        - option "詩人(魅×知) 女性4人幸 +9"
+                        - option "神官(魅×倫) 全員ﾒﾝﾀﾙ +6"
+                      - button "自動割り振り対象" [ref=f21e309] [cursor=pointer]
+                  - cell "なし" [ref=f21e311]:
+                    - combobox [ref=f21e312]:
+                      - option "なし" [selected]
+                  - cell "18" [ref=f21e313]
+                  - cell "18" [ref=f21e314]
+                  - cell "23" [ref=f21e315]
+                  - cell "18" [ref=f21e316]
+                  - cell "18" [ref=f21e317]
+                  - cell [ref=f21e318]
+                  - cell "19" [ref=f21e319]
+                  - cell "18" [ref=f21e320]
+                  - cell "18" [ref=f21e321]
+                  - cell "18" [ref=f21e322]
+                  - cell "18" [ref=f21e323]
+                  - cell [ref=f21e324]
+                  - cell [ref=f21e325]
+                  - cell [ref=f21e326]:
+                    - button "記録" [ref=f21e327] [cursor=pointer]
+                - row [ref=f21e328]:
+                  - cell [ref=f21e329] [cursor=pointer]:
+                    - img "負荷試験後衛08" [ref=f21e331]
+                  - cell "負荷試験後衛08" [ref=f21e332] [cursor=pointer]
+                  - cell "負荷試験後衛08" [ref=f21e333]
+                  - cell "人間" [ref=f21e334]
+                  - cell "女" [ref=f21e335]
+                  - cell "27" [ref=f21e336]
+                  - cell "60" [ref=f21e337]
+                  - cell "54" [ref=f21e338]
+                  - cell "65" [ref=f21e339]
+                  - cell [ref=f21e340]:
+                    - generic [ref=f21e341]:
+                      - combobox [ref=f21e342]:
+                        - option "未設定" [disabled] [selected]
+                        - option "休養 体力 +52,ﾒﾝﾀﾙ +20"
+                        - option "余暇 ﾒﾝﾀﾙ +50"
+                        - option "農作業(耐×勤) 食料+24"
+                        - option "狩猟(筋×勇) 食料+24"
+                        - option "漁(耐×勇) 食料+24"
+                        - option "伐採(筋×勤) 資材+24"
+                        - option "採集(器×知) 食料+14,資材+14"
+                        - option "内職(器×勤) 資金+24"
+                        - option "行商(魅×知) 資金+28"
+                        - option "研究(魔×知) 技術+28"
+                        - option "警備(筋×倫) 治安+10"
+                        - option "看護(魔×倫) 体力回復+20"
+                        - option "踊り子(魅×色) 男性4人幸 +8"
+                        - option "シスター(魅×倫) 全員ﾒﾝﾀﾙ +6"
+                      - button "自動割り振り対象" [ref=f21e343] [cursor=pointer]
+                  - cell "なし" [ref=f21e345]:
+                    - combobox [ref=f21e346]:
+                      - option "なし" [selected]
+                  - cell "18" [ref=f21e347]
+                  - cell "18" [ref=f21e348]
+                  - cell "18" [ref=f21e349]
+                  - cell "18" [ref=f21e350]
+                  - cell "18" [ref=f21e351]
+                  - cell [ref=f21e352]
+                  - cell "21" [ref=f21e353]
+                  - cell "18" [ref=f21e354]
+                  - cell "18" [ref=f21e355]
+                  - cell "18" [ref=f21e356]
+                  - cell "18" [ref=f21e357]
+                  - cell [ref=f21e358]
+                  - cell [ref=f21e359]
+                  - cell [ref=f21e360]:
+                    - button "記録" [ref=f21e361] [cursor=pointer]
+            - generic [ref=f21e363] [cursor=pointer]:
+              - checkbox "精神情報を表示" [ref=f21e364]
+              - text: 精神情報を表示
+          - generic [ref=f21e365]:
+            - heading "ログ" [level=2] [ref=f21e366]
+            - generic [ref=f21e367]:
+              - generic [ref=f21e368]:
+                - generic [ref=f21e369]: 【襲撃発生】ゴブリンの襲撃が村へ押し寄せました。
+                - generic [ref=f21e370]: "ゴブリンの襲撃: 5体が襲来！"
+                - generic [ref=f21e371]: "【襲撃結果】防衛成功 : 敵全滅"
+                - generic [ref=f21e372]: "[DEBUG] 襲撃結果 成功:true 部分成功:false"
+                - generic [ref=f21e373]: 防衛成功(敵全滅):村人幸福+20,神威+5
+                - generic [ref=f21e374]: 【村人の行動フェーズ】
+                - generic [ref=f21e375]: 負荷試験前衛01は迎撃(襲撃専用フェーズで実行)
+                - generic [ref=f21e376]: 負荷試験前衛02は迎撃(襲撃専用フェーズで実行)
+                - generic [ref=f21e377]: 負荷試験前衛03は迎撃(襲撃専用フェーズで実行)
+                - generic [ref=f21e378]: 負荷試験前衛04は迎撃(襲撃専用フェーズで実行)
+                - generic [ref=f21e379]: 負荷試験前衛05は迎撃(襲撃専用フェーズで実行)
+                - generic [ref=f21e380]: 負荷試験中衛06は射撃(襲撃専用フェーズで実行)
+                - generic [ref=f21e381]: 負荷試験後衛07は罠作成(襲撃専用フェーズで実行)
+                - generic [ref=f21e382]: 負荷試験後衛08は罠作成(襲撃専用フェーズで実行)
+                - generic [ref=f21e383]: 【月末処理】
+                - generic [ref=f21e384]: 食料-80
+                - generic [ref=f21e385]: === 1195年5月 ===
+                - generic [ref=f21e386]: 【月初処理】
+                - generic [ref=f21e387]: 魔素+33(村人幸福度由来)
+                - generic [ref=f21e388]: 神威+7(幸福度由来魔素)
+                - generic [ref=f21e389]: 負荷試験前衛01は体力が低下のため、休養します
+                - generic [ref=f21e390]: "[前イベント] 何も起こらず"
+              - textbox "キーワードを入力..." [ref=f21e393]
+        - contentinfo [ref=f21e395]: © 2025 Village of Bacchus (Debugged Full Spec)

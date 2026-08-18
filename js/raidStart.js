@@ -276,8 +276,9 @@ function createRaidEnemy(village, raiderType, existingNames, enemyGroup = null) 
   e.raiderDialogues = raiderType.dialogues || [];
 
   // 顔グラフィックの設定（直接portraitFileを設定）
-  if (raiderType.portraits) {
-    e.portraitFile = randChoice(raiderType.portraits);
+  const portraits = raiderType.portraitsByBodySex?.[e.bodySex] || raiderType.portraits;
+  if (Array.isArray(portraits) && portraits.length > 0) {
+    e.portraitFile = randChoice(portraits);
     console.log('Set portrait for raider:', {
       name: e.name,
       type: raiderType.type,

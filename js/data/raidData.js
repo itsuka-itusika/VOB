@@ -728,7 +728,10 @@ export const RAIDER_TYPES = [
       action: "襲撃"
     },
     raidPosition: "front",
-    portraits: numberedPortraits("MINOTAUR", 4),
+    portraitsByBodySex: {
+      "男": numberedPortraits("SPHINX_M", 6),
+      "女": numberedPortraits("SPHINX_F", 7)
+    },
     ranges: {
       hp: [160, 200],
       str: [25, 32],
