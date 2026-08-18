@@ -593,7 +593,7 @@ export const RAIDER_TYPES = [
     raidPosition: "front",
     portraits: numberedPortraits("ARMORED", 8),
     ranges: {
-      hp: [90, 115],
+      hp: [80, 100],
       str: [20, 25],
       vit: [20, 28],
       dex: [8, 15],
@@ -627,7 +627,7 @@ export const RAIDER_TYPES = [
     raidPosition: "front",
     portraits: numberedPortraits("ELITE", 22),
     ranges: {
-      hp: [85, 110],
+      hp: [80, 100],
       str: [22, 25],
       vit: [20, 25],
       dex: [18, 24],
@@ -636,7 +636,7 @@ export const RAIDER_TYPES = [
       int: [14, 22],
       ind: [16, 24],
       eth: [12, 20],
-      cou: [22, 28],
+      cou: [18, 25],
       sexdr: [5, 16]
     },
     mindTraits: ["戦慣れ"],
@@ -661,7 +661,7 @@ export const RAIDER_TYPES = [
     raidPosition: "front",
     portraits: numberedPortraits("HOLY_KNIGHT", 8),
     ranges: {
-      hp: [90, 115],
+      hp: [80, 100],
       str: [22, 25],
       vit: [20, 25],
       dex: [18, 24],
@@ -1433,34 +1433,28 @@ export const RAID_MODULES = [
     enemyGroups: [
       {
         raiderType: "重装兵",
-        minCount: 3,
-        maxCount: 3,
-        mindTraits: ["戦慣れ"],
-        mindTraitChances: [
-          { trait: "秘蹟：盾", chance: 0.2 },
-          { trait: "狂信", chance: 0.2 }
-        ]
+        minCount: 2,
+        maxCount: 2,
+        mindTraits: [],
+        mindTraitChances: [{ trait: "秘蹟：盾", chance: 0.2 }]
       },
       {
         raiderType: "上級騎士",
         minCount: 2,
         maxCount: 2,
-        mindTraits: ["歴戦"],
-        mindTraitChances: [{ trait: "狂信", chance: 0.2 }]
+        mindTraits: ["歴戦"]
       },
       {
         raiderType: "聖女",
         minCount: 1,
         maxCount: 1,
-        mindTraits: ["戦慣れ"],
-        mindTraitChances: [{ trait: "狂信", chance: 0.2 }]
+        mindTraits: []
       },
       {
         raiderType: "聖騎士",
         minCount: 1,
         maxCount: 1,
-        mindTraits: ["歴戦", "秘蹟：剣"],
-        mindTraitChances: [{ trait: "狂信", chance: 0.2 }]
+        mindTraits: ["歴戦", "秘蹟：剣"]
       }
     ],
     defense: { surviveTurns: 6 },
