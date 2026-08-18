@@ -1,7 +1,7 @@
 import { clampValue, round3 } from "../util.js";
-import { ABILITY_STATS, PHYSICAL_ABILITY_STATS } from "./personSchema.js";
+import { ABILITY_STATS, MENTAL_ABILITY_STATS, PHYSICAL_ABILITY_STATS } from "./personSchema.js";
 import { evaluateTitles } from "../titles.js";
-import { OLD_WOLF_TRAIT, YOUNG_WOLF_TRAIT } from "./speciesTraits.js";
+import { IMMATURE_MIND_TRAIT, OLD_WOLF_TRAIT, YOUNG_WOLF_TRAIT } from "./speciesTraits.js";
 import {
   VILLAGE_ROLE_DOCTOR,
   VILLAGE_ROLE_HEADMAN,
@@ -59,6 +59,7 @@ const TEMP_BODY_TRAIT_EFFECTS = Object.freeze({
 });
 
 const TEMP_MIND_TRAIT_EFFECTS = Object.freeze({
+  [IMMATURE_MIND_TRAIT]: { mul: Object.freeze(Object.fromEntries(MENTAL_ABILITY_STATS.map(stat => [stat, 0.25]))) },
   "心労": { mul: { int: 0.8, ind: 0.8, eth: 0.8, cou: 0.8, sexdr: 0.8 } },
   "抑鬱": { mul: { int: 0.25, ind: 0.25, eth: 0.25, cou: 0.25, sexdr: 0.25 } },
   "狂乱": { mul: { eth: 0.2 }, add: { sexdr: 15 } },

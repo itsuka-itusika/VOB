@@ -993,13 +993,13 @@ export function doAgingProcess(v) {
     if (isSaltPillar(p)) return;
     p.bodyAge++;
     p.spiritAge++;
+    const wasOldWolf = p.bodyTraits.includes(OLD_WOLF_TRAIT);
+    const ageLimitedTraitsChanged = syncWolfSpeciesTraits(p);
     if (isWolf(p)) {
-      const wasOldWolf = p.bodyTraits.includes(OLD_WOLF_TRAIT);
-      const changed = syncWolfSpeciesTraits(p);
       if (!wasOldWolf && p.bodyTraits.includes(OLD_WOLF_TRAIT)) {
         v.log(`${p.name}は老狼になった`);
       }
-      if (changed) syncEffectiveStats(p);
+      if (ageLimitedTraitsChanged) syncEffectiveStats(p);
     } else if (p.bodyTraits.some(trait => NO_AGING_BODY_TRAITS.has(trait))) {
       syncEffectiveStats(p);
     } else if (!p.bodyTraits.includes("老人")) {
@@ -1012,6 +1012,10 @@ export function doAgingProcess(v) {
         syncEffectiveStats(p);
         v.log(`${p.name}は中年になった`);
       }
+    }
+    if (ageLimitedTraitsChanged && !isWolf(p)) {
+      syncEffectiveStats(p);
+      refreshJobTable(p, v);
     }
     v.log(`${p.name}:${p.bodyAge}歳(精神年齢${p.spiritAge})`);
     updateChildGrowthStage(p, v, { announce: true });

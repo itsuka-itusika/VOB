@@ -2,6 +2,7 @@ import { Villager } from "./classes.js";
 import { randChoice, randInt, clampValue, randFloat, getPortraitPath } from "./util.js";
 import {
   generateRandomName,
+  createRandomVillager,
   assignBodyMindTraits,
   assignHobby,
   determineSpeechType,
@@ -26,8 +27,10 @@ import {
   WOLF_PUP_PORTRAIT_KEY,
   WINGED_PORTRAIT_FILES
 } from "./data/portraitPaths.js";
+import { getRaiderTypeByType } from "./data/raidData.js";
 import { getBaseStat, setBaseStat, setBaseStatsFromEffective, syncEffectiveStats } from "./domain/statLayers.js";
-import { OLD_WOLF_TRAIT, syncWolfSpeciesTraits, YOUNG_WOLF_TRAIT } from "./domain/speciesTraits.js";
+import { IMMATURE_MIND_TRAIT, OLD_WOLF_TRAIT, syncWolfSpeciesTraits, WILD_MIND_TRAIT, YOUNG_WOLF_TRAIT } from "./domain/speciesTraits.js";
+import { getRaiderSpeechType } from "./domain/raiderSpeechTypes.js";
 import { recordAdulthoodHistory, recordBirthHistory, recordPregnancyHistory } from "./history.js";
 import { addRelationship, checkHasRelationship, getRelationshipTargetName, normalizeRelationship } from "./relationships.js";
 import { getDialogueLine } from "./dialogue/dialogueEngine.js";
@@ -478,44 +481,29 @@ function setChildPortrait(child) {
 
 export function createWolfFoundling(village) {
   const sex = Math.random() < 0.5 ? "男" : "女";
-  const name = generateRandomName(sex, {
+  const wolfType = getRaiderTypeByType("狼");
+  const child = createRandomVillager({
+    sex,
+    minAge: 0,
+    maxAge: 0,
     existingNames: village.villagers.map(person => person.name),
-    race: "狼"
+    params: {
+      ...wolfType.params,
+      race: wolfType.race
+    },
+    ranges: wolfType.ranges
   });
-  const child = new Villager(name, sex, 0);
-  child.race = "狼";
   child.spiritAge = 0;
   child.spiritSex = sex;
-  child.potentialStats = {
-    hp: randInt(30, 50),
-    str: randInt(15, 20),
-    vit: randInt(8, 16),
-    dex: randInt(3, 8),
-    mag: randInt(10, 15),
-    chr: randInt(12, 16),
-    int: randInt(1, 5),
-    ind: randInt(5, 15),
-    eth: randInt(5, 15),
-    cou: randInt(20, 25),
-    sexdr: randInt(10, 20)
-  };
-  child.bodyPotentialStats = { ...child.potentialStats };
-  child.mindPotentialStats = { ...child.potentialStats };
-  Object.assign(child, child.potentialStats);
-  setBaseStatsFromEffective(child);
-  child.bodyTraits = ["赤子"];
-  child.mindTraits = ["無垢"];
-  child.hobby = "";
-  child.hp = 100;
-  child.mp = 100;
-  child.happiness = 50;
-  syncWolfSpeciesTraits(child);
-
-  const adult = buildAdultTemplate(child, child.potentialStats);
-  child.adultBodyTraits = adult.bodyTraits;
-  child.adultMindTraits = adult.mindTraits;
-  child.adultHobby = adult.hobby;
-  child.adultPortraitFile = adult.portraitFile;
+  const exclusiveMindTrait = child.mindTraits[0];
+  child.bodyTraits = [randChoice(wolfType.bodyTraits), ...wolfType.forcedBodyTraits, YOUNG_WOLF_TRAIT];
+  child.mindTraits = [exclusiveMindTrait, WILD_MIND_TRAIT, IMMATURE_MIND_TRAIT].filter(Boolean);
+  child.hobby = randChoice(wolfType.hobbies);
+  child.speechType = getRaiderSpeechType(wolfType.type);
+  child.portraitFile = WOLF_PUP_PORTRAIT_KEY;
+  child.adultPortraitFile = randChoice(wolfType.portraits);
+  syncWolfSpeciesTraits(child, { includeWildMindTrait: true });
+  syncEffectiveStats(child);
   updateChildGrowthStage(child, village);
   return child;
 }
@@ -523,7 +511,15 @@ export function createWolfFoundling(village) {
 export function updateChildGrowthStage(child, village, { announce = false } = {}) {
   const bodyPotential = child.bodyPotentialStats !== undefined ? child.bodyPotentialStats : child.potentialStats;
   const mindPotential = child.mindPotentialStats !== undefined ? child.mindPotentialStats : child.potentialStats;
-  if (!child.potentialStats && !bodyPotential && !mindPotential) return;
+  if (!child.potentialStats && !bodyPotential && !mindPotential) {
+    if (child.race === "狼") {
+      syncWolfSpeciesTraits(child);
+      syncEffectiveStats(child);
+      setChildPortrait(child);
+      refreshJobTable(child, village);
+    }
+    return;
+  }
 
   applyGrowthStats(child);
 

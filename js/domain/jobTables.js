@@ -12,7 +12,7 @@ import {
   canShootInRaid
 } from "../raidRules.js";
 import { syncEffectiveStats } from "./statLayers.js";
-import { FOUR_LEGGED_TRAIT, isWolf, WILD_MIND_TRAIT, YOUNG_WOLF_TRAIT } from "./speciesTraits.js";
+import { FOUR_LEGGED_TRAIT, IMMATURE_MIND_TRAIT, isWolf, WILD_MIND_TRAIT } from "./speciesTraits.js";
 import { isSaltPillar } from "./apocalypseRules.js";
 
 export const ACTION_NONE = "なし";
@@ -163,7 +163,7 @@ export function getActionDisplayName(action) {
 
 function hasInfantMind(person) {
   const mindTraits = traitList(person, "mindTraits");
-  return mindTraits.includes("無垢") || (Number(person?.spiritAge) || 0) <= 3;
+  return mindTraits.includes("無垢");
 }
 
 function hasInfantBody(person) {
@@ -410,20 +410,18 @@ export function refreshJobTable(v, village = {}) {
     return;
   }
 
-  if (traitList(v, "bodyTraits").includes(YOUNG_WOLF_TRAIT)) {
+  const mindTraits = traitList(v, "mindTraits");
+  if (mindTraits.includes(IMMATURE_MIND_TRAIT)) {
     const preferredTable = ["遊び"];
-    setTables(v, preferredTable, [ACTION_REST, ACTION_LEISURE, "遊び"]);
-    applyHumanBeastBodyFilter(v);
+    setTables(v, preferredTable, [ACTION_REST, "遊び"]);
     normalizePreferredForTable(v, v.jobTable, { defaultPreferred: "遊び" });
     normalizeCurrentAction(v);
     return;
   }
 
-  const sa = Number(v.spiritAge) || 0;
-  const mindTraits = traitList(v, "mindTraits");
   const infantMind = hasInfantMind(v);
-  const isToddlerStage = !infantMind && (mindTraits.includes("萌芽") || sa <= 9);
-  const isAdolescentStage = !infantMind && !isToddlerStage && (mindTraits.includes("思春期") || sa <= 15);
+  const isToddlerStage = !infantMind && mindTraits.includes("萌芽");
+  const isAdolescentStage = !infantMind && !isToddlerStage && mindTraits.includes("思春期");
 
   if (infantMind) {
     setTables(v, [ACTION_CRADLE], [ACTION_CRADLE]);

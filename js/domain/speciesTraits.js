@@ -4,6 +4,7 @@ export const FOUR_LEGGED_TRAIT = "四足歩行";
 export const SENSITIVE_NOSE_TRAIT = "嗅覚鋭敏";
 export const WILD_MIND_TRAIT = "野生";
 export const YOUNG_WOLF_TRAIT = "幼狼";
+export const IMMATURE_MIND_TRAIT = "未成熟";
 export const OLD_WOLF_TRAIT = "老狼";
 
 function ensureTraitArray(person, key) {
@@ -51,16 +52,25 @@ export function isAtPopulationLimit(village, incomingPerson = null) {
 }
 
 export function syncWolfSpeciesTraits(person, { includeWildMindTrait = false } = {}) {
-  if (!person || !isWolf(person)) return false;
+  if (!person) return false;
 
   let changed = false;
+  let mindTraits = ensureTraitArray(person, "mindTraits");
+  if ((Number(person.spiritAge) || 0) >= 1) {
+    const result = removeTrait(mindTraits, IMMATURE_MIND_TRAIT);
+    person.mindTraits = result.next;
+    mindTraits = result.next;
+    changed = result.changed || changed;
+  }
+
+  if (!isWolf(person)) return changed;
+
   const bodyTraits = ensureTraitArray(person, "bodyTraits");
 
   [FOUR_LEGGED_TRAIT, SENSITIVE_NOSE_TRAIT].forEach(trait => {
     changed = addUniqueTrait(bodyTraits, trait) || changed;
   });
   if (includeWildMindTrait) {
-    const mindTraits = ensureTraitArray(person, "mindTraits");
     changed = addUniqueTrait(mindTraits, WILD_MIND_TRAIT) || changed;
   }
 

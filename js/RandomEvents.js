@@ -26,8 +26,7 @@ import {
   EVENT_MOODS,
   EVENT_POOLS,
   EVENT_SECOND_LINE_BASES,
-  EVENT_SUBJECTS,
-  GOLDEN_RAIN_RACES
+  EVENT_SUBJECTS
 } from "./data/randomEventData.js";
 
 const VILLAGER_STATE_KEYS = [
@@ -216,7 +215,8 @@ export class RandomEvents {
    */
   static doMythicEvent(v) {
     let cands = [];
-    getActiveVillagers(v).forEach(p => {
+    const mythicVillagers = getActiveVillagers(v).filter(p => (p.race || "人間") === "人間");
+    mythicVillagers.forEach(p => {
       if (p.bodySex === "女" && p.bodyAge >= 16 && p.bodyAge <= 25 && p.sexdr <= 5 &&
           !p.bodyTraits.includes("月の巫女")) {
         cands.push({ type: "狩猟神", vill: p });
@@ -237,7 +237,6 @@ export class RandomEvents {
           Number(p.bodyAge) >= 16 &&
           Number(p.bodyAge) <= 29 &&
           Number(p.chr) >= 25 &&
-          GOLDEN_RAIN_RACES.has(p.race || "人間") &&
           !p.pregnancy &&
           !p.bodyTraits.includes("妊娠") &&
           !p.bodyTraits.includes("臨月") &&
@@ -246,7 +245,7 @@ export class RandomEvents {
       }
     });
 
-    const growthPotionCandidates = getActiveVillagers(v).filter(person => Number(person.bodyAge) <= 9);
+    const growthPotionCandidates = mythicVillagers.filter(person => Number(person.bodyAge) <= 9);
     if (growthPotionCandidates.length > 0 && Math.random() < 0.2) {
       cands.push({ type: "strangeGrowthPotion", vill: this.randChoice(growthPotionCandidates) });
     }
@@ -379,7 +378,8 @@ export class RandomEvents {
           Number(person.sexdr) >= 20 &&
           person.bodySex === "女" &&
           person.spiritSex === "男" &&
-          Number(person.spiritAge) >= 12
+          Number(person.spiritAge) >= 12 &&
+          !hasMindTrait(person, "野生")
         );
 
         if (candidates.length === 0) {
@@ -500,6 +500,7 @@ export class RandomEvents {
           x.bodyAge >= 12 &&
           x.spiritAge >= 16 &&
           x.eth <= 12 &&
+          !hasMindTrait(x, "野生") &&
           !this.hasBodyTrait(x, "刺青")
         );
 
@@ -523,6 +524,7 @@ export class RandomEvents {
           x.bodyAge >= 12 && x.bodyAge <= 30 &&
           x.spiritAge >= 16 &&
           x.sexdr >= 20 &&
+          !hasMindTrait(x, "野生") &&
           !this.hasHobby(x, "オシャレ")
         );
 

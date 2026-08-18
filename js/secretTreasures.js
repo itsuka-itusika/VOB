@@ -16,6 +16,7 @@ import { DESPAIR_TRAIT, DISAPPOINTMENT_TRAIT } from "./domain/despair.js";
 import { getDialogueLine } from "./dialogue/dialogueEngine.js";
 import { DEFAULT_PORTRAIT_KEY, getPortraitAssetPath } from "./data/portraitPaths.js";
 import { getActiveVillagers, getVillagersIncludingSaltPillar } from "./domain/apocalypseRules.js";
+import { FOUR_LEGGED_TRAIT, syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
 
 const SEASON_TRAITS_TO_REMOVE = ["夏", "秋", "冬", "冷夏", "飛蝗", "厳冬", "疫病流行"];
 const BAD_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "凍え", "疫病", "産褥", "危篤"];
@@ -223,13 +224,19 @@ function growToSixteen(person, village) {
   if (oldBodyAge <= 15) person.bodyAge = 16;
   if (oldSpiritAge <= 15) person.spiritAge = 16;
   updateChildGrowthStage(person, village, { announce: true });
+  syncWolfSpeciesTraits(person);
   if (!hasPotential) {
     person.bodyTraits = (person.bodyTraits || []).filter(trait => !["赤子", "幼児", "少年", "少女"].includes(trait));
     person.mindTraits = (person.mindTraits || []).filter(trait => !["無垢", "萌芽", "思春期"].includes(trait));
-    refreshJobTable(person, village);
   }
+  syncEffectiveStats(person);
+  refreshJobTable(person, village);
   village.log(`【秘宝】クロノスの秘薬により${person.name}は16歳まで成長しました`);
   showSecretTreasureResult(village, "クロノスの秘薬", `${person.name}は急速に成長し、若い姿を得ました。`, [person]);
+}
+
+function canUseChronosElixirOn(person) {
+  return !Array.isArray(person?.bodyTraits) || !person.bodyTraits.includes(FOUR_LEGGED_TRAIT);
 }
 
 function applyPineconeStaff(village, pair) {
@@ -443,9 +450,11 @@ export const SECRET_TREASURES = [
   {
     id: "chronos_elixir",
     name: "クロノスの秘薬",
-    desc: "肉体年齢15以下または精神年齢15以下の村人に使用可能。該当する年齢を16まで成長させ、潜在成長も反映する。",
+    desc: "四足歩行を持たず、肉体年齢15以下または精神年齢15以下の村人に使用可能。該当する年齢を16まで成長させ、潜在成長も反映する。",
     sellPrice: SECRET_TREASURE_SELL_PRICES.chronos_elixir,
     target: "childVillager",
+    targetFilter: canUseChronosElixirOn,
+    targetBlockedReason: "四足歩行を持たない若い村人が必要です",
     use: (village, target) => growToSixteen(target, village)
   },
   {

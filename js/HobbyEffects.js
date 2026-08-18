@@ -150,7 +150,7 @@ export class HobbyEffects {
 
   static isAgeRestrictedHobby(p, hobby) {
     const bodyAge = Number(p.bodyAge) || 0;
-    return bodyAge < 12 && ["自家発電", "飲酒", "ハンティング", "狩猟"].includes(hobby);
+    return bodyAge < 12 && ["自家発電", "飲酒"].includes(hobby);
   }
 
   static applyFighting(p, v) {
