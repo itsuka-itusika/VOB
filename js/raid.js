@@ -320,11 +320,13 @@ function calculateRaidFailurePenalty(village) {
     foodLoss: Math.floor((Number(village.food) || 0) * (Number(penalty.foodRate) || 0)),
     materialsLoss: Math.floor((Number(village.materials) || 0) * (Number(penalty.materialsRate) || 0)),
     fundsLoss: Math.floor((Number(village.funds) || 0) * (Number(penalty.fundsRate) || 0)),
+    manaLoss: Math.floor((Number(village.mana) || 0) * (Number(penalty.manaRate) || 0)),
     securityLoss: Number(penalty.security) || 0,
     happinessLoss: Number(penalty.villagerHappiness) || 0,
     hpMin,
     hpMax,
     buildingDamage: penalty.buildingDamage === true,
+    goldenStatueDamage: penalty.goldenStatueDamage === true,
     severeInjury: penalty.severeInjury === true
   };
 }
@@ -339,10 +341,12 @@ function formatRaidFailurePenaltyLines(village) {
     `食料: -${penalty.foodLoss}`,
     `資材: -${penalty.materialsLoss}`,
     `資金: -${penalty.fundsLoss}`,
+    `魔素: -${penalty.manaLoss}`,
     `治安: -${penalty.securityLoss}`,
     hpText,
     `村人幸福: -${penalty.happinessLoss}`,
     penalty.buildingDamage ? "建築損壊: あり" : "建築損壊: なし",
+    ...(penalty.goldenStatueDamage ? ["バッカスの黄金像損壊: あり"] : []),
     penalty.severeInjury ? "重体判定: あり" : "重体判定: なし"
   ];
 }
@@ -1134,6 +1138,7 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
       village.food=clampValue(village.food - penalty.foodLoss,0,99999);
       village.materials=clampValue(village.materials - penalty.materialsLoss,0,99999);
       village.funds=clampValue(village.funds - penalty.fundsLoss,0,99999);
+      village.mana=clampValue(village.mana - penalty.manaLoss,0,99999);
       village.security=clampValue(village.security - penalty.securityLoss,0,100);
 
       village.villagers.forEach(p=>{
@@ -1150,10 +1155,12 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
         penalty.foodLoss > 0 ? `食料-${penalty.foodLoss}` : "",
         penalty.materialsLoss > 0 ? `資材-${penalty.materialsLoss}` : "",
         penalty.fundsLoss > 0 ? `資金-${penalty.fundsLoss}` : "",
+        penalty.manaLoss > 0 ? `魔素-${penalty.manaLoss}` : "",
         penalty.securityLoss > 0 ? `治安-${penalty.securityLoss}` : "",
         penalty.hpMax > 0 ? `村人HP-${penalty.hpMin}~${penalty.hpMax}` : "",
         penalty.happinessLoss > 0 ? `幸福-${penalty.happinessLoss}` : "",
         penalty.buildingDamage ? "建築損壊あり" : "",
+        penalty.goldenStatueDamage ? "バッカスの黄金像損壊" : "",
         penalty.severeInjury ? "重体判定あり" : ""
       ].filter(Boolean).join(",") || "追加被害なし";
       village.log(`迎撃失敗:${penaltyLog}`);

@@ -959,10 +959,11 @@ const DEFAULT_RAID_FAILURE_PENALTY = {
   foodRate: 0,
   materialsRate: 0,
   fundsRate: 0,
+  manaRate: 0,
   security: 10,
-  villagerHpRange: [5, 15],
   villagerHappiness: 30,
   buildingDamage: false,
+  goldenStatueDamage: false,
   severeInjury: false
 };
 
@@ -1208,13 +1209,9 @@ export const RAID_MODULES = [
     ],
     defense: { surviveTurns: 7 },
     failurePenalty: {
-      foodRate: 0.45,
-      materialsRate: 0.35,
-      security: 28,
-      villagerHpRange: [18, 35],
-      villagerHappiness: 55,
-      buildingDamage: true,
-      severeInjury: true
+      foodRate: 0.3,
+      fundsRate: 0.3,
+      buildingDamage: true
     },
     introDialogues: [
       "森も空も街道も騒いでいる。異なる群れが一つの奔流となって村へ迫る。",
@@ -1268,8 +1265,8 @@ export const RAID_MODULES = [
       type: "resourcePayment",
       label: "貢納を差し出す",
       resources: [
-        { resource: "food", rate: 0.45, minAmount: 180 },
-        { resource: "funds", rate: 0.45, minAmount: 300 }
+        { resource: "food", rate: 0.3, minAmount: 180 },
+        { resource: "funds", rate: 0.3, minAmount: 300 }
       ]
     },
     representative: { raiderType: "強遊牧民" },
@@ -1283,8 +1280,9 @@ export const RAID_MODULES = [
       "重い貢納で済ませるか、戦でさらに失うか。選べ。"
     ],
     failurePenalty: {
-      foodRate: 0.4,
-      fundsRate: 0.4
+      foodRate: 0.3,
+      fundsRate: 0.3,
+      severeInjury: true
     }
   }),
   createCompositeRaiderRaid({
@@ -1296,7 +1294,7 @@ export const RAID_MODULES = [
       type: "resourcePayment",
       resource: "funds",
       label: "巡礼の寄付を払う",
-      rate: 0.55,
+      rate: 0.5,
       minAmount: 500
     },
     representative: [
@@ -1328,8 +1326,7 @@ export const RAID_MODULES = [
       "志の高い者も、飢えた者もいる。だが装備と隊列は本物だ。"
     ],
     failurePenalty: {
-      fundsRate: 0.35,
-      severeInjury: true
+      fundsRate: 0.4
     }
   }),
   createCompositeRaiderRaid({
@@ -1342,11 +1339,8 @@ export const RAID_MODULES = [
       { raiderType: "スフィンクス", minCount: 1, maxCount: 1 }
     ],
     failurePenalty: {
-      materialsRate: 0.35,
-      fundsRate: 0.25,
-      security: 18,
-      villagerHpRange: [12, 28],
-      villagerHappiness: 45
+      manaRate: 0.2,
+      buildingDamage: true
     },
     introDialogues: [
       "問いを持って降り立ちました。答えられぬ村には、爪で続きを刻みましょう。",
@@ -1364,9 +1358,9 @@ export const RAID_MODULES = [
       { raiderType: "翼人兵", minCount: 5, maxCount: 5, mindTraits: ["神聖"] }
     ],
     failurePenalty: {
-      security: 18,
-      villagerHpRange: [10, 22],
+      security: 20,
       villagerHappiness: 40,
+      buildingDamage: true,
       severeInjury: true
     },
     introDialogues: [
@@ -1391,11 +1385,8 @@ export const RAID_MODULES = [
       { raiderType: "聖女", minCount: 1, maxCount: 1, mindTraits: [] }
     ],
     failurePenalty: {
-      materialsRate: 0.3,
-      fundsRate: 0.3,
-      security: 18,
-      villagerHpRange: [10, 25],
-      villagerHappiness: 40,
+      foodRate: 0.4,
+      fundsRate: 0.4,
       severeInjury: true
     },
     introDialogues: [
@@ -1416,9 +1407,9 @@ export const RAID_MODULES = [
     ],
     defense: { surviveTurns: 6 },
     failurePenalty: {
-      security: 22,
-      villagerHpRange: [12, 28],
-      villagerHappiness: 50,
+      security: 20,
+      villagerHappiness: 40,
+      buildingDamage: true,
       severeInjury: true
     },
     introDialogues: [
@@ -1471,11 +1462,8 @@ export const RAID_MODULES = [
     ],
     defense: { surviveTurns: 6 },
     failurePenalty: {
-      materialsRate: 0.4,
+      foodRate: 0.4,
       fundsRate: 0.4,
-      security: 22,
-      villagerHpRange: [12, 30],
-      villagerHappiness: 50,
       severeInjury: true
     },
     introDialogues: [
@@ -1554,9 +1542,12 @@ export const RAID_MODULES = [
     defense: { surviveTurns: 7 },
     successRewards: { completeHappiness: 30, partialHappiness: 15 },
     failurePenalty: {
-      security: 28,
-      villagerHpRange: [18, 35],
-      villagerHappiness: 55,
+      foodRate: 0.5,
+      materialsRate: 0.5,
+      fundsRate: 0.5,
+      security: 0,
+      villagerHappiness: 80,
+      goldenStatueDamage: true,
       severeInjury: true
     },
     introDialogues: [
@@ -1584,12 +1575,12 @@ export const RAID_MODULES = [
     ],
     defense: { surviveTurns: 7 },
     failurePenalty: {
+      foodRate: 0.5,
       materialsRate: 0.5,
       fundsRate: 0.5,
-      security: 35,
-      villagerHpRange: [25, 45],
-      villagerHappiness: 65,
-      buildingDamage: true,
+      security: 20,
+      villagerHappiness: 60,
+      goldenStatueDamage: true,
       severeInjury: true
     },
     introDialogues: [
