@@ -491,10 +491,10 @@ export const RAIDER_TYPES = [
     raidPosition: "front",
     portraits: numberedPortraits("ELITE_NOMAD", 20),
     ranges: {
-      hp: [75, 95],
-      str: [20, 28],
+      hp: [70, 90],
+      str: [20, 25],
       vit: [18, 23],
-      dex: [20, 28],
+      dex: [20, 25],
       mag: [5, 14],
       chr: [10, 20],
       int: [12, 22],
@@ -526,7 +526,7 @@ export const RAIDER_TYPES = [
     raidPosition: "front",
     portraits: numberedPortraits("CENTAUR", 9),
     ranges: {
-      hp: [95, 125],
+      hp: [80, 100],
       str: [18, 23],
       vit: [18, 23],
       dex: [18, 28],
@@ -627,7 +627,7 @@ export const RAIDER_TYPES = [
     raidPosition: "front",
     portraits: numberedPortraits("ELITE", 22),
     ranges: {
-      hp: [80, 100],
+      hp: [70, 90],
       str: [22, 25],
       vit: [20, 25],
       dex: [18, 24],
@@ -696,7 +696,7 @@ export const RAIDER_TYPES = [
     raidTargeting: "frontFirst",
     portraits: numberedPortraits("SAINT", 21),
     ranges: {
-      hp: [70, 95],
+      hp: [60, 90],
       str: [8, 15],
       vit: [12, 20],
       dex: [12, 20],
@@ -771,7 +771,7 @@ export const RAIDER_TYPES = [
     raidAttackType: "rangedMagic",
     portraits: numberedPortraits("ANGEL_FIGHTER", 16),
     ranges: {
-      hp: [75, 100],
+      hp: [70, 90],
       str: [16, 23],
       vit: [16, 23],
       dex: [16, 23],
@@ -808,7 +808,7 @@ export const RAIDER_TYPES = [
     raidAttackType: "rangedMagic",
     portraits: numberedPortraits("ARCHANGEL", 13),
     ranges: {
-      hp: [105, 135],
+      hp: [80, 100],
       str: [18, 25],
       vit: [18, 25],
       dex: [16, 23],
@@ -1158,7 +1158,7 @@ export const RAID_MODULES = [
       { raiderType: "ゴブリン射手", minCount: 2, maxCount: 3 },
       { raiderType: "ゴブリン", minCount: 2, maxCount: 3 }
     ],
-    defense: { surviveTurns: 6 },
+    defense: { surviveTurns: 5 },
     failurePenalty: {
       foodRate: 0.35,
       fundsRate: 0.2
@@ -1210,7 +1210,7 @@ export const RAID_MODULES = [
       { raiderType: "ハーピーの長", minCount: 1, maxCount: 1 },
       { raiderType: "餓狼", minCount: 2, maxCount: 2 }
     ],
-    defense: { surviveTurns: 7 },
+    defense: { surviveTurns: 5 },
     failurePenalty: {
       foodRate: 0.3,
       fundsRate: 0.3,
@@ -1274,8 +1274,8 @@ export const RAID_MODULES = [
     },
     representative: { raiderType: "強遊牧民" },
     enemyGroups: [
-      { raiderType: "強遊牧民", minCount: 3, maxCount: 5 },
-      { raiderType: "セントール", minCount: 1, maxCount: 3 }
+      { raiderType: "強遊牧民", minCount: 3, maxCount: 4 },
+      { raiderType: "セントール", minCount: 1, maxCount: 2 }
     ],
     introDialogues: [
       "食料も富も差し出せ。拒む村は、蹄で踏み荒らす。",
@@ -1309,16 +1309,16 @@ export const RAID_MODULES = [
         weight: 80,
         enemyGroups: [
           { raiderType: "下級騎士", minCount: 3, maxCount: 3 },
-          { raiderType: "重装兵", minCount: 2, maxCount: 2, mindTraits: ["戦慣れ"] },
-          { raiderType: "上級騎士", minCount: 1, maxCount: 1, mindTraits: ["歴戦"] }
+          { raiderType: "重装兵", minCount: 1, maxCount: 1, mindTraits: [] },
+          { raiderType: "上級騎士", minCount: 1, maxCount: 1, mindTraits: ["戦慣れ"] }
         ]
       },
       {
         weight: 20,
         enemyGroups: [
           { raiderType: "下級騎士", minCount: 2, maxCount: 2 },
-          { raiderType: "重装兵", minCount: 2, maxCount: 2, mindTraits: ["戦慣れ"] },
-          { raiderType: "上級騎士", minCount: 1, maxCount: 1, mindTraits: ["歴戦"] },
+          { raiderType: "重装兵", minCount: 1, maxCount: 1, mindTraits: [] },
+          { raiderType: "上級騎士", minCount: 1, maxCount: 1, mindTraits: ["戦慣れ"] },
           { raiderType: "聖女", minCount: 1, maxCount: 1, mindTraits: [] }
         ]
       }
@@ -1383,7 +1383,7 @@ export const RAID_MODULES = [
     ],
     enemyGroups: [
       { raiderType: "下級騎士", minCount: 2, maxCount: 2 },
-      { raiderType: "重装兵", minCount: 2, maxCount: 2, mindTraits: ["戦慣れ"] },
+      { raiderType: "重装兵", minCount: 2, maxCount: 2, mindTraits: [] },
       { raiderType: "上級騎士", minCount: 2, maxCount: 2, mindTraits: ["歴戦"] },
       { raiderType: "聖女", minCount: 1, maxCount: 1, mindTraits: [] }
     ],
@@ -1408,7 +1408,7 @@ export const RAID_MODULES = [
       { raiderType: "翼人兵", minCount: 5, maxCount: 5, mindTraits: ["神聖", "戦慣れ"] },
       { raiderType: "上位翼人", minCount: 1, maxCount: 1, mindTraits: ["神聖", "歴戦", "狂信"] }
     ],
-    defense: { surviveTurns: 6 },
+    defense: { surviveTurns: 5 },
     failurePenalty: {
       security: 20,
       villagerHappiness: 40,
@@ -1457,7 +1457,7 @@ export const RAID_MODULES = [
         mindTraits: ["歴戦", "秘蹟：剣"]
       }
     ],
-    defense: { surviveTurns: 6 },
+    defense: { surviveTurns: 5 },
     failurePenalty: {
       foodRate: 0.4,
       fundsRate: 0.4,
@@ -1481,7 +1481,7 @@ export const RAID_MODULES = [
       { raiderType: "聖騎士", minCount: 1, maxCount: 1 },
       { raiderType: "聖女", minCount: 1, maxCount: 1 }
     ],
-    defense: { surviveTurns: 6 },
+    defense: { surviveTurns: 5 },
     failurePenalty: {
       materialsRate: 0.35,
       fundsRate: 0.35,
@@ -1507,7 +1507,7 @@ export const RAID_MODULES = [
       { raiderType: "強遊牧民", minCount: 2, maxCount: 3 },
       { raiderType: "セントール", minCount: 1, maxCount: 2 }
     ],
-    defense: { surviveTurns: 7 },
+    defense: { surviveTurns: 5 },
     failurePenalty: {
       foodRate: 0.45,
       fundsRate: 0.45,
