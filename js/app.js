@@ -29,6 +29,7 @@ import { getCaptives } from "./captives.js";
 import { setBalanceSimulationOptions } from "./balance/simulationOptions.js";
 
 const VIEW_MODE_STORAGE_KEY = "vob.viewMode";
+const OPENING_SCREEN_FADE_MS = 240;
 const APOCALYPSE_DEBUG_VILLAGER_COUNT = 15;
 const APOCALYPSE_DEBUG_RESOURCE_AMOUNT = 10000;
 let debugTitleActionsEnabled = false;
@@ -40,11 +41,74 @@ function replaceVillageState(nextVillage, loadedMessage) {
   updateUI(theVillage);
 }
 
+function setOpeningView(view) {
+  const screen = document.getElementById("openingScreen");
+  if (!screen) return;
+
+  const views = {
+    menu: document.getElementById("openingMenu"),
+    prompt: document.getElementById("openingNewGamePrompt"),
+    story: document.getElementById("openingStory")
+  };
+  Object.entries(views).forEach(([name, element]) => {
+    if (element) element.hidden = name !== view;
+  });
+  screen.dataset.view = view;
+
+  const focusTargets = {
+    menu: document.getElementById("openingNewGameButton"),
+    prompt: document.getElementById("openingWatchButton"),
+    story: document.getElementById("openingStoryTitle")
+  };
+  if (view === "story" && views.story) views.story.scrollTop = 0;
+  window.requestAnimationFrame(() => focusTargets[view]?.focus({ preventScroll: view === "story" }));
+}
+
+function enterGame() {
+  const screen = document.getElementById("openingScreen");
+  document.body.classList.remove("opening-active");
+  if (!screen || screen.hidden) return;
+
+  screen.classList.add("is-closing");
+  screen.setAttribute("aria-hidden", "true");
+  window.setTimeout(() => {
+    screen.hidden = true;
+    document.getElementById("nextTurnButton")?.focus();
+  }, OPENING_SCREEN_FADE_MS);
+}
+
+function trapOpeningFocus(event) {
+  if (event.key !== "Tab") return;
+  const visibleView = event.currentTarget.querySelector(".opening-view:not([hidden])");
+  const buttons = Array.from(visibleView?.querySelectorAll("button:not([disabled])") || []);
+  if (buttons.length === 0) return;
+
+  const firstButton = buttons[0];
+  const lastButton = buttons[buttons.length - 1];
+  const focusStart = visibleView.querySelector('[tabindex="-1"]') || firstButton;
+  if (!visibleView.contains(document.activeElement)) {
+    event.preventDefault();
+    firstButton.focus();
+  } else if (event.shiftKey && document.activeElement === focusStart) {
+    event.preventDefault();
+    lastButton.focus();
+  } else if (!event.shiftKey && document.activeElement === lastButton) {
+    event.preventDefault();
+    firstButton.focus();
+  }
+}
+
 async function loadFromSelectedJsonFile(file) {
   if (!file) return;
-  const loadedVillage = await loadVillageFromJsonFile(file);
-  if (loadedVillage) {
-    replaceVillageState(loadedVillage, "JSONファイルからロードしました");
+  try {
+    const loadedVillage = await loadVillageFromJsonFile(file);
+    if (loadedVillage) {
+      replaceVillageState(loadedVillage, "JSONファイルからロードしました");
+      enterGame();
+    }
+  } catch (error) {
+    console.error(error);
+    alert("JSONファイルを読み込めませんでした。");
   }
 }
 
@@ -58,12 +122,33 @@ function openJsonLoadDialog() {
 }
 
 function loadFromLocalStorage() {
-  const loadedVillage = loadVillageFromLocalStorage();
-  if (!loadedVillage) {
-    alert("ローカルストレージにセーブデータがありません。");
-    return;
+  try {
+    const loadedVillage = loadVillageFromLocalStorage();
+    if (!loadedVillage) {
+      alert("ローカルストレージにセーブデータがありません。");
+      return;
+    }
+    replaceVillageState(loadedVillage, "ローカルストレージからロードしました");
+    enterGame();
+  } catch (error) {
+    console.error(error);
+    alert("ローカル保存を読み込めませんでした。");
   }
-  replaceVillageState(loadedVillage, "ローカルストレージからロードしました");
+}
+
+function initOpeningScreen() {
+  const screen = document.getElementById("openingScreen");
+  if (!screen) return;
+
+  document.body.classList.add("opening-active");
+  document.getElementById("openingNewGameButton")?.addEventListener("click", () => setOpeningView("prompt"));
+  document.getElementById("openingWatchButton")?.addEventListener("click", () => setOpeningView("story"));
+  document.getElementById("openingSkipButton")?.addEventListener("click", enterGame);
+  document.getElementById("openingStoryContinueButton")?.addEventListener("click", enterGame);
+  document.getElementById("openingLoadLocalButton")?.addEventListener("click", loadFromLocalStorage);
+  document.getElementById("openingLoadJsonButton")?.addEventListener("click", openJsonLoadDialog);
+  screen.addEventListener("keydown", trapOpeningFocus);
+  setOpeningView("menu");
 }
 
 function grantAllSecretTreasures(village) {
@@ -435,3 +520,4 @@ exposeBalanceApi();
 bindModalOverlayClickClose();
 bindDebugTitleActions();
 initViewMode();
+initOpeningScreen();

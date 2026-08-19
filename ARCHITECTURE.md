@@ -28,6 +28,7 @@
 3. `updateUI(theVillage)` で初期画面を描画する。
 4. `js/app.js` がボタン操作用の関数を `window` に登録する。
 5. 表示モードを localStorage から復元し、PC / スマホ仮表示を切り替える。
+6. `OPENING.png` を使った開始画面を表示し、新規開始、localStorage 読込、JSON 読込のいずれかからゲーム画面へ進む。新規開始では、固定の導入シーンを表示するか選択できる。
 
 ## 月次処理
 

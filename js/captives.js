@@ -84,6 +84,12 @@ export function isCaptive(person, village) {
 }
 
 export function getCaptiveSocialCoefficient(person) {
+  const mindTraits = Array.isArray(person?.mindTraits) ? person.mindTraits : [];
+  const blocksSocialAttempts = mindTraits.some(trait => (
+    trait === "狂信" || String(trait).startsWith("秘蹟：")
+  ));
+  if (blocksSocialAttempts) return 0;
+
   const raiderType = String(person?.raiderType || person?.job || "");
   return CAPTIVE_SOCIAL_COEFFICIENTS[raiderType] ?? CAPTIVE_SOCIAL_COEFFICIENT;
 }
