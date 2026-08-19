@@ -10,6 +10,8 @@
   - PC 表示、スマホ仮表示、テーブル、モーダル、ログ、各種操作 UI の見た目を定義する。
 - `js/app.js`
   - アプリの接続層。モジュールを読み込み、HTML から呼ぶ操作を `window` に公開する。
+- `js/openingScreen.js`
+  - 開始画面のビュー切り替え、導入シーンの文字送り、ゲーム画面への遷移を扱う。
 - `js/main.js`
   - `theVillage` を生成し、月次進行の入口 `onNextTurn` を持つ。
 - `js/classes.js`
@@ -28,7 +30,8 @@
 3. `updateUI(theVillage)` で初期画面を描画する。
 4. `js/app.js` がボタン操作用の関数を `window` に登録する。
 5. 表示モードを localStorage から復元し、PC / スマホ仮表示を切り替える。
-6. `OPENING.png` を使った開始画面を表示し、新規開始、localStorage 読込、JSON 読込のいずれかからゲーム画面へ進む。新規開始では、固定の導入シーンを表示するか選択できる。
+6. `js/openingScreen.js` が `OPENING.png` を使った開始画面を表示し、新規開始、localStorage 読込、JSON 読込のいずれかからゲーム画面へ進む。読込処理は `js/app.js` から渡す。
+7. 新規開始では、固定の導入シーンを表示するか選択できる。導入シーンは背景を暗転させ、`js/data/openingScript.js` の台本を1メッセージずつ文字送りで表示する。クリック、タップ、Enter、Space で進み、文字送り中の入力は全文の即時表示になる。
 
 ## 月次処理
 
@@ -88,6 +91,8 @@
   - 礼拝堂建設後の村人の願望候補、発生・達成判定、期限、警告、願望モーダル、達成報酬を扱う。
 - `js/data/wishData.js`
   - 願望の表示名、発生時と達成時のセリフ、発生率、継続期間を定義する。
+- `js/data/openingScript.js`
+  - 導入シーンのト書きと台本。配列の1要素が1回の文字送りに対応する。
 - `js/headmanElection.js`
   - 集会所建設後の里長選挙、得票計算、里長役職の付け替えを扱う。
 - `js/raidStart.js`
