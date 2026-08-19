@@ -92,6 +92,7 @@
 
 - `js/data/dialogue/visitorLines.js`
   - 訪問者タイプ別の会話。
+  - `VISITOR_APOCALYPSE_LINES` は黙示録中の訪問者タイプ別会話。災厄の進行段階では分岐せず、第一〜第七のどこでも成立する内容にする。未定義タイプは `VISITOR_APOCALYPSE_GENERIC_LINES` で受ける。
 
 - `js/data/dialogue/randomEventLines.js`
   - ランダムイベントの口調別セリフ、子供向け汎用セリフ、fallback 展開ヘルパー。
@@ -137,7 +138,7 @@
 
 `getConversationLine` では、以下は通常候補選択より前に処理される。
 
-- 精神特性 `訪問者`: `visitor` scene の会話を返す。
+- 精神特性 `訪問者`: `visitor` scene の会話を返す。`isApocalypseActive(village)` が真なら黙示録用の会話を優先する。
 - 精神特性 `襲撃者` かつ `raiderDialogues` がある: 襲撃者専用セリフを返す。
 
 ## 口調キー

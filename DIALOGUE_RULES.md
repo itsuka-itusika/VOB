@@ -24,7 +24,7 @@
 - `exchangeSituationLines.js`: 入れ替わった身体の年齢・性別・種族・能力と、交換後半年以内の違和感に応じた通常会話。
 - `secretTreasureLines.js`: 秘宝の専用結果モーダルで表示する口調別反応。
 - `miracleLines.js`: 清拭など、分離済みの奇跡結果モーダルで表示する口調別反応。
-- `visitorLines.js`: 訪問者タイプ別会話。
+- `visitorLines.js`: 訪問者タイプ別会話。黙示録中は同ファイルの黙示録用テーブルへ切り替わる。
 - `randomEventLines.js`: ランダムイベント用の口調別セリフ。
 - `toneProfiles.js`: 口調キー、alias、fallback、口調解決。
 

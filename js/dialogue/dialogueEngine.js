@@ -17,7 +17,13 @@ import { REPRODUCTION_LINES } from "../data/dialogue/reproductionLines.js";
 import { EXCHANGE_SITUATION_LINES } from "../data/dialogue/exchangeSituationLines.js";
 import { SECRET_TREASURE_LINES } from "../data/dialogue/secretTreasureLines.js";
 import { MIRACLE_RESULT_LINES } from "../data/dialogue/miracleLines.js";
-import { getVisitorLineKey, VISITOR_GENERIC_LINES, VISITOR_LINES } from "../data/dialogue/visitorLines.js";
+import {
+  getVisitorLineKey,
+  VISITOR_APOCALYPSE_GENERIC_LINES,
+  VISITOR_APOCALYPSE_LINES,
+  VISITOR_GENERIC_LINES,
+  VISITOR_LINES
+} from "../data/dialogue/visitorLines.js";
 import {
   BUDDING_EVENT_LINES,
   EVENT_LINES_BY_SPEECH_TYPE,
@@ -29,6 +35,7 @@ import {
   findLineByKeys
 } from "../data/dialogue/randomEventLines.js";
 import { BODY_EXCHANGE_SOURCE_RACE_LINE_KEYS } from "../data/dialogue/exchangeLines.js";
+import { isApocalypseActive } from "../domain/apocalypseRules.js";
 
 export { resolveDialogueTone, resolveStoredSpeechType } from "../data/dialogue/toneProfiles.js";
 
@@ -94,7 +101,13 @@ function getStatusLines(character, status, context = {}) {
   return selectToneLines(STATUS_LINES[status], character, context);
 }
 
-function getVisitorLines(visitorType) {
+function getVisitorLines(visitorType, context = {}) {
+  if (context.apocalypseActive) {
+    const apocalypseLines = asLineArray(
+      VISITOR_APOCALYPSE_LINES[visitorType] || VISITOR_APOCALYPSE_GENERIC_LINES
+    );
+    if (apocalypseLines.length > 0) return apocalypseLines;
+  }
   return asLineArray(VISITOR_LINES[visitorType] || VISITOR_GENERIC_LINES);
 }
 
@@ -233,7 +246,7 @@ export function getDialogueLines({ character, scene, key, context = {} }) {
     case "miracle":
       return selectToneLines(MIRACLE_RESULT_LINES[key], character, context);
     case "visitor":
-      return getVisitorLines(key);
+      return getVisitorLines(key, context);
     default:
       return [];
   }
@@ -451,7 +464,13 @@ export function selectConversationCandidate(candidates) {
 
 export function getConversationLine({ character, village, context = {} }) {
   if (hasTrait(character, "訪問者", "mindTraits")) {
-    return getDialogueLine({ character, scene: "visitor", key: getVisitorType(character), context }) || "...";
+    const visitorContext = { ...context, apocalypseActive: isApocalypseActive(village) };
+    return getDialogueLine({
+      character,
+      scene: "visitor",
+      key: getVisitorType(character),
+      context: visitorContext
+    }) || "...";
   }
 
   if (hasTrait(character, "襲撃者", "mindTraits") && Array.isArray(character?.raiderDialogues) && character.raiderDialogues.length > 0) {
