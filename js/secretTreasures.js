@@ -5,7 +5,11 @@ import { recordDryadFruitHistory, recordMarriageHistory } from "./history.js";
 import { openExchangeModal, openPanFluteExchangeModal, showMarriageMiracleModal, showMiracleResultModal } from "./miracles.js";
 import { avoidCurrentRaidWithMessengerPass, canAvoidCurrentRaidWithMessengerPass, isMessengerPassBlockedByApocalypse, startRaidEvent } from "./raidStart.js";
 import { addRelationship, removeRelationship, addSpouseRelationships, raiseMutualFriendshipTo } from "./relationships.js";
-import { updateChildGrowthStage } from "./reproduction.js";
+import {
+  canUseAnnunciationPaintingOn,
+  scheduleAnnunciationPaintingPregnancy,
+  updateChildGrowthStage
+} from "./reproduction.js";
 import { clampValue, getPortraitPath, round3 } from "./util.js";
 import { updateUI } from "./ui.js";
 import { addAcquiredStat, syncEffectiveStats } from "./domain/statLayers.js";
@@ -23,11 +27,13 @@ const BAD_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "凍�
 const BAD_MIND_TRAITS = ["心労", "抑鬱"];
 export const PINECONE_STAFF_SECRET_TREASURE_ID = "pinecone_staff";
 export const DRYAD_FRUIT_SECRET_TREASURE_ID = "dryad_fruit";
+export const ANNUNCIATION_PAINTING_SECRET_TREASURE_ID = "annunciation_painting";
 const DEFAULT_PORTRAIT_PATH = getPortraitAssetPath(DEFAULT_PORTRAIT_KEY);
 const SECRET_TREASURE_SELL_PRICES = {
   persephone_statue: 300,
   abundance_horn: 300,
   armless_angel: 200,
+  [ANNUNCIATION_PAINTING_SECRET_TREASURE_ID]: 200,
   golden_arrow: 150,
   golden_apple: 150,
   ambrosia: 300,
@@ -197,6 +203,17 @@ function applyNike(village) {
   showSecretTreasureResult(village, "腕の無い天使像", "村人たちに勝利を呼ぶ気配が宿りました。", getVillagers(village));
 }
 
+function applyAnnunciationPainting(village, target) {
+  if (!scheduleAnnunciationPaintingPregnancy(village, target)) return false;
+  showSecretTreasureResult(
+    village,
+    "告天使の絵画",
+    `${target.name}のもとへ、絵画の告天使が神秘の受胎を告げました。`,
+    [target]
+  );
+  return true;
+}
+
 function canUsePortraitOn(person) {
   return (Number(person?.eth) || 0) >= 2;
 }
@@ -336,6 +353,16 @@ export const SECRET_TREASURES = [
     canUse: (village) => getVillagers(village).length > 0,
     blockedReason: "村人がいません",
     use: applyNike
+  },
+  {
+    id: ANNUNCIATION_PAINTING_SECRET_TREASURE_ID,
+    name: "告天使の絵画",
+    desc: "人型種族・身体性別が女・肉体年齢16歳以上の村人1名に使用可能。種族による年齢上限の違いはない。翌月、遺伝父不明の神秘的な妊娠が訪れる。",
+    sellPrice: SECRET_TREASURE_SELL_PRICES[ANNUNCIATION_PAINTING_SECRET_TREASURE_ID],
+    target: "villager",
+    targetFilter: canUseAnnunciationPaintingOn,
+    targetBlockedReason: "人型種族・身体性別が女・肉体年齢16歳以上で、妊娠・産褥中でも妊娠予約中でもない村人が必要です",
+    use: (village, target) => applyAnnunciationPainting(village, target)
   },
   {
     id: "golden_arrow",

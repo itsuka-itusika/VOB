@@ -16,7 +16,7 @@ import { getDialogueLine } from "./dialogue/dialogueEngine.js";
 import { BODY_EXCHANGE_SOURCE_RACE_LINE_KEYS, BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
 import { getVisitorArrivalLine } from "./data/dialogue/visitorLines.js";
 import { getActiveVillagers, isSaltPillar } from "./domain/apocalypseRules.js";
-import { startRaidEvent } from "./raidStart.js";
+import { getSelectableRaidTables, startRaidEvent } from "./raidStart.js";
 import { getRaiderIncomingDamageMultiplier } from "./raidRules.js";
 import { completeTutorialTask } from "./tutorial.js";
 import { getCaptives, normalizeCaptive } from "./captives.js";
@@ -53,6 +53,7 @@ const EFFECT_RESULT_DIALOGUES = {
   "マナの奇跡": { scene: "miracle", key: "mana" },
   "ミダスの奇跡": { scene: "miracle", key: "midas" },
   "アンブロシア": { scene: "secretTreasure", key: "ambrosia" },
+  "告天使の絵画": { scene: "secretTreasure", key: "annunciationPainting" },
   "ネクタル": { scene: "secretTreasure", key: "nectar" },
   "奇妙な計算機械": { scene: "secretTreasure", key: "strangeCalculator" },
   "蛇の巻き付いた杖": { scene: "secretTreasure", key: "serpentStaff" },
@@ -86,7 +87,7 @@ export const MIRACLES = [
   {id:"14", name:"ミダスの奇跡(100)", cost:100, desc:"1ヶ月間、食料を得る代わりに資金を得る"},
   {id:"15", name:"市場の奇跡(120)", cost:120, desc:"行商人の訪問者を3人生成"},
   {id:"17", name:"雷霆の奇跡(150)", cost:150, desc:"月1回。襲撃者1体の体力を80減らす。最低1で止まる"},
-  {id:"18", name:"騒擾の奇跡(100)", cost:100, desc:"襲撃中でない時、ただちに襲撃を発生させる"},
+  {id:"18", name:"騒擾の奇跡(100)", cost:100, desc:"襲撃中でない時、選んだ規模（異端を含む）の襲撃テーブルから、ただちに襲撃を発生させる"},
   {id:"19", name:"稀人の奇跡(300)", cost:300, desc:"翼人、アルセイド、ネレイド、ドライアド、アラクニド、エクイナ、サテュロス、メナドの訪問者を1人呼ぶ"}
 ];
 
@@ -271,6 +272,9 @@ function findMiracleTargetByName(name, village) {
 }
 
 function areMiracleTargetsReady(mid) {
+  if (mid === "18") {
+    return Boolean(document.getElementById("riotRaidTable")?.value);
+  }
   const count = getMiracleTargetCount(mid);
   if (count === 0) return true;
   const targetA = document.getElementById("targetA");
@@ -351,6 +355,46 @@ function updateMiracleActionButton(mid, button, village, costInfo, preview) {
 }
 
 function createMiracleTargetControls(miracle, village, button, costInfo) {
+  if (miracle.id === "18") {
+    const controls = document.createElement("div");
+    controls.className = "miracle-targets";
+
+    const label = document.createElement("label");
+    label.className = "miracle-target";
+    const labelText = document.createElement("span");
+    labelText.textContent = "襲撃テーブル";
+
+    const select = document.createElement("select");
+    select.id = "riotRaidTable";
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "(規模・異端を選択)";
+    select.appendChild(placeholder);
+    getSelectableRaidTables().forEach(table => {
+      const option = document.createElement("option");
+      option.value = table.id;
+      option.textContent = table.label;
+      select.appendChild(option);
+    });
+
+    const preview = document.createElement("div");
+    preview.className = "miracle-preview";
+    preview.textContent = "選んだ襲撃テーブルから、重みに従って襲撃を1件抽選します。";
+
+    const updateButton = () => {
+      const reason = getMiracleBlockReason(costInfo, village, miracle.id);
+      const ready = Boolean(select.value);
+      button.disabled = Boolean(reason) || !ready;
+      button.textContent = reason || (ready ? "行使" : "襲撃テーブルを選んでください");
+    };
+    select.addEventListener("change", updateButton);
+
+    label.append(labelText, select);
+    controls.append(label, preview);
+    updateButton();
+    return controls;
+  }
+
   const targetCount = getMiracleTargetCount(miracle.id);
   if (targetCount === 0) return null;
 
@@ -400,7 +444,7 @@ function createMiracleItem(miracle, village, selectedId) {
   const costInfo = getMiracleCostInfo(miracle, village);
   const reasonText = getMiracleBlockReason(costInfo, village, miracle.id);
   const targetCount = getMiracleTargetCount(miracle.id);
-  const needsTarget = targetCount > 0;
+  const needsTarget = targetCount > 0 || miracle.id === "18";
 
   div.className = `miracle-item${isActive ? " active" : ""}${isLocked ? " locked" : ""}`;
   div.innerHTML = `
@@ -423,7 +467,7 @@ function createMiracleItem(miracle, village, selectedId) {
     button.disabled = true;
     button.textContent = "行使不可";
   } else if (!isActive && needsTarget) {
-    button.textContent = "対象選択";
+    button.textContent = miracle.id === "18" ? "襲撃テーブル選択" : "対象選択";
     button.onclick = () => setSelectedMiracle(miracle.id, village);
   } else {
     button.textContent = "行使";
@@ -632,6 +676,15 @@ export function performMiracle(village) {
     village.log("【騒擾の奇跡】襲撃中は使用できません");
     return;
   }
+  const selectableRaidTables = mid === "18" ? getSelectableRaidTables() : [];
+  const riotRaidTableId = mid === "18"
+    ? (document.getElementById("riotRaidTable")?.value || "")
+    : "";
+  const riotRaidTable = selectableRaidTables.find(table => table.id === riotRaidTableId);
+  if (mid === "18" && !riotRaidTable) {
+    village.log("【騒擾の奇跡】襲撃テーブルを選択してください");
+    return;
+  }
 
   // 実行
   switch(mid) {
@@ -836,8 +889,8 @@ export function performMiracle(village) {
           marketMiracle(village);
           break;
         case "18": // 騒擾の奇跡
-          village.log("【騒擾の奇跡】遠くで鬨の声が上がり、村へ騒乱が引き寄せられた");
-          startRaidEvent(village);
+          village.log(`【騒擾の奇跡】「${riotRaidTable.label}」の襲撃テーブルから、村へ騒乱が引き寄せられた`);
+          startRaidEvent(village, { raidTableId: riotRaidTable.id });
           break;
         case "19": // 稀人の奇跡
           rareGuestMiracle(village);

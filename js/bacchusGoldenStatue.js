@@ -1,6 +1,5 @@
 import { getDivineMightLevel } from "./divineMight.js";
 import { countBuiltBuildings } from "./domain/buildingState.js";
-import { addHistoryEvent } from "./history.js";
 import { updateUI } from "./ui.js";
 import { getVillageScaleStage } from "./villageScale.js";
 
@@ -66,12 +65,6 @@ export function tryTriggerBacchusGoldenStatueEvent(village, options = {}) {
 
   ensureBuildingFlags(village)[BACCHUS_GOLDEN_STATUE_UNLOCK_FLAG] = true;
   village.log("【黄金像建立の機運】バッカスの黄金像が建築可能になりました。");
-  addHistoryEvent(village, {
-    title: "黄金像建立の機運",
-    text: "村人たちはバッカスを称え、その姿を黄金像として建立することを決めた。",
-    tags: ["バッカス", "黄金像", "異端"],
-    dedupeKey: "bacchusGoldenStatueUnlocked"
-  });
   updateUI(village);
 
   pendingVillage = village;
@@ -168,7 +161,7 @@ function showEventModal() {
     modalId: EVENT_MODAL_ID,
     title: "黄金像建立の機運",
     bodyHtml: `
-      <p>異端として記録された自治集落で、村人たちはもはや古き神への信仰を隠そうとはしなかった。</p>
+      <p>村人たちはもはや古き神への信仰を隠そうとはしなかった。</p>
       <p>「バッカスを称え、その御姿を黄金に刻もう。われらの村が、誰の恵みで満ちたのかを世に示すのだ」</p>
       <p class="event-modal-reward">バッカスの黄金像が建築可能になりました。</p>
     `

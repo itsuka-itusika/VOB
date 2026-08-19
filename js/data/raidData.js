@@ -803,9 +803,8 @@ export const RAIDER_TYPES = [
       job: "上位翼人",
       action: "襲撃"
     },
-    raidPosition: "middle",
-    raidTargeting: "frontMiddleRandom",
-    raidAttackType: "rangedMagic",
+    raidPosition: "front",
+    raidTargeting: "frontFirst",
     portraits: numberedPortraits("ARCHANGEL", 13),
     ranges: {
       hp: [80, 100],
@@ -878,25 +877,25 @@ export const RAIDER_TYPES = [
     raidPosition: "middle",
     raidTargeting: "frontMiddleRandom",
     raidAttackType: "rangedMagic",
-    portraits: ["REVELATION.png"],
+    portraits: ["ALIGNMENT.png"],
     exchangeImmune: true,
     uncapturable: true,
     ranges: {
-      hp: [230, 260],
-      str: [38, 46],
-      vit: [36, 44],
-      dex: [40, 48],
-      mag: [48, 58],
-      chr: [44, 54],
-      int: [42, 52],
-      ind: [36, 44],
-      eth: [42, 50],
-      cou: [42, 50],
-      sexdr: [0, 4]
+      hp: [200, 200],
+      str: [28, 28],
+      vit: [18, 18],
+      dex: [28, 28],
+      mag: [37, 37],
+      chr: [64, 64],
+      int: [60, 60],
+      ind: [55, 55],
+      eth: [100, 100],
+      cou: [28, 28],
+      sexdr: [0, 0]
     },
     forcedBodyTraits: ["飛行", "光輪", "多翼多眼", "交換無効"],
     replaceBodyTraits: true,
-    mindTraits: ["神聖", "狂信"],
+    mindTraits: ["狂信", "神聖"],
     replaceMindTraits: true,
     hobbies: ["万象監視"],
     dialogues: [
@@ -916,27 +915,27 @@ export const RAIDER_TYPES = [
     uiSexDisplay: "無性",
     ageRange: { min: 100, max: 300 },
     params: { job: "黙示録の騎士・戦争", action: "襲撃" },
-    raidPosition: "front",
+    raidPosition: "middle",
     raidTargeting: "frontFirst",
     portraits: ["WAR.png"],
     exchangeImmune: true,
     uncapturable: true,
     ranges: {
-      hp: [260, 300],
-      str: [52, 62],
-      vit: [46, 56],
-      dex: [36, 44],
-      mag: [38, 48],
-      chr: [38, 46],
-      int: [34, 42],
-      ind: [46, 54],
-      eth: [32, 40],
-      cou: [52, 60],
-      sexdr: [0, 4]
+      hp: [180, 180],
+      str: [32, 32],
+      vit: [35, 35],
+      dex: [30, 30],
+      mag: [28, 28],
+      chr: [1, 1],
+      int: [32, 32],
+      ind: [30, 30],
+      eth: [38, 38],
+      cou: [30, 30],
+      sexdr: [2, 2]
     },
     forcedBodyTraits: ["飛行", "光輪", "機身", "交換無効"],
     replaceBodyTraits: true,
-    mindTraits: ["神聖", "狂信"],
+    mindTraits: ["狂信", "神聖"],
     replaceMindTraits: true,
     hobbies: ["異端討滅"],
     dialogues: [
@@ -1358,7 +1357,13 @@ export const RAID_MODULES = [
     weight: 12,
     representative: { raiderType: "翼人兵" },
     enemyGroups: [
-      { raiderType: "翼人兵", minCount: 5, maxCount: 5, mindTraits: ["神聖"] }
+      {
+        raiderType: "翼人兵",
+        minCount: 5,
+        maxCount: 5,
+        mindTraits: ["神聖"],
+        excludedBodyTraits: ["聖女の輝き"]
+      }
     ],
     failurePenalty: {
       security: 20,
@@ -1405,8 +1410,20 @@ export const RAID_MODULES = [
     weight: 15,
     representative: { raiderType: "翼人兵" },
     enemyGroups: [
-      { raiderType: "翼人兵", minCount: 5, maxCount: 5, mindTraits: ["神聖", "戦慣れ"] },
-      { raiderType: "上位翼人", minCount: 1, maxCount: 1, mindTraits: ["神聖", "歴戦", "狂信"] }
+      {
+        raiderType: "翼人兵",
+        minCount: 5,
+        maxCount: 5,
+        mindTraits: ["神聖", "戦慣れ"],
+        excludedBodyTraits: ["聖女の輝き"]
+      },
+      {
+        raiderType: "上位翼人",
+        minCount: 1,
+        maxCount: 1,
+        mindTraits: ["神聖", "歴戦", "狂信"],
+        excludedBodyTraits: ["聖女の輝き"]
+      }
     ],
     defense: { surviveTurns: 5 },
     failurePenalty: {
@@ -1476,8 +1493,18 @@ export const RAID_MODULES = [
     weight: 5,
     representative: { raiderType: "上位翼人" },
     enemyGroups: [
-      { raiderType: "上位翼人", minCount: 1, maxCount: 1 },
-      { raiderType: "翼人兵", minCount: 2, maxCount: 3 },
+      {
+        raiderType: "上位翼人",
+        minCount: 1,
+        maxCount: 1,
+        excludedBodyTraits: ["聖女の輝き"]
+      },
+      {
+        raiderType: "翼人兵",
+        minCount: 2,
+        maxCount: 3,
+        excludedBodyTraits: ["聖女の輝き"]
+      },
       { raiderType: "聖騎士", minCount: 1, maxCount: 1 },
       { raiderType: "聖女", minCount: 1, maxCount: 1 }
     ],
@@ -1532,8 +1559,34 @@ export const RAID_MODULES = [
       { raiderType: "上位翼人" }
     ],
     enemyGroups: [
-      { raiderType: "上位翼人", minCount: 3, maxCount: 4 },
-      { raiderType: "翼人兵", minCount: 4, maxCount: 6 },
+      {
+        raiderType: "翼人兵",
+        minCount: 3,
+        maxCount: 3,
+        mindTraits: ["歴戦", "神聖"],
+        excludedBodyTraits: ["聖女の輝き"]
+      },
+      {
+        raiderType: "上位翼人",
+        minCount: 1,
+        maxCount: 1,
+        mindTraits: ["歴戦", "狂信", "神聖", "秘蹟：盾"],
+        excludedBodyTraits: ["聖女の輝き"]
+      },
+      {
+        raiderType: "上位翼人",
+        minCount: 1,
+        maxCount: 1,
+        mindTraits: ["歴戦", "狂信", "神聖", "秘蹟：剣"],
+        excludedBodyTraits: ["聖女の輝き"]
+      },
+      {
+        raiderType: "上位翼人",
+        minCount: 1,
+        maxCount: 1,
+        mindTraits: ["歴戦", "狂信", "神聖", "秘蹟：光"],
+        excludedBodyTraits: ["聖女の輝き"]
+      },
       { raiderType: "黙示録の騎士・支配", minCount: 1, maxCount: 1 }
     ],
     defense: { surviveTurns: 7 },
@@ -1564,10 +1617,16 @@ export const RAID_MODULES = [
       { raiderType: "聖女" }
     ],
     enemyGroups: [
-      { raiderType: "重装兵", minCount: 3, maxCount: 3 },
-      { raiderType: "上級騎士", minCount: 2, maxCount: 3 },
-      { raiderType: "聖騎士", minCount: 1, maxCount: 1 },
-      { raiderType: "聖女", minCount: 1, maxCount: 2 },
+      { raiderType: "重装兵", minCount: 2, maxCount: 2, mindTraits: ["歴戦", "秘蹟：盾"] },
+      { raiderType: "聖女", minCount: 1, maxCount: 1, mindTraits: ["歴戦", "狂信"] },
+      { raiderType: "聖騎士", minCount: 1, maxCount: 1, mindTraits: ["歴戦", "狂信", "秘蹟：剣"] },
+      {
+        raiderType: "上位翼人",
+        minCount: 1,
+        maxCount: 1,
+        mindTraits: ["歴戦", "狂信", "神聖"],
+        excludedBodyTraits: ["聖女の輝き"]
+      },
       { raiderType: "黙示録の騎士・戦争", minCount: 1, maxCount: 1 }
     ],
     defense: { surviveTurns: 7 },
@@ -1593,6 +1652,7 @@ const RAID_MODULE_BY_ID = new Map(RAID_MODULES.map(raid => [raid.id, raid]));
 export const RAID_SCALE_TABLES = [
   {
     id: "early-frontier",
+    label: "名もなき小集落・小さな開拓村",
     scaleStageIndexes: [0, 1],
     entries: [
       { raidId: "goblin", weight: 10 },
@@ -1603,6 +1663,7 @@ export const RAID_SCALE_TABLES = [
   },
   {
     id: "frontier-village",
+    label: "辺境の村",
     scaleStageIndexes: [2],
     entries: [
       { raidId: "goblin", weight: 10 },
@@ -1614,6 +1675,7 @@ export const RAID_SCALE_TABLES = [
   },
   {
     id: "mapped-village",
+    label: "旅人の立ち寄る村",
     scaleStageIndexes: [3],
     entries: [
       { raidId: "goblin", weight: 10 },
@@ -1627,6 +1689,7 @@ export const RAID_SCALE_TABLES = [
   },
   {
     id: "rich-village",
+    label: "豊かな村",
     scaleStageIndexes: [4],
     entries: [
       { raidId: "starving-wolves", weight: 10 },
@@ -1641,6 +1704,7 @@ export const RAID_SCALE_TABLES = [
   },
   {
     id: "prosperous-village",
+    label: "繁栄した郷村",
     scaleStageIndexes: [5],
     excludedVillageTrait: "異端",
     entries: [
@@ -1655,6 +1719,7 @@ export const RAID_SCALE_TABLES = [
   },
   {
     id: "autonomous-settlement",
+    label: "自治集落",
     scaleStageIndexes: [6],
     excludedVillageTrait: "異端",
     entries: [
@@ -1670,6 +1735,7 @@ export const RAID_SCALE_TABLES = [
   },
   {
     id: "heresy-prosperous-village",
+    label: "繁栄した郷村（異端）",
     scaleStageIndexes: [5],
     requiredVillageTrait: "異端",
     entries: [
@@ -1683,6 +1749,7 @@ export const RAID_SCALE_TABLES = [
   },
   {
     id: "heresy-autonomous-settlement",
+    label: "自治集落（異端）",
     scaleStageIndexes: [6],
     requiredVillageTrait: "異端",
     entries: [

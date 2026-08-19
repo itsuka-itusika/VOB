@@ -647,18 +647,23 @@ function convertObjectToVillager(obj) {
   if (obj.uiSexDisplay) {
     vill.uiSexDisplay = obj.uiSexDisplay;
   }
-  if (["翼人兵", "上位翼人", "黙示録の騎士・支配"].includes(vill.raiderType)) {
+  if (["翼人兵", "黙示録の騎士・支配"].includes(vill.raiderType)) {
     vill.raidAttackType = "rangedMagic";
   }
   if (vill.raiderType === "聖女") {
     vill.raidPosition = "front";
     vill.raidTargeting = "frontFirst";
   }
+  if (vill.raiderType === "上位翼人") {
+    vill.raidPosition = "front";
+    vill.raidTargeting = "frontFirst";
+    vill.raidAttackType = "";
+  }
   if (vill.raiderType === "黙示録の騎士・支配") {
     vill.race = "黙示録の騎士";
     vill.uiSexDisplay = "無性";
     vill.bodyTraits = ["飛行", "光輪", "多翼多眼", "交換無効"];
-    vill.mindTraits = ["襲撃者", "神聖", "狂信"];
+    vill.mindTraits = ["襲撃者", "狂信", "神聖"];
     vill.hobby = "万象監視";
     vill.exchangeImmune = true;
     vill.uncapturable = true;
@@ -666,8 +671,11 @@ function convertObjectToVillager(obj) {
   if (vill.raiderType === "黙示録の騎士・戦争") {
     vill.race = "黙示録の騎士";
     vill.uiSexDisplay = "無性";
+    vill.raidPosition = "middle";
+    vill.raidTargeting = "frontFirst";
+    vill.raidAttackType = "";
     vill.bodyTraits = ["飛行", "光輪", "機身", "交換無効"];
-    vill.mindTraits = ["襲撃者", "神聖", "狂信"];
+    vill.mindTraits = ["襲撃者", "狂信", "神聖"];
     vill.hobby = "異端討滅";
     vill.exchangeImmune = true;
     vill.uncapturable = true;

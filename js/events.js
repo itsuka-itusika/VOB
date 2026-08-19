@@ -6,7 +6,12 @@ import { createRandomVillager, createRandomVisitor } from "./createVillagers.js"
 import { processRaidScheduleAtMonthStart } from "./raidSchedule.js";
 import { RandomEvents } from "./RandomEvents.js";
 import { recordCriticalHistory, recordVillagerDeathHistory, recordVillagerLeaveHistory } from "./history.js";
-import { handleBirthAndPostpartum, handlePregnancyChecks, updateChildGrowthStage } from "./reproduction.js";
+import {
+  handleBirthAndPostpartum,
+  handlePendingMysticPregnancies,
+  handlePregnancyChecks,
+  updateChildGrowthStage
+} from "./reproduction.js";
 import { runAfterFestivalModals, showFestivalModal, showPineconeStaffIntroModal } from "./festivalModal.js";
 import { runHeadmanElectionIfDue } from "./headmanElection.js";
 import { grantSecretTreasure, PINECONE_STAFF_SECRET_TREASURE_ID } from "./secretTreasures.js";
@@ -389,6 +394,7 @@ export function runMonthStartPhase(village) {
   }
   doFixedEventPre(village);
   handleBirthAndPostpartum(village);
+  handlePendingMysticPregnancies(village);
   restoreRecoveredForcedActions(village);
   const apocalypseActive = processApocalypseMonthStart(village);
   if (!apocalypseActive && !simulationOptions.suppressRandomEvents) doRandomEventPre(village);

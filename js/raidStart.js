@@ -61,6 +61,13 @@ function getRaidTableForVillage(village) {
   }) || RAID_SCALE_TABLES[0];
 }
 
+export function getSelectableRaidTables() {
+  return RAID_SCALE_TABLES.map(table => ({
+    id: table.id,
+    label: table.label || table.id
+  }));
+}
+
 function getVariantEnemyGroups(variant) {
   if (Array.isArray(variant?.enemyGroups)) return variant.enemyGroups;
   if (Array.isArray(variant?.groups)) return variant.groups;
@@ -83,6 +90,12 @@ function cloneEnemyGroupTraitOptions(group, fallbackGroup = null) {
   const mindTraits = Array.isArray(group?.mindTraits)
     ? group.mindTraits
     : fallbackGroup?.mindTraits;
+  const bodyTraits = Array.isArray(group?.bodyTraits)
+    ? group.bodyTraits
+    : fallbackGroup?.bodyTraits;
+  const excludedBodyTraits = Array.isArray(group?.excludedBodyTraits)
+    ? group.excludedBodyTraits
+    : fallbackGroup?.excludedBodyTraits;
   const mindTraitChances = Array.isArray(group?.mindTraitChances)
     ? group.mindTraitChances
     : fallbackGroup?.mindTraitChances;
@@ -90,6 +103,12 @@ function cloneEnemyGroupTraitOptions(group, fallbackGroup = null) {
 
   if (Array.isArray(mindTraits)) {
     options.mindTraits = [...mindTraits];
+  }
+  if (Array.isArray(bodyTraits)) {
+    options.bodyTraits = [...bodyTraits];
+  }
+  if (Array.isArray(excludedBodyTraits)) {
+    options.excludedBodyTraits = [...excludedBodyTraits];
   }
   if (Array.isArray(mindTraitChances)) {
     options.mindTraitChances = mindTraitChances.map(entry => ({ ...entry }));
@@ -132,8 +151,9 @@ function matchesRaidEntryConditions(village, entry, stageIndex) {
   return true;
 }
 
-function selectRaidDefinition(village) {
-  const raidTable = getRaidTableForVillage(village);
+function selectRaidDefinition(village, raidTableId = "") {
+  const selectedRaidTable = RAID_SCALE_TABLES.find(table => table.id === raidTableId);
+  const raidTable = selectedRaidTable || getRaidTableForVillage(village);
   const stageIndex = getVillageScaleStageIndex(village);
   const candidates = raidTable.entries
     .filter(entry => matchesRaidEntryConditions(village, entry, stageIndex))
@@ -327,6 +347,17 @@ function createRaidEnemy(village, raiderType, existingNames, enemyGroup = null) 
     if (raiderType.hobbies) {
       e.hobby = randChoice(raiderType.hobbies);
     }
+  }
+
+  if (Array.isArray(enemyGroup?.bodyTraits)) {
+    enemyGroup.bodyTraits.forEach(trait => {
+      if (!e.bodyTraits.includes(trait)) {
+        e.bodyTraits.push(trait);
+      }
+    });
+  }
+  if (Array.isArray(enemyGroup?.excludedBodyTraits)) {
+    e.bodyTraits = e.bodyTraits.filter(trait => !enemyGroup.excludedBodyTraits.includes(trait));
   }
 
   e.jobTable = [raiderType.params.job];
@@ -645,7 +676,7 @@ export function startRaidEvent(village, options = {}) {
   const pendingRaid = options.pendingRaid || null;
   const raidDefinition = options.raidDefinition ||
     getRaidDefinitionFromPendingRaid(pendingRaid) ||
-    selectRaidDefinition(village);
+    selectRaidDefinition(village, options.raidTableId);
   village.log(pendingRaid
     ? `【襲撃発生】予兆のあった${raidDefinition.name}が村へ押し寄せました。`
     : `【襲撃発生】${raidDefinition.name}が村へ押し寄せました。`);

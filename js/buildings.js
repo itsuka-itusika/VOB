@@ -315,7 +315,7 @@ export const BUILDINGS = [
     tech: 1000,
     desc: "黄金像建立イベントで解放。交換の奇跡と交換の奇跡・強の消費魔素を半分にする。建設すると次月から七つの災厄が始まる。建設後は破壊可能。",
     isUnlocked: (village) => !!village?.buildingFlags?.[BACCHUS_GOLDEN_STATUE_UNLOCK_FLAG],
-    confirmMessage: "警告：バッカスの黄金像を建設すると、天に怒りの声が響きます。\n次月から七つの災厄が順に村を襲い、ランダムイベントと通常の襲撃は停止します。\n\n黙示録は建築画面から黄金像を破壊することで中断できます。\nそれでも建設しますか？",
+    confirmMessage: "警告：黄金像の建設は新しき神の逆鱗に触れます。\n神の怒りは黙示録を招き、七つの大いなる災厄が村を襲うでしょう。\nそれでも建設しますか？",
     effect: (village) => {
       ensureBuildingFlags(village)[BACCHUS_GOLDEN_STATUE_BUILT_FLAG] = true;
       village.log("バッカスの黄金像建設完了: 交換の奇跡と交換の奇跡・強の消費魔素が半分になりました");

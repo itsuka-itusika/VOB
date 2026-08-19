@@ -60,13 +60,13 @@
 - js/apocalypse.js / js/domain/apocalypseRules.js
   - 黄金像完成後の黙示録状態、七災厄の月初進行、塩の柱、専用襲撃開始、黄金像破壊・敗北中断・七災厄の完了処理を扱う。第七の災厄を越えた時は塩の柱を解除し、村人へ専用称号を付与して、クリア済みフラグと神威Lv6を解放する。
 - `js/reproduction.js`
-  - 妊娠、出産、産褥、成人化、成長段階を扱う。
+  - 妊娠、出産、産褥、成人化、成長段階を扱う。黄金の雨と告天使の絵画による翌月の神秘的な妊娠予約も、保存互換性のため `pendingGoldenRainPregnancies` 上で種別を分けて処理する。
 - `js/relationships.js`
   - 恋人・配偶者・親子などの関係を正規化し、追加・削除・表示する。
 - `js/miracles.js`
   - 奇跡モーダル、奇跡の実行、交換の奇跡、奇跡結果を扱う。
 - `js/secretTreasures.js`
-  - 秘宝データ、秘宝モーダル、使い切り効果、ドライアドの果実による専用変化モーダルを扱う。
+  - 秘宝データ、秘宝モーダル、使い切り効果、ドライアドの果実による専用変化モーダル、告天使の絵画の対象判定と妊娠予約を扱う。
 - `js/secretTreasureEvents.js`
   - 行動や行商人取引による秘宝入手判定、入手ログ、入手イベントモーダルを扱う。
 - `js/adventurerQuests.js`
@@ -102,7 +102,7 @@
 - `js/villageScale.js`
   - 規模に応じた村の呼称、呼称到達モーダル、達成済み段階の管理を扱う。
 - `js/history.js`
-  - 村史・個人記録イベントの生成、正規化、表示モーダルを扱う。
+  - 村史・個人記録イベントの生成、正規化、表示モーダルを扱う。黙示録では塩の柱への変化・回復と七災突破を個人向けイベントとして記録する。
 - `js/saveLoad.js`
   - JSON ファイル保存/読込と localStorage 保存/読込を扱う。
 - `js/dictionary.js`
@@ -125,7 +125,7 @@
   - `js/data/tutorialData.js` はチュートリアル項目と報酬データを持つ。
   - `js/data/raidData.js` は襲撃者の能力定義、襲撃モジュール、代表襲撃者定義、回避手段、規模別襲撃テーブルを持つ。
   - `js/data/dialogue/raidStartLines.js` は襲撃発生時の精神特性別反応文とメンタル回復量を持つ。
-  - 襲撃テーブルは規模段階ごとに分かれ、`requiredVillageTrait` / `excludedVillageTrait` によって村特性「異端」の専用テーブルへ切り替わる。襲撃モジュールは通常の `enemyGroups` に加え、重み付きの `enemyGroupVariants` で確率分岐する編成を定義できる。敵グループごとの `mindTraits` / `mindTraitChances` で、そのモジュールに限った固定精神特性と確率精神特性を指定する。
+  - 襲撃テーブルは規模段階ごとに分かれ、`requiredVillageTrait` / `excludedVillageTrait` によって村特性「異端」の専用テーブルへ切り替わる。騒擾の奇跡は通常6種・異端2種のテーブルを明示選択し、その中から重み付き抽選する。襲撃モジュールは通常の `enemyGroups` に加え、重み付きの `enemyGroupVariants` で確率分岐する編成を定義できる。敵グループごとの `mindTraits` / `mindTraitChances` / `bodyTraits` / `excludedBodyTraits` で、そのモジュールに限った固定精神特性、確率精神特性、追加・除外身体特性を指定する。
 
 新しい行動、資源、建築、奇跡、状態異常、特性、イベント、襲撃者、ルールなどを追加したり、既存仕様を変更した場合は、必要に応じて `js/data/dictionaryData.js` の用語説明も追加・更新します。プレイヤーが用語検索で確認できる情報と、実装上の仕様がずれないようにしてください。
 

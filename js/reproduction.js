@@ -74,6 +74,9 @@ const CHILD_MIND_TRAITS = ["無垢", "萌芽", "思春期"];
 const PREGNANCY_FULL_TERM_MONTHS = 10;
 const POSTPARTUM_MONTHS = 3;
 const THUNDER_BLESSING_TRAIT = "雷霆の加護";
+const HOLY_SPIRIT_BLESSING_TRAIT = "聖霊の加護";
+const GOLDEN_RAIN_PREGNANCY_KIND = "goldenRain";
+const ANNUNCIATION_PREGNANCY_KIND = "annunciationPainting";
 const GENETIC_EXCLUDED_BODY_TRAITS = new Set([
   "火星の加護",
   "飢餓",
@@ -103,6 +106,23 @@ const VIRTUAL_THUNDER_FATHER = {
   eth: 30,
   cou: 30,
   sexdr: 40
+};
+const VIRTUAL_ANNUNCIATION_FATHER = {
+  name: "不明",
+  bodyOwner: "不明",
+  race: "人間",
+  bodySex: "男",
+  bodyTraits: [],
+  str: 30,
+  vit: 30,
+  dex: 30,
+  mag: 30,
+  chr: 30,
+  int: 30,
+  ind: 30,
+  eth: 40,
+  cou: 30,
+  sexdr: 20
 };
 
 function hasTrait(person, trait) {
@@ -199,6 +219,11 @@ function applyInheritedBodyTraits(child, traits) {
   syncEffectiveStats(child);
 }
 
+function applyInheritedMindTraits(child, traits) {
+  traits.forEach(trait => addUnique(child.mindTraits, trait));
+  syncEffectiveStats(child);
+}
+
 function applyRaceBodyTraits(character) {
   (RACE_BODY_TRAITS[normalizeChildRace(character?.race)] || [])
     .forEach(trait => addUnique(character.bodyTraits, trait));
@@ -256,15 +281,32 @@ function canBeFather(person) {
     Number(person.bodyAge) >= 12;
 }
 
-function canReceiveGoldenRainPregnancy(person) {
-  return isHumanoid(person) &&
-    !isSaltPillar(person) &&
+function canReceiveMysticPregnancy(person) {
+  return !isSaltPillar(person) &&
     person.bodySex === "女" &&
-    isPregnancyAge(person, 29) &&
     !person.pregnancy &&
     !hasTrait(person, "妊娠") &&
     !hasTrait(person, "臨月") &&
     !hasTrait(person, "産褥");
+}
+
+function canReceiveGoldenRainPregnancy(person) {
+  return isHumanoid(person) && canReceiveMysticPregnancy(person) && isPregnancyAge(person, 29);
+}
+
+function canReceiveAnnunciationPregnancy(person) {
+  return isHumanoid(person) && canReceiveMysticPregnancy(person);
+}
+
+function hasPendingMysticPregnancy(village, person) {
+  return Array.isArray(village?.pendingGoldenRainPregnancies) &&
+    village.pendingGoldenRainPregnancies.some(entry => entry?.targetName === person?.name);
+}
+
+export function canUseAnnunciationPaintingOn(person, village) {
+  if (!canReceiveAnnunciationPregnancy(person) || hasPendingMysticPregnancy(village, person)) return false;
+  const age = Number(person.bodyAge) || 0;
+  return age >= 16;
 }
 
 function getNextMonthDate(village) {
@@ -280,7 +322,7 @@ function isDue(village, due) {
 }
 
 export function scheduleGoldenRainPregnancy(village, mother) {
-  if (!village || !mother || !canReceiveGoldenRainPregnancy(mother)) return false;
+  if (!village || !mother || !canReceiveGoldenRainPregnancy(mother) || hasPendingMysticPregnancy(village, mother)) return false;
   if (!Array.isArray(village.pendingGoldenRainPregnancies)) {
     village.pendingGoldenRainPregnancies = [];
   }
@@ -288,9 +330,26 @@ export function scheduleGoldenRainPregnancy(village, mother) {
   village.pendingGoldenRainPregnancies.push({
     targetName: mother.name,
     dueYear: due.year,
-    dueMonth: due.month
+    dueMonth: due.month,
+    kind: GOLDEN_RAIN_PREGNANCY_KIND
   });
   village.log(`${mother.name}は黄金の雨を浴びました。来月、神秘の妊娠が訪れるかもしれません。`);
+  return true;
+}
+
+export function scheduleAnnunciationPaintingPregnancy(village, mother) {
+  if (!village || !mother || !canUseAnnunciationPaintingOn(mother, village)) return false;
+  if (!Array.isArray(village.pendingGoldenRainPregnancies)) {
+    village.pendingGoldenRainPregnancies = [];
+  }
+  const due = getNextMonthDate(village);
+  village.pendingGoldenRainPregnancies.push({
+    targetName: mother.name,
+    dueYear: due.year,
+    dueMonth: due.month,
+    kind: ANNUNCIATION_PREGNANCY_KIND
+  });
+  village.log(`【秘宝】${mother.name}は告天使の絵画から降り注ぐ光を受けました。翌月、神秘の妊娠が訪れます。`);
   return true;
 }
 
@@ -653,12 +712,16 @@ export function handleBirthAndPostpartum(village) {
 }
 
 export function handlePregnancyChecks(village) {
-  processPendingGoldenRainPregnancies(village);
   processPregnancyChecks(village);
+}
+
+export function handlePendingMysticPregnancies(village) {
+  processPendingGoldenRainPregnancies(village);
 }
 
 export function handlePregnancyAndBirth(village) {
   handleBirthAndPostpartum(village);
+  handlePendingMysticPregnancies(village);
   handlePregnancyChecks(village);
 }
 
@@ -684,6 +747,7 @@ function processPendingGoldenRainPregnancies(village) {
 
   const remaining = [];
   village.pendingGoldenRainPregnancies.forEach(entry => {
+    const isAnnunciation = entry?.kind === ANNUNCIATION_PREGNANCY_KIND;
     const due = { year: Number(entry.dueYear) || 0, month: Number(entry.dueMonth) || 0 };
     if (!isDue(village, due)) {
       remaining.push(entry);
@@ -695,19 +759,36 @@ function processPendingGoldenRainPregnancies(village) {
       remaining.push(entry);
       return;
     }
-    if (!mother || !canReceiveGoldenRainPregnancy(mother)) {
-      if (mother) village.log(`${mother.name}への黄金の雨の兆しは、妊娠には至りませんでした。`);
+    const canReceive = isAnnunciation
+      ? canReceiveAnnunciationPregnancy(mother)
+      : canReceiveGoldenRainPregnancy(mother);
+    if (!mother || !canReceive) {
+      if (mother) {
+        const sourceName = isAnnunciation ? "告天使の絵画の光" : "黄金の雨の兆し";
+        village.log(`${mother.name}への${sourceName}は、妊娠には至りませんでした。`);
+      }
       return;
     }
 
-    startPregnancy(village, mother, null, {
-      fatherSnapshot: VIRTUAL_THUNDER_FATHER,
-      childRaceFatherSnapshot: { race: "人間" },
-      humanChildRace: "半神",
-      femaleFixedMaleChildRace: "半神",
-      inheritedBodyTraits: [THUNDER_BLESSING_TRAIT],
-      geneticFatherUnknown: true
-    });
+    if (isAnnunciation) {
+      startPregnancy(village, mother, null, {
+        fatherSnapshot: VIRTUAL_ANNUNCIATION_FATHER,
+        humanChildRace: "半神",
+        inheritedMindTraits: [HOLY_SPIRIT_BLESSING_TRAIT],
+        geneticFatherUnknown: true,
+        source: "告天使の絵画"
+      });
+    } else {
+      startPregnancy(village, mother, null, {
+        fatherSnapshot: VIRTUAL_THUNDER_FATHER,
+        childRaceFatherSnapshot: { race: "人間" },
+        humanChildRace: "半神",
+        femaleFixedMaleChildRace: "半神",
+        inheritedBodyTraits: [THUNDER_BLESSING_TRAIT],
+        geneticFatherUnknown: true,
+        source: "黄金の雨"
+      });
+    }
   });
 
   village.pendingGoldenRainPregnancies = remaining;
@@ -723,6 +804,9 @@ function startPregnancy(village, mother, father, options = {}) {
     ...rollInheritedTraits({ motherSnapshot, fatherSnapshot, childSex }),
     ...(Array.isArray(options.inheritedBodyTraits) ? options.inheritedBodyTraits : [])
   ];
+  const inheritedMindTraits = Array.isArray(options.inheritedMindTraits)
+    ? [...new Set(options.inheritedMindTraits)]
+    : [];
 
   mother.pregnancy = {
     months: 0,
@@ -735,12 +819,13 @@ function startPregnancy(village, mother, father, options = {}) {
     childSex,
     potentialStats,
     inheritedBodyTraits,
+    inheritedMindTraits,
     fullTermApplied: false
   };
   addUnique(mother.bodyTraits, "妊娠");
   recordPregnancyHistory(village, mother, father, {
     geneticFatherUnknown: !!options.geneticFatherUnknown,
-    source: options.geneticFatherUnknown ? "黄金の雨" : "妊娠"
+    source: options.source || (options.geneticFatherUnknown ? "神秘の妊娠" : "妊娠")
   });
   village.log(`${mother.name}が妊娠しました`);
   showPregnancyModal(village, mother, father);
@@ -771,6 +856,7 @@ function giveBirth(village, mother) {
   child.mindTraits = ["無垢"];
   applyRaceBodyTraits(child);
   applyInheritedBodyTraits(child, data.inheritedBodyTraits || []);
+  applyInheritedMindTraits(child, data.inheritedMindTraits || []);
   child.hobby = "";
   child.hp = 100;
   child.mp = 100;

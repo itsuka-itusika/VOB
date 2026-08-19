@@ -193,9 +193,10 @@ function buildWarningMessages(village) {
   const assemblyHallBuilt = hasActiveBuildingFlag(village, "hasAssemblyHall", "assemblyHall");
 
   if (isApocalypseActive(village)) {
+    const apocalypseStage = Math.min(7, Math.max(1, Math.trunc(Number(village.apocalypseStage) || 0)));
     warnings.push({
       level: "danger",
-      text: "天の怒りにより七つの災厄が村を襲う。人々が畏れ反省し、自ら黄金像を引き倒さない限り災いは続くだろう（建築コマンドから黄金像を破壊することができます）"
+      text: `黙示録【第${apocalypseStage}の災厄】<br>「建築」から黄金像を破壊すれば黙示録は中断されます。`
     });
   }
 

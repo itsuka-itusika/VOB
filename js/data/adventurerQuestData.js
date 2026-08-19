@@ -97,6 +97,7 @@ export const ADVENTURER_QUEST_BASE_SUCCESS_RATES = {
   persephone_statue: 25,
   abundance_horn: 27.5,
   armless_angel: 30,
+  annunciation_painting: 30,
   golden_arrow: 35,
   golden_apple: 37.5,
   ambrosia: 25,

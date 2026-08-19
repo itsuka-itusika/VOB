@@ -1,4 +1,4 @@
-import { addHistoryEvent } from "./history.js";
+import { addHistoryEvent, recordApocalypsePersonalHistory } from "./history.js";
 import { startRaidEvent } from "./raidStart.js";
 import { clearRaidWarningModal } from "./raidWarningModal.js";
 import { refreshJobTable } from "./domain/jobTables.js";
@@ -78,6 +78,9 @@ function refreshAfterSaltPillarRecovery(person, village) {
   } else {
     refreshJobTable(person, village);
   }
+  recordApocalypsePersonalHistory(village, person, "塩の柱から元に戻った。", {
+    tags: ["塩の柱", "回復"]
+  });
 }
 
 function isVisibleElement(element) {
@@ -226,11 +229,11 @@ function applySecondCalamity(village) {
   village.food = Math.max(0, before - loss);
   addVillageTrait(village, LOCUST_TRAIT);
   village.apocalypseLocustMonths = 0;
-  recordStage(village, 2, "第二の角笛が吹かれた", "天を覆う蝗とともに黒き騎士・飢餓が現れ、蓄えを食い尽くした。");
+  recordStage(village, 2, "第二の角笛が吹かれた", "黒き騎士《飢餓》が天を覆う蝗とともに現れ、蓄えを食い尽くした。");
   queueApocalypseModal({
     title: "第二の角笛が吹かれた",
     message: "天を覆う蝗の向こうに、黒き騎士・飢餓が姿を現し、荒らされた倉を見届けると天へ消えた。",
-    effect: `食料の6割、${loss}が失われ、村特性「飛蝗」が3か月間付与されました（黙示録終了時は即座に解除）。`,
+    effect: `食料${loss}を喪失。3か月間「飛蝗」が発生します。`,
     image: stageImage(2)
   });
 }
@@ -268,10 +271,10 @@ function applyFourthCalamity(village) {
     refreshJobTable(person, village);
   });
   const targetNames = targets.map(person => person.name).join("、") || "対象者なし";
-  recordStage(village, 4, "第四の角笛が吹かれた", `青白き騎士・疫病が現れ、${targetNames}へ病の息を吹きかけた。`);
+  recordStage(village, 4, "第四の角笛が吹かれた", "青白き騎士《疫病》が現れ、村に病が蔓延した。");
   queueApocalypseModal({
     title: "第四の角笛が吹かれた",
-    message: "青白き騎士・疫病が村を見下ろし、病の息と咳の響きを残して天へ消えた。",
+    message: "青白き騎士《疫病》が村を見下ろす。騎士が去ったあと、村のあちこちから咳が聞こえ始めた。",
     effect: targets.length > 0
       ? `${targetNames}に身体特性「疫病」が付与されました。`
       : "疫病になる新たな村人はいませんでした。",
@@ -294,9 +297,12 @@ function applyFifthCalamity(village) {
     person.saltPillarMonths = 0;
     syncEffectiveStats(person);
     refreshJobTable(person, village);
+    recordApocalypsePersonalHistory(village, person, "天の光を受け塩の柱となった。", {
+      tags: ["塩の柱", "第五の災厄"]
+    });
   });
   const targetNames = targets.map(person => person.name).join("、") || "対象者なし";
-  recordStage(village, 5, "第五の角笛が吹かれた", `天の光が勇気ある者を射抜き、${targetNames}の身体を塩へ変えた。`);
+  recordStage(village, 5, "第五の角笛が吹かれた", "天の光により幾人かの村人が塩の柱となった。");
   queueApocalypseModal({
     title: "第五の角笛が吹かれた",
     message: "天の光を振り仰いだ勇気ある者たちの身体が、白い塩へと変わった。",
@@ -305,8 +311,8 @@ function applyFifthCalamity(village) {
   });
 }
 
-function applyRaidCalamity(village, { stage, title, message, effect, raidId, image = stageImage(stage) }) {
-  recordStage(village, stage, title, message);
+function applyRaidCalamity(village, { stage, title, message, historyText = message, effect, raidId, image = stageImage(stage) }) {
+  recordStage(village, stage, title, historyText);
   queueApocalypseModal({
     title,
     message,
@@ -324,8 +330,8 @@ export function startApocalypseFromGoldenStatue(village) {
   addVillageTrait(village, APOCALYPSE_TRAIT);
   village.log("【黙示録】天に怒りの声が響いた。次月から七つの災厄が村を襲う。");
   addHistoryEvent(village, {
-    title: "黄金像と天の怒り",
-    text: "バッカスの黄金像が建ち、天に怒りの声が響いた。次月から七つの災厄が村を襲う。",
+    title: "黄金像の建立",
+    text: "バッカスの黄金像が建立された。それは神の怒りに触れ災厄を招いた。",
     tags: ["バッカス", "黄金像", "黙示録"]
   });
   queueApocalypseModal({
@@ -363,6 +369,7 @@ export function processApocalypseMonthStart(village) {
         stage: 6,
         title: "第六の角笛が吹かれた",
         message: "赤き騎士・戦争が、聖征軍団を率いて進軍した。",
+        historyText: "赤き騎士《戦争》が聖征軍団を率いて現れ、村へ攻め寄せた。",
         effect: "聖征軍団と赤き騎士・戦争の襲撃が始まります。敗北すれば黄金像は破壊され、黙示録は終了します。",
         raidId: APOCALYPSE_RAID_IDS.SIXTH
       });
@@ -372,6 +379,7 @@ export function processApocalypseMonthStart(village) {
         stage: 7,
         title: "第七の角笛が吹かれた",
         message: "白き騎士・支配が、雲を裂いて降り立つ上位翼人兵を従え、最後の裁きを告げた。",
+        historyText: "白き騎士《支配》が最後の裁きを下すべく翼人兵を率いて村へ襲来した。",
         effect: "上位翼人兵と白き騎士・支配の襲撃が始まります。敗北すれば黄金像は破壊され、黙示録は終了します。",
         raidId: APOCALYPSE_RAID_IDS.SEVENTH,
         image: stageImage(5)
@@ -459,7 +467,12 @@ function completeApocalypse(village) {
     person.saltPillarMonths = 0;
     refreshAfterSaltPillarRecovery(person, village);
   });
-  (village.villagers || []).forEach(person => grantTitle(person, "apocalypseCleared"));
+  (village.villagers || []).forEach(person => {
+    grantTitle(person, "apocalypseCleared");
+    recordApocalypsePersonalHistory(village, person, "村とともに七つの災厄を生き延びた。", {
+      tags: ["七つの災厄", "生還"]
+    });
+  });
   refreshDivineMightLevelUnlock(village, beforeDivineMightLevel);
   village.log("【七つの災厄を越えて】黙示録の四騎士を退け、天の怒りと異端の記録は消え去った。");
   if (restoredSaltPillars.length > 0) {

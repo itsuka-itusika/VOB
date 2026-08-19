@@ -3,7 +3,7 @@ export const BABY_MALE_PORTRAIT_KEY = "malebaby.png";
 export const BABY_FEMALE_PORTRAIT_KEY = "femalebaby.png";
 export const WOLF_PUP_PORTRAIT_KEY = "WOLF_PUP.png";
 export const WAR_PORTRAIT_KEY = "WAR.png";
-export const REVELATION_PORTRAIT_KEY = "REVELATION.png";
+export const ALIGNMENT_PORTRAIT_KEY = "ALIGNMENT.png";
 const LEGACY_ARACHNID_PORTRAIT_FILES = [
   "Arachnid/ChatGPT Image 2026年6月4日 01_41_09.png",
   "Arachnid/ChatGPT Image 2026年6月4日 01_41_23.png",
@@ -30,7 +30,7 @@ const CHILD_SHADOW_PORTRAIT_KEYS = new Set(["CHILD_SHADOW.svg", "CHILD_SHADOW_BA
 const SYSTEM_PORTRAIT_KEYS = new Set([
   DEFAULT_PORTRAIT_KEY,
   WAR_PORTRAIT_KEY,
-  REVELATION_PORTRAIT_KEY,
+  ALIGNMENT_PORTRAIT_KEY,
   ...CHILD_SHADOW_PORTRAIT_KEYS
 ]);
 const BABY_PORTRAIT_KEYS = new Set([BABY_MALE_PORTRAIT_KEY, BABY_FEMALE_PORTRAIT_KEY]);
@@ -191,6 +191,9 @@ export function normalizePortraitKey(value) {
   if (lowerFileName === DEFAULT_PORTRAIT_KEY) return DEFAULT_PORTRAIT_KEY;
   if (lowerFileName === BABY_MALE_PORTRAIT_KEY) return BABY_MALE_PORTRAIT_KEY;
   if (lowerFileName === BABY_FEMALE_PORTRAIT_KEY) return BABY_FEMALE_PORTRAIT_KEY;
+  if (lowerFileName === "revelation.png" || lowerFileName === ALIGNMENT_PORTRAIT_KEY.toLowerCase()) {
+    return ALIGNMENT_PORTRAIT_KEY;
+  }
   if (lowerFileName === "child_shadow.svg") return "CHILD_SHADOW.svg";
   if (lowerFileName === "child_shadow_baby.svg") return "CHILD_SHADOW_BABY.svg";
 

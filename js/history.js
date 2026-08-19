@@ -24,7 +24,8 @@ export const HISTORY_EVENT_TYPES = Object.freeze({
   HOBBY_AWAKENING: "hobbyAwakening",
   PREGNANCY: "pregnancy",
   ADULTHOOD: "adulthood",
-  CRITICAL: "critical"
+  CRITICAL: "critical",
+  APOCALYPSE: "apocalypse"
 });
 
 const HISTORY_TYPE_LABELS = Object.freeze({
@@ -45,7 +46,8 @@ const HISTORY_TYPE_LABELS = Object.freeze({
   [HISTORY_EVENT_TYPES.HOBBY_AWAKENING]: "趣味",
   [HISTORY_EVENT_TYPES.PREGNANCY]: "妊娠",
   [HISTORY_EVENT_TYPES.ADULTHOOD]: "成人",
-  [HISTORY_EVENT_TYPES.CRITICAL]: "危篤"
+  [HISTORY_EVENT_TYPES.CRITICAL]: "危篤",
+  [HISTORY_EVENT_TYPES.APOCALYPSE]: "黙示録"
 });
 
 const HISTORY_SCOPES = Object.freeze({
@@ -424,6 +426,19 @@ export function recordMythicEventHistory(village, eventKey, person, options = {}
     text,
     people: person ? [person] : [],
     tags: ["怪異", title]
+  });
+}
+
+export function recordApocalypsePersonalHistory(village, person, text, options = {}) {
+  if (!person || !text) return;
+  addHistoryEvent(village, {
+    type: HISTORY_EVENT_TYPES.APOCALYPSE,
+    title: options.title || "黙示録",
+    text,
+    people: [person],
+    importance: "minor",
+    scope: HISTORY_SCOPES.PERSON,
+    tags: ["黙示録", ...(Array.isArray(options.tags) ? options.tags : [])]
   });
 }
 
