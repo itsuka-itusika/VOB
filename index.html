@@ -12,7 +12,7 @@
     gtag('config', 'G-TR05T5GRB4');
   </script>
   <title>ヴィレッジオブバッカス</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260819-opening-typewriter">
+  <link rel="stylesheet" href="css/styles.css?v=20260819-opening-modal-style">
   <style>
     .action-buttons {
       display: flex;
@@ -52,17 +52,22 @@
 
   <div id="openingStory" class="opening-view opening-story" role="dialog" aria-modal="true" aria-labelledby="openingStoryTitle" hidden>
     <h2 id="openingStoryTitle" class="opening-visually-hidden" tabindex="-1">オープニング</h2>
-    <button type="button" id="openingStorySkipButton" class="opening-story-skip">スキップ</button>
     <p id="openingStoryStage" class="opening-story-stage"></p>
     <div id="openingMessageWindow" class="opening-message-window" hidden>
-      <p id="openingMessageSpeaker" class="opening-message-speaker"></p>
-      <p id="openingMessageText" class="opening-message-text" aria-hidden="true"></p>
-      <span id="openingMessageCursor" class="opening-message-cursor" aria-hidden="true" hidden>▼</span>
+      <div class="opening-message-content">
+        <div class="opening-message-portrait" aria-hidden="true">？</div>
+        <div class="opening-message-dialogue">
+          <p id="openingMessageSpeaker" class="opening-message-speaker"></p>
+          <p id="openingMessageText" class="opening-message-text" aria-hidden="true"></p>
+          <span id="openingMessageCursor" class="opening-message-cursor" aria-hidden="true" hidden>▼</span>
+        </div>
+      </div>
+      <div class="opening-story-actions">
+        <button type="button" id="openingStorySkipButton">スキップ</button>
+        <button type="button" id="openingStoryContinueButton" hidden>ゲームを始める</button>
+      </div>
     </div>
     <p id="openingMessageSr" class="opening-visually-hidden" aria-live="polite"></p>
-    <div class="opening-story-actions">
-      <button type="button" id="openingStoryContinueButton" hidden>ゲームを始める</button>
-    </div>
   </div>
 </div>
 <header>
@@ -551,7 +556,7 @@
      (他のjs: util.js, classes.js, createVillagers.js などは先の回答と同様に配置)
 -->
 <script src="./js/balance/seedBootstrap.js?v=20260812-balance-seed-2"></script>
-<script type="module" src="./js/app.js?v=20260819-opening-typewriter"></script>
+<script type="module" src="./js/app.js?v=20260819-opening-modal-style"></script>
 
 </body>
 </html>

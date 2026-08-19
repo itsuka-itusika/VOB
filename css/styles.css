@@ -161,36 +161,19 @@ body.opening-active {
 }
 .opening-story {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto auto;
-  justify-items: center;
+  place-items: center;
   padding: 28px;
   overflow-y: auto;
   cursor: pointer;
 }
-.opening-story-skip {
-  position: absolute;
-  top: 18px;
-  right: 18px;
-  padding: 6px 16px;
-  border: 1px solid rgba(185, 154, 88, 0.7);
-  border-radius: 3px;
-  background: rgba(20, 16, 10, 0.7);
-  color: #cdb27a;
-  font: 400 0.85rem/1.3 inherit;
-  letter-spacing: 0.08em;
-  cursor: pointer;
-}
-.opening-story-skip:hover {
-  border-color: #e3c475;
-  color: #f0dba6;
-}
-.opening-story-skip:focus-visible {
-  outline: 3px solid #fff0aa;
-  outline-offset: 3px;
-}
+/* ト書きは配置に影響させず、メッセージウィンドウの上に置く。 */
 .opening-story-stage {
-  align-self: center;
+  position: absolute;
+  top: 20%;
+  right: 0;
+  left: 0;
   margin: 0;
+  padding: 0 16px;
   color: #c9b98f;
   text-align: center;
   letter-spacing: 0.06em;
@@ -201,46 +184,72 @@ body.opening-active {
 .opening-story-stage.is-visible {
   opacity: 1;
 }
+/* 以下は会話モーダル（#conversationModal）の構成を、暗い配色で再現したもの。 */
 .opening-message-window {
-  position: relative;
   box-sizing: border-box;
-  width: min(820px, 100%);
-  min-height: 7.5em;
-  padding: clamp(18px, 3vw, 28px) clamp(20px, 3.5vw, 34px);
+  width: min(640px, 100%);
+  padding: 20px;
   border: 1px solid rgba(211, 181, 111, 0.7);
   border-radius: 4px;
-  background: rgba(8, 7, 5, 0.9);
+  background: rgba(8, 7, 5, 0.92);
   box-shadow: 0 22px 70px rgba(0, 0, 0, 0.68), inset 0 0 40px rgba(207, 168, 87, 0.06);
   animation: openingWindowFadeIn 0.5s ease-out both;
 }
+.opening-message-content {
+  display: flex;
+  gap: 20px;
+}
+/* 顔グラ枠。話者の姿が見えないことを、空の枠そのもので示す。 */
+.opening-message-portrait {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 200px;
+  height: 200px;
+  border: 1px solid rgba(211, 181, 111, 0.28);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(216, 185, 104, 0.45);
+  font-size: 4rem;
+}
+.opening-message-dialogue {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 200px;
+  padding: 10px 14px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.035);
+}
 .opening-message-speaker {
-  margin: 0 0 0.6em;
+  margin: 0 0 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(211, 181, 111, 0.35);
   color: #d8b968;
   font-weight: 700;
   letter-spacing: 0.08em;
 }
 .opening-message-text {
-  min-height: 3.7em;
   margin: 0;
   font-size: clamp(0.98rem, 2vw, 1.12rem);
   line-height: 1.85;
 }
 .opening-message-cursor {
   position: absolute;
-  right: clamp(14px, 2.5vw, 22px);
-  bottom: clamp(10px, 2vw, 16px);
+  right: 12px;
+  bottom: 10px;
   color: #e5c77f;
   font-size: 0.9rem;
   animation: openingCursorBlink 1.1s steps(1, end) infinite;
 }
 .opening-story-actions {
-  display: grid;
-  justify-items: end;
-  width: min(820px, 100%);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
   min-height: 46px;
-  margin-top: 18px;
+  margin-top: 14px;
 }
-.opening-story-actions button {
+#openingStoryContinueButton {
   min-width: 190px;
 }
 @keyframes openingWindowFadeIn {
@@ -266,6 +275,17 @@ body.opening-active {
   .opening-story {
     padding: 16px;
   }
+  .opening-message-content {
+    gap: 12px;
+  }
+  .opening-message-portrait {
+    width: 128px;
+    height: 128px;
+    font-size: 2.6rem;
+  }
+  .opening-message-dialogue {
+    min-height: 128px;
+  }
 }
 @media (max-height: 620px) and (orientation: landscape) {
   .opening-menu {
@@ -285,21 +305,27 @@ body.opening-active {
   .opening-story {
     padding: 12px;
   }
-  .opening-story-skip {
-    top: 10px;
-    right: 10px;
-  }
   .opening-message-window {
-    min-height: 6em;
-    padding: 14px 20px;
+    padding: 14px;
   }
-  .opening-message-text {
-    min-height: 3.1em;
+  .opening-message-content {
+    gap: 12px;
+  }
+  .opening-message-portrait {
+    width: 128px;
+    height: 128px;
+    font-size: 2.6rem;
+  }
+  .opening-message-dialogue {
+    min-height: 128px;
     line-height: 1.55;
   }
   .opening-story-actions {
     min-height: 38px;
     margin-top: 10px;
+  }
+  .opening-story-actions button {
+    min-height: 38px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

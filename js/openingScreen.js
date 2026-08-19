@@ -47,9 +47,12 @@ function clearMessageStartTimer() {
 function setWaitingForInput(waiting) {
   const cursor = getElement("openingMessageCursor");
   const continueButton = getElement("openingStoryContinueButton");
+  const skipButton = getElement("openingStorySkipButton");
   const showContinue = waiting && isLastMessage();
   if (cursor) cursor.hidden = !waiting || showContinue;
   if (continueButton) continueButton.hidden = !showContinue;
+  // 最後の1枚では飛ばす先がないため、スキップは開始ボタンへ置き換える。
+  if (skipButton) skipButton.hidden = showContinue;
   if (showContinue) window.requestAnimationFrame(() => continueButton?.focus());
 }
 
@@ -151,6 +154,8 @@ function resetOpeningStory() {
   if (cursor) cursor.hidden = true;
   const continueButton = getElement("openingStoryContinueButton");
   if (continueButton) continueButton.hidden = true;
+  const skipButton = getElement("openingStorySkipButton");
+  if (skipButton) skipButton.hidden = false;
 }
 
 function startOpeningStory() {
