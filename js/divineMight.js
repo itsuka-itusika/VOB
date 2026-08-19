@@ -72,12 +72,11 @@ export function getDivineMightStatus(village) {
   const amount = getDivineMightAmount(village);
   const level = getDivineMightLevelForAmount(amount, village);
   const next = getNextDivineMightLevelInfo(level);
-  const displayThreshold = next
-    ? next.threshold
-    : DIVINE_MIGHT_LEVELS[DIVINE_MIGHT_LEVELS.length - 1].threshold;
+  // 最高レベル到達後は次の閾値がないため、数値ではなく max と表示する。
+  const thresholdLabel = next ? formatDivineMightAmount(next.threshold) : "max";
   return {
     amount,
-    amountLabel: `${formatDivineMightAmount(amount)}/${formatDivineMightAmount(displayThreshold)}`,
+    amountLabel: `${formatDivineMightAmount(amount)}/${thresholdLabel}`,
     level,
     next,
     remaining: next ? Math.max(0, next.threshold - amount) : 0
