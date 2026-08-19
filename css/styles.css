@@ -249,12 +249,9 @@ body.opening-active {
   min-height: 46px;
   margin-top: 14px;
 }
-#openingStoryContinueButton {
-  min-width: 190px;
-}
-/* スキップは会話モーダルの「閉じる」に倣い、主要ボタンより控えめにする。
-   .opening-story-actions button より詳細度を上げないと共有の金色装飾に負ける。 */
-.opening-story-actions .opening-story-skip {
+/* 導入シーンのボタンは、会話モーダルの閉じるボタンに倣って控えめにする。
+   共有の .opening-story-actions button より詳細度を上げないと金色装飾に負ける。 */
+.opening-story .opening-story-actions button {
   min-height: 34px;
   padding: 5px 16px;
   border-color: rgba(185, 154, 88, 0.55);
@@ -265,10 +262,13 @@ body.opening-active {
   text-shadow: none;
   box-shadow: none;
 }
-.opening-story-actions .opening-story-skip:hover {
+.opening-story .opening-story-actions button:hover {
   border-color: #e3c475;
   background: rgba(36, 29, 18, 0.78);
   color: #f0dba6;
+}
+#openingStoryContinueButton {
+  min-width: 190px;
 }
 @keyframes openingWindowFadeIn {
   from { opacity: 0; transform: translateY(10px); }
@@ -341,9 +341,6 @@ body.opening-active {
   .opening-story-actions {
     min-height: 38px;
     margin-top: 10px;
-  }
-  .opening-story-actions button {
-    min-height: 38px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
