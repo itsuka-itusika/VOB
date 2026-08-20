@@ -56,7 +56,12 @@ const APOCALYPSE_WAR_RAIDER_TYPE = "黙示録の騎士・戦争";
 const APOCALYPSE_CONQUEST_RAIDER_TYPE = "黙示録の騎士・支配";
 const WAR_LIGHT_PILLAR_TURN = 7;
 const WAR_LIGHT_PILLAR_DAMAGE = 666;
-const CONQUEST_JUDGMENT_LIGHT_TURNS = new Set([1, 3]);
+// 《支配》の裁きの光。ターンごとに狙う基準と宣告が変わる。
+const CONQUEST_JUDGMENT_LIGHT_RULES = new Map([
+  [1, { statKey: "eth", pickHighest: false, cry: "邪悪なる者、滅ぶべし", note: "最も倫理の低い村人に天の裁き！" }],
+  [3, { statKey: "sexdr", pickHighest: true, cry: "姦淫する者、滅ぶべし", note: "最も好色の高い村人に天の裁き！" }],
+  [5, { statKey: "happiness", pickHighest: true, cry: "高ぶる者、滅ぶべし", note: "最も幸福度の高い村人に天の裁き！" }]
+]);
 const CONQUEST_JUDGMENT_LIGHT_DAMAGE = 200;
 const HOLY_ATTACK_IMMUNITY_TRAIT = "光輪";
 const TRAIT_INJURED = "負傷";
@@ -796,7 +801,7 @@ function createCombatActions(village) {
       village.raidTurnCount === WAR_LIGHT_PILLAR_TURN &&
       unit?.raiderType === APOCALYPSE_WAR_RAIDER_TYPE;
     const isConquestJudgmentLight = village.currentRaid?.id === APOCALYPSE_UPPER_WINGED_ID &&
-      CONQUEST_JUDGMENT_LIGHT_TURNS.has(village.raidTurnCount) &&
+      CONQUEST_JUDGMENT_LIGHT_RULES.has(village.raidTurnCount) &&
       unit?.raiderType === APOCALYPSE_CONQUEST_RAIDER_TYPE;
     const type = isWarLightPillar
       ? "WAR_LIGHT_PILLAR"
@@ -842,27 +847,24 @@ function doConquestJudgmentLightAction(action, village) {
   const result = createRaidActionResult(actor);
   if (shouldSkipDefeatedEnemyAction(actor, village)) return result;
 
-  const isEthicsJudgment = village.raidTurnCount === 1;
-  const statKey = isEthicsJudgment ? "eth" : "sexdr";
+  const rule = CONQUEST_JUDGMENT_LIGHT_RULES.get(village.raidTurnCount);
   const candidates = getVillageCombatants(village);
   if (candidates.length === 0) {
     addRaidActionLog(result, `【裁きの光】${actor.name}が裁きを下すべき村人は残っていない`);
     return result;
   }
 
-  const values = candidates.map(person => Number(person?.[statKey]) || 0);
-  const targetValue = isEthicsJudgment ? Math.min(...values) : Math.max(...values);
-  const target = randChoice(candidates.filter(person => (Number(person?.[statKey]) || 0) === targetValue));
+  const values = candidates.map(person => Number(person?.[rule.statKey]) || 0);
+  const targetValue = rule.pickHighest ? Math.max(...values) : Math.min(...values);
+  const target = randChoice(candidates.filter(person => (Number(person?.[rule.statKey]) || 0) === targetValue));
   const hasHolyAttackImmunity = Array.isArray(target?.bodyTraits) &&
     target.bodyTraits.includes(HOLY_ATTACK_IMMUNITY_TRAIT);
   const damage = hasHolyAttackImmunity ? 0 : CONQUEST_JUDGMENT_LIGHT_DAMAGE;
 
   applyRaidDamage(target, damage);
   addRaidDamageAnimation(result, actor, target, damage, false, "裁きの光");
-  addRaidActionLog(result, `【裁きの光】「${isEthicsJudgment ? "邪悪なる者、滅ぶべし" : "姦淫する者、滅ぶべし"}」`);
-  addRaidActionLog(result, isEthicsJudgment
-    ? "最も倫理の低い村人に天の裁き！"
-    : "最も好色の高い村人に天の裁き！");
+  addRaidActionLog(result, `【裁きの光】「${rule.cry}」`);
+  addRaidActionLog(result, rule.note);
   addRaidActionLog(result, hasHolyAttackImmunity
     ? `　　→ ${target.name}の光輪が聖なる攻撃を退け、ダメージを0にした`
     : `　　→ ${target.name}に固定${CONQUEST_JUDGMENT_LIGHT_DAMAGE}ダメージ`);
