@@ -767,7 +767,6 @@ export const RAIDER_TYPES = [
       action: "襲撃"
     },
     raidPosition: "middle",
-    raidTargeting: "frontMiddleRandom",
     raidAttackType: "rangedMagic",
     portraits: numberedPortraits("ANGEL_FIGHTER", 16),
     ranges: {
@@ -841,7 +840,6 @@ export const RAIDER_TYPES = [
       action: "襲撃"
     },
     raidPosition: "middle",
-    raidTargeting: "frontMiddleRandom",
     portraits: numberedPortraits("ELITE_NOMAD", 20),
     ranges: {
       hp: [85, 110],
@@ -875,7 +873,6 @@ export const RAIDER_TYPES = [
     ageRange: { min: 100, max: 300 },
     params: { job: "黙示録の騎士・支配", action: "襲撃" },
     raidPosition: "middle",
-    raidTargeting: "frontMiddleRandom",
     raidAttackType: "rangedMagic",
     portraits: ["ALIGNMENT.png"],
     exchangeImmune: true,

@@ -41,10 +41,6 @@ const RAID_PHASE_REAR = "rear";
 const RAID_PHASE_COMBAT = "combat";
 const RAID_POSITION_FRONT = "front";
 const RAID_POSITION_MIDDLE = "middle";
-const RAID_TARGET_FRONT_FIRST = "frontFirst";
-const RAID_TARGET_MIDDLE_FIRST = "middleFirst";
-const RAID_TARGET_MIDDLE_ONLY = "middleOnly";
-const RAID_TARGET_FRONT_MIDDLE_RANDOM = "frontMiddleRandom";
 const RAID_TARGET_WEAKEST_HIGH_CHANCE = "weakestHighChance";
 const RAID_ATTACK_RANGED_MAGIC = "rangedMagic";
 const RAID_WEAKEST_TARGET_CHANCE = 0.8;
@@ -513,25 +509,13 @@ function pickFrontFirst(candidates, village) {
   return front.length > 0 ? front : middle;
 }
 
+// 通常攻撃は、攻撃側が中衛であっても前衛が残っている間は前衛だけを狙う。
+// 黙示録の裁きの光と光の柱は専用処理で対象を選ぶため、この制限を受けない。
 function getTargetCandidates(actor, village) {
-  const actorIsEnemy = isEnemyUnit(actor, village);
-  const candidates = actorIsEnemy
+  const candidates = isEnemyUnit(actor, village)
     ? getVillageCombatants(village)
     : getAliveEnemies(village);
-  if (!actorIsEnemy) return pickFrontFirst(candidates, village);
-
-  const targeting = actor.raidTargeting || RAID_TARGET_FRONT_FIRST;
-  const front = candidates.filter(unit => getCombatPosition(unit, village) === RAID_POSITION_FRONT);
-  const middle = candidates.filter(unit => getCombatPosition(unit, village) === RAID_POSITION_MIDDLE);
-
-  if (targeting === RAID_TARGET_WEAKEST_HIGH_CHANCE) return candidates;
-  if (targeting === RAID_TARGET_MIDDLE_ONLY) return middle.length > 0 ? middle : [];
-  if (targeting === RAID_TARGET_MIDDLE_FIRST) return middle.length > 0 ? middle : front;
-  if (targeting === RAID_TARGET_FRONT_MIDDLE_RANDOM) {
-    const mixed = front.concat(middle);
-    return mixed.length > 0 ? mixed : candidates;
-  }
-  return front.length > 0 ? front : middle;
+  return pickFrontFirst(candidates, village);
 }
 
 function selectTarget(actor, village) {
