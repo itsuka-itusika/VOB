@@ -1257,6 +1257,13 @@ table.show-spirit-columns .spirit-column {
   font-size: 0.7rem;
   line-height: 1.25;
 }
+.raid-unit-action-note {
+  display: inline-block;
+  padding: 1px 0;
+  color: #6b5b3c;
+  font-size: 0.7rem;
+  line-height: 1.25;
+}
 .raid-unit-hp.is-low,
 .raid-unit-mp.is-low {
   color: #a3261b;
@@ -4051,6 +4058,9 @@ body.mobile-mode .raid-stat-summary {
 body.mobile-mode .raid-unit-action,
 body.mobile-mode .raid-unit-effect {
   padding: 0 3px;
+  font-size: 0.62rem;
+}
+body.mobile-mode .raid-unit-action-note {
   font-size: 0.62rem;
 }
 body.mobile-mode .raid-buttons {

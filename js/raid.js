@@ -498,7 +498,13 @@ function updateRaidStatusLine(village) {
   const pendingTraps = getPendingTrapMakers(village).length;
   const enemyCount = getAliveEnemies(village).length;
   const surviveTurns = getRaidSurviveTurns(village);
-  const surviveText = surviveTurns ? ` / 撤退目安 ${surviveTurns}ターン` : "";
+  let surviveText = "";
+  if (surviveTurns) {
+    // 戦闘中は残りターン数を数え、あと何手粘れば敵が引き揚げるか分かるようにする。
+    surviveText = village.raidPhase === RAID_PHASE_COMBAT
+      ? ` / 敵撤退まで残り${surviveTurns + 1 - Math.max(1, Number(village.raidTurnCount) || 1)}ターン`
+      : ` / 敵撤退目安 ${surviveTurns}ターン`;
+  }
 
   statusLine.textContent = `フェーズ: ${getRaidPhaseLabel(village)}${surviveText} / 前衛${frontliners}・中衛${shooters}・後衛残り${pendingTraps} / 襲撃者${enemyCount}`;
 }
@@ -961,6 +967,11 @@ function applyOffensiveTraitModifiers(actor, damage, label, result) {
   return nextDamage;
 }
 
+/** 籠城の被ダメージ倍率。表示と計算で同じ値を使う。 */
+function getFortifyDamageMultiplier(village) {
+  return hasMoatDefense(village) ? 0.7 : 0.8;
+}
+
 function applyIncomingDamageModifiers(damage, target, village) {
   let multiplier = 1;
   if (isEnemyUnit(target, village)) {
@@ -970,7 +981,7 @@ function applyIncomingDamageModifiers(damage, target, village) {
     multiplier *= 1.2;
   }
   if (!isEnemyUnit(target, village) && target.action === ACTION_FORTIFY) {
-    multiplier *= hasMoatDefense(village) ? 0.7 : 0.8;
+    multiplier *= getFortifyDamageMultiplier(village);
   }
   return Math.max(0, Math.floor(damage * multiplier));
 }
@@ -1512,7 +1523,7 @@ function createRaidUnitRow(unit, village = null) {
     row.classList.add("is-leaving", "is-retreating");
   }
   appendRaidPortraitCell(row, unit);
-  appendRaidNameCell(row, unit);
+  appendRaidNameCell(row, unit, village);
   appendRaidValueCell(row, unit?.hp, "raid-unit-hp", Number(unit?.hp) <= 33);
   appendRaidValueCell(row, unit?.mp, "raid-unit-mp", Number(unit?.mp) <= 33);
   appendRaidStatSummaryCell(row, unit);
@@ -1536,7 +1547,7 @@ function appendRaidPortraitCell(row, unit) {
   row.appendChild(cell);
 }
 
-function appendRaidNameCell(row, unit) {
+function appendRaidNameCell(row, unit, village = null) {
   const cell = document.createElement("td");
   cell.className = "raid-unit-name";
 
@@ -1553,6 +1564,14 @@ function appendRaidNameCell(row, unit) {
     action.className = "raid-unit-action";
     action.textContent = unit.action;
     meta.appendChild(action);
+  }
+
+  // 籠城は見た目に効果が出ないため、実際の被ダメージ倍率を添える。
+  if (unit?.action === ACTION_FORTIFY && village && !isEnemyUnit(unit, village)) {
+    const note = document.createElement("span");
+    note.className = "raid-unit-action-note";
+    note.textContent = `被弾${getFortifyDamageMultiplier(village)}倍`;
+    meta.appendChild(note);
   }
 
   getRaidVisibleEffects(unit).forEach(effectName => {
