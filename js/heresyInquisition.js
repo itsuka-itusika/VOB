@@ -1,5 +1,6 @@
 import { getDivineMightLevel, runAfterPendingDivineMightLevelUp } from "./divineMight.js";
 import { getPortraitAssetPath, INQUISITOR_PORTRAIT_FILES } from "./data/portraitPaths.js";
+import { pickInquisitorSpeechSet } from "./data/dialogue/inquisitorLines.js";
 import { isHeadmanElectionModalPendingOrOpen } from "./headmanElection.js";
 import { updateUI } from "./ui.js";
 import { getVillageScaleStage } from "./villageScale.js";
@@ -113,18 +114,23 @@ function createModalLayer({ overlayId, modalId, title, bodyHtml, buttons }) {
   `;
 
   const buttonArea = modal.querySelector(".heresy-inquisition-buttons");
-  buttons.forEach(({ label, onClick, className = "" }) => {
+  buttons.forEach(({ label, onClick, className = "", disabledReason = "" }) => {
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = label;
     if (className) button.className = className;
-    button.onclick = onClick;
+    if (disabledReason) {
+      button.disabled = true;
+      button.title = disabledReason;
+    } else {
+      button.onclick = onClick;
+    }
     buttonArea.appendChild(button);
   });
 
   document.body.appendChild(overlay);
   document.body.appendChild(modal);
-  buttonArea.querySelector("button")?.focus();
+  buttonArea.querySelector("button:not([disabled])")?.focus();
   return { overlay, modal };
 }
 
@@ -156,52 +162,54 @@ function showInquisitionChoiceModal(village) {
   const cost = getHeresyInquisitionHospitalityCost(village);
   const funds = Math.max(0, Number(village.funds) || 0);
   const portraitPath = getRandomInquisitorPortraitPath();
-  const shortageText = funds < cost
-    ? `<p class="heresy-inquisition-warning">現在の資金では、もてなしに必要な費用を用意できません。</p>`
-    : "";
+  const speech = pickInquisitorSpeechSet();
+  const canAfford = funds >= cost;
+  const shortageText = canAfford
+    ? ""
+    : `<p class="heresy-inquisition-warning">現在の資金では、もてなしに必要な費用を用意できません。</p>`;
 
   createModalLayer({
     overlayId: "heresyInquisitionOverlay",
     modalId: "heresyInquisitionModal",
     title: "異端審問",
     bodyHtml: getInquisitorBody(`
-      <p>「この村では、古き神の力が異様なほど高まっているとの報告がある。新しき神の名において、異端の疑いを調査する。」</p>
+      <p>${speech.opening}</p>
       <div class="heresy-inquisition-cost">
         <span>もてなし費用</span>
         <strong>資金 ${cost}</strong>
         <small>現在の資金 ${funds}</small>
       </div>
       ${shortageText}
+      <ul class="heresy-inquisition-choices">
+        <li><strong>もてなす</strong>資金${cost}を支払います。村に変化はありません。</li>
+        <li><strong>追い払う</strong>村に「異端」が記録され、襲撃の傾向が変わります。取り消しはできません。</li>
+      </ul>
     `, portraitPath),
     buttons: [
       {
         label: "もてなす",
         className: "heresy-hospitality-button",
-        onClick: () => handleHospitality(village, cost, portraitPath)
+        disabledReason: canAfford ? "" : `もてなしには資金${cost}が必要です（現在${funds}）`,
+        onClick: () => handleHospitality(village, cost, portraitPath, speech)
       },
       {
         label: "追い払う",
         className: "heresy-expulsion-button",
-        onClick: () => handleExpulsion(village, portraitPath)
+        onClick: () => handleExpulsion(village, portraitPath, speech)
       }
     ]
   });
 }
 
-function handleHospitality(village, cost, portraitPath) {
-  if ((Number(village.funds) || 0) < cost) {
-    showInsufficientFundsModal(village, cost);
-    return;
-  }
-
+function handleHospitality(village, cost, portraitPath, speech) {
   village.funds = Math.max(0, (Number(village.funds) || 0) - cost);
   village.log(`【異端審問】異端審問官をもてなし、資金${cost}を支払って調査を切り抜けた。`);
   updateUI(village);
   removeModalLayer("heresyInquisitionOverlay", "heresyInquisitionModal");
-  showHospitalityResultModal(cost, portraitPath);
+  showHospitalityResultModal(cost, portraitPath, speech);
 }
 
-function handleExpulsion(village, portraitPath) {
+function handleExpulsion(village, portraitPath, speech) {
   const villageTraits = Array.isArray(village.villageTraits)
     ? village.villageTraits
     : (village.villageTraits = []);
@@ -210,30 +218,10 @@ function handleExpulsion(village, portraitPath) {
   village.log("【異端審問】異端審問官を追い払い、村は異端として記録された。");
   updateUI(village);
   removeModalLayer("heresyInquisitionOverlay", "heresyInquisitionModal");
-  showExpulsionResultModal(portraitPath);
+  showExpulsionResultModal(portraitPath, speech);
 }
 
-function showInsufficientFundsModal(village, cost) {
-  const ids = {
-    overlayId: "inquisitionInsufficientFundsOverlay",
-    modalId: "inquisitionInsufficientFundsModal"
-  };
-  const funds = Math.max(0, Number(village.funds) || 0);
-  createModalLayer({
-    ...ids,
-    title: "資金が足りない",
-    bodyHtml: `
-      <p>異端審問官をもてなすには資金${cost}が必要です。</p>
-      <p class="heresy-inquisition-result">現在の資金は${funds}です。もてなすことはできません。</p>
-    `,
-    buttons: [{
-      label: "戻る",
-      onClick: () => removeModalLayer(ids.overlayId, ids.modalId)
-    }]
-  });
-}
-
-function showHospitalityResultModal(cost, portraitPath) {
+function showHospitalityResultModal(cost, portraitPath, speech) {
   const ids = {
     overlayId: "inquisitionHospitalityResultOverlay",
     modalId: "inquisitionHospitalityResultModal"
@@ -242,7 +230,7 @@ function showHospitalityResultModal(cost, portraitPath) {
     ...ids,
     title: "異端審問：もてなし",
     bodyHtml: getInquisitorBody(`
-      <p>「十分な協力が得られた。今回の調査では、断罪に足る証は見つからなかったことにしよう。」</p>
+      <p>${speech.hospitality}</p>
       <p class="heresy-inquisition-result">資金-${cost}。村に「異端」は付きませんでした。</p>
     `, portraitPath),
     buttons: [{
@@ -252,7 +240,7 @@ function showHospitalityResultModal(cost, portraitPath) {
   });
 }
 
-function showExpulsionResultModal(portraitPath) {
+function showExpulsionResultModal(portraitPath, speech) {
   const ids = {
     overlayId: "inquisitionExpulsionResultOverlay",
     modalId: "inquisitionExpulsionResultModal"
@@ -262,7 +250,7 @@ function showExpulsionResultModal(portraitPath) {
     title: "異端審問：追放",
     bodyHtml: getInquisitorBody(`
       <p>村人たちは異端審問官を村の外へ追い立てた。</p>
-      <p>「拒絶の事実は記録した。次に訪れるのは、調査官ではない。」</p>
+      <p>${speech.expulsion}</p>
       <p class="heresy-inquisition-result">村特性「異端」が付き、異端専用の襲撃テーブルへ切り替わりました。</p>
     `, portraitPath),
     buttons: [{

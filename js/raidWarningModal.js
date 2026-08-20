@@ -17,7 +17,6 @@ const PRIORITY_MODAL_SELECTORS = [
   "#wishModal",
   "#wishCompleteModal",
   "#heresyInquisitionModal",
-  "#inquisitionInsufficientFundsModal",
   "#inquisitionHospitalityResultModal",
   "#inquisitionExpulsionResultModal",
   ".effect-result-modal",

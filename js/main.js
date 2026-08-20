@@ -39,7 +39,6 @@ const TURN_BLOCKING_MODAL_SELECTORS = [
   "#wishModal",
   "#wishCompleteModal",
   "#heresyInquisitionModal",
-  "#inquisitionInsufficientFundsModal",
   "#inquisitionHospitalityResultModal",
   "#inquisitionExpulsionResultModal",
   "#bacchusGoldenStatueEventModal",

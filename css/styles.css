@@ -806,6 +806,20 @@ body.scale-stage-6 .log-area,
 #villageScaleModal.scale-stage-6 {
   --village-scale-image: url("../images/village-scale-07-autonomous-settlement.jpg");
 }
+
+/* 黙示録が続く間は、画面の色調をわずかに不穏へ寄せる */
+body.apocalypse-mode header {
+  background: #3a1414;
+}
+body.apocalypse-mode .log-area {
+  background:
+    linear-gradient(rgba(255, 236, 232, 0.85), rgba(243, 219, 214, 0.92)),
+    var(--village-scale-image) center / cover no-repeat #fff;
+  border-color: #a45f5f;
+}
+body.apocalypse-mode #villageInfoHeading {
+  color: #7b2020;
+}
 .village-scale-modal-body {
   padding: 34px 38px 28px;
   color: #2f2719;
@@ -2009,15 +2023,6 @@ section h2 {
   border-color: #5b1f1f;
 }
 
-#inquisitionInsufficientFundsOverlay {
-  z-index: 2700;
-}
-
-#inquisitionInsufficientFundsModal {
-  width: min(440px, calc(100vw - 32px));
-  z-index: 2701;
-}
-
 .heresy-inquisition-body {
   padding: 18px;
 }
@@ -2090,6 +2095,27 @@ section h2 {
   color: #8b1e1e;
 }
 
+.heresy-inquisition-choices {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  list-style: none;
+  border: 1px solid #d8c9bb;
+  background: #fdfaf5;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.heresy-inquisition-choices li + li {
+  margin-top: 6px;
+}
+
+.heresy-inquisition-choices strong {
+  display: inline-block;
+  min-width: 5.5em;
+  margin-right: 8px;
+  color: #4b3627;
+}
+
 .heresy-inquisition-buttons {
   display: flex;
   justify-content: flex-end;
@@ -2114,6 +2140,70 @@ section h2 {
 .heresy-inquisition-buttons .heresy-expulsion-button {
   border-color: #9d5555;
   color: #7b2020;
+}
+
+.heresy-inquisition-buttons button:disabled {
+  border-color: #d3cabf;
+  background: #efece7;
+  color: #a09589;
+  cursor: not-allowed;
+}
+
+.golden-statue-confirm-modal {
+  width: min(560px, calc(100vw - 32px));
+  border-color: #7b2020;
+}
+
+.golden-statue-confirm-modal .event-modal-body {
+  padding: 18px;
+}
+
+.golden-statue-confirm-modal h3 {
+  margin: 0 0 12px;
+  color: #7b2020;
+}
+
+.golden-statue-confirm-modal p {
+  margin: 0 0 12px;
+  line-height: 1.65;
+}
+
+.golden-statue-confirm-warning {
+  padding: 10px 12px;
+  border: 1px solid #b06a6a;
+  background: #fdf2f0;
+  font-weight: bold;
+  color: #8b1e1e;
+}
+
+.golden-statue-confirm-note {
+  color: #7a5c32;
+  font-size: 0.9rem;
+}
+
+.golden-statue-confirm-buttons {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.golden-statue-confirm-buttons button {
+  min-width: 120px;
+  padding: 9px 14px;
+  border: 1px solid #b7a897;
+  background: #f0ebe4;
+  cursor: pointer;
+}
+
+.golden-statue-confirm-buttons .golden-statue-confirm-button {
+  border-color: #9d5555;
+  color: #7b2020;
+}
+
+.golden-statue-confirm-buttons button:hover,
+.golden-statue-confirm-buttons button:focus-visible {
+  background: #e4d9cb;
 }
 
 .pinecone-staff-intro-modal .event-modal-image {

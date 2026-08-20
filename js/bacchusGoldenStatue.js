@@ -12,6 +12,8 @@ const AUTONOMOUS_SETTLEMENT_STAGE_INDEX = 6;
 const REQUIRED_DIVINE_MIGHT_LEVEL = 5;
 const EVENT_MODAL_ID = "bacchusGoldenStatueEventModal";
 const EVENT_OVERLAY_ID = "bacchusGoldenStatueEventOverlay";
+const BUILD_CONFIRM_MODAL_ID = "bacchusGoldenStatueConfirmModal";
+const BUILD_CONFIRM_OVERLAY_ID = "bacchusGoldenStatueConfirmOverlay";
 const PRIORITY_MODAL_SELECTORS = [
   "#actionPhaseModal",
   "#seasonChangeDialog",
@@ -23,7 +25,6 @@ const PRIORITY_MODAL_SELECTORS = [
   "#wishModal",
   "#wishCompleteModal",
   "#heresyInquisitionModal",
-  "#inquisitionInsufficientFundsModal",
   "#inquisitionHospitalityResultModal",
   "#inquisitionExpulsionResultModal",
   "#secretTreasureEventModal",
@@ -166,6 +167,56 @@ function showEventModal() {
       <p class="event-modal-reward">バッカスの黄金像が建築可能になりました。</p>
     `
   });
+}
+
+/**
+ * 黄金像の建設確認。黙示録の入口となる決断のため、
+ * ブラウザ標準の確認ではなく専用モーダルで警告する。
+ */
+export function confirmBacchusGoldenStatueBuild({ warningText = "", onConfirm }) {
+  document.getElementById(BUILD_CONFIRM_OVERLAY_ID)?.remove();
+  document.getElementById(BUILD_CONFIRM_MODAL_ID)?.remove();
+
+  const overlay = document.createElement("div");
+  overlay.id = BUILD_CONFIRM_OVERLAY_ID;
+  overlay.className = "event-modal-overlay";
+
+  const modal = document.createElement("div");
+  modal.id = BUILD_CONFIRM_MODAL_ID;
+  modal.className = "event-modal golden-statue-confirm-modal";
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-modal", "true");
+  modal.setAttribute("aria-labelledby", `${BUILD_CONFIRM_MODAL_ID}Title`);
+  modal.innerHTML = `
+    <div class="event-modal-body">
+      <h3 id="${BUILD_CONFIRM_MODAL_ID}Title">黄金像の建設</h3>
+      <p>村人たちは槌を手に、黄金の御姿を仰ぐ日を待っている。</p>
+      <p class="golden-statue-confirm-warning">
+        警告：黄金像の建設は新しき神の逆鱗に触れます。<br>
+        神の怒りは黙示録を招き、七つの大いなる災厄が村を襲うでしょう。
+      </p>
+      ${warningText ? `<p class="golden-statue-confirm-note">【冬越し資材警告】${warningText}</p>` : ""}
+      <div class="event-modal-buttons golden-statue-confirm-buttons">
+        <button type="button" data-cancel-golden-statue>やめておく</button>
+        <button type="button" class="golden-statue-confirm-button" data-confirm-golden-statue>それでも建設する</button>
+      </div>
+    </div>
+  `;
+
+  const close = () => {
+    overlay.remove();
+    modal.remove();
+  };
+  modal.querySelector("[data-cancel-golden-statue]").onclick = close;
+  modal.querySelector("[data-confirm-golden-statue]").onclick = () => {
+    close();
+    if (typeof onConfirm === "function") onConfirm();
+  };
+  overlay.onclick = close;
+  document.body.appendChild(overlay);
+  document.body.appendChild(modal);
+  // 取り返しのつかない選択のため、既定の焦点は中止側へ置く。
+  modal.querySelector("[data-cancel-golden-statue]")?.focus();
 }
 
 export { startApocalypseFromGoldenStatue } from "./apocalypse.js";

@@ -19,6 +19,7 @@ import {
   BACCHUS_GOLDEN_STATUE_BUILDING_ID,
   BACCHUS_GOLDEN_STATUE_BUILT_FLAG,
   BACCHUS_GOLDEN_STATUE_UNLOCK_FLAG,
+  confirmBacchusGoldenStatueBuild,
   startApocalypseFromGoldenStatue
 } from "./bacchusGoldenStatue.js";
 import { destroyBacchusGoldenStatue } from "./apocalypse.js";
@@ -335,7 +336,7 @@ export const BUILDINGS = [
     tech: 1000,
     desc: "黄金像建立イベントで解放。交換の奇跡と交換の奇跡・強の消費魔素を半分にする。建設すると次月から七つの災厄が始まる。建設後は破壊可能。",
     isUnlocked: (village) => !!village?.buildingFlags?.[BACCHUS_GOLDEN_STATUE_UNLOCK_FLAG],
-    confirmMessage: "警告：黄金像の建設は新しき神の逆鱗に触れます。\n神の怒りは黙示録を招き、七つの大いなる災厄が村を襲うでしょう。\nそれでも建設しますか？",
+    confirmWith: confirmBacchusGoldenStatueBuild,
     effect: (village) => {
       ensureBuildingFlags(village)[BACCHUS_GOLDEN_STATUE_BUILT_FLAG] = true;
       village.log("バッカスの黄金像建設完了: 交換の奇跡と交換の奇跡・強の消費魔素が半分になりました");
@@ -478,11 +479,15 @@ function createBuildingItem(building, village) {
   button.disabled = isBuilt || reachedLimit || !canBuild;
   if (canBuild) {
     button.onclick = () => {
-      const baseConfirmMessage = building.confirmMessage || `${building.name}を建設しますか？`;
       const currentWarning = getPostBuildWinterMaterialWarning(village, getBuildingCostForVillage(building, village).materials);
-      const confirmMessage = currentWarning
-        ? `${baseConfirmMessage}\n\n【冬越し資材警告】\n${formatPostBuildWinterWarning(currentWarning)}\nそれでも建設しますか？`
-        : baseConfirmMessage;
+      const warningText = currentWarning ? formatPostBuildWinterWarning(currentWarning) : "";
+      if (typeof building.confirmWith === "function") {
+        building.confirmWith({ warningText, onConfirm: () => constructBuilding(building, village) });
+        return;
+      }
+      const confirmMessage = warningText
+        ? `${building.name}を建設しますか？\n\n【冬越し資材警告】\n${warningText}\nそれでも建設しますか？`
+        : `${building.name}を建設しますか？`;
       if (confirm(confirmMessage)) constructBuilding(building, village);
     };
   }

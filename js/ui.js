@@ -1131,6 +1131,7 @@ export function updateUI(v) {
   const rp = document.getElementById("resourcePanel");
   if (!rp) return;
   applyVillageScaleArtClass(v.building);
+  document.body?.classList.toggle("apocalypse-mode", isApocalypseActive(v));
   const villageInfoHeading = document.getElementById("villageInfoHeading");
   const scaleTitle = getVillageScaleTitle(v.building);
   const divineStatus = getDivineMightStatus(v);

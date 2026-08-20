@@ -63,7 +63,6 @@ const PRIORITY_MODAL_SELECTORS = [
   "#buildingRequestModal",
   "#buildingRequestCompleteModal",
   "#heresyInquisitionModal",
-  "#inquisitionInsufficientFundsModal",
   "#inquisitionHospitalityResultModal",
   "#inquisitionExpulsionResultModal",
   "#bacchusGoldenStatueEventModal",
