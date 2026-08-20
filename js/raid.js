@@ -25,6 +25,8 @@ import {
   getActiveRaidFrontliners,
   getActiveRaidMiddleliners,
   getActiveRaidTrapMakers,
+  getRaidFrontlinerSlotCount,
+  getRaidMiddleSlotCount,
   isRaidCombatAction
 } from "./raidRules.js";
 import { refreshJobTable } from "./domain/jobTables.js";
@@ -43,6 +45,7 @@ const RAID_PHASE_COMBAT = "combat";
 const RAID_POSITION_FRONT = "front";
 const RAID_POSITION_MIDDLE = "middle";
 const RAID_TARGET_WEAKEST_HIGH_CHANCE = "weakestHighChance";
+const CANNON_INCOMING_DAMAGE_MULTIPLIER = 1.5;
 const RAID_ATTACK_RANGED_MAGIC = "rangedMagic";
 const RAID_WEAKEST_TARGET_CHANCE = 0.8;
 const APOCALYPSE_GRAND_CRUSADE_ID = "apocalypse-grand-crusade";
@@ -501,6 +504,8 @@ function updateRaidStatusLine(village) {
 
   const frontliners = getActiveRaidFrontliners(village).filter(person => person.hp > 0).length;
   const middleliners = getActiveRaidMiddleliners(village).length;
+  const frontSlots = getRaidFrontlinerSlotCount(village);
+  const middleSlots = getRaidMiddleSlotCount(village);
   const pendingTraps = getPendingTrapMakers(village).length;
   const enemyCount = getAliveEnemies(village).length;
   const surviveTurns = getRaidSurviveTurns(village);
@@ -512,7 +517,7 @@ function updateRaidStatusLine(village) {
       : ` / 敵撤退目安 ${surviveTurns}ターン`;
   }
 
-  statusLine.textContent = `フェーズ: ${getRaidPhaseLabel(village)}${surviveText} / 前衛${frontliners}・中衛${middleliners}・後衛残り${pendingTraps} / 襲撃者${enemyCount}`;
+  statusLine.textContent = `フェーズ: ${getRaidPhaseLabel(village)}${surviveText} / 前衛${frontliners}/${frontSlots}・中衛${middleliners}/${middleSlots}・後衛残り${pendingTraps} / 襲撃者${enemyCount}`;
 }
 
 function pickFrontFirst(candidates, village) {
@@ -996,7 +1001,7 @@ function applyIncomingDamageModifiers(damage, target, village) {
     multiplier *= getRaiderIncomingDamageMultiplier(target);
   }
   if (getCombatPosition(target, village) === RAID_POSITION_MIDDLE) {
-    multiplier *= isCannonUnit(target, village) ? 1.5 : 1.2;
+    multiplier *= isCannonUnit(target, village) ? CANNON_INCOMING_DAMAGE_MULTIPLIER : 1.2;
   }
   if (!isEnemyUnit(target, village) && target.action === ACTION_FORTIFY) {
     multiplier *= getFortifyDamageMultiplier(village);
@@ -1567,6 +1572,13 @@ function appendRaidPortraitCell(row, unit) {
   row.appendChild(cell);
 }
 
+function appendRaidUnitNote(meta, text) {
+  const note = document.createElement("span");
+  note.className = "raid-unit-action-note";
+  note.textContent = text;
+  meta.appendChild(note);
+}
+
 function appendRaidNameCell(row, unit, village = null) {
   const cell = document.createElement("td");
   cell.className = "raid-unit-name";
@@ -1586,18 +1598,13 @@ function appendRaidNameCell(row, unit, village = null) {
     meta.appendChild(action);
   }
 
-  // 籠城・火砲は見た目に効果が出ないため、実際の被ダメージ倍率を添える。
+  // 籠城・火砲は見た目に効果が出ないため、行動順と実際の被ダメージ倍率を添える。
   if (unit?.action === ACTION_FORTIFY && village && !isEnemyUnit(unit, village)) {
-    const note = document.createElement("span");
-    note.className = "raid-unit-action-note";
-    note.textContent = `被弾${getFortifyDamageMultiplier(village)}倍`;
-    meta.appendChild(note);
+    appendRaidUnitNote(meta, `被弾${getFortifyDamageMultiplier(village)}倍`);
   }
   if (village && isCannonUnit(unit, village)) {
-    const note = document.createElement("span");
-    note.className = "raid-unit-action-note";
-    note.textContent = "被弾1.5倍";
-    meta.appendChild(note);
+    appendRaidUnitNote(meta, "後攻");
+    appendRaidUnitNote(meta, `被弾${CANNON_INCOMING_DAMAGE_MULTIPLIER}倍`);
   }
 
   getRaidVisibleEffects(unit).forEach(effectName => {
