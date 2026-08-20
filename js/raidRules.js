@@ -13,6 +13,8 @@ export const RAID_ACTIONS = [ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT, ACTION
 export const RAID_COMBAT_ACTIONS = [ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT, ACTION_CANNON];
 export const RAID_BASE_FRONTLINER_SLOTS = 6;
 export const RAID_TRAP_MAKER_SLOTS = 3;
+export const RAID_MIDDLE_INCOMING_DAMAGE_MULTIPLIER = 1.2;
+export const RAID_CANNON_INCOMING_DAMAGE_MULTIPLIER = 1.5;
 
 const RAID_COMMON_UNABLE_MIND_TRAITS = ["無垢", "萌芽", "襲撃者", "訪問者"];
 const RAID_DEFEND_UNABLE_MIND_TRAITS = [...RAID_COMMON_UNABLE_MIND_TRAITS, "思春期"];
@@ -150,6 +152,11 @@ function sortRaidTrapMakersByPriority(trapMakers) {
     const scoreB = (Number(b?.dex) || 0) * (Number(b?.int) || 0);
     return scoreB - scoreA;
   });
+}
+
+/** 籠城の被ダメージ倍率。環濠の有無で変わるため、表示と計算で同じ値を使う。 */
+export function getFortifyDamageMultiplier(village) {
+  return hasActiveBuildingFlag(village, "hasMoat", "moat") ? 0.7 : 0.8;
 }
 
 export function getRaidFrontlinerSlotCount(village = null) {

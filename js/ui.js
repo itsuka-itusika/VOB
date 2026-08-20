@@ -57,7 +57,13 @@ import { getCaptives } from "./captives.js";
 import { getTutorialWarnings } from "./tutorial.js";
 import { applyVillageScaleArtClass, getVillageScaleTitle } from "./villageScale.js";
 import { getDivineMightStatus } from "./divineMight.js";
-import { RAID_ACTIONS, isRaidActionSlotAvailable } from "./raidRules.js";
+import {
+  RAID_ACTIONS,
+  RAID_CANNON_INCOMING_DAMAGE_MULTIPLIER,
+  RAID_MIDDLE_INCOMING_DAMAGE_MULTIPLIER,
+  getFortifyDamageMultiplier,
+  isRaidActionSlotAvailable
+} from "./raidRules.js";
 import { getBuildingRequestWarnings } from "./buildingRequests.js";
 import { checkWishCompletion, getWishWarnings } from "./wishes.js";
 import { hasDespairState, hasDisappointmentState } from "./domain/despair.js";
@@ -649,13 +655,13 @@ function getTaskEstimateParts(person, task, village) {
       parts = [`想定ダメージ${estimateDefendDamage(person, village)}`];
       break;
     case "籠城":
-      parts = ["攻撃なし", "被弾0.8倍", "反撃あり"];
+      parts = ["攻撃なし", `被弾${getFortifyDamageMultiplier(village)}倍`, "反撃あり"];
       break;
     case "射撃":
-      parts = [`想定ダメージ${estimateShootDamage(person, village)}`, "先制", "反撃なし", "被弾1.2倍"];
+      parts = [`想定ダメージ${estimateShootDamage(person, village)}`, "先制", "反撃なし", `被弾${RAID_MIDDLE_INCOMING_DAMAGE_MULTIPLIER}倍`];
       break;
     case "火砲":
-      parts = [`想定ダメージ${estimateCannonDamage(person)}`, "後攻", "反撃なし", "被弾1.5倍"];
+      parts = [`想定ダメージ${estimateCannonDamage(person)}`, "後攻", "反撃なし", `被弾${RAID_CANNON_INCOMING_DAMAGE_MULTIPLIER}倍`];
       break;
     case "罠作成":
       parts = [`想定ダメージ${estimateTrapDamage(person)}`];

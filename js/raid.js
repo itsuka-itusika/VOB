@@ -3,7 +3,6 @@
 import { randInt, randChoice, clampValue, shuffleArray, getPortraitPath } from "./util.js";
 import { getRaidRulesById } from "./data/raidData.js";
 import { damageRandomBuilding } from "./buildings.js";
-import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { endOfMonthProcess, doFixedEventPost, doAgingProcess, runMonthStartPhase } from "./events.js";
 import { handleAllVillagerJobs } from "./jobs.js";
 import { addDivineMight } from "./divineMight.js";
@@ -18,8 +17,11 @@ import {
   ACTION_FORTIFY,
   ACTION_SHOOT,
   ACTION_TRAP,
+  RAID_CANNON_INCOMING_DAMAGE_MULTIPLIER,
   RAID_MIDDLE_ACTIONS,
+  RAID_MIDDLE_INCOMING_DAMAGE_MULTIPLIER,
   canPerformRaidAction,
+  getFortifyDamageMultiplier,
   getRaidActionBlockReason,
   getRaidActionSkipMessage,
   getRaiderIncomingDamageMultiplier,
@@ -46,8 +48,6 @@ const RAID_PHASE_COMBAT = "combat";
 const RAID_POSITION_FRONT = "front";
 const RAID_POSITION_MIDDLE = "middle";
 const RAID_TARGET_WEAKEST_HIGH_CHANCE = "weakestHighChance";
-const MIDDLE_INCOMING_DAMAGE_MULTIPLIER = 1.2;
-const CANNON_INCOMING_DAMAGE_MULTIPLIER = 1.5;
 const RAID_ATTACK_RANGED_MAGIC = "rangedMagic";
 const RAID_WEAKEST_TARGET_CHANCE = 0.8;
 const APOCALYPSE_GRAND_CRUSADE_ID = "apocalypse-grand-crusade";
@@ -417,10 +417,6 @@ function isEnemyUnit(unit, village) {
 function hasTrait(person, trait) {
   return (Array.isArray(person?.bodyTraits) && person.bodyTraits.includes(trait)) ||
     (Array.isArray(person?.mindTraits) && person.mindTraits.includes(trait));
-}
-
-function hasMoatDefense(village) {
-  return hasActiveBuildingFlag(village, "hasMoat", "moat");
 }
 
 function normalizeEnemyPosition(position) {
@@ -992,11 +988,6 @@ function applyOffensiveTraitModifiers(actor, damage, label, result) {
   return nextDamage;
 }
 
-/** 籠城の被ダメージ倍率。表示と計算で同じ値を使う。 */
-function getFortifyDamageMultiplier(village) {
-  return hasMoatDefense(village) ? 0.7 : 0.8;
-}
-
 function applyIncomingDamageModifiers(damage, target, village) {
   let multiplier = 1;
   if (isEnemyUnit(target, village)) {
@@ -1004,8 +995,8 @@ function applyIncomingDamageModifiers(damage, target, village) {
   }
   if (getCombatPosition(target, village) === RAID_POSITION_MIDDLE) {
     multiplier *= isCannonUnit(target, village)
-      ? CANNON_INCOMING_DAMAGE_MULTIPLIER
-      : MIDDLE_INCOMING_DAMAGE_MULTIPLIER;
+      ? RAID_CANNON_INCOMING_DAMAGE_MULTIPLIER
+      : RAID_MIDDLE_INCOMING_DAMAGE_MULTIPLIER;
   }
   if (!isEnemyUnit(target, village) && target.action === ACTION_FORTIFY) {
     multiplier *= getFortifyDamageMultiplier(village);
@@ -1609,11 +1600,11 @@ function appendRaidNameCell(row, unit, village = null) {
   }
   if (isVillageUnit && unit?.action === ACTION_SHOOT) {
     appendRaidUnitNote(meta, "前衛に先制");
-    appendRaidUnitNote(meta, `被弾${MIDDLE_INCOMING_DAMAGE_MULTIPLIER}倍`);
+    appendRaidUnitNote(meta, `被弾${RAID_MIDDLE_INCOMING_DAMAGE_MULTIPLIER}倍`);
   }
   if (isVillageUnit && unit?.action === ACTION_CANNON) {
     appendRaidUnitNote(meta, "前衛より後攻");
-    appendRaidUnitNote(meta, `被弾${CANNON_INCOMING_DAMAGE_MULTIPLIER}倍`);
+    appendRaidUnitNote(meta, `被弾${RAID_CANNON_INCOMING_DAMAGE_MULTIPLIER}倍`);
   }
 
   getRaidVisibleEffects(unit).forEach(effectName => {
