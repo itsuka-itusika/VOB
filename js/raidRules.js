@@ -30,6 +30,7 @@ const RAID_BODY_BLOCK_REASONS = [
 const RAID_TRIPLE_DAMAGE_BODY_TRAITS = ["赤子", YOUNG_WOLF_TRAIT, "危篤", "重体"];
 const RAID_DOUBLE_DAMAGE_BODY_TRAITS = ["疫病", "負傷", "過労", "産褥"];
 const HUMAN_BEAST_TRAIT = "人面獣身";
+const CANNON_BLOCKED_MIND_TRAITS = ["文明忌避", "不殺"];
 
 function traitList(person, key) {
   return Array.isArray(person?.[key]) ? person[key] : [];
@@ -68,6 +69,10 @@ export function getRaidActionBlockReason(person, action = "", { ignoreRoleTraits
   if ((usesRaidTools || action === ACTION_FORTIFY) && mindTraits.includes(WILD_MIND_TRAIT)) {
     return WILD_MIND_TRAIT;
   }
+  if (action === ACTION_CANNON) {
+    const cannonReason = CANNON_BLOCKED_MIND_TRAITS.find(trait => mindTraits.includes(trait));
+    if (cannonReason) return cannonReason;
+  }
   return "";
 }
 
@@ -92,6 +97,8 @@ export function getRaidActionSkipMessage(person, action = "戦闘", options = {}
     [FOUR_LEGGED_TRAIT]: `${name}は四足の身体で${label}の道具を扱えない。`,
     [HUMAN_BEAST_TRAIT]: `${name}は獣身では${label}の道具を扱えない。`,
     [WILD_MIND_TRAIT]: `${name}は野生の本能に従い、${label}の指示を受け付けない。`,
+    "文明忌避": `${name}は文明の産物である${label}に触れようとしない。`,
+    "不殺": `${name}は不殺の誓いを守り、${label}を撃たない。`,
     "体力尽き": `${name}は体力が尽きており、行動できない。`
   };
   return `【${label}】${messages[reason] || `${name}は行動不能。`}`;
@@ -176,6 +183,7 @@ export function canShootInRaid(person, village = null) {
 
 export function canCannonInRaid(person, village = null) {
   return canJoinRaidMiddleLine(person, village) &&
+    !hasAnyTrait(traitList(person, "mindTraits"), CANNON_BLOCKED_MIND_TRAITS) &&
     hasRaidUnlock(village, "hasArcaneFoundry", "arcaneFoundry");
 }
 
