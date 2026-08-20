@@ -21,7 +21,7 @@ export const TUTORIAL_TASKS = [
     title: "資材の生産",
     warningText: "チュートリアル: 資材の生産∶伐採、採集で資材を生産しましょう",
     conditionText: "伐採、採集で資材を生産する",
-    descriptionText: "資材は建物にも冬の備えにも要る。伐採と採集で溜めておけ。足りなくなってからでは遅いぞ。",
+    descriptionText: "資材は建物にも冬の備えにも要る。村人を凍えさせたくないなら、伐採と採集で溜めておくことだ。",
     rewardText: "資材+50",
     reward: { resource: "materials", amount: 50 }
   },
@@ -30,7 +30,7 @@ export const TUTORIAL_TASKS = [
     title: "納屋の建築",
     warningText: "チュートリアル: 納屋の建築∶建築コマンドから納屋を建てましょう",
     conditionText: "建築コマンドから納屋を建てる",
-    descriptionText: "資材と資金を積めば、村に新しい建物が増える。建てるほど村の規模は上がり、やがて村そのものが姿を変えるぞ。",
+    descriptionText: "資材と資金を積めば、村に新しい建物が増える。建てるほど村の規模は上がり、やがて村そのものが姿を変えるだろう。",
     rewardText: "資金+50",
     reward: { resource: "funds", amount: 50 }
   },
