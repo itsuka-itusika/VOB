@@ -649,10 +649,10 @@ function getTaskEstimateParts(person, task, village) {
       parts = [`想定ダメージ${estimateDefendDamage(person, village)}`];
       break;
     case "籠城":
-      parts = ["攻撃なし", "被ダメージ0.8倍", "反撃あり"];
+      parts = ["攻撃なし", "被弾0.8倍", "反撃あり"];
       break;
     case "射撃":
-      parts = [`想定ダメージ${estimateShootDamage(person, village)}`, "先攻", "反撃なし", "被弾1.2倍"];
+      parts = [`想定ダメージ${estimateShootDamage(person, village)}`, "先制", "反撃なし", "被弾1.2倍"];
       break;
     case "火砲":
       parts = [`想定ダメージ${estimateCannonDamage(person)}`, "後攻", "反撃なし", "被弾1.5倍"];

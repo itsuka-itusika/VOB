@@ -1605,15 +1605,15 @@ function appendRaidNameCell(row, unit, village = null) {
   // 籠城・射撃・火砲は見た目に効果が出ないため、行動順と実際の被ダメージ倍率を添える。
   const isVillageUnit = Boolean(village) && !isEnemyUnit(unit, village);
   if (isVillageUnit && unit?.action === ACTION_FORTIFY) {
-    appendRaidUnitNote(meta, `被ダメージ${getFortifyDamageMultiplier(village)}倍`);
+    appendRaidUnitNote(meta, `被弾${getFortifyDamageMultiplier(village)}倍`);
   }
   if (isVillageUnit && unit?.action === ACTION_SHOOT) {
-    appendRaidUnitNote(meta, "先制");
-    appendRaidUnitNote(meta, `被ダメージ${MIDDLE_INCOMING_DAMAGE_MULTIPLIER}倍`);
+    appendRaidUnitNote(meta, "前衛に先制");
+    appendRaidUnitNote(meta, `被弾${MIDDLE_INCOMING_DAMAGE_MULTIPLIER}倍`);
   }
   if (isVillageUnit && unit?.action === ACTION_CANNON) {
-    appendRaidUnitNote(meta, "後攻");
-    appendRaidUnitNote(meta, `被ダメージ${CANNON_INCOMING_DAMAGE_MULTIPLIER}倍`);
+    appendRaidUnitNote(meta, "前衛より後攻");
+    appendRaidUnitNote(meta, `被弾${CANNON_INCOMING_DAMAGE_MULTIPLIER}倍`);
   }
 
   getRaidVisibleEffects(unit).forEach(effectName => {
