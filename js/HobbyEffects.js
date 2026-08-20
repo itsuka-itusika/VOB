@@ -48,10 +48,8 @@ export class HobbyEffects {
         msg = this.applyGamble(p, v);
         break;
       case "ナンパ":
-        msg = this.applyPickupOnWoman(p, v);
-        break;
       case "逆ナン":
-        msg = this.applyPickup(p, v, "女");
+        msg = this.applyPickup(p, v);
         break;
       case "滝行":
         msg = this.applyAsceticTraining(p);
@@ -283,32 +281,69 @@ export class HobbyEffects {
     return `(ギャンブル:資金-${amount}${this.maybeRaiseStat(p, "cou", 0.2)})`;
   }
 
+  // ナンパ系の趣味。骨格は共通で、対象条件と成否の数値だけ趣味ごとに変わる。
+  static getPickupRules(hobby) {
+    if (hobby === "逆ナン") {
+      return {
+        label: "逆ナン",
+        isTargetSex: b => b.spiritSex === "男",
+        minSpiritAge: 16,
+        minBodyAge: 16,
+        getMaxBodyAge: () => null,
+        minCharm: 18,
+        isRefusedBy: () => false,
+        meetsCharmGate: a => (Number(a.chr) || 0) >= 16,
+        getAcceptanceChance: b => (Number(b.sexdr) || 0) * 6 - (Number(b.eth) || 0) * 2,
+        refusePenalty: -20,
+        rejectPenalty: -10
+      };
+    }
+    return {
+      label: "ナンパ",
+      isTargetSex: b => b.bodySex === "女",
+      minSpiritAge: null,
+      minBodyAge: 16,
+      getMaxBodyAge: a => (Number(a.spiritAge) || 0) + 8,
+      minCharm: 16,
+      isRefusedBy: (a, b) => this.hasMindTrait(b, "男嫌い") && a.bodySex === "男",
+      meetsCharmGate: (a, b) => (Number(a.chr) || 0) >= (Number(b.chr) || 0) - 4,
+      getAcceptanceChance: b => (Number(b.sexdr) || 0) * 5 - (Number(b.eth) || 0) * 3,
+      refusePenalty: -20,
+      rejectPenalty: -20
+    };
+  }
+
+  static hasMindTrait(person, trait) {
+    return Array.isArray(person?.mindTraits) && person.mindTraits.includes(trait);
+  }
+
   // 塩の柱は getActiveVillagers が除外するため、ここでは判定しない。
-  static isPickupTargetCandidate(a, b) {
+  static isPickupTargetCandidate(a, b, rules) {
     if (!b || b === a) return false;
     if (!isSingle(b)) return false;
     if (hasCloseOrHostileRelationship(a, b)) return false;
     const bodyTraits = Array.isArray(b.bodyTraits) ? b.bodyTraits : [];
     if (bodyTraits.includes("四足歩行") || bodyTraits.includes("人面獣身")) return false;
-    if (b.bodySex !== "女") return false;
+    if (!rules.isTargetSex(b)) return false;
+    if (rules.minSpiritAge !== null && (Number(b.spiritAge) || 0) < rules.minSpiritAge) return false;
     const bodyAge = Number(b.bodyAge) || 0;
-    if (bodyAge < 16 || bodyAge > (Number(a.spiritAge) || 0) + 8) return false;
-    if ((Number(b.chr) || 0) < 16) return false;
+    const maxBodyAge = rules.getMaxBodyAge(a);
+    if (bodyAge < rules.minBodyAge) return false;
+    if (maxBodyAge !== null && bodyAge > maxBodyAge) return false;
+    if ((Number(b.chr) || 0) < rules.minCharm) return false;
     return getFriendshipScore(a, b) >= 0;
   }
 
-  static rejectsPickup(a, b) {
-    const mindTraits = Array.isArray(b.mindTraits) ? b.mindTraits : [];
-    if (mindTraits.includes("神聖")) return true;
-    if (mindTraits.includes("男嫌い") && a.bodySex === "男") return true;
+  static refusesPickup(a, b, rules) {
+    if (this.hasMindTrait(b, "神聖")) return true;
+    if (rules.isRefusedBy(a, b)) return true;
     return getFriendshipScore(b, a) <= -1;
   }
 
-  // B→Aの好感度が0〜39のときだけ通る成否判定。
-  static rollPickupAcceptance(a, b) {
-    if ((Number(a.chr) || 0) < (Number(b.chr) || 0) - 4) return false;
-    const chance = (Number(b.sexdr) || 0) * 5 - (Number(b.eth) || 0) * 3;
-    return Math.random() * 100 < chance;
+  // 相手から本人への好感度が0〜39のときだけ通る成否判定。
+  static rollPickupAcceptance(a, b, rules) {
+    if (!rules.meetsCharmGate(a, b)) return false;
+    return Math.random() * 100 < rules.getAcceptanceChance(b);
   }
 
   static resolvePickupSuccess(a, b, v) {
@@ -331,47 +366,38 @@ export class HobbyEffects {
       addRelationship(b, `恋人:${a.name}`);
       a.happiness = clampValue(a.happiness + 20, 0, 100);
       b.happiness = clampValue(b.happiness + 20, 0, 100);
-      recordLoverHistory(v, a, b, { source: "ナンパ" });
-      v.log(`${a.name}と${b.name}はナンパをきっかけに恋人になった`);
+      recordLoverHistory(v, a, b, { source: a.hobby || "ナンパ" });
+      v.log(`${a.name}と${b.name}は${a.hobby || "ナンパ"}をきっかけに恋人になった`);
       loverText = ",恋人成立,双方幸福+20";
     }
 
     return `${b.name}と意気投合,双方好感度+10,双方メンタル+10,幸福+10${jealousy}${loverText}`;
   }
 
-  static applyPickupOnWoman(p, v) {
-    const targets = getActiveVillagers(v).filter(x => this.isPickupTargetCandidate(p, x));
-    if (targets.length === 0) {
-      return "(ナンパ:めぼしい相手がいなかった…)";
+  static resolvePickup(a, b, v, rules) {
+    if (this.refusesPickup(a, b, rules)) {
+      adjustFriendshipScore(b, a, rules.refusePenalty);
+      return `${b.name}に相手にされなかった,好感度${rules.refusePenalty}`;
     }
-
-    const target = targets[randInt(0, targets.length - 1)];
-    const outcome = this.resolvePickup(p, target, v);
-    // 魅力上昇が同じナンパの成否へ影響しないよう、能力上昇は判定後に処理する。
-    const statGrowth = `${this.maybeRaiseStat(p, "chr", 0.3)}${this.maybeRaiseStat(p, "sexdr", 0.25)}`;
-    return `(ナンパ:${outcome}${statGrowth})`;
-  }
-
-  static resolvePickup(a, b, v) {
-    if (this.rejectsPickup(a, b)) {
-      adjustFriendshipScore(b, a, -20);
-      return `${b.name}に相手にされなかった,好感度-20`;
-    }
-    if (getFriendshipScore(b, a) < 40 && !this.rollPickupAcceptance(a, b)) {
-      adjustFriendshipScore(b, a, -20);
-      return `${b.name}に振られた,好感度-20`;
+    if (getFriendshipScore(b, a) < 40 && !this.rollPickupAcceptance(a, b, rules)) {
+      adjustFriendshipScore(b, a, rules.rejectPenalty);
+      return `${b.name}に振られた,好感度${rules.rejectPenalty}`;
     }
     return this.resolvePickupSuccess(a, b, v);
   }
 
-  static applyPickup(p, v, targetSpiritSex) {
-    p.mp = clampValue(p.mp + 10, 0, 100);
-    const targets = getActiveVillagers(v).filter(x => x !== p && x.spiritSex === targetSpiritSex);
-    if (targets.length > 0) {
-      const target = targets[randInt(0, targets.length - 1)];
-      target.happiness = clampValue(target.happiness + 4, 0, 100);
+  static applyPickup(p, v) {
+    const rules = this.getPickupRules(p.hobby);
+    const targets = getActiveVillagers(v).filter(x => this.isPickupTargetCandidate(p, x, rules));
+    if (targets.length === 0) {
+      return `(${rules.label}:めぼしい相手がいなかった…)`;
     }
-    return `(ナンパ系:メンタル+10${this.maybeRaiseStat(p, "chr", 0.3)}${this.maybeRaiseStat(p, "sexdr", 0.25)})`;
+
+    const target = targets[randInt(0, targets.length - 1)];
+    const outcome = this.resolvePickup(p, target, v, rules);
+    // 魅力上昇が同じ試行の成否へ影響しないよう、能力上昇は判定後に処理する。
+    const statGrowth = `${this.maybeRaiseStat(p, "chr", 0.3)}${this.maybeRaiseStat(p, "sexdr", 0.25)}`;
+    return `(${rules.label}:${outcome}${statGrowth})`;
   }
 
   static applyAsceticTraining(p) {
