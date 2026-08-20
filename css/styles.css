@@ -161,7 +161,7 @@ body.opening-active {
   overflow-y: auto;
   cursor: pointer;
 }
-/* ト書きは配置に影響させず、暗闇の中央へ大きく置く。 */
+/* ト書きは配置に影響させず、暗闇の中央へ置く。 */
 .opening-story-stage {
   position: absolute;
   top: 50%;
@@ -169,11 +169,11 @@ body.opening-active {
   left: 0;
   margin: 0;
   padding: 0 16px;
-  color: #d6c496;
-  font-size: clamp(1.35rem, 4.4vw, 2.2rem);
+  color: #c9b98f;
+  /* 大きさは .opening-message-text と揃え、位置だけで見せる。 */
+  font-size: clamp(0.98rem, 2vw, 1.12rem);
   text-align: center;
-  letter-spacing: 0.14em;
-  text-shadow: 0 0 24px rgba(0, 0, 0, 0.9);
+  letter-spacing: 0.06em;
   transform: translateY(-50%);
   opacity: 0;
   transition: opacity 1s ease-out;
@@ -230,8 +230,10 @@ body.opening-active {
   margin: 0;
   font-size: clamp(0.98rem, 2vw, 1.12rem);
   line-height: 1.85;
-  /* 末尾に1文字だけ残るような折り返しを避ける。 */
-  text-wrap: balance;
+}
+/* 台本の改行で区切った1行。行内の折り返しは自然な位置に任せる。 */
+.opening-message-line {
+  display: block;
 }
 .opening-message-cursor {
   position: absolute;
@@ -287,14 +289,14 @@ body.opening-active {
   min-width: 190px;
   margin-left: auto;
 }
-/* 導入を見終えたら、メッセージだけ先に消して闇を残す。 */
+/* 導入を見終えたら、メッセージだけ先に消す。時間は STORY_FADE_OUT_MS と揃える。 */
 .opening-story.is-ending {
   pointer-events: none;
 }
 .opening-story.is-ending .opening-message-window {
   animation: none;
   opacity: 0;
-  transition: opacity 1100ms ease;
+  transition: opacity 500ms ease;
 }
 @keyframes openingWindowFadeIn {
   from { opacity: 0; transform: translateY(10px); }

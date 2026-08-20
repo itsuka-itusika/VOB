@@ -2,10 +2,9 @@ import { OPENING_SCRIPT, OPENING_STAGE_DIRECTION } from "./data/openingScript.js
 
 // 読込などで即座にゲームへ移るときの短い暗転。
 const OPENING_SCREEN_FADE_MS = 240;
-// 導入を見終えたあとは、メッセージを消し、闇を挟んでからゲーム画面を出す。
-const STORY_FADE_OUT_MS = 1100;
-const STORY_BLACKOUT_HOLD_MS = 700;
-const STORY_FADE_IN_MS = 1200;
+// 導入を見終えたあとは、メッセージを消してからゲーム画面を出す。
+const STORY_FADE_OUT_MS = 500;
+const STORY_FADE_IN_MS = 500;
 // ト書きを見せてから消し、間を空けてから最初の声を出す。
 const STAGE_HOLD_MS = 2400;
 const STAGE_FADE_OUT_MS = 1000;
@@ -69,8 +68,17 @@ function showMessage(index) {
   const messageWindow = getElement("openingMessageWindow");
   if (messageWindow) messageWindow.hidden = false;
   // 区切りごとに全文を一度に出す。文字送りはしない。
+  // 台本の改行は行ごとの要素に分け、行内だけで折り返させる。
   const textElement = getElement("openingMessageText");
-  if (textElement) textElement.textContent = message.text;
+  if (textElement) {
+    textElement.textContent = "";
+    message.text.split("\n").forEach(line => {
+      const row = document.createElement("span");
+      row.className = "opening-message-line";
+      row.textContent = line;
+      textElement.appendChild(row);
+    });
+  }
   setWaitingForInput(true);
 }
 
@@ -116,7 +124,7 @@ function startOpeningStory() {
   }, STAGE_HOLD_MS + STAGE_FADE_OUT_MS + VOICE_START_DELAY_MS);
 }
 
-/** 導入を見終えたあと、暗転を挟んでゲーム画面へ移る。 */
+/** 導入を見終えたあと、メッセージを消してからゲーム画面へ移る。 */
 function finishOpeningStory() {
   const story = getElement("openingStory");
   if (!story || prefersReducedMotion()) {
@@ -124,7 +132,7 @@ function finishOpeningStory() {
     return;
   }
   story.classList.add("is-ending");
-  scheduleOpeningStep(() => enterGame(STORY_FADE_IN_MS), STORY_FADE_OUT_MS + STORY_BLACKOUT_HOLD_MS);
+  scheduleOpeningStep(() => enterGame(STORY_FADE_IN_MS), STORY_FADE_OUT_MS);
 }
 
 function advanceOpeningStory() {
