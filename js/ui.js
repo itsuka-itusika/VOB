@@ -659,10 +659,10 @@ function getTaskEstimateParts(person, task, village) {
       parts = ["攻撃なし", `被弾${getFortifyDamageMultiplier(village)}倍`, "反撃あり"];
       break;
     case "射撃":
-      parts = [`想定ダメージ${estimateShootDamage(person, village)}`, "先制", "反撃なし", `被弾${RAID_MIDDLE_INCOMING_DAMAGE_MULTIPLIER}倍`];
+      parts = [`想定ダメージ${estimateShootDamage(person, village)}`, "先制", `被弾${RAID_MIDDLE_INCOMING_DAMAGE_MULTIPLIER}倍`, "反撃なし"];
       break;
     case "火砲":
-      parts = [`想定ダメージ${estimateCannonDamage(person)}`, "後攻", "反撃なし", `被弾${RAID_CANNON_INCOMING_DAMAGE_MULTIPLIER}倍`];
+      parts = [`想定ダメージ${estimateCannonDamage(person)}`, "後攻", `被弾${RAID_CANNON_INCOMING_DAMAGE_MULTIPLIER}倍`, "反撃なし"];
       break;
     case "罠作成":
       parts = [`想定ダメージ${estimateTrapDamage(person)}`];
