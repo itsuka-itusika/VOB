@@ -3,6 +3,15 @@ import { addStoredResource } from "./domain/resourceLimits.js";
 import { addAcquiredStat } from "./domain/statLayers.js";
 import { getActiveVillagers } from "./domain/apocalypseRules.js";
 import { addDivineMight } from "./divineMight.js";
+import {
+  addRelationship,
+  adjustFriendshipScore,
+  getFriendshipScore,
+  getPartnerVillagers,
+  hasCloseOrHostileRelationship,
+  isSingle
+} from "./relationships.js";
+import { recordLoverHistory } from "./history.js";
 
 // 趣味によるステータス変動の発生率倍率。全趣味に一律で掛かる。
 const HOBBY_STAT_CHANGE_RATE = 0.4;
@@ -39,7 +48,7 @@ export class HobbyEffects {
         msg = this.applyGamble(p, v);
         break;
       case "ナンパ":
-        msg = this.applyPickup(p, v, "男");
+        msg = this.applyPickupOnWoman(p, v);
         break;
       case "逆ナン":
         msg = this.applyPickup(p, v, "女");
@@ -272,6 +281,87 @@ export class HobbyEffects {
     }
     v.funds = clampValue(v.funds - amount, 0, 99999);
     return `(ギャンブル:資金-${amount}${this.maybeRaiseStat(p, "cou", 0.2)})`;
+  }
+
+  // 塩の柱は getActiveVillagers が除外するため、ここでは判定しない。
+  static isPickupTargetCandidate(a, b) {
+    if (!b || b === a) return false;
+    if (!isSingle(b)) return false;
+    if (hasCloseOrHostileRelationship(a, b)) return false;
+    const bodyTraits = Array.isArray(b.bodyTraits) ? b.bodyTraits : [];
+    if (bodyTraits.includes("四足歩行") || bodyTraits.includes("人面獣身")) return false;
+    if (b.bodySex !== "女") return false;
+    const bodyAge = Number(b.bodyAge) || 0;
+    if (bodyAge < 16 || bodyAge > (Number(a.spiritAge) || 0) + 8) return false;
+    if ((Number(b.chr) || 0) < 16) return false;
+    return getFriendshipScore(a, b) >= 0;
+  }
+
+  static rejectsPickup(a, b) {
+    const mindTraits = Array.isArray(b.mindTraits) ? b.mindTraits : [];
+    if (mindTraits.includes("神聖")) return true;
+    if (mindTraits.includes("男嫌い") && a.bodySex === "男") return true;
+    return getFriendshipScore(b, a) <= -1;
+  }
+
+  // B→Aの好感度が0〜39のときだけ通る成否判定。
+  static rollPickupAcceptance(a, b) {
+    if ((Number(a.chr) || 0) < (Number(b.chr) || 0) - 4) return false;
+    const chance = (Number(b.sexdr) || 0) * 5 - (Number(b.eth) || 0) * 3;
+    return Math.random() * 100 < chance;
+  }
+
+  static resolvePickupSuccess(a, b, v) {
+    adjustFriendshipScore(a, b, 10);
+    adjustFriendshipScore(b, a, 10);
+    [a, b].forEach(person => {
+      person.mp = clampValue(person.mp + 10, 0, 100);
+      person.happiness = clampValue(person.happiness + 10, 0, 100);
+    });
+
+    const partners = getPartnerVillagers(v, a);
+    partners.forEach(partner => adjustFriendshipScore(partner, a, -20));
+    const jealousy = partners.length > 0
+      ? `,${partners.map(partner => partner.name).join("・")}の好感度-20`
+      : "";
+
+    let loverText = "";
+    if (isSingle(a) && getFriendshipScore(a, b) >= 40) {
+      addRelationship(a, `恋人:${b.name}`);
+      addRelationship(b, `恋人:${a.name}`);
+      a.happiness = clampValue(a.happiness + 20, 0, 100);
+      b.happiness = clampValue(b.happiness + 20, 0, 100);
+      recordLoverHistory(v, a, b, { source: "ナンパ" });
+      v.log(`${a.name}と${b.name}はナンパをきっかけに恋人になった`);
+      loverText = ",恋人成立,双方幸福+20";
+    }
+
+    return `${b.name}と意気投合,双方好感度+10,双方メンタル+10,幸福+10${jealousy}${loverText}`;
+  }
+
+  static applyPickupOnWoman(p, v) {
+    const targets = getActiveVillagers(v).filter(x => this.isPickupTargetCandidate(p, x));
+    if (targets.length === 0) {
+      return "(ナンパ:めぼしい相手がいなかった…)";
+    }
+
+    const target = targets[randInt(0, targets.length - 1)];
+    const outcome = this.resolvePickup(p, target, v);
+    // 魅力上昇が同じナンパの成否へ影響しないよう、能力上昇は判定後に処理する。
+    const statGrowth = `${this.maybeRaiseStat(p, "chr", 0.3)}${this.maybeRaiseStat(p, "sexdr", 0.25)}`;
+    return `(ナンパ:${outcome}${statGrowth})`;
+  }
+
+  static resolvePickup(a, b, v) {
+    if (this.rejectsPickup(a, b)) {
+      adjustFriendshipScore(b, a, -20);
+      return `${b.name}に相手にされなかった,好感度-20`;
+    }
+    if (getFriendshipScore(b, a) < 40 && !this.rollPickupAcceptance(a, b)) {
+      adjustFriendshipScore(b, a, -20);
+      return `${b.name}に振られた,好感度-20`;
+    }
+    return this.resolvePickupSuccess(a, b, v);
   }
 
   static applyPickup(p, v, targetSpiritSex) {

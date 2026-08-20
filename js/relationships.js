@@ -79,7 +79,7 @@ export function doLoverCheck(village, options = {}) {
   }
 }
 
-function isSingle(person) {
+export function isSingle(person) {
   return !checkHasRelationship(person,"既婚") &&
     !checkHasRelationship(person,"恋人") &&
     !hasRelationshipPrefix(person, SPOUSE_RELATION_PREFIXES);
@@ -254,6 +254,30 @@ function hasRelationshipTo(person, targetName, prefixes) {
   return getParsedRelationships(person).some(parsed =>
     parsed.target === targetName && prefixes.has(parsed.prefix)
   );
+}
+
+// 恋人、夫婦、親子、天敵のいずれかで結ばれているか。ナンパの対象外判定に使う。
+const CLOSE_OR_HOSTILE_RELATION_PREFIXES = new Set([
+  "恋人",
+  ...LOVER_BLOCKING_RELATION_PREFIXES
+]);
+const PARTNER_RELATION_PREFIXES = new Set(["恋人", ...SPOUSE_RELATION_PREFIXES]);
+
+export function hasCloseOrHostileRelationship(a, b) {
+  if (!a || !b || !a.name || !b.name) return false;
+  return hasRelationshipTo(a, b.name, CLOSE_OR_HOSTILE_RELATION_PREFIXES) ||
+    hasRelationshipTo(b, a.name, CLOSE_OR_HOSTILE_RELATION_PREFIXES);
+}
+
+// 恋人と配偶者をまとめて返す。相手が複数いる場合もすべて含む。
+export function getPartnerVillagers(village, person) {
+  const names = new Set(getParsedRelationships(person)
+    .filter(parsed => PARTNER_RELATION_PREFIXES.has(parsed.prefix))
+    .map(parsed => parsed.target)
+    .filter(Boolean));
+  if (names.size === 0) return [];
+  const villagers = Array.isArray(village?.villagers) ? village.villagers : [];
+  return villagers.filter(other => other !== person && names.has(other.name));
 }
 
 function hasLoverBlockingRelationship(a, b) {
