@@ -60,12 +60,14 @@ function canBuildStorehouse(village) {
  * 規模と前提建築の両方を要求する建築物の解放条件。
  * 一覧への表示は規模だけで決め、前提建築が揃っていない間は建設不可として理由を出す。
  */
-function requireScaleAndBuildings(scale, requiredBuildingIds) {
+function requireScaleAndBuildings(scale, requiredBuildingIds, isBuildingsReady = null) {
+  const buildingsReady = isBuildingsReady ||
+    ((village) => requiredBuildingIds.every(id => hasActiveBuilding(village, id)));
   return {
+    requiredScale: scale,
     requiredBuildingIds,
     isRevealed: (village) => isScaleAtLeast(village, scale),
-    isUnlocked: (village) => isScaleAtLeast(village, scale) &&
-      requiredBuildingIds.every(id => hasActiveBuilding(village, id))
+    isUnlocked: (village) => isScaleAtLeast(village, scale) && buildingsReady(village)
   };
 }
 
@@ -92,14 +94,14 @@ export const BUILDINGS = [
     materials: 50,
     funds: 0,
     tech: 0,
-    desc: "食料と資材の所持上限+600。貯蔵庫建築を解放。規模+20",
+    desc: "食料と資材の所持上限+600。規模70以上で貯蔵庫建築を解放。規模+20",
     effect: standardBuildingEffect({
       scale: 20,
       flag: "hasBarn",
       after: (village) => {
         ensureBuildingFlags(village).canBuildStorehouse = true;
       },
-      log: "納屋建設完了: 食料と資材の所持上限+600、貯蔵庫建築解放、規模+20"
+      log: "納屋建設完了: 食料と資材の所持上限+600、規模70以上で貯蔵庫建築解放、規模+20"
     })
   },
   {
@@ -108,12 +110,11 @@ export const BUILDINGS = [
     materials: 100,
     funds: 100,
     tech: 50,
-    desc: "食料と資材の所持上限+3000。最大3つまで建設可能。規模+30",
+    desc: "辺境の村で解放。納屋建設後に建設可能。食料と資材の所持上限+3000。最大3つまで建設可能。規模+30",
     allowMultiple: true,
     maxCount: MAX_STOREHOUSES,
-    requiredBuildingIds: ["barn"],
-    isRevealed: () => true,
-    isUnlocked: canBuildStorehouse,
+    // 納屋の判定は古い保存データの建築フラグも見るため、canBuildStorehouse を使う。
+    ...requireScaleAndBuildings(70, ["barn"], canBuildStorehouse),
     effect: standardBuildingEffect({
       scale: 30,
       log: "貯蔵庫建設完了: 食料と資材の所持上限+3000、規模+30"
@@ -359,6 +360,10 @@ function isBuildingListed(building, village) {
 
 function getUnlockBlockReason(building, village) {
   if (isBuildingUnlocked(building, village)) return "";
+  const requiredScale = Number(building.requiredScale) || 0;
+  if (requiredScale > 0 && !isScaleAtLeast(village, requiredScale)) {
+    return `規模${requiredScale}以上が必要`;
+  }
   const missing = (building.requiredBuildingIds || [])
     .filter(id => !hasActiveBuilding(village, id))
     .map(id => `「${getBuildingNameById(id)}」`);
