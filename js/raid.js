@@ -1095,7 +1095,7 @@ function finalizeRaid(isSuccess, reason, village, options = {}) {
   rlog.innerHTML+=`<br>→ 襲撃結果: ${isSuccess?"防衛成功":"失敗"} (${reason})<br>モーダルを閉じます...`;
   scrollRaidLogToLatest();
 
-  endRaidProcess(isSuccess, false, village, options);
+  endRaidProcess(isSuccess, false, village, { ...options, resultReason: reason });
 }
 
 /** 指定ターン粘って撤退(部分成功) */
@@ -1106,7 +1106,7 @@ function finalizeRaidPartSuccess(village) {
   rlog.innerHTML+=`<br>→ 襲撃結果: 敵撤退(部分成功)<br>モーダルを閉じます...`;
   scrollRaidLogToLatest();
 
-  endRaidProcess(true,true,village);
+  endRaidProcess(true, true, village, { resultReason: "敵撤退" });
 }
 
 /** 襲撃終了処理 */
@@ -1136,8 +1136,10 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
     if (idx>=0) {
       village.villageTraits.splice(idx,1);
     }
+    // 結果モーダル用の集計。敵リストの破棄や敗北ペナルティで情報が消える前に行う。
+    const resultInfo = collectRaidResultInfo(village, isSuccess, isPartSuccess, options.resultReason);
     if (isSuccess && !isPartSuccess) {
-      tryCaptureRaidPrisoner(village);
+      resultInfo.capturedName = tryCaptureRaidPrisoner(village)?.name || "";
     }
     village.raidEnemies=[];
     clearDefeatedRaidEnemies(village);
@@ -1161,6 +1163,8 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
       }
       const divineGain = isPartSuccess ? 1 : 5;
       addDivineMight(village, divineGain);
+      resultInfo.happinessGain = happinessGain;
+      resultInfo.divineGain = divineGain;
       village.log(isPartSuccess
         ? `防衛成功(部分):村人幸福+${happinessGain},神威+${divineGain}`
         : `防衛成功(敵全滅):村人幸福+${happinessGain},神威+${divineGain}`);
@@ -1183,7 +1187,7 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
         }
       });
 
-      const penaltyLog = [
+      resultInfo.penaltyLines = [
         penalty.foodLoss > 0 ? `食料-${penalty.foodLoss}` : "",
         penalty.materialsLoss > 0 ? `資材-${penalty.materialsLoss}` : "",
         penalty.fundsLoss > 0 ? `資金-${penalty.fundsLoss}` : "",
@@ -1194,7 +1198,8 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
         penalty.buildingDamage ? "建築損壊あり" : "",
         penalty.goldenStatueDamage ? "バッカスの黄金像損壊" : "",
         penalty.severeInjury ? "重体判定あり" : ""
-      ].filter(Boolean).join(",") || "追加被害なし";
+      ].filter(Boolean);
+      const penaltyLog = resultInfo.penaltyLines.join(",") || "追加被害なし";
       village.log(`迎撃失敗:${penaltyLog}`);
       if (penalty.buildingDamage) {
         damageRandomBuilding(village);
@@ -1234,6 +1239,7 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
       village.gameOver=true;
       village.isRaidFinalizing = false;
       updateUI(village);
+      showRaidResultModal(resultInfo);
       return;
     }
 
@@ -1257,8 +1263,161 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
 
     village.isRaidFinalizing = false;
     updateUI(village);
+    showRaidResultModal(resultInfo);
 
   }, closeDelayMs);
+}
+
+/** 結果モーダル用の集計。敵リスト破棄・敗北ペナルティ適用の前に呼ぶこと。 */
+function collectRaidResultInfo(village, isSuccess, isPartSuccess, resultReason = "") {
+  const enemies = Array.isArray(village.raidEnemies) ? village.raidEnemies : [];
+  const defeatedEnemies = [...new Set([
+    ...(Array.isArray(village.defeatedRaidEnemies) ? village.defeatedRaidEnemies : []),
+    ...enemies.filter(enemy => Number(enemy.hp) <= 0)
+  ])];
+  const survivingCount = enemies.filter(enemy => Number(enemy.hp) > 0).length;
+
+  const participantNames = Array.isArray(village.raidFriendshipParticipants)
+    ? village.raidFriendshipParticipants
+    : [];
+  const fallenNames = participantNames.filter(name => {
+    const person = village.villagers.find(v => v.name === name);
+    return person && Number(person.hp) <= 0;
+  });
+
+  let mvp = null;
+  if (isSuccess) {
+    const damageEntries = Object.entries(village.raidFriendshipDamage || {})
+      .filter(([, damage]) => Number(damage) > 0);
+    if (damageEntries.length > 0) {
+      const topDamage = Math.max(...damageEntries.map(([, damage]) => Number(damage)));
+      const topNames = damageEntries
+        .filter(([, damage]) => Number(damage) === topDamage)
+        .map(([name]) => name);
+      mvp = {
+        damage: topDamage,
+        people: topNames.map(name => {
+          const person = village.villagers.find(v => v.name === name);
+          return { name, portrait: person ? getPortraitPath(person) : "" };
+        })
+      };
+    }
+  }
+
+  return {
+    isSuccess,
+    isPartSuccess,
+    resultReason: String(resultReason || ""),
+    defeatedCount: defeatedEnemies.length,
+    survivingCount,
+    fallenNames,
+    mvp,
+    capturedName: "",
+    happinessGain: 0,
+    divineGain: 0,
+    penaltyLines: []
+  };
+}
+
+const RAID_RESULT_MODAL_ID = "raidResultModal";
+const RAID_RESULT_OVERLAY_ID = "raidResultOverlay";
+
+// ログ用の内部理由を、そのままプレイヤーへ見せられる言い回しへ置き換える。
+const RAID_RESULT_REASON_TEXTS = {
+  "敵全滅": "襲撃者を全滅させた",
+  "罠作成だけで撃退": "罠だけで追い払った",
+  "敵撤退": "襲撃者が引き揚げた",
+  "戦闘部隊0": "迎撃できる村人がいなかった",
+  "戦闘部隊なし(行動不能)": "戦える村人がいなくなった",
+  "戦闘部隊全滅": "迎撃隊が壊滅した",
+  "撤退": "撤退を選んだ"
+};
+
+function escapeRaidResultText(value) {
+  return String(value ?? "").replace(/[&<>"]/g, ch => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]
+  ));
+}
+
+/** 襲撃の結末をまとめて示すモーダル。閉じるだけで、状態は一切変更しない。 */
+function showRaidResultModal(info) {
+  if (!info || typeof document === "undefined") return;
+  document.getElementById(RAID_RESULT_OVERLAY_ID)?.remove();
+  document.getElementById(RAID_RESULT_MODAL_ID)?.remove();
+
+  const title = !info.isSuccess
+    ? "防衛失敗"
+    : (info.isPartSuccess ? "防衛成功（敵撤退）" : "防衛成功");
+  const reasonText = RAID_RESULT_REASON_TEXTS[info.resultReason] || info.resultReason;
+  const lines = [];
+
+  let enemyText;
+  if (!info.isSuccess) {
+    // 失敗時は残った敵が引き揚げたわけではないので、撃退できなかった側を主語にする。
+    enemyText = info.survivingCount > 0
+      ? (info.defeatedCount > 0
+        ? `襲撃者${info.defeatedCount}体を撃退したが、${info.survivingCount}体を防ぎきれなかった`
+        : `襲撃者${info.survivingCount}体を防ぎきれなかった`)
+      : `襲撃者${info.defeatedCount}体を撃退したが、村を守りきれなかった`;
+  } else {
+    enemyText = info.survivingCount > 0
+      ? `襲撃者${info.defeatedCount}体を撃退し、${info.survivingCount}体が引き揚げた`
+      : `襲撃者${info.defeatedCount}体を撃退した`;
+  }
+  lines.push(escapeRaidResultText(enemyText));
+
+  if (info.fallenNames.length > 0) {
+    lines.push(escapeRaidResultText(`負傷離脱: ${info.fallenNames.join("、")}`));
+  }
+  if (info.isSuccess) {
+    lines.push(escapeRaidResultText(`村人の幸福+${info.happinessGain}、神威+${info.divineGain}`));
+  }
+  if (info.capturedName) {
+    lines.push(escapeRaidResultText(`${info.capturedName}を捕虜として収容した`));
+  }
+  info.penaltyLines.forEach(line => lines.push(escapeRaidResultText(line)));
+
+  const mvpHtml = info.mvp
+    ? `<div class="raid-result-mvp">
+        <div class="raid-result-mvp-label">殊勲</div>
+        ${info.mvp.people.map(person => `
+          <div class="raid-result-mvp-person">
+            ${person.portrait ? `<img src="${escapeRaidResultText(person.portrait)}" alt="">` : ""}
+            <span>${escapeRaidResultText(person.name)}</span>
+          </div>`).join("")}
+        <div class="raid-result-mvp-damage">与ダメージ ${Math.floor(info.mvp.damage)}</div>
+      </div>`
+    : "";
+
+  const overlay = document.createElement("div");
+  overlay.id = RAID_RESULT_OVERLAY_ID;
+  overlay.className = "event-modal-overlay raid-result-overlay";
+
+  const modal = document.createElement("div");
+  modal.id = RAID_RESULT_MODAL_ID;
+  modal.className = "event-modal raid-result-modal";
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-modal", "true");
+  modal.innerHTML = `
+    <div class="event-modal-body">
+      <h3>${escapeRaidResultText(title)}${reasonText ? `<span class="raid-result-reason">${escapeRaidResultText(reasonText)}</span>` : ""}</h3>
+      ${mvpHtml}
+      ${lines.map(line => `<p>${line}</p>`).join("")}
+      <div class="event-modal-buttons">
+        <button type="button" data-close-raid-result>閉じる</button>
+      </div>
+    </div>
+  `;
+
+  const close = () => {
+    overlay.remove();
+    modal.remove();
+  };
+  modal.querySelector("[data-close-raid-result]").onclick = close;
+  overlay.onclick = close;
+  document.body.appendChild(overlay);
+  document.body.appendChild(modal);
+  modal.querySelector("[data-close-raid-result]")?.focus();
 }
 
 /** モーダルを閉じる */

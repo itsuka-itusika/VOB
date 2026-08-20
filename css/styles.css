@@ -1299,8 +1299,8 @@ table.show-spirit-columns .spirit-column {
 }
 .raid-action-pop {
   position: absolute;
-  left: 50%;
-  top: 4px;
+  right: 4px;
+  top: 50%;
   z-index: 3;
   pointer-events: none;
   padding: 4px 10px;
@@ -1327,15 +1327,15 @@ table.show-spirit-columns .spirit-column {
 @keyframes raidActionPop {
   0% {
     opacity: 0;
-    transform: translate(-50%, 0%) scale(0.92);
+    transform: translateY(-50%) scale(0.92);
   }
   18% {
     opacity: 1;
-    transform: translate(-50%, -15%) scale(1);
+    transform: translateY(-65%) scale(1);
   }
   100% {
     opacity: 0;
-    transform: translate(-50%, -45%) scale(1.03);
+    transform: translateY(-95%) scale(1.03);
   }
 }
 @keyframes raidDamagePop {
@@ -1861,6 +1861,56 @@ section h2 {
   font-weight: bold;
 }
 
+/* 襲撃結果モーダル。月初イベント等のモーダルより前面に出す。 */
+.raid-result-overlay {
+  z-index: 10050;
+}
+.raid-result-modal {
+  z-index: 10051;
+}
+.raid-result-modal h3 .raid-result-reason {
+  margin-left: 0.6em;
+  color: #777;
+  font-size: 0.75em;
+  font-weight: normal;
+}
+.raid-result-mvp {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 12px;
+  margin: 10px 0 14px;
+  padding: 10px 12px;
+  border: 1px solid #d9c069;
+  border-radius: 6px;
+  background: #fdf6dd;
+}
+.raid-result-mvp-label {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: #b8952e;
+  color: #fff;
+  font-weight: bold;
+  font-size: 0.85rem;
+}
+.raid-result-mvp-person {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: bold;
+}
+.raid-result-mvp-person img {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border: 1px solid #c9ab54;
+  border-radius: 4px;
+}
+.raid-result-mvp-damage {
+  color: #8a6d1d;
+  font-size: 0.9rem;
+}
 .event-modal-buttons {
   margin-top: 14px;
   text-align: right;
