@@ -920,7 +920,7 @@ export function doMonthStartProcess(v, simulationOptions = {}) {
 
     const preferredAction = String(p.preferredAction || p.job || ACTION_NONE).trim() || ACTION_NONE;
     const hasPreferredAction = preferredAction !== ACTION_NONE && p.actionTable.includes(preferredAction);
-    const isRaidAction = currentAction === "迎撃" || currentAction === "籠城" || currentAction === "射撃" || currentAction === "罠作成";
+    const isRaidAction = currentAction === "迎撃" || currentAction === "籠城" || currentAction === "射撃" || currentAction === "火砲" || currentAction === "罠作成";
     const isFixedAction = [ACTION_CRADLE, ACTION_HEAL, ACTION_LAST_MOMENTS].includes(p.action);
 
     if (!isFixedAction && (isTemporaryAction(currentAction) || isRaidAction || !p.actionTable.includes(currentAction))) {

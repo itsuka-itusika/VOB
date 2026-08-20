@@ -5,7 +5,7 @@ import { ACTION_NONE, refreshJobTable, setPreferredAction } from "./domain/jobTa
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { getPermanentStat } from "./domain/statLayers.js";
 import { DEFAULT_PORTRAIT_KEY, getPortraitAssetPath } from "./data/portraitPaths.js";
-import { ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT, ACTION_TRAP, RAID_ACTIONS, canPerformRaidAction } from "./raidRules.js";
+import { ACTION_CANNON, ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT, ACTION_TRAP, RAID_ACTIONS, canPerformRaidAction } from "./raidRules.js";
 import { getConversationLine } from "./dialogue/dialogueEngine.js";
 import { recordVillagerJoinHistory } from "./history.js";
 import { MERCHANT_SECRET_TREASURE_LINES } from "./data/dialogue/visitorLines.js";
@@ -264,6 +264,7 @@ export function openConversationModal(character) {
       { action: ACTION_DEFEND, id: "assignDefender" },
       { action: ACTION_FORTIFY, id: "assignFortifier" },
       { action: ACTION_SHOOT, id: "assignShooter" },
+      { action: ACTION_CANNON, id: "assignCannoneer" },
       { action: ACTION_TRAP, id: "assignTrapMaker" }
     ];
     const buttons = raidButtonDefs
@@ -324,6 +325,7 @@ function changeCharacterAction(character, newAction) {
       ["assignDefender", ACTION_DEFEND],
       ["assignFortifier", ACTION_FORTIFY],
       ["assignShooter", ACTION_SHOOT],
+      ["assignCannoneer", ACTION_CANNON],
       ["assignTrapMaker", ACTION_TRAP]
     ].forEach(([id, action]) => {
       const button = document.getElementById(id);

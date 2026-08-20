@@ -23,7 +23,7 @@ import {
   canShootInRaid,
   getRaidFrontlinerSlotCount,
   getRaidReadiness,
-  getRaidShooterSlotCount,
+  getRaidMiddleSlotCount,
   getRaidTrapMakerSlotCount,
   isRaidAction,
   isRaidActive
@@ -536,7 +536,7 @@ function getMinimumFrontliners(village, profiles) {
 }
 
 function enforceShooterSlots(village, profiles, assignments) {
-  const shooterSlots = getRaidShooterSlotCount(village);
+  const shooterSlots = getRaidMiddleSlotCount(village);
   if (!Number.isFinite(shooterSlots)) return;
 
   const assignedShooters = profiles

@@ -1,11 +1,13 @@
 import { isForcedHealingAction } from "../util.js";
 import { hasActiveBuildingFlag } from "./buildingState.js";
 import {
+  ACTION_CANNON,
   ACTION_DEFEND,
   ACTION_FORTIFY,
   ACTION_SHOOT,
   ACTION_TRAP,
   RAID_ACTIONS,
+  canCannonInRaid,
   canDefendInRaid,
   canFortifyInRaid,
   canMakeTrapInRaid,
@@ -38,6 +40,7 @@ const NON_PREFERRED_ACTIONS = new Set([
   ACTION_DEFEND,
   ACTION_FORTIFY,
   ACTION_SHOOT,
+  ACTION_CANNON,
   ACTION_TRAP,
   "訪問",
   "襲撃",
@@ -101,6 +104,7 @@ const HUMAN_BEAST_BLOCKED_ACTIONS = new Set([
   "お手伝い",
   "丁稚",
   ACTION_SHOOT,
+  ACTION_CANNON,
   ACTION_TRAP
 ]);
 const FOUR_LEGGED_BLOCKED_ACTIONS = new Set([
@@ -263,6 +267,7 @@ function addRaidActionsIfAllowed(person, village) {
   if (canDefendInRaid(person)) raidActions.push(ACTION_DEFEND);
   if (canFortifyInRaid(person, village)) raidActions.push(ACTION_FORTIFY);
   if (canShootInRaid(person, village)) raidActions.push(ACTION_SHOOT);
+  if (canCannonInRaid(person, village)) raidActions.push(ACTION_CANNON);
   if (canMakeTrapInRaid(person)) raidActions.push(ACTION_TRAP);
   if (raidActions.length === 0) return;
 

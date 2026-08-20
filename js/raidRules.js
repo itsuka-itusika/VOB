@@ -5,10 +5,12 @@ import { FOUR_LEGGED_TRAIT, WILD_MIND_TRAIT, YOUNG_WOLF_TRAIT } from "./domain/s
 export const ACTION_DEFEND = "迎撃";
 export const ACTION_TRAP = "罠作成";
 export const ACTION_SHOOT = "射撃";
+export const ACTION_CANNON = "火砲";
 export const ACTION_FORTIFY = "籠城";
 export const TRAIT_UNDER_RAID = "襲撃中";
-export const RAID_ACTIONS = [ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT, ACTION_TRAP];
-export const RAID_COMBAT_ACTIONS = [ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT];
+export const RAID_MIDDLE_ACTIONS = [ACTION_SHOOT, ACTION_CANNON];
+export const RAID_ACTIONS = [ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT, ACTION_CANNON, ACTION_TRAP];
+export const RAID_COMBAT_ACTIONS = [ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT, ACTION_CANNON];
 export const RAID_BASE_FRONTLINER_SLOTS = 6;
 export const RAID_TRAP_MAKER_SLOTS = 3;
 
@@ -56,13 +58,14 @@ export function getRaidActionBlockReason(person, action = "", { ignoreRoleTraits
   if (!ignoreRoleTraits && mindTraits.includes("襲撃者")) return "襲撃者";
   if (!ignoreRoleTraits && mindTraits.includes("訪問者")) return "訪問者";
   if (action === ACTION_DEFEND && mindTraits.includes("思春期")) return "思春期";
-  if ((action === ACTION_TRAP || action === ACTION_SHOOT) && bodyTraits.includes(FOUR_LEGGED_TRAIT)) {
+  const usesRaidTools = action === ACTION_TRAP || RAID_MIDDLE_ACTIONS.includes(action);
+  if (usesRaidTools && bodyTraits.includes(FOUR_LEGGED_TRAIT)) {
     return FOUR_LEGGED_TRAIT;
   }
-  if ((action === ACTION_TRAP || action === ACTION_SHOOT) && bodyTraits.includes(HUMAN_BEAST_TRAIT)) {
+  if (usesRaidTools && bodyTraits.includes(HUMAN_BEAST_TRAIT)) {
     return HUMAN_BEAST_TRAIT;
   }
-  if ((action === ACTION_TRAP || action === ACTION_SHOOT || action === ACTION_FORTIFY) && mindTraits.includes(WILD_MIND_TRAIT)) {
+  if ((usesRaidTools || action === ACTION_FORTIFY) && mindTraits.includes(WILD_MIND_TRAIT)) {
     return WILD_MIND_TRAIT;
   }
   return "";
@@ -118,8 +121,8 @@ function hasRaidUnlock(village, flag, buildingId) {
   return hasActiveBuildingFlag(village, flag, buildingId);
 }
 
-function sortRaidShootersByPriority(shooters) {
-  return [...shooters].sort((a, b) => {
+function sortRaidMiddlelinersByPriority(middleliners) {
+  return [...middleliners].sort((a, b) => {
     const courageDiff = (Number(b?.cou) || 0) - (Number(a?.cou) || 0);
     if (courageDiff !== 0) return courageDiff;
     return (Number(b?.dex) || 0) - (Number(a?.dex) || 0);
@@ -153,17 +156,27 @@ export function getRaidTrapMakerSlotCount(village = null) {
   return village ? RAID_TRAP_MAKER_SLOTS : Number.POSITIVE_INFINITY;
 }
 
-export function getRaidShooterSlotCount(village = null) {
+/** 中衛枠は射撃と火砲で共有し、有効な櫓1基につき1人ぶん増える。 */
+export function getRaidMiddleSlotCount(village = null) {
   if (!village) return Number.POSITIVE_INFINITY;
   return countActiveBuildings(village, "watchtower");
 }
 
-export function canShootInRaid(person, village = null) {
+function canJoinRaidMiddleLine(person, village) {
   return canDefendInRaid(person) &&
-    getRaidShooterSlotCount(village) > 0 &&
+    getRaidMiddleSlotCount(village) > 0 &&
     !traitList(person, "bodyTraits").includes(FOUR_LEGGED_TRAIT) &&
     !traitList(person, "bodyTraits").includes(HUMAN_BEAST_TRAIT) &&
     !traitList(person, "mindTraits").includes(WILD_MIND_TRAIT);
+}
+
+export function canShootInRaid(person, village = null) {
+  return canJoinRaidMiddleLine(person, village);
+}
+
+export function canCannonInRaid(person, village = null) {
+  return canJoinRaidMiddleLine(person, village) &&
+    hasRaidUnlock(village, "hasArcaneFoundry", "arcaneFoundry");
 }
 
 export function canFortifyInRaid(person, village = null) {
@@ -187,9 +200,11 @@ export function canPerformRaidAction(person, action, village = null) {
       ? canFortifyInRaid(person, village)
       : action === ACTION_SHOOT
         ? canShootInRaid(person, village)
-        : action === ACTION_TRAP
-          ? canMakeTrapInRaid(person)
-          : false;
+        : action === ACTION_CANNON
+          ? canCannonInRaid(person, village)
+          : action === ACTION_TRAP
+            ? canMakeTrapInRaid(person)
+            : false;
 
   return canPerformByRole &&
     Array.isArray(person.actionTable) &&
@@ -204,15 +219,16 @@ export function isRaidActive(village) {
     village.raidEnemies.length > 0;
 }
 
-export function getActiveRaidShooters(village) {
+export function getActiveRaidMiddleliners(village) {
   const villagers = Array.isArray(village?.villagers) ? village.villagers : [];
-  const shooters = villagers.filter(person => {
-    return person.action === ACTION_SHOOT && canPerformRaidAction(person, ACTION_SHOOT, village);
+  const middleliners = villagers.filter(person => {
+    return RAID_MIDDLE_ACTIONS.includes(person.action) &&
+      canPerformRaidAction(person, person.action, village);
   });
-  const slots = getRaidShooterSlotCount(village);
+  const slots = getRaidMiddleSlotCount(village);
   return Number.isFinite(slots)
-    ? sortRaidShootersByPriority(shooters).slice(0, slots)
-    : shooters;
+    ? sortRaidMiddlelinersByPriority(middleliners).slice(0, slots)
+    : middleliners;
 }
 
 export function getActiveRaidFrontliners(village) {
@@ -235,13 +251,14 @@ export function getActiveRaidTrapMakers(village) {
 export function isRaidActionSlotAvailable(village, action, person = null) {
   if (!village || !RAID_ACTIONS.includes(action)) return true;
   const villagers = Array.isArray(village.villagers) ? village.villagers : [];
-  const assignedCount = action === ACTION_SHOOT
-    ? villagers.filter(item => item !== person && item.action === ACTION_SHOOT).length
+  const isMiddleAction = RAID_MIDDLE_ACTIONS.includes(action);
+  const assignedCount = isMiddleAction
+    ? villagers.filter(item => item !== person && RAID_MIDDLE_ACTIONS.includes(item.action)).length
     : action === ACTION_TRAP
       ? villagers.filter(item => item !== person && item.action === ACTION_TRAP).length
       : villagers.filter(item => item !== person && (item.action === ACTION_DEFEND || item.action === ACTION_FORTIFY)).length;
-  const slotCount = action === ACTION_SHOOT
-    ? getRaidShooterSlotCount(village)
+  const slotCount = isMiddleAction
+    ? getRaidMiddleSlotCount(village)
     : action === ACTION_TRAP
       ? getRaidTrapMakerSlotCount(village)
       : getRaidFrontlinerSlotCount(village);
@@ -253,14 +270,18 @@ export function getRaidReadiness(village) {
   const frontliners = getActiveRaidFrontliners(village);
   const defenders = frontliners.filter(person => person.action === ACTION_DEFEND);
   const fortifiers = frontliners.filter(person => person.action === ACTION_FORTIFY);
-  const shooters = getActiveRaidShooters(village);
+  const middleliners = getActiveRaidMiddleliners(village);
+  const shooters = middleliners.filter(person => person.action === ACTION_SHOOT);
+  const cannoneers = middleliners.filter(person => person.action === ACTION_CANNON);
   const trapMakers = getActiveRaidTrapMakers(village);
-  const combatants = frontliners.concat(shooters);
+  const combatants = frontliners.concat(middleliners);
 
   return {
     defenders,
     fortifiers,
     shooters,
+    cannoneers,
+    middleliners,
     trapMakers,
     frontliners,
     combatants,

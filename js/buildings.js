@@ -67,6 +67,12 @@ function canBuildPrison(village) {
   return isScaleAtLeast(village, 250) && hasActiveBuilding(village, "holdingCell");
 }
 
+function canBuildArcaneFoundry(village) {
+  return isScaleAtLeast(village, 250) &&
+    hasActiveBuilding(village, "alchemy") &&
+    hasActiveBuilding(village, "brewery");
+}
+
 /** 建築物の定義 */
 export const BUILDINGS = [
   {
@@ -275,7 +281,7 @@ export const BUILDINGS = [
     allowMultiple: true,
     maxCount: village => Math.min(4, 1 + Math.max(0, getVillageScaleStage(village.building).index - 3)),
     isUnlocked: (village) => isScaleAtLeast(village, 120),
-    effect: standardBuildingEffect({ scale: 10, flag: "hasWatchtower", log: "櫓建設完了: 射撃の中衛枠+1、規模+10" })
+    effect: standardBuildingEffect({ scale: 10, flag: "hasWatchtower", log: "櫓建設完了: 中衛枠+1、規模+10" })
   },
   {
     id: "woodenFence",
@@ -296,6 +302,20 @@ export const BUILDINGS = [
     desc: "豊かな村で解放。木柵建設後に建設可能。籠城時のダメージ軽減率を0.7にする。規模+30",
     isUnlocked: canBuildMoat,
     effect: standardBuildingEffect({ scale: 30, flag: "hasMoat", log: "環濠建設完了: 籠城時のダメージ軽減率が0.7になりました、規模+30" })
+  },
+  {
+    id: "arcaneFoundry",
+    name: "魔導工廠",
+    materials: 100,
+    funds: 200,
+    tech: 300,
+    desc: "繁栄した郷村で解放。錬金工房と醸造所の建設後に建設可能。襲撃中の中衛行動「火砲」解放。規模+30",
+    isUnlocked: canBuildArcaneFoundry,
+    effect: standardBuildingEffect({
+      scale: 30,
+      flag: "hasArcaneFoundry",
+      log: "魔導工廠建設完了: 襲撃中の中衛行動「火砲」解放、規模+30"
+    })
   },
   {
     id: "prison",

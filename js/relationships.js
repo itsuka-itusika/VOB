@@ -29,6 +29,7 @@ const FRIENDSHIP_WORK_EXCLUDED_ACTIONS = new Set([
   "迎撃",
   "籠城",
   "射撃",
+  "火砲",
   "罠作成"
 ]);
 const FRIENDSHIP_MAIN_RELATED_PREFIXES = new Set(["恋人", "夫", "妻", "親友"]);
@@ -623,7 +624,7 @@ export function applyRaidFriendshipResults(village) {
   const participantNames = Array.isArray(village.raidFriendshipParticipants)
     ? village.raidFriendshipParticipants
     : village.villagers
-      .filter(person => ["迎撃", "籠城", "射撃", "罠作成"].includes(person.action))
+      .filter(person => ["迎撃", "籠城", "射撃", "火砲", "罠作成"].includes(person.action))
       .map(person => person.name);
   const participants = [...new Set(participantNames)]
     .map(name => nameToVillager.get(name))

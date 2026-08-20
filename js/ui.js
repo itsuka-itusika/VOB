@@ -492,6 +492,10 @@ function estimateTrapDamage(person) {
   return Math.floor(((Number(person.dex) || 0) * (Number(person.int) || 0) / 400) * 30);
 }
 
+function estimateCannonDamage(person) {
+  return Math.max(0, Math.floor((((Number(person.mag) || 0) * (Number(person.int) || 0)) / 400) * 20));
+}
+
 function estimateShootDamage(person, village) {
   const enemies = Array.isArray(village.raidEnemies)
     ? village.raidEnemies.filter(enemy => Number(enemy.hp) > 0)
@@ -650,6 +654,9 @@ function getTaskEstimateParts(person, task, village) {
     case "射撃":
       parts = [`想定ダメージ${estimateShootDamage(person, village)}`, "反撃なし"];
       break;
+    case "火砲":
+      parts = [`想定ダメージ${estimateCannonDamage(person)}`, "ターンの最後に攻撃", "反撃なし", "被ダメージ1.5倍"];
+      break;
     case "罠作成":
       parts = [`想定ダメージ${estimateTrapDamage(person)}`];
       break;
@@ -713,6 +720,7 @@ const ACTION_DESCRIPTIONS = {
   "迎撃": "襲撃中に敵へ直接攻撃する一時行動。",
   "籠城": "襲撃中に前衛で守りを固め、攻撃された時に反撃する一時行動。",
   "射撃": "襲撃中に中衛から攻撃し、反撃を受けない一時行動。",
+  "火砲": "襲撃中に中衛からターンの最後に砲撃する一時行動。反撃は受けないが、狙われた時の被害が大きい。",
   "罠作成": "襲撃中に罠を作り、敵へ事前ダメージを与える一時行動。"
 };
 
@@ -760,6 +768,7 @@ const JOB_KEY_STATS = {
   "迎撃": "筋力/魔力×勇気",
   "籠城": "耐久×勇気",
   "射撃": "器用×勇気",
+  "火砲": "魔力×知力",
   "罠作成": "器用×知力"
 };
 
