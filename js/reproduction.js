@@ -290,7 +290,7 @@ function canReceiveMysticPregnancy(person) {
     !hasTrait(person, "産褥");
 }
 
-function canReceiveGoldenRainPregnancy(person) {
+export function canReceiveGoldenRainPregnancy(person) {
   return isHumanoid(person) && canReceiveMysticPregnancy(person) && isPregnancyAge(person, 29);
 }
 
@@ -298,9 +298,20 @@ function canReceiveAnnunciationPregnancy(person) {
   return isHumanoid(person) && canReceiveMysticPregnancy(person);
 }
 
+// 神秘の妊娠の予約は肉体に紐づく。肉体交換が起きた場合は、その身体を得た人物へ移る。
+function getBodyIdentity(person) {
+  return person?.bodyOwner || person?.name || "";
+}
+
+function matchesPendingMysticTarget(entry, person) {
+  // targetName は肉体紐づけ以前の保存データ向けの読み替え。
+  const target = entry?.targetBodyOwner || entry?.targetName;
+  return !!target && target === getBodyIdentity(person);
+}
+
 function hasPendingMysticPregnancy(village, person) {
   return Array.isArray(village?.pendingGoldenRainPregnancies) &&
-    village.pendingGoldenRainPregnancies.some(entry => entry?.targetName === person?.name);
+    village.pendingGoldenRainPregnancies.some(entry => matchesPendingMysticTarget(entry, person));
 }
 
 export function canUseAnnunciationPaintingOn(person, village) {
@@ -328,7 +339,7 @@ export function scheduleGoldenRainPregnancy(village, mother) {
   }
   const due = getNextMonthDate(village);
   village.pendingGoldenRainPregnancies.push({
-    targetName: mother.name,
+    targetBodyOwner: getBodyIdentity(mother),
     dueYear: due.year,
     dueMonth: due.month,
     kind: GOLDEN_RAIN_PREGNANCY_KIND
@@ -344,7 +355,7 @@ export function scheduleAnnunciationPaintingPregnancy(village, mother) {
   }
   const due = getNextMonthDate(village);
   village.pendingGoldenRainPregnancies.push({
-    targetName: mother.name,
+    targetBodyOwner: getBodyIdentity(mother),
     dueYear: due.year,
     dueMonth: due.month,
     kind: ANNUNCIATION_PREGNANCY_KIND
@@ -373,9 +384,6 @@ function decideChildRace(childSex, motherSnapshot, fatherSnapshot, explicitRace 
 }
 
 function decidePregnancyChildRace(childSex, motherSnapshot, fatherSnapshot, options = {}) {
-  if (options.femaleFixedMaleChildRace && childSex === "男" && isFemaleFixedRace(motherSnapshot?.race)) {
-    return normalizeChildRace(options.femaleFixedMaleChildRace);
-  }
   const raceFatherSnapshot = options.childRaceFatherSnapshot || fatherSnapshot;
   const childRace = decideChildRace(childSex, motherSnapshot, raceFatherSnapshot, options.childRace);
   if (options.humanChildRace && childRace === "人間") {
@@ -754,7 +762,7 @@ function processPendingGoldenRainPregnancies(village) {
       return;
     }
 
-    const mother = village.villagers.find(person => person.name === entry.targetName);
+    const mother = village.villagers.find(person => matchesPendingMysticTarget(entry, person));
     if (isSaltPillar(mother)) {
       remaining.push(entry);
       return;
@@ -783,7 +791,6 @@ function processPendingGoldenRainPregnancies(village) {
         fatherSnapshot: VIRTUAL_THUNDER_FATHER,
         childRaceFatherSnapshot: { race: "人間" },
         humanChildRace: "半神",
-        femaleFixedMaleChildRace: "半神",
         inheritedBodyTraits: [THUNDER_BLESSING_TRAIT],
         geneticFatherUnknown: true,
         source: "黄金の雨"

@@ -4,7 +4,12 @@ import { randInt, clampValue, round3 } from "./util.js";
 import { adjustMutualFriendship, doLoverCheck, addRelationship as addCategorizedRelationship, getPairFriendshipMinimum, normalizeRelationship, parseRelationship } from "./relationships.js";
 import { canExchangeBody, doExchange } from "./exchange.js";
 import { showRandomEventModal } from "./randomEventModal.js";
-import { createWolfFoundling, matureBodyToAdultOnly, scheduleGoldenRainPregnancy } from "./reproduction.js";
+import {
+  canReceiveGoldenRainPregnancy,
+  createWolfFoundling,
+  matureBodyToAdultOnly,
+  scheduleGoldenRainPregnancy
+} from "./reproduction.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
@@ -233,14 +238,11 @@ export class RandomEvents {
           !p.bodyTraits.includes("大地の巫女")) {
         cands.push({ type: "地母神", vill: p });
       }
-      if (p.bodySex === "女" &&
-          Number(p.bodyAge) >= 16 &&
-          Number(p.bodyAge) <= 29 &&
-          Number(p.chr) >= 25 &&
-          !p.pregnancy &&
-          !p.bodyTraits.includes("妊娠") &&
-          !p.bodyTraits.includes("臨月") &&
-          !p.bodyTraits.includes("産褥")) {
+    });
+
+    // 黄金の雨は巫女系と違い、人間に限らず人型種族へ起こる。
+    getActiveVillagers(v).forEach(p => {
+      if (Number(p.chr) >= 25 && canReceiveGoldenRainPregnancy(p)) {
         cands.push({ type: "goldenRain", vill: p });
       }
     });
