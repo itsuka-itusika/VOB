@@ -931,7 +931,7 @@ function canActInCombat(actor, village) {
 function calcRangedDamage(atk, def) {
   if (atk?.raidAttackType === RAID_ATTACK_RANGED_MAGIC) {
     return {
-      damage: Math.max(0, Math.floor(((atk.mag * atk.cou) / 400) * 25)),
+      damage: Math.max(0, Math.floor(((atk.mag * atk.cou) / 400) * 20)),
       isMagic: true,
       attackText: "遠距離魔法"
     };

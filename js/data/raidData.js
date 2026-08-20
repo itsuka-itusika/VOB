@@ -780,8 +780,8 @@ export const RAIDER_TYPES = [
       int: [16, 24],
       ind: [16, 24],
       eth: [22, 30],
-      cou: [18, 24],
-      sexdr: [3, 10]
+      cou: [22, 26],
+      sexdr: [3, 8]
     },
     forcedBodyTraits: ["飛行", "光輪"],
     mindTraits: ["神聖", "狂信"],
@@ -885,12 +885,12 @@ export const RAIDER_TYPES = [
       str: [28, 28],
       vit: [18, 18],
       dex: [28, 28],
-      mag: [37, 37],
+      mag: [47, 47],
       chr: [64, 64],
       int: [60, 60],
       ind: [55, 55],
       eth: [100, 100],
-      cou: [28, 28],
+      cou: [26, 26],
       sexdr: [0, 0]
     },
     forcedBodyTraits: ["飛行", "光輪", "多翼多眼", "交換無効"],
