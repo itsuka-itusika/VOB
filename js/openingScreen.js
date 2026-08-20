@@ -1,24 +1,20 @@
 import { OPENING_SCRIPT, OPENING_STAGE_DIRECTION } from "./data/openingScript.js";
 
+// 読込などで即座にゲームへ移るときの短い暗転。
 const OPENING_SCREEN_FADE_MS = 240;
-// 暗転してから最初の声が出るまでの間。
-const MESSAGE_START_DELAY_MS = 900;
-const CHAR_INTERVAL_MS = 45;
-// 句読点の後だけ長めに止めると、読み上げの息継ぎに近い間になる。
-const PUNCTUATION_EXTRA_MS = {
-  "、": 170,
-  "，": 170,
-  "。": 280,
-  "？": 280,
-  "！": 280,
-  "…": 220
-};
+// 導入を見終えたあとは、メッセージを消し、闇を挟んでからゲーム画面を出す。
+const STORY_FADE_OUT_MS = 1100;
+const STORY_BLACKOUT_HOLD_MS = 700;
+const STORY_FADE_IN_MS = 1200;
+// ト書きを見せてから消し、間を空けてから最初の声を出す。
+const STAGE_HOLD_MS = 2400;
+const STAGE_FADE_OUT_MS = 1000;
+const VOICE_START_DELAY_MS = 1100;
 
 // 見直しでは既にゲームが始まっているため、最後のボタンの文言を変える。
 let isReplayMode = false;
 let messageIndex = -1;
-let typingState = null;
-let messageStartTimerId = null;
+let pendingTimerIds = [];
 let loadHandlers = {};
 
 function getElement(id) {
@@ -34,15 +30,14 @@ function isLastMessage() {
   return messageIndex >= OPENING_SCRIPT.length - 1;
 }
 
-function stopTyping() {
-  if (typingState?.rafId) window.cancelAnimationFrame(typingState.rafId);
-  typingState = null;
+function scheduleOpeningStep(callback, delayMs) {
+  pendingTimerIds.push(window.setTimeout(callback, delayMs));
 }
 
-function clearMessageStartTimer() {
-  if (messageStartTimerId === null) return false;
-  window.clearTimeout(messageStartTimerId);
-  messageStartTimerId = null;
+function clearPendingTimers() {
+  if (pendingTimerIds.length === 0) return false;
+  pendingTimerIds.forEach(id => window.clearTimeout(id));
+  pendingTimerIds = [];
   return true;
 }
 
@@ -61,70 +56,6 @@ function setWaitingForInput(waiting) {
   if (showContinue) window.requestAnimationFrame(() => continueButton?.focus());
 }
 
-function renderTypedText() {
-  const textElement = getElement("openingMessageText");
-  if (textElement && typingState) {
-    textElement.textContent = typingState.chars.slice(0, typingState.shownCount).join("");
-  }
-}
-
-function stepTyping(timestamp) {
-  if (!typingState) return;
-  if (typingState.startTime === null) typingState.startTime = timestamp;
-
-  const elapsed = timestamp - typingState.startTime;
-  let shownCount = typingState.shownCount;
-  while (shownCount < typingState.timings.length && typingState.timings[shownCount] <= elapsed) {
-    shownCount++;
-  }
-  if (shownCount !== typingState.shownCount) {
-    typingState.shownCount = shownCount;
-    renderTypedText();
-  }
-
-  if (shownCount >= typingState.chars.length) {
-    stopTyping();
-    setWaitingForInput(true);
-    return;
-  }
-  typingState.rafId = window.requestAnimationFrame(stepTyping);
-}
-
-function showFullText(text) {
-  const textElement = getElement("openingMessageText");
-  if (textElement) textElement.textContent = text;
-  setWaitingForInput(true);
-}
-
-function startTyping(text) {
-  stopTyping();
-  setWaitingForInput(false);
-
-  const chars = Array.from(text);
-  if (chars.length === 0 || prefersReducedMotion()) {
-    showFullText(text);
-    return;
-  }
-
-  let total = 0;
-  const timings = chars.map(char => {
-    total += CHAR_INTERVAL_MS + (PUNCTUATION_EXTRA_MS[char] || 0);
-    return total;
-  });
-
-  const textElement = getElement("openingMessageText");
-  if (textElement) textElement.textContent = "";
-  typingState = { chars, timings, shownCount: 0, startTime: null, rafId: null };
-  typingState.rafId = window.requestAnimationFrame(stepTyping);
-}
-
-function completeTyping() {
-  if (!typingState) return;
-  const fullText = typingState.chars.join("");
-  stopTyping();
-  showFullText(fullText);
-}
-
 function showMessage(index) {
   const message = OPENING_SCRIPT[index];
   if (!message) return;
@@ -133,19 +64,21 @@ function showMessage(index) {
   getElement("openingStoryStage")?.classList.remove("is-visible");
   const speaker = getElement("openingMessageSpeaker");
   if (speaker) speaker.textContent = message.speaker;
-  // 文字送り中の要素は読み上げが1文字ずつになるため、全文は専用の live 領域へ渡す。
   const screenReaderText = getElement("openingMessageSr");
   if (screenReaderText) screenReaderText.textContent = `${message.speaker} ${message.text}`;
   const messageWindow = getElement("openingMessageWindow");
   if (messageWindow) messageWindow.hidden = false;
-  startTyping(message.text);
+  // 区切りごとに全文を一度に出す。文字送りはしない。
+  const textElement = getElement("openingMessageText");
+  if (textElement) textElement.textContent = message.text;
+  setWaitingForInput(true);
 }
 
 function resetOpeningStory() {
-  stopTyping();
-  clearMessageStartTimer();
+  clearPendingTimers();
   messageIndex = -1;
 
+  getElement("openingStory")?.classList.remove("is-ending");
   getElement("openingStoryStage")?.classList.remove("is-visible");
   const messageWindow = getElement("openingMessageWindow");
   if (messageWindow) messageWindow.hidden = true;
@@ -175,20 +108,29 @@ function startOpeningStory() {
     showMessage(0);
     return;
   }
-  messageStartTimerId = window.setTimeout(() => {
-    messageStartTimerId = null;
+  // ト書きが消えきってから、少し置いて最初の声を出す。
+  scheduleOpeningStep(() => stage?.classList.remove("is-visible"), STAGE_HOLD_MS);
+  scheduleOpeningStep(() => {
+    clearPendingTimers();
     showMessage(0);
-  }, MESSAGE_START_DELAY_MS);
+  }, STAGE_HOLD_MS + STAGE_FADE_OUT_MS + VOICE_START_DELAY_MS);
+}
+
+/** 導入を見終えたあと、暗転を挟んでゲーム画面へ移る。 */
+function finishOpeningStory() {
+  const story = getElement("openingStory");
+  if (!story || prefersReducedMotion()) {
+    enterGame();
+    return;
+  }
+  story.classList.add("is-ending");
+  scheduleOpeningStep(() => enterGame(STORY_FADE_IN_MS), STORY_FADE_OUT_MS + STORY_BLACKOUT_HOLD_MS);
 }
 
 function advanceOpeningStory() {
   // 最初の声を待っている間の入力は、待ち時間の短縮として扱う。
-  if (clearMessageStartTimer()) {
+  if (clearPendingTimers()) {
     showMessage(0);
-    return;
-  }
-  if (typingState) {
-    completeTyping();
     return;
   }
   if (messageIndex >= 0 && !isLastMessage()) showMessage(messageIndex + 1);
@@ -221,18 +163,24 @@ function setOpeningView(view) {
   window.requestAnimationFrame(() => focusTargets[view]?.focus({ preventScroll: view === "story" }));
 }
 
-export function enterGame() {
+export function enterGame(fadeMs = OPENING_SCREEN_FADE_MS) {
   const screen = getElement("openingScreen");
   document.body.classList.remove("opening-active");
-  resetOpeningStory();
-  if (!screen || screen.hidden) return;
+  if (!screen || screen.hidden) {
+    resetOpeningStory();
+    return;
+  }
 
+  clearPendingTimers();
+  screen.style.transitionDuration = `${fadeMs}ms`;
   screen.classList.add("is-closing");
   screen.setAttribute("aria-hidden", "true");
+  // 暗転が終わるまで導入の表示を残し、消えたあとに片付ける。
   window.setTimeout(() => {
     screen.hidden = true;
+    resetOpeningStory();
     getElement("nextTurnButton")?.focus();
-  }, OPENING_SCREEN_FADE_MS);
+  }, fadeMs);
 }
 
 function trapOpeningFocus(event) {
@@ -299,6 +247,7 @@ export function replayOpeningStory() {
   isReplayMode = true;
   screen.hidden = false;
   screen.classList.remove("is-closing");
+  screen.style.transitionDuration = "";
   screen.removeAttribute("aria-hidden");
   document.body.classList.add("opening-active");
   setOpeningView("story");
@@ -316,8 +265,8 @@ export function initOpeningScreen({ onLoadLocal, onLoadJson, getLocalSaveLabel }
     isReplayMode = false;
     setOpeningView("story");
   });
-  getElement("openingStorySkipButton")?.addEventListener("click", enterGame);
-  getElement("openingStoryContinueButton")?.addEventListener("click", enterGame);
+  getElement("openingStorySkipButton")?.addEventListener("click", () => enterGame());
+  getElement("openingStoryContinueButton")?.addEventListener("click", finishOpeningStory);
   getElement("openingLoadLocalButton")?.addEventListener("click", () => loadHandlers.onLoadLocal?.());
   getElement("openingLoadJsonButton")?.addEventListener("click", () => loadHandlers.onLoadJson?.());
 

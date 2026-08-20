@@ -161,19 +161,22 @@ body.opening-active {
   overflow-y: auto;
   cursor: pointer;
 }
-/* ト書きは配置に影響させず、メッセージウィンドウの上に置く。 */
+/* ト書きは配置に影響させず、暗闇の中央へ大きく置く。 */
 .opening-story-stage {
   position: absolute;
-  top: 20%;
+  top: 50%;
   right: 0;
   left: 0;
   margin: 0;
   padding: 0 16px;
-  color: #c9b98f;
+  color: #d6c496;
+  font-size: clamp(1.35rem, 4.4vw, 2.2rem);
   text-align: center;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.14em;
+  text-shadow: 0 0 24px rgba(0, 0, 0, 0.9);
+  transform: translateY(-50%);
   opacity: 0;
-  transition: opacity 1.1s ease-out;
+  transition: opacity 1s ease-out;
 }
 /* 声が聞こえ始めたらト書きは退場し、暗闇と話者だけを残す。 */
 .opening-story-stage.is-visible {
@@ -182,7 +185,7 @@ body.opening-active {
 /* 以下は会話モーダル（#conversationModal）の構成を、暗い配色で再現したもの。 */
 .opening-message-window {
   box-sizing: border-box;
-  width: min(640px, 100%);
+  width: min(760px, 100%);
   padding: 20px;
   border: 1px solid rgba(211, 181, 111, 0.7);
   border-radius: 4px;
@@ -227,6 +230,8 @@ body.opening-active {
   margin: 0;
   font-size: clamp(0.98rem, 2vw, 1.12rem);
   line-height: 1.85;
+  /* 末尾に1文字だけ残るような折り返しを避ける。 */
+  text-wrap: balance;
 }
 .opening-message-cursor {
   position: absolute;
@@ -239,7 +244,7 @@ body.opening-active {
 .opening-story-actions {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 10px;
   min-height: 46px;
   margin-top: 14px;
@@ -262,8 +267,34 @@ body.opening-active {
   background: rgba(36, 29, 18, 0.78);
   color: #f0dba6;
 }
+/* スキップは押し間違えないよう、枠を外して左下に小さく置く。 */
+.opening-story .opening-story-actions .opening-skip-button {
+  min-height: 0;
+  padding: 2px 2px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: rgba(200, 174, 120, 0.7);
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  box-shadow: none;
+}
+.opening-story .opening-story-actions .opening-skip-button:hover {
+  background: none;
+  color: #e6d0a0;
+}
 #openingStoryContinueButton {
   min-width: 190px;
+  margin-left: auto;
+}
+/* 導入を見終えたら、メッセージだけ先に消して闇を残す。 */
+.opening-story.is-ending {
+  pointer-events: none;
+}
+.opening-story.is-ending .opening-message-window {
+  animation: none;
+  opacity: 0;
+  transition: opacity 1100ms ease;
 }
 @keyframes openingWindowFadeIn {
   from { opacity: 0; transform: translateY(10px); }
