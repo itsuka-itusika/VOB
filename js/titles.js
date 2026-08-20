@@ -54,6 +54,16 @@ const TITLE_DEFINITIONS = Object.freeze({
     name: "市の目利き",
     description: "行商で大成功を5回出した。"
   },
+  pickupSuccess5: {
+    id: "pickupSuccess5",
+    name: "ナンパマスター",
+    description: "ナンパを5回成功させた。"
+  },
+  reversePickupSuccess5: {
+    id: "reversePickupSuccess5",
+    name: "逆ナンマスター",
+    description: "逆ナンを5回成功させた。"
+  },
   survivedCritical: {
     id: "survivedCritical",
     name: "死線を越えた者",
@@ -72,7 +82,9 @@ const DEFAULT_TITLE_STATS = Object.freeze({
   headmanTerms: 0,
   huntCritical: 0,
   fishCritical: 0,
-  tradingCritical: 0
+  tradingCritical: 0,
+  pickupSuccess: 0,
+  reversePickupSuccess: 0
 });
 
 export const TITLE_COUNTER_KEYS = Object.freeze({
@@ -81,7 +93,9 @@ export const TITLE_COUNTER_KEYS = Object.freeze({
   HEADMAN_TERMS: "headmanTerms",
   HUNT_CRITICAL: "huntCritical",
   FISH_CRITICAL: "fishCritical",
-  TRADING_CRITICAL: "tradingCritical"
+  TRADING_CRITICAL: "tradingCritical",
+  PICKUP_SUCCESS: "pickupSuccess",
+  REVERSE_PICKUP_SUCCESS: "reversePickupSuccess"
 });
 
 function normalizeCount(value) {
@@ -153,6 +167,8 @@ export function evaluateTitles(person, options = {}) {
   if (person.titleStats.huntCritical >= 5) add("huntCritical5");
   if (person.titleStats.fishCritical >= 5) add("fishCritical5");
   if (person.titleStats.tradingCritical >= 5) add("tradingCritical5");
+  if (person.titleStats.pickupSuccess >= 5) add("pickupSuccess5");
+  if (person.titleStats.reversePickupSuccess >= 5) add("reversePickupSuccess5");
   if (person.hasBeenCritical && !person.bodyTraits?.includes("危篤")) add("survivedCritical");
 
   return added;

@@ -1,6 +1,6 @@
 import { clampValue, randInt } from "./util.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
-import { addAcquiredStat } from "./domain/statLayers.js";
+import { addAcquiredStat, getPermanentStat } from "./domain/statLayers.js";
 import { getActiveVillagers } from "./domain/apocalypseRules.js";
 import { addDivineMight } from "./divineMight.js";
 import {
@@ -12,6 +12,7 @@ import {
   isSingle
 } from "./relationships.js";
 import { recordLoverHistory } from "./history.js";
+import { incrementTitleCounter, TITLE_COUNTER_KEYS } from "./titles.js";
 
 // 趣味によるステータス変動の発生率倍率。全趣味に一律で掛かる。
 const HOBBY_STAT_CHANGE_RATE = 0.4;
@@ -286,6 +287,7 @@ export class HobbyEffects {
     if (hobby === "逆ナン") {
       return {
         label: "逆ナン",
+        counterKey: TITLE_COUNTER_KEYS.REVERSE_PICKUP_SUCCESS,
         isTargetSex: b => b.spiritSex === "男",
         minSpiritAge: 16,
         minBodyAge: 16,
@@ -300,6 +302,7 @@ export class HobbyEffects {
     }
     return {
       label: "ナンパ",
+      counterKey: TITLE_COUNTER_KEYS.PICKUP_SUCCESS,
       isTargetSex: b => b.bodySex === "女",
       minSpiritAge: null,
       minBodyAge: 16,
@@ -347,6 +350,7 @@ export class HobbyEffects {
   }
 
   static resolvePickupSuccess(a, b, v, rules) {
+    incrementTitleCounter(a, rules.counterKey, 1, { getPermanentStat });
     adjustFriendshipScore(a, b, 10);
     adjustFriendshipScore(b, a, 10);
     [a, b].forEach(person => {
