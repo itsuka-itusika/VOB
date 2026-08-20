@@ -17,6 +17,7 @@ import {
 import { proceedRaidAction, retreatRaid } from "./raid.js";
 import { startRaidEvent } from "./raidStart.js";
 import {
+  getLocalSaveSummary,
   loadVillageFromJsonFile,
   loadVillageFromLocalStorage,
   saveVillageToJsonFile,
@@ -27,7 +28,8 @@ import { RAID_MODULES } from "./data/raidData.js";
 import { updateUI } from "./ui.js";
 import { getCaptives } from "./captives.js";
 import { setBalanceSimulationOptions } from "./balance/simulationOptions.js";
-import { enterGame, initOpeningScreen } from "./openingScreen.js";
+import { enterGame, initOpeningScreen, replayOpeningStory } from "./openingScreen.js";
+import { getVillageScaleTitle } from "./villageScale.js";
 
 const VIEW_MODE_STORAGE_KEY = "vob.viewMode";
 const APOCALYPSE_DEBUG_VILLAGER_COUNT = 15;
@@ -276,6 +278,8 @@ function runUtilityAction() {
     if (window.confirm("ローカル保存を読み込み、現在の状態を置き換えますか？")) {
       loadFromLocalStorage();
     }
+  } else if (action === "opening") {
+    replayOpeningStory();
   } else if (action === "readme") {
     window.open("Readme.txt", "_blank");
   } else if (action === "debug") {
@@ -450,5 +454,10 @@ bindDebugTitleActions();
 initViewMode();
 initOpeningScreen({
   onLoadLocal: loadFromLocalStorage,
-  onLoadJson: openJsonLoadDialog
+  onLoadJson: openJsonLoadDialog,
+  getLocalSaveLabel: () => {
+    const summary = getLocalSaveSummary();
+    if (!summary) return "";
+    return `${summary.year}年${summary.month}月・${getVillageScaleTitle(summary.building)}`;
+  }
 });

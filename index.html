@@ -12,7 +12,7 @@
     gtag('config', 'G-TR05T5GRB4');
   </script>
   <title>ヴィレッジオブバッカス</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260819-opening-quiet-buttons">
+  <link rel="stylesheet" href="css/styles.css?v=20260820-opening-menu">
   <style>
     .action-buttons {
       display: flex;
@@ -35,20 +35,15 @@
     <h1 class="opening-visually-hidden">Village of Bacchus</h1>
     <div class="opening-menu-panel" role="group" aria-label="ゲーム開始メニュー">
       <button type="button" id="openingNewGameButton" class="opening-menu-button">はじめから</button>
-      <button type="button" id="openingLoadLocalButton" class="opening-menu-button">つづきから（ローカル読込）</button>
+      <button type="button" id="openingLoadLocalButton" class="opening-menu-button">
+        <span class="opening-menu-label">つづきから（ローカル読込）</span>
+        <span class="opening-menu-note" id="openingLoadLocalNote" hidden></span>
+      </button>
       <button type="button" id="openingLoadJsonButton" class="opening-menu-button">つづきから（json）</button>
     </div>
+    <p class="opening-version" id="openingVersion"></p>
   </div>
 
-  <div id="openingNewGamePrompt" class="opening-view opening-prompt" role="dialog" aria-modal="true" aria-labelledby="openingPromptTitle" hidden>
-    <div class="opening-card">
-      <p id="openingPromptTitle" class="opening-prompt-title">オープニングを見ますか？</p>
-      <div class="opening-choice-buttons">
-        <button type="button" id="openingWatchButton">はい</button>
-        <button type="button" id="openingSkipButton">いいえ</button>
-      </div>
-    </div>
-  </div>
 
   <div id="openingStory" class="opening-view opening-story" role="dialog" aria-modal="true" aria-labelledby="openingStoryTitle" hidden>
     <h2 id="openingStoryTitle" class="opening-visually-hidden" tabindex="-1">オープニング</h2>
@@ -97,6 +92,7 @@
             <option value="load-json">JSON読込</option>
             <option value="save-local">ローカル保存</option>
             <option value="load-local">ローカル読込</option>
+            <option value="opening">オープニングを見る</option>
             <option value="readme">更新履歴・説明</option>
             <option value="debug">デバッグ用</option>
           </select>

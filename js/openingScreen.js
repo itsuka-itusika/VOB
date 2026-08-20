@@ -14,6 +14,8 @@ const PUNCTUATION_EXTRA_MS = {
   "…": 220
 };
 
+// 見直しでは既にゲームが始まっているため、最後のボタンの文言を変える。
+let isReplayMode = false;
 let messageIndex = -1;
 let typingState = null;
 let messageStartTimerId = null;
@@ -50,7 +52,10 @@ function setWaitingForInput(waiting) {
   const skipButton = getElement("openingStorySkipButton");
   const showContinue = waiting && isLastMessage();
   if (cursor) cursor.hidden = !waiting || showContinue;
-  if (continueButton) continueButton.hidden = !showContinue;
+  if (continueButton) {
+    continueButton.hidden = !showContinue;
+    continueButton.textContent = isReplayMode ? "ゲームへ戻る" : "ゲームを始める";
+  }
   // 最後の1枚では飛ばす先がないため、スキップは開始ボタンへ置き換える。
   if (skipButton) skipButton.hidden = showContinue;
   if (showContinue) window.requestAnimationFrame(() => continueButton?.focus());
@@ -195,7 +200,6 @@ function setOpeningView(view) {
 
   const views = {
     menu: getElement("openingMenu"),
-    prompt: getElement("openingNewGamePrompt"),
     story: getElement("openingStory")
   };
   Object.entries(views).forEach(([name, element]) => {
@@ -212,7 +216,6 @@ function setOpeningView(view) {
 
   const focusTargets = {
     menu: getElement("openingNewGameButton"),
-    prompt: getElement("openingWatchButton"),
     story: getElement("openingStoryTitle")
   };
   window.requestAnimationFrame(() => focusTargets[view]?.focus({ preventScroll: view === "story" }));
@@ -269,15 +272,50 @@ function handleStoryKeydown(event) {
   advanceOpeningStory();
 }
 
-export function initOpeningScreen({ onLoadLocal, onLoadJson } = {}) {
+function applyLocalSaveState(getLocalSaveLabel) {
+  const button = getElement("openingLoadLocalButton");
+  const note = getElement("openingLoadLocalNote");
+  if (!button) return;
+
+  const label = typeof getLocalSaveLabel === "function" ? getLocalSaveLabel() : "";
+  button.disabled = !label;
+  if (!note) return;
+  note.textContent = label || "保存データがありません";
+  note.hidden = false;
+}
+
+function applyVersionLabel() {
+  const version = getElement("openingVersion");
+  if (!version) return;
+  // 表記が二重にならないよう、ヘッダーのタイトルからバージョンを読み取る。
+  version.textContent = getElement("appTitle")?.textContent?.match(/ver\.[\d.]+/)?.[0] || "";
+}
+
+/** ゲーム開始後にオープニングを見直す。導入を終えると元のゲーム画面へ戻る。 */
+export function replayOpeningStory() {
+  const screen = getElement("openingScreen");
+  if (!screen) return;
+
+  isReplayMode = true;
+  screen.hidden = false;
+  screen.classList.remove("is-closing");
+  screen.removeAttribute("aria-hidden");
+  document.body.classList.add("opening-active");
+  setOpeningView("story");
+}
+
+export function initOpeningScreen({ onLoadLocal, onLoadJson, getLocalSaveLabel } = {}) {
   const screen = getElement("openingScreen");
   if (!screen) return;
 
   loadHandlers = { onLoadLocal, onLoadJson };
   document.body.classList.add("opening-active");
-  getElement("openingNewGameButton")?.addEventListener("click", () => setOpeningView("prompt"));
-  getElement("openingWatchButton")?.addEventListener("click", () => setOpeningView("story"));
-  getElement("openingSkipButton")?.addEventListener("click", enterGame);
+  applyLocalSaveState(getLocalSaveLabel);
+  applyVersionLabel();
+  getElement("openingNewGameButton")?.addEventListener("click", () => {
+    isReplayMode = false;
+    setOpeningView("story");
+  });
   getElement("openingStorySkipButton")?.addEventListener("click", enterGame);
   getElement("openingStoryContinueButton")?.addEventListener("click", enterGame);
   getElement("openingLoadLocalButton")?.addEventListener("click", () => loadHandlers.onLoadLocal?.());

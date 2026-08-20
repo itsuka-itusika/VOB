@@ -30,8 +30,8 @@
 3. `updateUI(theVillage)` で初期画面を描画する。
 4. `js/app.js` がボタン操作用の関数を `window` に登録する。
 5. 表示モードを localStorage から復元し、PC / スマホ仮表示を切り替える。
-6. `js/openingScreen.js` が `OPENING.png` を使った開始画面を表示し、新規開始、localStorage 読込、JSON 読込のいずれかからゲーム画面へ進む。読込処理は `js/app.js` から渡す。
-7. 新規開始では、固定の導入シーンを表示するか選択できる。導入シーンは背景を暗転させ、`js/data/openingScript.js` の台本を1メッセージずつ文字送りで表示する。表示枠はゲーム内の会話モーダル（`#conversationModal`）と同じ構成を暗い配色で再現したもので、顔グラ枠は話者が不明であることを示すために空にする。クリック、タップ、Enter、Space で進み、文字送り中の入力は全文の即時表示になる。
+6. `js/openingScreen.js` が `OPENING.png` を使った開始画面を表示し、新規開始、localStorage 読込、JSON 読込のいずれかからゲーム画面へ進む。読込処理と、ローカル保存の概要を返す関数は `js/app.js` から渡す。
+7. 新規開始では固定の導入シーンへ進む。ゲーム開始後も `replayOpeningStory()` で見直せる。導入シーンは背景を暗転させ、`js/data/openingScript.js` の台本を1メッセージずつ文字送りで表示する。表示枠はゲーム内の会話モーダル（`#conversationModal`）と同じ構成を暗い配色で再現したもので、顔グラ枠は話者が不明であることを示すために空にする。クリック、タップ、Enter、Space で進み、文字送り中の入力は全文の即時表示になる。
 
 ## 月次処理
 

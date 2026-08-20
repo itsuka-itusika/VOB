@@ -164,6 +164,27 @@ export function loadVillageFromLocalStorage() {
   return convertObjectToVillage(dataObj);
 }
 
+/**
+ * ローカル保存の概要(なければ null)。
+ * 開始メニューの表示に使うため、村の再構築は行わず必要な値だけ読む。
+ */
+export function getLocalSaveSummary() {
+  const jsonStr = localStorage.getItem("villageSave");
+  if (!jsonStr) return null;
+
+  try {
+    const dataObj = JSON.parse(jsonStr);
+    return {
+      year: Number(dataObj?.year) || 0,
+      month: Number(dataObj?.month) || 0,
+      building: Number(dataObj?.building) || 0
+    };
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}
+
 /* -------------------------------------------
    以下、保存用データへの変換と読み出し時の再構築
    (Village, Villager) を適切に再生成する
