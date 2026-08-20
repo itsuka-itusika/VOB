@@ -16,6 +16,7 @@ import {
   ACTION_CANNON,
   ACTION_DEFEND,
   ACTION_FORTIFY,
+  ACTION_SHOOT,
   ACTION_TRAP,
   RAID_MIDDLE_ACTIONS,
   canPerformRaidAction,
@@ -45,6 +46,7 @@ const RAID_PHASE_COMBAT = "combat";
 const RAID_POSITION_FRONT = "front";
 const RAID_POSITION_MIDDLE = "middle";
 const RAID_TARGET_WEAKEST_HIGH_CHANCE = "weakestHighChance";
+const MIDDLE_INCOMING_DAMAGE_MULTIPLIER = 1.2;
 const CANNON_INCOMING_DAMAGE_MULTIPLIER = 1.5;
 const RAID_ATTACK_RANGED_MAGIC = "rangedMagic";
 const RAID_WEAKEST_TARGET_CHANCE = 0.8;
@@ -1001,7 +1003,9 @@ function applyIncomingDamageModifiers(damage, target, village) {
     multiplier *= getRaiderIncomingDamageMultiplier(target);
   }
   if (getCombatPosition(target, village) === RAID_POSITION_MIDDLE) {
-    multiplier *= isCannonUnit(target, village) ? CANNON_INCOMING_DAMAGE_MULTIPLIER : 1.2;
+    multiplier *= isCannonUnit(target, village)
+      ? CANNON_INCOMING_DAMAGE_MULTIPLIER
+      : MIDDLE_INCOMING_DAMAGE_MULTIPLIER;
   }
   if (!isEnemyUnit(target, village) && target.action === ACTION_FORTIFY) {
     multiplier *= getFortifyDamageMultiplier(village);
@@ -1598,13 +1602,18 @@ function appendRaidNameCell(row, unit, village = null) {
     meta.appendChild(action);
   }
 
-  // 籠城・火砲は見た目に効果が出ないため、行動順と実際の被ダメージ倍率を添える。
-  if (unit?.action === ACTION_FORTIFY && village && !isEnemyUnit(unit, village)) {
-    appendRaidUnitNote(meta, `被弾${getFortifyDamageMultiplier(village)}倍`);
+  // 籠城・射撃・火砲は見た目に効果が出ないため、行動順と実際の被ダメージ倍率を添える。
+  const isVillageUnit = Boolean(village) && !isEnemyUnit(unit, village);
+  if (isVillageUnit && unit?.action === ACTION_FORTIFY) {
+    appendRaidUnitNote(meta, `被ダメージ${getFortifyDamageMultiplier(village)}倍`);
   }
-  if (village && isCannonUnit(unit, village)) {
+  if (isVillageUnit && unit?.action === ACTION_SHOOT) {
+    appendRaidUnitNote(meta, "先制");
+    appendRaidUnitNote(meta, `被ダメージ${MIDDLE_INCOMING_DAMAGE_MULTIPLIER}倍`);
+  }
+  if (isVillageUnit && unit?.action === ACTION_CANNON) {
     appendRaidUnitNote(meta, "後攻");
-    appendRaidUnitNote(meta, `被弾${CANNON_INCOMING_DAMAGE_MULTIPLIER}倍`);
+    appendRaidUnitNote(meta, `被ダメージ${CANNON_INCOMING_DAMAGE_MULTIPLIER}倍`);
   }
 
   getRaidVisibleEffects(unit).forEach(effectName => {
