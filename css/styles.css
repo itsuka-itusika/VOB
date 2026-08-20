@@ -2272,14 +2272,12 @@ section h2 {
 }
 .tutorial-completion-current,
 .tutorial-completion-description,
-.tutorial-completion-reward,
-.tutorial-completion-all-done {
+.tutorial-completion-reward {
   margin: 0 0 10px;
   line-height: 1.55;
 }
 .tutorial-completion-current,
-.tutorial-completion-reward,
-.tutorial-completion-all-done {
+.tutorial-completion-reward {
   font-weight: bold;
 }
 .tutorial-checklist {
@@ -2307,9 +2305,6 @@ section h2 {
 .tutorial-checklist-status {
   color: #666;
   font-size: 0.88rem;
-}
-.tutorial-completion-all-done {
-  padding: 0 20px;
 }
 .tutorial-completion-buttons {
   padding: 12px 20px 16px;

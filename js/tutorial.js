@@ -215,7 +215,7 @@ function showTutorialCompletionModal(village, taskId) {
       <h3>チュートリアル達成</h3>
       <p class="tutorial-completion-current">今回達成: ${escapeHtml(task.title)}</p>
       <p class="tutorial-completion-description">${escapeHtml(task.descriptionText || task.conditionText || "")}</p>
-      <p class="tutorial-completion-reward">報酬を獲得しました。報酬: ${escapeHtml(task.rewardText)}</p>
+      <p class="tutorial-completion-reward">報酬: ${escapeHtml(task.rewardText)}</p>
     </div>
     <div class="tutorial-checklist">
       <div class="tutorial-checklist-heading">チュートリアル一覧</div>
@@ -245,14 +245,13 @@ function showTutorialAllCompleteModal(village) {
   modal.innerHTML = `
     <div class="tutorial-completion-body">
       <h3>チュートリアル全達成</h3>
-      <p class="tutorial-completion-description">村を動かす基本の流れをひと通り確認しました。</p>
-      <p class="tutorial-completion-reward">全達成報酬を獲得しました。報酬: ${escapeHtml(TUTORIAL_ALL_COMPLETE_REWARD.rewardText)}</p>
+      <p class="tutorial-completion-description">ひと通りは覚えたな。あとは好きにやれ。村をどう育てるかは、お前次第だ。</p>
+      <p class="tutorial-completion-reward">報酬: ${escapeHtml(TUTORIAL_ALL_COMPLETE_REWARD.rewardText)}</p>
     </div>
     <div class="tutorial-checklist">
       <div class="tutorial-checklist-heading">チュートリアル一覧</div>
       ${buildChecklistHtml(village)}
     </div>
-    <p class="tutorial-completion-all-done">すべてのチュートリアルを達成しました。</p>
     <div class="tutorial-completion-buttons">
       <button type="button" data-close-tutorial-modal>閉じる</button>
     </div>
