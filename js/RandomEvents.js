@@ -247,7 +247,9 @@ export class RandomEvents {
       }
     });
 
-    const growthPotionCandidates = mythicVillagers.filter(person => Number(person.bodyAge) <= 9);
+    // 怪しい薬は巫女系と違い、狼以外の全種族が対象。
+    const growthPotionCandidates = getActiveVillagers(v)
+      .filter(person => (person.race || "人間") !== "狼" && Number(person.bodyAge) <= 9);
     if (growthPotionCandidates.length > 0 && Math.random() < 0.2) {
       cands.push({ type: "strangeGrowthPotion", vill: this.randChoice(growthPotionCandidates) });
     }
