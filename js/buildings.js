@@ -56,22 +56,17 @@ function canBuildStorehouse(village) {
   );
 }
 
-function canBuildHoldingCell(village) {
-  return isScaleAtLeast(village, 70) && hasActiveBuilding(village, "barn");
-}
-
-function canBuildMoat(village) {
-  return isScaleAtLeast(village, 180) && hasActiveBuilding(village, "woodenFence");
-}
-
-function canBuildPrison(village) {
-  return isScaleAtLeast(village, 250) && hasActiveBuilding(village, "holdingCell");
-}
-
-function canBuildArcaneFoundry(village) {
-  return isScaleAtLeast(village, 250) &&
-    hasActiveBuilding(village, "alchemy") &&
-    hasActiveBuilding(village, "brewery");
+/**
+ * 規模と前提建築の両方を要求する建築物の解放条件。
+ * 一覧への表示は規模だけで決め、前提建築が揃っていない間は建設不可として理由を出す。
+ */
+function requireScaleAndBuildings(scale, requiredBuildingIds) {
+  return {
+    requiredBuildingIds,
+    isRevealed: (village) => isScaleAtLeast(village, scale),
+    isUnlocked: (village) => isScaleAtLeast(village, scale) &&
+      requiredBuildingIds.every(id => hasActiveBuilding(village, id))
+  };
 }
 
 /** 建築物の定義 */
@@ -116,6 +111,8 @@ export const BUILDINGS = [
     desc: "食料と資材の所持上限+3000。最大3つまで建設可能。規模+30",
     allowMultiple: true,
     maxCount: MAX_STOREHOUSES,
+    requiredBuildingIds: ["barn"],
+    isRevealed: () => true,
     isUnlocked: canBuildStorehouse,
     effect: standardBuildingEffect({
       scale: 30,
@@ -259,7 +256,7 @@ export const BUILDINGS = [
     funds: 20,
     tech: 0,
     desc: "辺境の村で解放。納屋建設後に建設可能。捕虜を最大1名まで収容できる。規模+10",
-    isUnlocked: canBuildHoldingCell,
+    ...requireScaleAndBuildings(70, ["barn"]),
     effect: standardBuildingEffect({ scale: 10, flag: "hasHoldingCell", log: "営倉建設完了: 捕虜を最大1名まで収容可能、規模+10" })
   },
   {
@@ -301,7 +298,7 @@ export const BUILDINGS = [
     funds: 50,
     tech: 100,
     desc: "豊かな村で解放。木柵建設後に建設可能。籠城時のダメージ軽減率を0.7にする。規模+30",
-    isUnlocked: canBuildMoat,
+    ...requireScaleAndBuildings(180, ["woodenFence"]),
     effect: standardBuildingEffect({ scale: 30, flag: "hasMoat", log: "環濠建設完了: 籠城時のダメージ軽減率が0.7になりました、規模+30" })
   },
   {
@@ -311,7 +308,7 @@ export const BUILDINGS = [
     funds: 200,
     tech: 300,
     desc: "繁栄した郷村で解放。錬金工房と醸造所の建設後に建設可能。襲撃中の中衛行動「火砲」解放。規模+30",
-    isUnlocked: canBuildArcaneFoundry,
+    ...requireScaleAndBuildings(250, ["alchemy", "brewery"]),
     effect: standardBuildingEffect({
       scale: 30,
       flag: "hasArcaneFoundry",
@@ -325,7 +322,7 @@ export const BUILDINGS = [
     funds: 50,
     tech: 0,
     desc: "繁栄した郷村で解放。営倉建設後に建設可能。捕虜を最大3名まで収容できる。規模+20",
-    isUnlocked: canBuildPrison,
+    ...requireScaleAndBuildings(250, ["holdingCell"]),
     effect: standardBuildingEffect({ scale: 20, flag: "hasPrison", log: "牢獄建設完了: 捕虜を最大3名まで収容可能、規模+20" })
   },
   {
@@ -345,6 +342,29 @@ export const BUILDINGS = [
   }
 ];
 
+function getBuildingNameById(buildingId) {
+  return BUILDINGS.find(building => building.id === buildingId)?.name || buildingId;
+}
+
+function isBuildingUnlocked(building, village) {
+  return typeof building.isUnlocked !== "function" || building.isUnlocked(village);
+}
+
+/** 建築モーダルへ表示するか。前提建築が未達でも、規模を満たしていれば表示する。 */
+function isBuildingListed(building, village) {
+  if (countBuiltBuildings(village, building.id) > 0) return true;
+  if (typeof building.isRevealed === "function") return building.isRevealed(village);
+  return isBuildingUnlocked(building, village);
+}
+
+function getUnlockBlockReason(building, village) {
+  if (isBuildingUnlocked(building, village)) return "";
+  const missing = (building.requiredBuildingIds || [])
+    .filter(id => !hasActiveBuilding(village, id))
+    .map(id => `「${getBuildingNameById(id)}」`);
+  return missing.length > 0 ? `${missing.join("")}が必要` : "解放条件未達";
+}
+
 function getBuildingCounts(village) {
   return (village.buildings || []).reduce((acc, id) => {
     acc[id] = (acc[id] || 0) + 1;
@@ -362,6 +382,8 @@ export function getBuildingMaxCount(building, village) {
 function getBuildBlockReason(building, village, { isBuilt = false, reachedLimit = false, costs = null } = {}) {
   if (isBuilt) return "建設済み";
   if (reachedLimit) return "建設上限";
+  const unlockReason = getUnlockBlockReason(building, village);
+  if (unlockReason) return unlockReason;
   const buildCosts = costs || getBuildingCostForVillage(building, village);
   const reasons = [];
   if (village.materials < buildCosts.materials) reasons.push("資材不足");
@@ -441,7 +463,7 @@ function createBuildingItem(building, village) {
   const costs = getBuildingCostForVillage(building, village);
   const repairCosts = getBuildingRepairCosts(building);
   const canRepair = damagedCount > 0 && canAffordRepair(village, repairCosts);
-  const canBuild = !isBuilt && !reachedLimit &&
+  const canBuild = !isBuilt && !reachedLimit && isBuildingUnlocked(building, village) &&
     village.materials >= costs.materials &&
     village.funds >= costs.funds &&
     village.tech >= costs.tech;
@@ -551,7 +573,7 @@ export function openBuildingModal(village) {
   renderBuiltBuildings(content.querySelector(".built-list"), village);
   const grid = content.querySelector(".building-grid");
   BUILDINGS
-    .filter(building => countBuiltBuildings(village, building.id) > 0 || !building.isUnlocked || building.isUnlocked(village))
+    .filter(building => isBuildingListed(building, village))
     .forEach(building => grid.appendChild(createBuildingItem(building, village)));
 }
 
