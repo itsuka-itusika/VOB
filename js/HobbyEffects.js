@@ -346,7 +346,7 @@ export class HobbyEffects {
     return Math.random() * 100 < rules.getAcceptanceChance(b);
   }
 
-  static resolvePickupSuccess(a, b, v) {
+  static resolvePickupSuccess(a, b, v, rules) {
     adjustFriendshipScore(a, b, 10);
     adjustFriendshipScore(b, a, 10);
     [a, b].forEach(person => {
@@ -366,8 +366,8 @@ export class HobbyEffects {
       addRelationship(b, `恋人:${a.name}`);
       a.happiness = clampValue(a.happiness + 20, 0, 100);
       b.happiness = clampValue(b.happiness + 20, 0, 100);
-      recordLoverHistory(v, a, b, { source: a.hobby || "ナンパ" });
-      v.log(`${a.name}と${b.name}は${a.hobby || "ナンパ"}をきっかけに恋人になった`);
+      recordLoverHistory(v, a, b, { source: rules.label });
+      v.log(`${a.name}と${b.name}は${rules.label}をきっかけに恋人になった`);
       loverText = ",恋人成立,双方幸福+20";
     }
 
@@ -383,21 +383,25 @@ export class HobbyEffects {
       adjustFriendshipScore(b, a, rules.rejectPenalty);
       return `${b.name}に振られた,好感度${rules.rejectPenalty}`;
     }
-    return this.resolvePickupSuccess(a, b, v);
+    return this.resolvePickupSuccess(a, b, v, rules);
   }
 
-  static applyPickup(p, v) {
-    const rules = this.getPickupRules(p.hobby);
-    const targets = getActiveVillagers(v).filter(x => this.isPickupTargetCandidate(p, x, rules));
+  static hasPickupTarget(p, v, rules) {
+    return getActiveVillagers(v).some(x => this.isPickupTargetCandidate(p, x, rules));
+  }
+
+  static applyPickup(p, v, rules = null) {
+    const appliedRules = rules || this.getPickupRules(p.hobby);
+    const targets = getActiveVillagers(v).filter(x => this.isPickupTargetCandidate(p, x, appliedRules));
     if (targets.length === 0) {
-      return `(${rules.label}:めぼしい相手がいなかった…)`;
+      return `(${appliedRules.label}:めぼしい相手がいなかった…)`;
     }
 
     const target = targets[randInt(0, targets.length - 1)];
-    const outcome = this.resolvePickup(p, target, v, rules);
+    const outcome = this.resolvePickup(p, target, v, appliedRules);
     // 魅力上昇が同じ試行の成否へ影響しないよう、能力上昇は判定後に処理する。
     const statGrowth = `${this.maybeRaiseStat(p, "chr", 0.3)}${this.maybeRaiseStat(p, "sexdr", 0.25)}`;
-    return `(${rules.label}:${outcome}${statGrowth})`;
+    return `(${appliedRules.label}:${outcome}${statGrowth})`;
   }
 
   static applyAsceticTraining(p) {

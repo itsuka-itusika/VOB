@@ -1,9 +1,10 @@
 // RandomEvents.js
 
 import { randInt, clampValue, round3 } from "./util.js";
-import { adjustMutualFriendship, doLoverCheck, addRelationship as addCategorizedRelationship, getPairFriendshipMinimum, normalizeRelationship, parseRelationship } from "./relationships.js";
+import { adjustMutualFriendship, doLoverCheck, addRelationship as addCategorizedRelationship, getPairFriendshipMinimum, isSingle, normalizeRelationship, parseRelationship } from "./relationships.js";
 import { canExchangeBody, doExchange } from "./exchange.js";
 import { showRandomEventModal } from "./randomEventModal.js";
+import { HobbyEffects } from "./HobbyEffects.js";
 import {
   canReceiveGoldenRainPregnancy,
   createWolfFoundling,
@@ -566,6 +567,23 @@ export class RandomEvents {
         } else {
           return null;
         }
+        break;
+      }
+      case "pickup": {
+        const rules = HobbyEffects.getPickupRules("ナンパ");
+        const candidates = getActiveVillagers(v).filter(a => {
+          if (a.spiritSex !== "男" || Number(a.spiritAge) < 16) return false;
+          // 相手がいる者は、より強い好色と低い倫理でなければ声をかけない。
+          const meetsDesire = isSingle(a)
+            ? Number(a.sexdr) >= 18
+            : Number(a.sexdr) >= 20 && Number(a.eth) <= 14;
+          return meetsDesire && HobbyEffects.hasPickupTarget(a, v, rules);
+        });
+        if (candidates.length === 0) return null;
+
+        const a = this.randChoice(candidates);
+        v.log(`ナンパイベント:${a.name}${HobbyEffects.applyPickup(a, v, rules)}`);
+        this.addForcedSpeaker(a);
         break;
       }
       case "selfPleasure": {

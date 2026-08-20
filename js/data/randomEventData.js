@@ -11,7 +11,7 @@ export const EVENT_KIND_TITLES = {
 };
 
 export const EVENT_POOLS = {
-  good: ["wolfChild", "cat", "gold", "strangeRain", "fireworks", "hotSpring", "bathPerk", "hobbyFriends", "menFriendship", "lover", "yuri", "tattoo", "fashion", "muscle", "selfPleasure"],
+  good: ["wolfChild", "cat", "gold", "strangeRain", "fireworks", "hotSpring", "bathPerk", "hobbyFriends", "menFriendship", "lover", "pickup", "yuri", "tattoo", "fashion", "muscle", "selfPleasure"],
   bad: ["storm", "downpour", "heat", "fire", "thief", "rats", "lightning1", "lightning2", "snow", "fight", "loverArgument", "argument", "drunk", "epidemic"]
 };
 
@@ -32,6 +32,7 @@ export const EVENT_SUBJECTS = {
   hobbyFriends: "趣味仲間",
   menFriendship: "男同士の友情",
   lover: "恋の気配",
+  pickup: "ナンパ",
   yuri: "百合の恋",
   tattoo: "刺青",
   fashion: "ファッションショー",
@@ -70,6 +71,7 @@ export const EVENT_MOODS = {
   hobbyFriends: "friendship",
   menFriendship: "friendship",
   lover: "romance",
+  pickup: "romance",
   yuri: "romance",
   tattoo: "selfChange",
   fashion: "selfChange",
@@ -172,6 +174,15 @@ export const EVENT_VILLAGER_LINES = {
     bright: "めっちゃ盛り上がったね！ 友達ってやっぱりいいな！",
     male: "気の合う相手ができた。悪くないな。",
     female: "信頼できる相手がいるのは心強いですね。"
+  },
+  pickup: {
+    polite: "思いきって声をかけてみました。案外、話が弾むものですね。",
+    cool: "声をかけた。結果はどうあれ、動かなければ始まらない。",
+    bold: "黙って見てるだけじゃ何も起きねえ。声をかけてきたぜ！",
+    shy: "こ、声をかけてしまいました……心臓が持ちません……",
+    bright: "思いきって話しかけちゃった！ やってみるもんだね！",
+    male: "気になる相手に声をかけてみた。",
+    female: "思いきって声をかけてみました。"
   },
   lover: {
     polite: "この胸の高鳴りは……丁寧に向き合うべきものですね。",
@@ -305,6 +316,7 @@ export const EVENT_SECOND_LINE_BASES = {
   bathPerk: "長風呂で気分がすっかりほぐれた",
   menFriendship: "こういう相手がいると少し強くなれる気がする",
   lover: "あの人のことが妙に頭から離れない",
+  pickup: "自分から声をかける度胸が出た",
   yuri: "この気持ちは相手が女でも変わらない",
   tattoo: "肌に刻んだ印を見るたび気持ちが引き締まる",
   fashion: "装いひとつで見える景色まで変わる",
