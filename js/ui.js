@@ -208,9 +208,13 @@ function buildWarningMessages(village) {
   }
 
   if (foodCost > 0 && monthsOfFood <= 3) {
+    const foodMonthsText = Math.max(0, monthsOfFood).toFixed(1);
+    const isFoodCritical = monthsOfFood <= 1;
     warnings.push({
-      level: monthsOfFood <= 1 ? "danger" : "warning",
-      text: `食料が尽きそうです。このペースでは約${Math.max(0, monthsOfFood).toFixed(1)}か月で枯渇する可能性があります。`
+      level: isFoodCritical ? "danger" : "warning",
+      text: isFoodCritical
+        ? `食料が尽きかけています。残り約${foodMonthsText}か月分です。`
+        : `食料の備蓄が薄めです（約${foodMonthsText}か月分）。`
     });
   }
 
