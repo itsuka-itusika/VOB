@@ -1,3 +1,5 @@
+import { isSaltPillar } from "../domain/apocalypseRules.js";
+
 export const DEFAULT_PORTRAIT_KEY = "default.png";
 export const BABY_MALE_PORTRAIT_KEY = "malebaby.png";
 export const BABY_FEMALE_PORTRAIT_KEY = "femalebaby.png";
@@ -26,6 +28,8 @@ export const MAENAD_PORTRAIT_FILES = Array.from({ length: 16 }, (_, index) => `M
 export const GOBLIN_PORTRAIT_FILES = Array.from({ length: 13 }, (_, index) => `GOB${index + 1}.png`);
 
 const PORTRAIT_ROOT = "images/portraits";
+const SALT_PILLAR_PORTRAIT_FOLDER = "salt";
+const SALT_PILLAR_PORTRAIT_COUNT = 4;
 const CHILD_SHADOW_PORTRAIT_KEYS = new Set(["CHILD_SHADOW.svg", "CHILD_SHADOW_BABY.svg"]);
 const SYSTEM_PORTRAIT_KEYS = new Set([
   DEFAULT_PORTRAIT_KEY,
@@ -250,7 +254,23 @@ function replaceCharacterPortraitKey(character, field, key) {
   character[field] = key;
 }
 
+/**
+ * 塩の柱は本人の顔ではなく塩像を出す。
+ * 同じ人物なら常に同じ塩像になるよう、名前と元の顔から番号を決める。
+ */
+function getSaltPillarPortraitPath(character) {
+  const seed = `${character?.name ?? ""}/${character?.portraitFile ?? ""}`;
+  let hash = 0;
+  for (let index = 0; index < seed.length; index++) {
+    hash = (hash * 31 + seed.charCodeAt(index)) % 2147483647;
+  }
+  const number = (hash % SALT_PILLAR_PORTRAIT_COUNT) + 1;
+  return `${PORTRAIT_ROOT}/${SALT_PILLAR_PORTRAIT_FOLDER}/SALT${number}.png`;
+}
+
 export function getPortraitAssetPathForCharacter(character) {
+  if (isSaltPillar(character)) return getSaltPillarPortraitPath(character);
+
   const variant = getBodyAgePortraitVariant(character);
   let portraitField = variant === "young" && character?.adultPortraitFile
     ? "adultPortraitFile"
