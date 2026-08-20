@@ -34,6 +34,14 @@ export const CAPTIVE_SOCIAL_COEFFICIENTS = Object.freeze({
   "上位翼人": 0.04,
   "騎馬兵団兵": 0.06
 });
+// 捕虜になった時点で失われる精神特性。群れを率いる立場も神の加護も、囚われた身では保てない。
+const CAPTIVITY_LOST_MIND_TRAITS = Object.freeze([
+  "餓狼",
+  "首長",
+  "秘蹟：剣",
+  "秘蹟：盾",
+  "秘蹟：光"
+]);
 export const MAX_CAPTIVES = 3;
 export const HOLDING_CELL_MAX_CAPTIVES = 1;
 export const CAPTIVE_RELEASE_MONTHS = 6;
@@ -85,10 +93,7 @@ export function isCaptive(person, village) {
 
 export function getCaptiveSocialCoefficient(person) {
   const mindTraits = Array.isArray(person?.mindTraits) ? person.mindTraits : [];
-  const blocksSocialAttempts = mindTraits.some(trait => (
-    trait === "狂信" || String(trait).startsWith("秘蹟：")
-  ));
-  if (blocksSocialAttempts) return 0;
+  if (mindTraits.includes("狂信")) return 0;
 
   const raiderType = String(person?.raiderType || person?.job || "");
   return CAPTIVE_SOCIAL_COEFFICIENTS[raiderType] ?? CAPTIVE_SOCIAL_COEFFICIENT;
@@ -98,7 +103,11 @@ export function normalizeCaptive(person) {
   if (!person) return person;
   person.mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
   person.bodyTraits = Array.isArray(person.bodyTraits) ? person.bodyTraits : [];
-  person.mindTraits = person.mindTraits.filter(trait => trait !== "襲撃者" && trait !== "訪問者");
+  person.mindTraits = person.mindTraits.filter(trait =>
+    trait !== "襲撃者" &&
+    trait !== "訪問者" &&
+    !CAPTIVITY_LOST_MIND_TRAITS.includes(trait)
+  );
   if (!person.mindTraits.includes(CAPTIVE_TRAIT)) {
     person.mindTraits.push(CAPTIVE_TRAIT);
   }
