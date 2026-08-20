@@ -293,7 +293,7 @@ export const RAIDER_TYPES = [
       int: [1, 5],
       ind: [5, 15],
       eth: [5, 15],
-      cou: [27, 34],
+      cou: [20, 25],
       sexdr: [10, 20]
     },
     bodyTraits: ["筋肉質", "毛艶がいい", "精悍", "痩せぎす", "細身", "強面"],
