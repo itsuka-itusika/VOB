@@ -32,6 +32,13 @@ const RAID_BODY_BLOCK_REASONS = [
 const RAID_TRIPLE_DAMAGE_BODY_TRAITS = ["赤子", YOUNG_WOLF_TRAIT, "危篤", "重体"];
 const RAID_DOUBLE_DAMAGE_BODY_TRAITS = ["疫病", "負傷", "過労", "産褥"];
 const HUMAN_BEAST_TRAIT = "人面獣身";
+const RAID_LINE_LABELS = {
+  [ACTION_DEFEND]: "前衛",
+  [ACTION_FORTIFY]: "前衛",
+  [ACTION_SHOOT]: "中衛",
+  [ACTION_CANNON]: "中衛",
+  [ACTION_TRAP]: "後衛"
+};
 const CANNON_BLOCKED_MIND_TRAITS = ["文明忌避", "不殺"];
 
 function traitList(person, key) {
@@ -263,21 +270,33 @@ export function getActiveRaidTrapMakers(village) {
   return sortRaidTrapMakersByPriority(trapMakers).slice(0, getRaidTrapMakerSlotCount(village));
 }
 
-export function isRaidActionSlotAvailable(village, action, person = null) {
-  if (!village || !RAID_ACTIONS.includes(action)) return true;
+function getRaidActionSlotUsage(village, action, person = null) {
+  if (!village || !RAID_ACTIONS.includes(action)) return null;
   const villagers = Array.isArray(village.villagers) ? village.villagers : [];
   const isMiddleAction = RAID_MIDDLE_ACTIONS.includes(action);
-  const assignedCount = isMiddleAction
+  const assigned = isMiddleAction
     ? villagers.filter(item => item !== person && RAID_MIDDLE_ACTIONS.includes(item.action)).length
     : action === ACTION_TRAP
       ? villagers.filter(item => item !== person && item.action === ACTION_TRAP).length
       : villagers.filter(item => item !== person && (item.action === ACTION_DEFEND || item.action === ACTION_FORTIFY)).length;
-  const slotCount = isMiddleAction
+  const slots = isMiddleAction
     ? getRaidMiddleSlotCount(village)
     : action === ACTION_TRAP
       ? getRaidTrapMakerSlotCount(village)
       : getRaidFrontlinerSlotCount(village);
-  return assignedCount < slotCount;
+  return { label: RAID_LINE_LABELS[action], assigned, slots };
+}
+
+export function isRaidActionSlotAvailable(village, action, person = null) {
+  const usage = getRaidActionSlotUsage(village, action, person);
+  return !usage || usage.assigned < usage.slots;
+}
+
+/** 枠が埋まって選べない理由。選べる場合は空文字を返す。 */
+export function getRaidSlotLimitMessage(village, action, person = null) {
+  const usage = getRaidActionSlotUsage(village, action, person);
+  if (!usage || usage.assigned < usage.slots) return "";
+  return `${usage.label}枠が上限に達しています（${usage.assigned}/${usage.slots}）`;
 }
 
 export function getRaidReadiness(village) {

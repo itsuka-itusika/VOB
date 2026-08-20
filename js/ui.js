@@ -62,6 +62,7 @@ import {
   RAID_CANNON_INCOMING_DAMAGE_MULTIPLIER,
   RAID_MIDDLE_INCOMING_DAMAGE_MULTIPLIER,
   getFortifyDamageMultiplier,
+  getRaidSlotLimitMessage,
   isRaidActionSlotAvailable
 } from "./raidRules.js";
 import { getBuildingRequestWarnings } from "./buildingRequests.js";
@@ -910,10 +911,14 @@ function appendActionCell(row, person, village, editable) {
     const option = document.createElement("option");
     const label = getActionOptionLabel(person, action, village);
     option.value = action;
-    const slotUnavailable = RAID_ACTIONS.includes(action) && !isRaidActionSlotAvailable(village, action, person);
-    option.textContent = slotUnavailable ? `${label}（上限）` : label;
-    option.title = getActionOptionTitle(person, action, village);
-    option.disabled = slotUnavailable;
+    const slotLimitMessage = RAID_ACTIONS.includes(action)
+      ? getRaidSlotLimitMessage(village, action, person)
+      : "";
+    option.textContent = label;
+    option.title = [getActionOptionTitle(person, action, village), slotLimitMessage]
+      .filter(Boolean)
+      .join("\n");
+    option.disabled = Boolean(slotLimitMessage);
     if (action === currentAction) option.selected = true;
     select.appendChild(option);
   });

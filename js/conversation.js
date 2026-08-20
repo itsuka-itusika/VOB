@@ -5,7 +5,7 @@ import { ACTION_NONE, refreshJobTable, setPreferredAction } from "./domain/jobTa
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { getPermanentStat } from "./domain/statLayers.js";
 import { DEFAULT_PORTRAIT_KEY, getPortraitAssetPath } from "./data/portraitPaths.js";
-import { ACTION_CANNON, ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT, ACTION_TRAP, RAID_ACTIONS, canPerformRaidAction, isRaidActionSlotAvailable } from "./raidRules.js";
+import { ACTION_CANNON, ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT, ACTION_TRAP, RAID_ACTIONS, canPerformRaidAction, getRaidSlotLimitMessage } from "./raidRules.js";
 import { getConversationLine } from "./dialogue/dialogueEngine.js";
 import { recordVillagerJoinHistory } from "./history.js";
 import { MERCHANT_SECRET_TREASURE_LINES } from "./data/dialogue/visitorLines.js";
@@ -271,10 +271,10 @@ export function openConversationModal(character) {
       .filter(def => canPerformRaidAction(character, def.action, theVillage))
       .map(def => {
         // 村人一覧のプルダウンと同じ基準で、隊列の枠が埋まっている行動は選べないようにする。
-        const slotUnavailable = !isRaidActionSlotAvailable(theVillage, def.action, character);
-        const label = slotUnavailable ? `${def.action}（上限）` : def.action;
+        const slotLimitMessage = getRaidSlotLimitMessage(theVillage, def.action, character);
         const activeClass = character.action === def.action ? "active-action" : "";
-        return `<button id="${def.id}" class="${activeClass}"${slotUnavailable ? " disabled" : ""}>${label}</button>`;
+        const disabledAttr = slotLimitMessage ? ` disabled title="${slotLimitMessage}"` : "";
+        return `<button id="${def.id}" class="${activeClass}"${disabledAttr}>${def.action}</button>`;
       });
     actionButtons.innerHTML = buttons.join("");
     actionButtons.style.display = buttons.length > 0 ? "block" : "none";
