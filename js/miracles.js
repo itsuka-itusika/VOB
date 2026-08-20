@@ -789,7 +789,7 @@ export function performMiracle(village) {
             showMiracleResultModal(
               village,
               "清拭の奇跡",
-              "清めの香草酒の香りが村を満たしました。",
+              "清めの酒の強い匂いが村を満たしました。",
               speaker ? [speaker] : [],
               { allowEmpty: true }
             );
