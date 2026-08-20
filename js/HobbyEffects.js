@@ -2,6 +2,10 @@ import { clampValue, randInt } from "./util.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { addAcquiredStat } from "./domain/statLayers.js";
 import { getActiveVillagers } from "./domain/apocalypseRules.js";
+import { addDivineMight } from "./divineMight.js";
+
+// 趣味によるステータス変動の発生率倍率。全趣味に一律で掛かる。
+const HOBBY_STAT_CHANGE_RATE = 0.4;
 
 export class HobbyEffects {
   static apply(p, v) {
@@ -156,7 +160,7 @@ export class HobbyEffects {
   static applyFighting(p, v) {
     p.hp = clampValue(p.hp-10, 0, 100);
     v.security = clampValue(v.security-10, 0, 100);
-    if (Math.random() < 0.5) {
+    if (this.rollHobbyStatChange(0.5)) {
       addAcquiredStat(p, "cou", 1);
       return "(喧嘩:体力-10,治安-10,勇気+1)";
     }
@@ -165,7 +169,7 @@ export class HobbyEffects {
 
   static applyTraining(p, v) {
     p.hp = clampValue(p.hp-10, 0, 100);
-    if (Math.random() < 0.5) {
+    if (this.rollHobbyStatChange(0.5)) {
       addAcquiredStat(p, "str", 1);
       return "(筋トレ:体力-10,筋力+1)";
     }
@@ -176,7 +180,7 @@ export class HobbyEffects {
     if (v.food >= 10) {
       v.food -= 10;
       p.hp = clampValue(p.hp+50, 0, 100);
-      if (Math.random() < 0.5) {
+      if (this.rollHobbyStatChange(0.5)) {
         addAcquiredStat(p, "vit", 1);
         return "(ドカ食い:食料-10,体力+50,耐久+1)";
       }
@@ -205,10 +209,10 @@ export class HobbyEffects {
         v.mana = clampValue(v.mana+gain, 0, 99999);
         msg += `,男性幸福+5,魔素+${gain}`;
       }
-      if (Math.random() < 0.5) {
+      if (this.rollHobbyStatChange(0.5)) {
         addAcquiredStat(p, "sexdr", 1);
       }
-      if (Math.random() < 0.5) {
+      if (this.rollHobbyStatChange(0.5)) {
         addAcquiredStat(p, "eth", -1);
       }
       return msg + ")";
@@ -224,7 +228,7 @@ export class HobbyEffects {
       });
       let g = Math.floor(p.mag * p.chr/40);
       v.mana = clampValue(v.mana+g, 0, 99999);
-      if (Math.random() < 0.5) {
+      if (this.rollHobbyStatChange(0.5)) {
         addAcquiredStat(p, "sexdr", 1);
       }
       return `(自家発電[女]:体力-20,男性幸福+3,魔素+${g})`;
@@ -232,8 +236,12 @@ export class HobbyEffects {
     return "(自家発電[男]:体力-20,効果小)";
   }
 
+  static rollHobbyStatChange(chance) {
+    return Math.random() < (Number(chance) || 0) * HOBBY_STAT_CHANGE_RATE;
+  }
+
   static maybeRaiseStat(p, stat, chance, amount = 1) {
-    if (Math.random() < chance) {
+    if (this.rollHobbyStatChange(chance)) {
       addAcquiredStat(p, stat, amount);
       return `,${this.statLabel(stat)}${amount >= 0 ? "+" : ""}${amount}`;
     }
@@ -372,7 +380,8 @@ export class HobbyEffects {
     p.mp = clampValue(p.mp + 20, 0, 100);
     p.happiness = clampValue(p.happiness + 10, 0, 100);
     v.security = clampValue(v.security - 3, 0, 100);
-    return `(飲酒:メンタル+20,幸福+10,治安-3${this.maybeRaiseStat(p, "cou", 0.2)})`;
+    addDivineMight(v, 1);
+    return `(飲酒:メンタル+20,幸福+10,治安-3,神威+1${this.maybeRaiseStat(p, "cou", 0.2)})`;
   }
 
   static applyInvestment(p, v) {
