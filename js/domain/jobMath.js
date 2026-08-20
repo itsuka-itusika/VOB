@@ -181,6 +181,7 @@ export function getLaborYieldMultiplier(job, person = null, village = null) {
   if (hasBodyTrait(person, SENSITIVE_FINGERS_TRAIT) && job === "内職") mul *= 1.2;
   if ((person?.hobby === "ハンティング" || person?.hobby === "狩猟" || person?.hobby === "狩り") && job === "狩猟") mul *= 1.1;
   if (person?.hobby === "釣り" && job === "漁") mul *= 1.1;
+  if ((person?.hobby === "読書" || person?.hobby === "自由研究") && job === "研究") mul *= 1.1;
   if (hasMindTrait(person, MID_TEEN_TRAIT) && YOUTH_WORK_JOBS.includes(job)) mul *= 0.8;
   return mul;
 }
