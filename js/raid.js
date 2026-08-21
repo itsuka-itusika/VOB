@@ -1031,6 +1031,9 @@ function doCounterAttack(counterActor, target, village, result) {
   rdmg = applyIncomingDamageModifiers(rdmg, target, village);
   let retTypeText=ret.isMagic? "魔法攻撃":"物理攻撃";
   const saltPillarShattered = applyRaidDamage(target, rdmg);
+  if (!isEnemyUnit(counterActor, village)) {
+    recordRaidFriendshipDamage(village, counterActor, rdmg);
+  }
   addRaidDamageAnimation(result, counterActor, target, rdmg, true, ret.isMagic ? "魔法で反撃" : "反撃");
   addRaidActionLog(result, `　　→ 反撃(${retTypeText}):${counterActor.name}→${target.name}に${rdmg}ダメージ`);
   if (saltPillarShattered) addSaltPillarShatterLog(result, target);
