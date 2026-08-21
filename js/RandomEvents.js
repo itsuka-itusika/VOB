@@ -161,8 +161,8 @@ export class RandomEvents {
     } finally {
       village.log = originalLog;
     }
-    if (!eventKey) return;
-    if (this.shouldSuppressRandomEventAnnouncement(eventKey)) return;
+    if (!eventKey) return null;
+    if (this.shouldSuppressRandomEventAnnouncement(eventKey)) return eventKey;
 
     const changedVillagers = this.collectChangedVillagers(village, beforeState);
     let speakers = [...new Set([...changedVillagers, ...this._forcedSpeakers])];
@@ -189,6 +189,7 @@ export class RandomEvents {
       console.error("Random event announcement failed", error);
       originalLog("ランダムイベント通知の表示に失敗しましたが、処理を継続します。");
     }
+    return eventKey;
   }
 
   static shouldSuppressRandomEventAnnouncement(eventKey) {
@@ -205,8 +206,28 @@ export class RandomEvents {
 
   static runEventByKind(village, kind) {
     if (kind === "mythic") return this.doMythicEvent(village);
-    if (kind === "good") return this.doGoodEvent(village);
-    if (kind === "bad") return this.doBadEvent(village);
+    if (kind === "good" || kind === "bad") return this.runPooledEvent(village, kind);
+    return null;
+  }
+
+  /**
+   * 抽選で選んだイベントが条件を満たさず不発だった場合、その種類を除いて引き直す。
+   * 不発の分岐はいずれも副作用の前に抜けるため、引き直しても二重に適用されない。
+   */
+  static runPooledEvent(village, kind) {
+    const excluded = new Set();
+    const poolSize = (EVENT_POOLS[kind] || []).length;
+    for (let attempt = 0; attempt < poolSize; attempt++) {
+      const eventKey = kind === "good"
+        ? this.chooseGoodEvent(excluded)
+        : this.chooseBadEvent(village, excluded);
+      if (!eventKey) return null;
+      excluded.add(eventKey);
+      const result = kind === "good"
+        ? this.doGoodEvent(village, eventKey)
+        : this.doBadEvent(village, eventKey);
+      if (result) return result;
+    }
     return null;
   }
 
@@ -218,9 +239,10 @@ export class RandomEvents {
    */
   static execute(v, phase, options = {}) {
     const kind = this.chooseEventKind(options);
-    if (kind) {
-      this.runWithAnnouncement(v, phase, kind, () => this.runEventByKind(v, kind));
-    } else {
+    const eventKey = kind
+      ? this.runWithAnnouncement(v, phase, kind, () => this.runEventByKind(v, kind))
+      : null;
+    if (!eventKey) {
       v.log(`[${phase}イベント] 何も起こらず`);
     }
   }
@@ -310,8 +332,8 @@ export class RandomEvents {
   /**
    * グッドイベント(24%)
    */
-  static doGoodEvent(v) {
-    let ev = this.chooseGoodEvent();
+  static doGoodEvent(v, eventKey = null) {
+    let ev = eventKey || this.chooseGoodEvent();
 
     switch (ev) {
       case "wolfChild": {
@@ -646,8 +668,11 @@ export class RandomEvents {
     return ev;
   }
 
-  static chooseGoodEvent() {
-    const events = EVENT_POOLS.good;
+  static chooseGoodEvent(excluded = null) {
+    const events = excluded && excluded.size > 0
+      ? EVENT_POOLS.good.filter(key => !excluded.has(key))
+      : EVENT_POOLS.good;
+    if (events.length === 0) return null;
     const otherEvents = events.filter(key => key !== "lover");
     if (!events.includes("lover") || otherEvents.length === 0) {
       return this.randChoice(events);
@@ -713,19 +738,21 @@ export class RandomEvents {
     return weighted[weighted.length - 1].key;
   }
 
-  static chooseBadEvent(village) {
+  static chooseBadEvent(village, excluded = null) {
     const season = this.getCurrentSeason(village);
-    return this.chooseWeightedEvent(EVENT_POOLS.bad.map(key => ({
-      key,
-      weight: this.getBadEventWeight(key, season)
-    })));
+    return this.chooseWeightedEvent(EVENT_POOLS.bad
+      .filter(key => !excluded || !excluded.has(key))
+      .map(key => ({
+        key,
+        weight: this.getBadEventWeight(key, season)
+      })));
   }
 
   /**
    * バッドイベント(15%)
    */
-  static doBadEvent(v) {
-    let ev = this.chooseBadEvent(v);
+  static doBadEvent(v, eventKey = null) {
+    let ev = eventKey || this.chooseBadEvent(v);
     if (!ev) return null;
 
     switch (ev) {
