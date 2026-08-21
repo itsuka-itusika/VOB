@@ -8,6 +8,8 @@ export const ACTION_SHOOT = "射撃";
 export const ACTION_CANNON = "火砲";
 export const ACTION_FORTIFY = "籠城";
 export const TRAIT_UNDER_RAID = "襲撃中";
+// 罠で付与する一時状態。付与された次の戦闘ターンだけ行動できない。
+export const RAID_STUN_EFFECT = "足止め";
 export const RAID_MIDDLE_ACTIONS = [ACTION_SHOOT, ACTION_CANNON];
 export const RAID_ACTIONS = [ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT, ACTION_CANNON, ACTION_TRAP];
 export const RAID_COMBAT_ACTIONS = [ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT, ACTION_CANNON];
@@ -43,6 +45,22 @@ const CANNON_BLOCKED_MIND_TRAITS = ["文明忌避"];
 // 戦いそのものを拒む精神特性。身を守る籠城だけは選べる。
 const PACIFIST_MIND_TRAITS = ["不殺", "非戦主義"];
 
+export function hasRaidStunEffect(person) {
+  return Array.isArray(person?.raidEffects) && person.raidEffects.includes(RAID_STUN_EFFECT);
+}
+
+export function applyRaidStunEffect(person) {
+  if (!person || hasRaidStunEffect(person)) return false;
+  if (!Array.isArray(person.raidEffects)) person.raidEffects = [];
+  person.raidEffects.push(RAID_STUN_EFFECT);
+  return true;
+}
+
+export function clearRaidStunEffect(person) {
+  if (!Array.isArray(person?.raidEffects)) return;
+  person.raidEffects = person.raidEffects.filter(effect => effect !== RAID_STUN_EFFECT);
+}
+
 function traitList(person, key) {
   return Array.isArray(person?.[key]) ? person[key] : [];
 }
@@ -58,6 +76,7 @@ function hasCommonRaidBlockingCondition(person) {
 export function getRaidActionBlockReason(person, action = "", { ignoreRoleTraits = false } = {}) {
   if (!person) return "不在";
   if ((Number(person.hp) || 0) <= 0) return "体力尽き";
+  if (hasRaidStunEffect(person)) return RAID_STUN_EFFECT;
 
   const bodyTraits = traitList(person, "bodyTraits");
   const mindTraits = traitList(person, "mindTraits");
@@ -115,7 +134,8 @@ export function getRaidActionSkipMessage(person, action = "戦闘", options = {}
     "文明忌避": `${name}は文明の産物である${label}に触れようとしない。`,
     "不殺": `${name}は不殺の誓いを守り、${label}に加わらない。`,
     "非戦主義": `${name}は戦いを望まず、${label}に加わらない。`,
-    "体力尽き": `${name}は体力が尽きており、行動できない。`
+    "体力尽き": `${name}は体力が尽きており、行動できない。`,
+    [RAID_STUN_EFFECT]: `${name}は足を取られ、身動きが取れない。`
   };
   return `【${label}】${messages[reason] || `${name}は行動不能。`}`;
 }

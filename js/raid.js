@@ -20,11 +20,14 @@ import {
   RAID_CANNON_INCOMING_DAMAGE_MULTIPLIER,
   RAID_MIDDLE_ACTIONS,
   RAID_MIDDLE_INCOMING_DAMAGE_MULTIPLIER,
+  applyRaidStunEffect,
   canPerformRaidAction,
+  clearRaidStunEffect,
   getFortifyDamageMultiplier,
   getRaidActionBlockReason,
   getRaidActionSkipMessage,
   getRaiderIncomingDamageMultiplier,
+  hasRaidStunEffect,
   getActiveRaidFrontliners,
   getActiveRaidMiddleliners,
   getActiveRaidTrapMakers,
@@ -746,6 +749,8 @@ function doOneTrapAction(action, village) {
     addRaidDepartureAnimation(result, e, "撃退");
     recordDefeatedRaidEnemy(village, e);
     scheduleDefeatedEnemyDeparture(e);
+  } else if (hasTrait(p, "糸吐き") && applyRaidStunEffect(e)) {
+    addRaidActionLog(result, `　　→ ${p.name}の糸が${e.name}を絡め取った！次のターン、${e.name}は行動できない`);
   }
   return result;
 }
@@ -925,6 +930,10 @@ function doOneCombatAction(action, village) {
   return result;
 }
 
+function clearAllRaidStunEffects(village) {
+  (Array.isArray(village?.raidEnemies) ? village.raidEnemies : []).forEach(clearRaidStunEffect);
+}
+
 function canActInCombat(actor, village) {
   if (!actor || actor.hp <= 0) return false;
   if (isEnemyUnit(actor, village)) {
@@ -1004,6 +1013,7 @@ function applyIncomingDamageModifiers(damage, target, village) {
 }
 
 function canCounterAttack(target, village) {
+  if (hasRaidStunEffect(target)) return false;
   return getCombatPosition(target, village) === RAID_POSITION_FRONT;
 }
 
@@ -1066,6 +1076,8 @@ function calcAttackDamage(atk, def, isCounter) {
 /** 全アクション完了後にターン終了 */
 function finalizeCombatTurn(village) {
   let logDiv=document.getElementById("raidLogArea");
+
+  clearAllRaidStunEffects(village);
 
   let combatants = getVillageCombatants(village);
   let enemies   = getAliveEnemies(village);
@@ -1152,6 +1164,7 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
   village.raidActionQueue = [];
   village.raidPhase = "";
   village.currentActionIndex = 0;
+  clearAllRaidStunEffects(village);
   setRaidActionButtonState(true, "終了処理中...");
   const nextTurnButton = document.getElementById("nextTurnButton");
   if (nextTurnButton) {
