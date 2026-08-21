@@ -57,7 +57,8 @@ const EFFECT_RESULT_DIALOGUES = {
   "ネクタル": { scene: "secretTreasure", key: "nectar" },
   "奇妙な計算機械": { scene: "secretTreasure", key: "strangeCalculator" },
   "蛇の巻き付いた杖": { scene: "secretTreasure", key: "serpentStaff" },
-  "クロノスの秘薬": { scene: "secretTreasure", key: "chronosElixir" }
+  "クロノスの秘薬": { scene: "secretTreasure", key: "chronosElixir" },
+  "腕の無い天使像": { scene: "secretTreasure", key: "armlessAngel" }
 };
 
 function getAlcoholMiracleRecoveryAmount(person, baseAmount) {
@@ -1272,16 +1273,15 @@ const MIRACLE_RESULT_MAX_SPEAKERS = 3;
 
 // 代表を選ぶ際、同じセリフになる相手は後回しにしてセリフの重複を避ける。
 function pickMiracleResultSpeakers(targets, miracleName) {
-  if (targets.length <= MIRACLE_RESULT_MAX_SPEAKERS) {
-    return targets.map(person => ({ person, line: getGenericMiracleLine(person, miracleName) }));
-  }
   const picked = [];
   const usedLines = new Set();
-  shuffleArray(targets).forEach(person => {
+  // 上限より多いときだけ、誰が代表になるかを毎回変える。
+  const candidates = targets.length > MIRACLE_RESULT_MAX_SPEAKERS ? shuffleArray(targets) : targets;
+  candidates.forEach(person => {
     if (picked.length >= MIRACLE_RESULT_MAX_SPEAKERS) return;
     const line = getGenericMiracleLine(person, miracleName);
-    if (usedLines.has(line)) return;
-    usedLines.add(line);
+    if (line && usedLines.has(line)) return;
+    if (line) usedLines.add(line);
     picked.push({ person, line });
   });
   return picked;
@@ -1404,13 +1404,29 @@ function getBodyExchangeLineKey(person) {
   return resolveDialogueTone(person);
 }
 
-function getBodyExchangeReactionLine(person) {
-  const type = getBodyExchangeLineKey(person);
-  const fallbackType = person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ";
-  return randFrom(BODY_EXCHANGE_REACTION_LINES[type] || BODY_EXCHANGE_REACTION_LINES[fallbackType] || BODY_EXCHANGE_REACTION_LINES["普通Ｍ"]);
+/**
+ * 同じ画面に並ぶ人物へ、まだ使っていないセリフを優先して配る。
+ * 候補を使い切った場合は重複を許し、誰かの発言が欠けないようにする。
+ */
+function pickLineAvoidingUsed(lines, usedLines) {
+  const list = Array.isArray(lines) ? lines : [];
+  if (!usedLines) return randFrom(list);
+  const unused = list.filter(line => !usedLines.has(line));
+  const line = randFrom(unused.length > 0 ? unused : list);
+  if (line) usedLines.add(line);
+  return line;
 }
 
-function createPanFluteExchangePerson(person) {
+function getBodyExchangeReactionLine(person, usedLines = null) {
+  const type = getBodyExchangeLineKey(person);
+  const fallbackType = person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ";
+  const lines = BODY_EXCHANGE_REACTION_LINES[type] ||
+    BODY_EXCHANGE_REACTION_LINES[fallbackType] ||
+    BODY_EXCHANGE_REACTION_LINES["普通Ｍ"];
+  return pickLineAvoidingUsed(lines, usedLines);
+}
+
+function createPanFluteExchangePerson(person, line) {
   const wrapper = document.createElement("div");
   wrapper.className = "pan-flute-person";
 
@@ -1432,10 +1448,10 @@ function createPanFluteExchangePerson(person) {
   dialogue.className = "pan-flute-dialogue";
   const name = document.createElement("strong");
   name.textContent = `${person.name}:`;
-  const line = document.createElement("span");
-  line.textContent = getBodyExchangeReactionLine(person);
+  const lineElement = document.createElement("span");
+  lineElement.textContent = line;
   dialogue.appendChild(name);
-  dialogue.appendChild(line);
+  dialogue.appendChild(lineElement);
 
   wrapper.appendChild(portraitArea);
   wrapper.appendChild(dialogue);
@@ -1454,6 +1470,14 @@ export function openPanFluteExchangeModal(pairs, options = {}) {
   if (message) message.textContent = options.message || "笛の音に誘われ、魂たちは互いの体を見てざわめいている...";
 
   list.innerHTML = "";
+  // 3組6人が同時に並ぶため、セリフは画面全体で重複を避けて先に決める。
+  const usedLines = new Set();
+  const lineByPerson = new Map();
+  pairs.forEach(pair => {
+    (Array.isArray(pair) ? pair : []).forEach(person => {
+      if (person) lineByPerson.set(person, getBodyExchangeReactionLine(person, usedLines));
+    });
+  });
   pairs.forEach(([personA, personB], index) => {
     const item = document.createElement("div");
     item.className = "pan-flute-pair";
@@ -1464,14 +1488,14 @@ export function openPanFluteExchangeModal(pairs, options = {}) {
 
     const body = document.createElement("div");
     body.className = "pan-flute-pair-body";
-    body.appendChild(createPanFluteExchangePerson(personA));
+    body.appendChild(createPanFluteExchangePerson(personA, lineByPerson.get(personA)));
 
     const arrow = document.createElement("div");
     arrow.className = "pan-flute-arrow";
     arrow.textContent = "⇄";
     body.appendChild(arrow);
 
-    body.appendChild(createPanFluteExchangePerson(personB));
+    body.appendChild(createPanFluteExchangePerson(personB, lineByPerson.get(personB)));
     item.appendChild(label);
     item.appendChild(body);
     list.appendChild(item);
@@ -1532,22 +1556,18 @@ export function openExchangeModal(personA, personB, options = {}) {
     portraitB.src = DEFAULT_PORTRAIT_PATH;
   }
 
-  const speechTypeA = getBodyExchangeLineKey(personA);
-  const speechTypeB = getBodyExchangeLineKey(personB);
-
-  // 入れ替わり時のセリフをランダムに選択
-  const getRandomLine = (patterns, type, person) => {
-    const fallbackType = person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ";
-    return randFrom(patterns[type] || patterns[fallbackType] || patterns["普通Ｍ"]);
-  };
+  // 入れ替わり時のセリフを選ぶ。二人が並ぶため、同じ文にならないようにする。
+  const usedLines = new Set();
+  const lineA = getBodyExchangeReactionLine(personA, usedLines);
+  const lineB = getBodyExchangeReactionLine(personB, usedLines);
 
   // 会話テキストを設定
   textA.innerHTML = `
-    <p><strong>${personA.name}:</strong> ${getRandomLine(BODY_EXCHANGE_REACTION_LINES, speechTypeA, personA)}</p>
+    <p><strong>${personA.name}:</strong> ${lineA}</p>
   `;
 
   textB.innerHTML = `
-    <p><strong>${personB.name}:</strong> ${getRandomLine(BODY_EXCHANGE_REACTION_LINES, speechTypeB, personB)}</p>
+    <p><strong>${personB.name}:</strong> ${lineB}</p>
   `;
 
   overlay.style.display = "block";
