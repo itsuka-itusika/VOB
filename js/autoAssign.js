@@ -227,6 +227,7 @@ function getJobTraitMultiplier(person, job, village) {
   if (villageTraits.includes("冬") && job === "農作業") mul *= 0.5;
   if (villageTraits.includes("冬") && job === "狩猟") mul *= 1.2;
   if (villageTraits.includes("冷夏") && ["農作業", "伐採"].includes(job)) mul *= 0.5;
+  if (villageTraits.includes("飛蝗") && ["農作業", "採集", "伐採", "醸造"].includes(job)) mul *= 0.2;
 
   if (hasTrait(person, "緑の指") && ["農作業", "伐採", "採集", "醸造"].includes(job)) mul *= 1.2;
   if (hasTrait(person, "大地の巫女") && ["農作業", "醸造"].includes(job)) mul *= 1.5;

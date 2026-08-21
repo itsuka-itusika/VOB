@@ -52,7 +52,7 @@ import { showDictionaryEntry } from "./dictionary.js";
 import { combinedDictionaryData } from "./data/dictionaryData.js";
 import { getPortraitPath, getVillagerFoodConsumption } from "./util.js";
 import { openPersonalHistoryModal } from "./history.js";
-import { formatRelationshipsForDisplay, normalizeRelationship } from "./relationships.js";
+import { formatRelationshipsForDisplay, hasHobbyMateRelationship } from "./relationships.js";
 import { getCaptives } from "./captives.js";
 import { getTutorialWarnings } from "./tutorial.js";
 import { applyVillageScaleArtClass, getVillageScaleTitle } from "./villageScale.js";
@@ -61,6 +61,7 @@ import {
   RAID_ACTIONS,
   RAID_CANNON_INCOMING_DAMAGE_MULTIPLIER,
   RAID_MIDDLE_INCOMING_DAMAGE_MULTIPLIER,
+  applyOffensiveTraitDamage,
   getFortifyDamageMultiplier,
   getRaidSlotLimitMessage,
   isRaidActionSlotAvailable
@@ -414,14 +415,6 @@ function jobMindCost(job, stat, person, village) {
   return mindCost(getJobCostType(job).mind, stat, person, village);
 }
 
-function hasCurrentHobbyMate(person) {
-  if (!person.hobby || !Array.isArray(person.relationships)) return false;
-  return person.relationships.some(rel => {
-    const normalized = normalizeRelationship(rel);
-    return normalized.includes(`${person.hobby}仲間：`);
-  });
-}
-
 function formatEstimate(parts) {
   return parts
     .filter(Boolean)
@@ -482,8 +475,6 @@ function getRandomTradingRewardPart(person, calculateYield = calculateTradingYie
 }
 
 function estimateDefendDamage(person, village) {
-  if (hasTrait(person, "非戦主義")) return 0;
-
   const enemies = Array.isArray(village.raidEnemies)
     ? village.raidEnemies.filter(enemy => Number(enemy.hp) > 0)
     : [];
@@ -492,11 +483,7 @@ function estimateDefendDamage(person, village) {
     : 0;
   const physical = Math.max(0, Math.floor((((Number(person.str) || 0) * (Number(person.cou) || 0)) / 400) * 50 - avgEnemyVit));
   const magical = Math.max(0, Math.floor((((Number(person.mag) || 0) * (Number(person.cou) || 0)) / 400) * 25));
-  let damage = Math.max(physical, magical);
-  if (hasTrait(person, "歴戦")) {
-    damage = Math.floor(damage * 1.2);
-  }
-  return damage;
+  return applyOffensiveTraitDamage(person, Math.max(physical, magical));
 }
 
 function estimateTrapDamage(person) {
@@ -504,7 +491,8 @@ function estimateTrapDamage(person) {
 }
 
 function estimateCannonDamage(person) {
-  return Math.max(0, Math.floor((((Number(person.mag) || 0) * (Number(person.int) || 0)) / 400) * 20));
+  const base = Math.max(0, Math.floor((((Number(person.mag) || 0) * (Number(person.int) || 0)) / 400) * 20));
+  return applyOffensiveTraitDamage(person, base);
 }
 
 function estimateShootDamage(person, village) {
@@ -514,7 +502,8 @@ function estimateShootDamage(person, village) {
   const avgEnemyVit = enemies.length > 0
     ? enemies.reduce((sum, enemy) => sum + (Number(enemy.vit) || 0), 0) / enemies.length
     : 0;
-  return Math.max(0, Math.floor((((Number(person.dex) || 0) * (Number(person.cou) || 0)) / 400) * 40 - avgEnemyVit * 1.5));
+  const base = Math.max(0, Math.floor((((Number(person.dex) || 0) * (Number(person.cou) || 0)) / 400) * 40 - avgEnemyVit * 1.5));
+  return applyOffensiveTraitDamage(person, base);
 }
 
 function getTaskEstimateParts(person, task, village) {
@@ -529,8 +518,9 @@ function getTaskEstimateParts(person, task, village) {
   const str = Number(person.str) || 0;
   const vit = Number(person.vit) || 0;
   const clinic = hasActiveBuildingFlag(village, "hasClinic", "clinic");
-  const affectedMen = village.villagers.filter(v => v.spiritSex === "男").length;
-  const affectedWomen = village.villagers.filter(v => v.spiritSex === "女").length;
+  const activeVillagers = getActiveVillagers(village);
+  const affectedMen = activeVillagers.filter(v => v.spiritSex === "男").length;
+  const affectedWomen = activeVillagers.filter(v => v.spiritSex === "女").length;
   const affectedAll = village.villagers.length;
   let gain = 0;
   let parts = [];
@@ -551,7 +541,7 @@ function getTaskEstimateParts(person, task, village) {
     }
     case "余暇": {
       let mp = person.mindTraits.includes("ニート") ? 100 : 50;
-      if (hasCurrentHobbyMate(person)) mp = Math.round(mp * 1.5);
+      if (hasHobbyMateRelationship(person)) mp = Math.round(mp * 1.5);
       parts = [`メンタル+${mp}`];
       break;
     }

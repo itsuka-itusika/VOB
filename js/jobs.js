@@ -47,6 +47,7 @@ import { completeTutorialTask } from "./tutorial.js";
 import { incrementTitleCounter, TITLE_COUNTER_KEYS } from "./titles.js";
 import { addDivineMight, showPendingDivineMightLevelUpModal } from "./divineMight.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
+import { hasHobbyMateRelationship } from "./relationships.js";
 
 const BASE_JOB_STAT_GROWTH_CHANCE = 0.05;
 const PHYSICAL_JOB_GROWTH_STATS = new Set(["str", "vit", "dex", "mag", "chr"]);
@@ -416,11 +417,6 @@ function doRestJob(p, v) {
   v.log(`${p.name}休養:${msg} 体力+${hpG},メンタル+${mpG}`);
 }
 
-function hasCurrentHobbyMate(p) {
-  if (!p.hobby || !Array.isArray(p.relationships)) return false;
-  return p.relationships.some(rel => rel.startsWith(`${p.hobby}仲間:`));
-}
-
 function doLeisureJob(p, v) {
   let base=50;
   let hobbyMateMsg = "";
@@ -428,7 +424,7 @@ function doLeisureJob(p, v) {
     base=100;
     p.happiness=clampValue(p.happiness+20,0,100);
   }
-  if (hasCurrentHobbyMate(p)) {
+  if (hasHobbyMateRelationship(p)) {
     base = Math.round(base * 1.5);
     hobbyMateMsg = ",趣味仲間効果";
   }

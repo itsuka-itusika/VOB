@@ -132,6 +132,16 @@ export function isPacifistFighter(person) {
   return hasAnyTrait(traitList(person, "mindTraits"), PACIFIST_MIND_TRAITS);
 }
 
+/** 攻撃特性による与ダメージ補正。想定ダメージ表示と実戦闘で同じ値を使う。 */
+export function applyOffensiveTraitDamage(person, damage) {
+  const base = Math.max(0, Math.floor(Number(damage) || 0));
+  if (isPacifistFighter(person)) return 0;
+  const traits = [...traitList(person, "bodyTraits"), ...traitList(person, "mindTraits")];
+  if (traits.includes("歴戦")) return Math.floor(base * 1.2);
+  if (traits.includes("戦慣れ")) return Math.floor(base * 1.1);
+  return base;
+}
+
 /** 前衛に立てるか。迎撃と籠城で共通する条件。 */
 function canJoinRaidFrontLine(person) {
   if (hasCommonRaidBlockingCondition(person)) return false;

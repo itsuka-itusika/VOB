@@ -30,6 +30,7 @@ import {
   getActiveRaidTrapMakers,
   getRaidFrontlinerSlotCount,
   getRaidMiddleSlotCount,
+  applyOffensiveTraitDamage,
   isPacifistFighter,
   isRaidCombatAction
 } from "./raidRules.js";
@@ -971,24 +972,19 @@ function getAttackActionPopLabel(attackResult, isRanged) {
 }
 
 function applyOffensiveTraitModifiers(actor, damage, label, result) {
-  let nextDamage = damage;
   if (hasTrait(actor, "歴戦")) {
-    nextDamage = Math.floor(nextDamage * 1.2);
     addRaidActionLog(result, `${label}${actor.name}は歴戦の経験で強力な攻撃！`);
   } else if (hasTrait(actor, "戦慣れ")) {
-    nextDamage = Math.floor(nextDamage * 1.1);
     addRaidActionLog(result, `${label}${actor.name}は戦慣れした動きで攻め込む！`);
   }
 
   if (hasTrait(actor, "非戦主義")) {
-    nextDamage = 0;
     addRaidActionLog(result, `${label}${actor.name}は非戦主義のため攻撃を拒否！`);
   }
   if (hasTrait(actor, "不殺")) {
-    nextDamage = 0;
     addRaidActionLog(result, `${label}${actor.name}は不殺の誓いにより攻撃を止めた！`);
   }
-  return nextDamage;
+  return applyOffensiveTraitDamage(actor, damage);
 }
 
 function applyIncomingDamageModifiers(damage, target, village) {

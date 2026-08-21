@@ -91,6 +91,13 @@ export function hasLoverRelationship(person) {
   return hasRelationshipPrefix(person, LOVER_RELATION_PREFIXES);
 }
 
+/** 今の趣味の仲間がいるか。余暇のメンタル回復1.5倍の判定に使う。 */
+export function hasHobbyMateRelationship(person) {
+  const hobby = person?.hobby;
+  if (!hobby) return false;
+  return hasRelationshipPrefix(person, new Set([`${hobby}仲間`]));
+}
+
 function getOppositeSex(sex) {
   if (sex === "男") return "女";
   if (sex === "女") return "男";
