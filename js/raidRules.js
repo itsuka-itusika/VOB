@@ -180,6 +180,45 @@ export function estimateRaidActionDamage(person, action, village = null) {
   return applyOffensiveTraitDamage(person, base);
 }
 
+/** 生存中の襲撃者の総体力。防衛の勝ち目を測るのに使う。 */
+export function getEnemyTotalHp(village) {
+  const enemies = Array.isArray(village?.raidEnemies) ? village.raidEnemies : [];
+  return enemies.reduce((sum, enemy) => sum + Math.max(0, Number(enemy.hp) || 0), 0);
+}
+
+/**
+ * 襲撃者1体あたりの平均的な一撃。前衛の消耗を見積もるのに使う。
+ * 実際の被弾は相手の耐久で減るため、村人の平均耐久を差し引く。
+ */
+export function getAverageEnemyAttack(village) {
+  const enemies = Array.isArray(village?.raidEnemies)
+    ? village.raidEnemies.filter(enemy => (Number(enemy.hp) || 0) > 0)
+    : [];
+  if (enemies.length === 0) return 0;
+
+  const villagers = Array.isArray(village?.villagers) ? village.villagers : [];
+  const averageVitality = villagers.length > 0
+    ? villagers.reduce((sum, person) => sum + (Number(person.vit) || 0), 0) / villagers.length
+    : 0;
+
+  const total = enemies.reduce((sum, enemy) => {
+    const stat = key => Number(enemy[key]) || 0;
+    const physical = Math.max(0, (stat("str") * stat("cou") / 400) * 50 - averageVitality);
+    const magical = Math.max(0, (stat("mag") * stat("cou") / 400) * 25);
+    return sum + Math.max(physical, magical);
+  }, 0);
+  return total / enemies.length;
+}
+
+/** その襲撃行動でどれだけ被弾しやすいか。罠は狙われないため0。 */
+export function getRaidIncomingDamageMultiplier(action, village = null) {
+  if (action === ACTION_DEFEND) return 1;
+  if (action === ACTION_FORTIFY) return getFortifyDamageMultiplier(village);
+  if (action === ACTION_SHOOT) return RAID_MIDDLE_INCOMING_DAMAGE_MULTIPLIER;
+  if (action === ACTION_CANNON) return RAID_CANNON_INCOMING_DAMAGE_MULTIPLIER;
+  return 0;
+}
+
 /** 前衛に立てるか。迎撃と籠城で共通する条件。 */
 function canJoinRaidFrontLine(person) {
   if (hasCommonRaidBlockingCondition(person)) return false;

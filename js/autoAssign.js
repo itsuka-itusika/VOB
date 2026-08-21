@@ -6,12 +6,35 @@ import {
   ACTION_MASSAGE_FEMALE,
   ACTION_MASSAGE_MALE,
   ACTION_SALT_PILLAR,
-  MASSAGE_ACTIONS,
   isTemporaryAction,
   refreshJobTable,
   setPreferredAction
 } from "./domain/jobTables.js";
 import { getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "./util.js";
+import {
+  calculateAlchemyYield,
+  calculateApprenticeYield,
+  calculateBrewingYield,
+  calculateBunnySupport,
+  calculateCopyBookYield,
+  calculateDancerHappiness,
+  calculateFarmYield,
+  calculateFishYield,
+  calculateGatherYield,
+  calculateGuardYield,
+  calculateHandiworkYield,
+  calculateHuntYield,
+  calculateLumberYield,
+  calculateMassageHeal,
+  calculateMikoMana,
+  calculateNurseHeal,
+  calculatePoetHappiness,
+  calculatePriestMindHeal,
+  calculateResearchAssistantYield,
+  calculateResearchYield,
+  calculateTradingYield,
+  calculateWeavingYield
+} from "./domain/jobMath.js";
 import {
   ACTION_CANNON,
   ACTION_DEFEND,
@@ -32,105 +55,35 @@ import {
   isRaidActive
 } from "./raidRules.js";
 import { getCaptives } from "./captives.js";
-import {
-  VILLAGE_ROLE_DOCTOR,
-  VILLAGE_ROLE_LIBRARIAN,
-  VILLAGE_ROLE_PRIEST,
-  hasVillageRole
-} from "./domain/villageRoles.js";
 
 const JOB_NONE = ACTION_NONE;
 const JOB_REST = ACTION_REST;
 const JOB_LEISURE = ACTION_LEISURE;
 const JOB_HEAL = "\u7642\u990a";
 const JOB_LAST_MOMENTS = "\u81e8\u7d42";
-const JOB_FOOD_SET = new Set([
-  "\u8fb2\u4f5c\u696d",
-  "\u72e9\u731f",
-  "\u6f01",
-  "\u63a1\u96c6",
-  "\u91b8\u9020"
-]);
-const JOB_FOOD_PRIORITY = {
-  "\u8fb2\u4f5c\u696d": 1.15,
-  "\u63a1\u96c6": 1.05,
-  "\u91b8\u9020": 1.0,
-  "\u72e9\u731f": 0.82,
-  "\u6f01": 0.8
-};
-const JOB_MATERIAL_SET = new Set([
-  "\u4f10\u63a1",
-  "\u63a1\u96c6"
-]);
-const JOB_FUNDS_SET = new Set([
-  "\u5185\u8077",
-  "\u884c\u5546",
-  "\u4e01\u7a1a",
-  "\u932c\u91d1\u8853",
-  "\u5199\u672c",
-  "\u6a5f\u7e54\u308a"
-]);
-const OTHER_RECOVERY_JOB_SET = new Set([
-  "\u770b\u8b77",
-  ...MASSAGE_ACTIONS
-]);
 const SELF_RECOVERY_ACTION_SET = new Set([
   "\u7642\u990a",
   "\u4f11\u990a",
   "\u4f59\u6687"
 ]);
 
-const JOB_WEIGHTS = {
-  "\u8fb2\u4f5c\u696d": { vit: 2, ind: 2 },
-  "\u4f10\u63a1": { str: 2, ind: 2 },
-  "\u72e9\u731f": { str: 2, cou: 2 },
-  "\u6f01": { vit: 2, cou: 2 },
-  "\u63a1\u96c6": { dex: 2, int: 2 },
-  "\u5185\u8077": { dex: 2, ind: 2 },
-  "\u7814\u7a76": { int: 2, mag: 2 },
-  "\u7814\u7a76\u52a9\u624b": { int: 2, mag: 2 },
-  "\u8b66\u5099": { str: 2, eth: 2 },
-  "\u770b\u8b77": { mag: 2, eth: 2 },
-  "\u8e0a\u308a\u5b50": { chr: 2, sexdr: 2 },
-  "\u8a69\u4eba": { chr: 4 },
-  "\u30b7\u30b9\u30bf\u30fc": { chr: 2, eth: 2 },
-  "\u795e\u5b98": { chr: 2, eth: 2 },
-  "\u884c\u5546": { chr: 2, int: 2 },
-  "\u4e01\u7a1a": { chr: 2, int: 2 },
-  "\u3042\u3093\u307e": { str: 1, dex: 1, chr: 1, sexdr: 1 },
-  [ACTION_MASSAGE_MALE]: { str: 2, int: 2 },
-  [ACTION_MASSAGE_FEMALE]: { chr: 2, sexdr: 2 },
-  "\u5deb\u5973": { chr: 1.5, mag: 1.5, sexdr: 1.5 },
-  "\u30d0\u30cb\u30fc": { chr: 2, sexdr: 2 },
-  "\u932c\u91d1\u8853": { int: 2, mag: 2 },
-  "\u5199\u672c": { vit: 2, int: 2 },
-  "\u6a5f\u7e54\u308a": { dex: 2, ind: 2 },
-  "\u91b8\u9020": { mag: 2, vit: 2, ind: 2 }
+// 職の評価は jobMath.js の期待成果をそのまま使う。ここに計算式は持たない。
+// 産出する資源軸ごとの基本重みと、村が困っているときの効き幅だけを定める。
+const AXIS_BASE_WEIGHTS = {
+  food: 1,
+  materials: 0.9,
+  recovery: 0.8,
+  funds: 0.35,
+  mana: 0.3,
+  security: 0.3,
+  tech: 0.25,
+  happiness: 0.25
 };
-
-const JOB_BASE_SCORES = {
-  "\u8fb2\u4f5c\u696d": 20,
-  "\u4f10\u63a1": 20,
-  "\u72e9\u731f": 14,
-  "\u6f01": 14,
-  "\u63a1\u96c6": 14,
-  "\u5185\u8077": 8,
-  "\u7814\u7a76": -8,
-  "\u7814\u7a76\u52a9\u624b": -8,
-  "\u884c\u5546": 8,
-  "\u4e01\u7a1a": 8,
-  "\u932c\u91d1\u8853": 0,
-  "\u5199\u672c": 8,
-  "\u6a5f\u7e54\u308a": 8,
-  "\u91b8\u9020": 14,
-  "\u8b66\u5099": -8,
-  "\u770b\u8b77": 30,
-  "\u8e0a\u308a\u5b50": -8,
-  "\u30b7\u30b9\u30bf\u30fc": -8,
-  "\u3042\u3093\u307e": 30,
-  [ACTION_MASSAGE_MALE]: 30,
-  [ACTION_MASSAGE_FEMALE]: 30,
-  "\u30d0\u30cb\u30fc": 8
+const AXIS_URGENCY = {
+  food: 3,
+  materials: 2,
+  recovery: 2.5,
+  funds: 1.5
 };
 
 function firstAvailable(candidates, table) {
@@ -178,6 +131,12 @@ function buildVillagePriorityContext(village) {
   const fundsSeverity = normalizeSeverity((fundsBaseline - (Number(village.funds) || 0)) / fundsBaseline);
 
   return {
+    severityByAxis: {
+      food: foodSeverity,
+      materials: materialSeverity,
+      recovery: recoverySeverity,
+      funds: fundsSeverity
+    },
     foodSeverity,
     recoverySeverity,
     materialSeverity,
@@ -191,96 +150,72 @@ function buildVillagePriorityContext(village) {
   };
 }
 
-function getPriorityBonus(job, context) {
-  let bonus = 0;
-
-  if (JOB_FOOD_SET.has(job)) {
-    bonus += context.foodSeverity * 120 * (JOB_FOOD_PRIORITY[job] || 1);
-  }
-  if (OTHER_RECOVERY_JOB_SET.has(job)) {
-    bonus += context.recoverySeverity * 85;
-  }
-  if (JOB_MATERIAL_SET.has(job)) {
-    bonus += context.materialSeverity * 55;
-  }
-  if (JOB_FUNDS_SET.has(job)) {
-    bonus -= 24;
-    bonus += Math.max(0, context.fundsSeverity - 1.05) * 45;
-    if (context.foodSeverity > 0.35 || context.materialSeverity > 0.35 || context.recoverySeverity > 0.35) {
-      bonus -= 18;
+/**
+ * その職が1か月で生む期待成果を、資源軸ごとに返す。
+ * 計算は jobMath.js の実処理と同じ関数へ委ね、ここでは軸へ振り分けるだけにする。
+ * 対象外の行動（遊び、休養など）は null を返し、評価から外す。
+ */
+function getExpectedYield(person, job, village) {
+  switch (job) {
+    case "農作業": return { food: calculateFarmYield(person, village) };
+    case "狩猟": return { food: calculateHuntYield(person, village) };
+    case "漁": return { food: calculateFishYield(person, village) };
+    case "伐採": return { materials: calculateLumberYield(person, village) };
+    case "採集": {
+      const yields = calculateGatherYield(person, village);
+      return { food: yields.food, materials: yields.materials };
     }
+    case "醸造": {
+      const yields = calculateBrewingYield(person, village);
+      return { food: yields.food, mana: yields.mana };
+    }
+    case "内職": return { funds: calculateHandiworkYield(person, village) };
+    case "行商": return { funds: calculateTradingYield(person) };
+    case "丁稚": return { funds: calculateApprenticeYield(person) };
+    case "機織り": return { funds: calculateWeavingYield(person) };
+    case "写本": {
+      const amount = calculateCopyBookYield(person);
+      return { funds: amount, tech: amount };
+    }
+    case "錬金術": {
+      const yields = calculateAlchemyYield(person);
+      return { funds: yields.funds, mana: yields.mana };
+    }
+    case "研究": return { tech: calculateResearchYield(person, village) };
+    case "研究助手": return { tech: calculateResearchAssistantYield(person, village) };
+    case "警備": return { security: calculateGuardYield(person) };
+    case "看護": return { recovery: calculateNurseHeal(person, village) };
+    case "あんま":
+    case ACTION_MASSAGE_MALE:
+    case ACTION_MASSAGE_FEMALE:
+      return { recovery: calculateMassageHeal(person, job) };
+    case "神官":
+    case "シスター":
+      return { recovery: calculatePriestMindHeal(person, village) };
+    case "踊り子": return { happiness: calculateDancerHappiness(person, village) };
+    case "詩人": return { happiness: calculatePoetHappiness(person, village) };
+    case "バニー": return { happiness: calculateBunnySupport(person) };
+    case "巫女": return { mana: calculateMikoMana(person) };
+    default: return null;
   }
-
-  return bonus;
 }
 
-function hasTrait(person, trait) {
-  return (Array.isArray(person.bodyTraits) && person.bodyTraits.includes(trait))
-    || (Array.isArray(person.mindTraits) && person.mindTraits.includes(trait));
-}
-
-function getJobTraitMultiplier(person, job, village) {
-  let mul = 1;
-  const villageTraits = Array.isArray(village?.villageTraits) ? village.villageTraits : [];
-  if (villageTraits.includes("豊穣") && ["農作業", "伐採", "狩猟", "漁", "採集", "醸造"].includes(job)) mul *= 2;
-  if (villageTraits.includes("秋") && ["農作業", "採集", "醸造"].includes(job)) mul *= 1.5;
-  if (villageTraits.includes("夏") && job === "漁") mul *= 1.2;
-  if (villageTraits.includes("冬") && job === "農作業") mul *= 0.5;
-  if (villageTraits.includes("冬") && job === "狩猟") mul *= 1.2;
-  if (villageTraits.includes("冷夏") && ["農作業", "伐採"].includes(job)) mul *= 0.5;
-  if (villageTraits.includes("飛蝗") && ["農作業", "採集", "伐採", "醸造"].includes(job)) mul *= 0.2;
-
-  if (hasTrait(person, "緑の指") && ["農作業", "伐採", "採集", "醸造"].includes(job)) mul *= 1.2;
-  if (hasTrait(person, "大地の巫女") && ["農作業", "醸造"].includes(job)) mul *= 1.5;
-  if (hasTrait(person, "大地の加護") && ["農作業", "醸造"].includes(job)) mul *= 1.2;
-  if (hasTrait(person, "熟練農夫") && job === "農作業") mul *= 1.3;
-  if (hasTrait(person, "達人農夫") && job === "農作業") mul *= 1.5;
-  if (hasTrait(person, "熟練木樵") && job === "伐採") mul *= 1.3;
-  if (hasTrait(person, "達人木樵") && job === "伐採") mul *= 1.5;
-  if (hasTrait(person, "熟練狩人") && job === "狩猟") mul *= 1.3;
-  if (hasTrait(person, "達人狩人") && job === "狩猟") mul *= 1.5;
-  if (hasTrait(person, "熟練漁師") && job === "漁") mul *= 1.3;
-  if (hasTrait(person, "達人漁師") && job === "漁") mul *= 1.5;
-  if (hasTrait(person, "飛行") && ["狩猟", "採集"].includes(job)) mul *= 1.2;
-  if (hasTrait(person, "月の巫女") && job === "狩猟") mul *= 1.5;
-  if (hasTrait(person, "月の加護") && job === "狩猟") mul *= 1.2;
-  if (hasTrait(person, "夜目") && ["警備", "狩猟"].includes(job)) mul *= 1.2;
-  if (hasTrait(person, "嗅覚鋭敏") && job === "警備") mul *= 1.5;
-  if (hasTrait(person, "嗅覚鋭敏") && job === "採集") mul *= 1.5;
-  if (hasTrait(person, "嗅覚鋭敏") && job === "狩猟") mul *= 1.2;
-  if (hasTrait(person, "水中呼吸") && job === "漁") mul *= 2;
-  if (hasTrait(person, "森の知恵") && job === "採集") mul *= 1.2;
-  if (hasTrait(person, "海の知恵") && job === "漁") mul *= 1.2;
-  if (hasTrait(person, "繊細な指") && ["内職", "機織り", ACTION_MASSAGE_MALE, ACTION_MASSAGE_FEMALE].includes(job)) mul *= 1.2;
-  if ((person.hobby === "ハンティング" || person.hobby === "狩猟" || person.hobby === "狩り") && job === "狩猟") mul *= 1.1;
-  if (hasTrait(person, "思春期") && ["農作業", "伐採", "狩猟", "漁", "採集", "内職", "丁稚", "研究助手"].includes(job)) mul *= 0.8;
-  if (hasVillageRole(person, VILLAGE_ROLE_LIBRARIAN) && ["研究", "写本"].includes(job)) mul *= 1.2;
-  if (hasVillageRole(person, VILLAGE_ROLE_PRIEST) && ["神官", "シスター", "巫女"].includes(job)) mul *= 1.2;
-  if (hasVillageRole(person, VILLAGE_ROLE_DOCTOR) && ["看護", ACTION_MASSAGE_MALE, ACTION_MASSAGE_FEMALE].includes(job)) mul *= 1.2;
-  return mul;
-}
-
-function getJobWeights(person, job) {
-  if (job === ACTION_MASSAGE_MALE) return { str: 2, int: 2 };
-  if (job === ACTION_MASSAGE_FEMALE) return { chr: 2, sexdr: 2 };
-  if (job === "\u3042\u3093\u307e") {
-    if (person.bodySex === "\u7537") return { str: 2, int: 2 };
-    if (person.bodySex === "\u5973") return { chr: 2, sexdr: 2 };
-  }
-  return JOB_WEIGHTS[job];
+/** 資源軸ごとの重み。村が困っている軸ほど大きくなる。 */
+function getAxisWeight(axis, context) {
+  const base = AXIS_BASE_WEIGHTS[axis] || 0;
+  const urgency = AXIS_URGENCY[axis];
+  if (!urgency || !context) return base;
+  const severity = context.severityByAxis[axis] || 0;
+  return base * (1 + severity * urgency);
 }
 
 function scoreJob(person, job, context) {
-  const weights = getJobWeights(person, job);
-  if (!weights) return -Infinity;
+  const yields = getExpectedYield(person, job, context?.village);
+  if (!yields) return -Infinity;
 
-  const baseScore = JOB_BASE_SCORES[job] || 0;
-  const priorityBonus = context ? getPriorityBonus(job, context) : 0;
-
-  const rawScore = Object.entries(weights).reduce((score, [stat, weight]) => {
-    return score + (Number(person[stat]) || 0) * weight;
-  }, baseScore + priorityBonus);
-  return rawScore * getJobTraitMultiplier(person, job, context?.village);
+  return Object.entries(yields).reduce((score, [axis, amount]) => {
+    return score + (Number(amount) || 0) * getAxisWeight(axis, context);
+  }, 0);
 }
 
 function chooseBestJob(person, context) {
