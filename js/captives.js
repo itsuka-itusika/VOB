@@ -45,6 +45,8 @@ const CAPTIVITY_LOST_MIND_TRAITS = Object.freeze([
 export const MAX_CAPTIVES = 3;
 export const HOLDING_CELL_MAX_CAPTIVES = 1;
 export const CAPTIVE_RELEASE_MONTHS = 6;
+// 元捕虜が村へ加入してから、戸惑いの通常会話を出す期間。
+export const FORMER_CAPTIVE_ADJUSTMENT_MONTHS = 3;
 
 function getMonthIndex(year, month) {
   return (Number(year) || 0) * 12 + Math.max(0, (Number(month) || 1) - 1);
@@ -143,6 +145,13 @@ export function normalizeFormerCaptive(person) {
   if (separatorIndex >= 0) {
     person.name = person.name.slice(separatorIndex + 1);
   }
+  return person;
+}
+
+export function markFormerCaptiveJoin(village, person) {
+  if (!village || !person) return person;
+  person.formerCaptiveJoinYear = Number(village.year) || 0;
+  person.formerCaptiveJoinMonth = Number(village.month) || 1;
   return person;
 }
 

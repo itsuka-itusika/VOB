@@ -6,7 +6,7 @@ import { addStoredResource } from "./domain/resourceLimits.js";
 import { getPermanentStat } from "./domain/statLayers.js";
 import { DEFAULT_PORTRAIT_KEY, getPortraitAssetPath } from "./data/portraitPaths.js";
 import { ACTION_CANNON, ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT, ACTION_TRAP, RAID_ACTIONS, canPerformRaidAction, getRaidSlotLimitMessage } from "./raidRules.js";
-import { getConversationLine } from "./dialogue/dialogueEngine.js";
+import { getConversationLine, getDialogueLine } from "./dialogue/dialogueEngine.js";
 import { recordVillagerJoinHistory } from "./history.js";
 import { MERCHANT_SECRET_TREASURE_LINES } from "./data/dialogue/visitorLines.js";
 import { getCaptiveConversationLines } from "./data/dialogue/captiveLines.js";
@@ -18,6 +18,7 @@ import {
   formatCaptiveReleaseDeadline,
   getCaptiveSocialCoefficient,
   isCaptive,
+  markFormerCaptiveJoin,
   normalizeFormerCaptive,
   releaseCaptive
 } from "./captives.js";
@@ -63,6 +64,14 @@ function randFrom(items) {
 function getCaptiveConversationLine(captive) {
   const failed = Array.isArray(captive.mindTraits) && captive.mindTraits.includes(CAPTIVE_FAILED_TRAIT);
   return randFrom(getCaptiveConversationLines(captive, { failed }));
+}
+
+// 捕虜まわりの一回きりのセリフは、訪問者の到着時と同じくログへ流す。
+// 塩の柱は口をきけないため出さない。
+function logCaptiveLine(person, { scene, key = "" }) {
+  if (isSaltPillar(person)) return;
+  const line = getDialogueLine({ character: person, scene, key });
+  if (line) theVillage.log(`${person.name}「${line}」`);
 }
 
 function createConversationStatusHtml(character) {
@@ -206,6 +215,7 @@ export function openConversationModal(character) {
       releaseCaptiveButton.addEventListener("click", () => {
         releaseCaptive(theVillage, character);
         theVillage.log(`${character.name}を解放しました`);
+        logCaptiveLine(character, { scene: "captiveRelease" });
         closeConversationModal();
         updateUI(theVillage);
       });
@@ -710,6 +720,7 @@ function markCaptiveSocialFailure(captive, actor, source, reason = "") {
 function handleCaptiveSocialSuccess(captive, actor, successRate, source) {
   releaseCaptive(theVillage, captive);
   normalizeFormerCaptive(captive);
+  markFormerCaptiveJoin(theVillage, captive);
   setPreferredAction(captive, ACTION_NONE);
   captive.action = ACTION_NONE;
   captive.jobTable = [];
@@ -725,6 +736,7 @@ function handleCaptiveSocialSuccess(captive, actor, successRate, source) {
   recordVillagerJoinHistory(theVillage, captive, { recruiter: actor, source });
   refreshJobTable(captive, theVillage);
   theVillage.log(`${actor.name}の${source}により、${captive.name}が村人になりました。(成功率: ${Math.floor(successRate)}%)`);
+  logCaptiveLine(captive, { scene: "captiveJoin", key: source });
   alert(`${source}成功！${captive.name}が村人になりました。`);
   closeConversationModal();
 }

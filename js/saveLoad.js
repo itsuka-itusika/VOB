@@ -389,6 +389,8 @@ function convertVillagerToObject(vill) {
     capturedYear: Number.isFinite(Number(vill.capturedYear)) ? Number(vill.capturedYear) : undefined,
     capturedMonth: Number.isFinite(Number(vill.capturedMonth)) ? Number(vill.capturedMonth) : undefined,
     releaseMonthIndex: Number.isFinite(Number(vill.releaseMonthIndex)) ? Number(vill.releaseMonthIndex) : undefined,
+    formerCaptiveJoinYear: Number.isFinite(Number(vill.formerCaptiveJoinYear)) ? Number(vill.formerCaptiveJoinYear) : undefined,
+    formerCaptiveJoinMonth: Number.isFinite(Number(vill.formerCaptiveJoinMonth)) ? Number(vill.formerCaptiveJoinMonth) : undefined,
     adultBodyReached: vill.adultBodyReached !== undefined
       ? !!vill.adultBodyReached
       : !!(vill.potentialStats && Number(vill.bodyAge) >= 16),
@@ -587,6 +589,8 @@ function convertObjectToVillager(obj) {
   if (Number.isFinite(Number(obj.capturedYear))) vill.capturedYear = Number(obj.capturedYear);
   if (Number.isFinite(Number(obj.capturedMonth))) vill.capturedMonth = Number(obj.capturedMonth);
   if (Number.isFinite(Number(obj.releaseMonthIndex))) vill.releaseMonthIndex = Number(obj.releaseMonthIndex);
+  if (Number.isFinite(Number(obj.formerCaptiveJoinYear))) vill.formerCaptiveJoinYear = Number(obj.formerCaptiveJoinYear);
+  if (Number.isFinite(Number(obj.formerCaptiveJoinMonth))) vill.formerCaptiveJoinMonth = Number(obj.formerCaptiveJoinMonth);
 
   vill.bodyTraits = normalizeBodyTraitList(obj.bodyTraits);
   vill.mindTraits = Array.isArray(obj.mindTraits) ? [...obj.mindTraits] : [];

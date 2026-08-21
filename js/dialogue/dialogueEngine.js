@@ -35,7 +35,13 @@ import {
   findLineByKeys
 } from "../data/dialogue/randomEventLines.js";
 import { BODY_EXCHANGE_SOURCE_RACE_LINE_KEYS } from "../data/dialogue/exchangeLines.js";
+import {
+  CAPTIVE_JOIN_LINES,
+  CAPTIVE_RELEASE_LINES,
+  FORMER_CAPTIVE_LINES
+} from "../data/dialogue/captiveLines.js";
 import { isApocalypseActive } from "../domain/apocalypseRules.js";
+import { FORMER_CAPTIVE_ADJUSTMENT_MONTHS } from "../captives.js";
 
 export { resolveDialogueTone, resolveStoredSpeechType } from "../data/dialogue/toneProfiles.js";
 
@@ -251,6 +257,12 @@ export function getDialogueLines({ character, scene, key, context = {} }) {
       return selectToneLines(SECRET_TREASURE_LINES[key], character, context);
     case "miracle":
       return selectToneLines(MIRACLE_RESULT_LINES[key], character, context);
+    case "captiveJoin":
+      return selectToneLines(CAPTIVE_JOIN_LINES[key], character, context);
+    case "captiveRelease":
+      return selectToneLines(CAPTIVE_RELEASE_LINES, character, context);
+    case "formerCaptive":
+      return selectToneLines(FORMER_CAPTIVE_LINES[key], character, context);
     case "visitor":
       return getVisitorLines(key, context);
     default:
@@ -366,6 +378,17 @@ export function getExchangeSituationKey(character, village) {
   return hasRecentBodyExchange(character, village) ? "discomfort" : "";
 }
 
+// 元捕虜が加入してから3ヶ月以内かを、加入月の記録から判定する。
+export function getFormerCaptiveKey(character, village) {
+  const joinMonth = getAbsoluteMonth(character?.formerCaptiveJoinYear, character?.formerCaptiveJoinMonth);
+  const currentMonth = getAbsoluteMonth(village?.year, village?.month);
+  if (joinMonth === null || currentMonth === null) return "";
+  const elapsedMonths = currentMonth - joinMonth;
+  if (elapsedMonths < 0) return "";
+  if (elapsedMonths === 0) return "arrival";
+  return elapsedMonths <= FORMER_CAPTIVE_ADJUSTMENT_MONTHS - 1 ? "settling" : "";
+}
+
 function getVisitorType(visitor) {
   return getVisitorLineKey(visitor, VISITOR_LINES);
 }
@@ -406,6 +429,15 @@ export function collectConversationCandidates({ character, village, context = {}
     key: healthStatus.key,
     priority: healthStatus.priority
   }, sharedContext);
+
+  const formerCaptiveKey = getFormerCaptiveKey(character, village);
+  if (formerCaptiveKey) {
+    addCandidate(candidates, character, {
+      scene: "formerCaptive",
+      key: formerCaptiveKey,
+      priority: CONVERSATION_PRIORITY.NORMAL
+    }, sharedContext);
+  }
 
   const exchangeSituationKey = getExchangeSituationKey(character, village);
   if (exchangeSituationKey) {
