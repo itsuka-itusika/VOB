@@ -170,8 +170,8 @@ body.opening-active {
   margin: 0;
   padding: 0 16px;
   color: #c9b98f;
-  /* 大きさは .opening-message-text と揃え、位置だけで見せる。 */
-  font-size: clamp(0.98rem, 2vw, 1.12rem);
+  /* 大きさは会話モーダルの本文と揃え、位置だけで見せる。 */
+  font-size: 1rem;
   text-align: center;
   letter-spacing: 0.06em;
   transform: translateY(-50%);
@@ -185,9 +185,13 @@ body.opening-active {
 /* 以下は会話モーダル（#conversationModal）の構成を、暗い配色で再現したもの。 */
 .opening-message-window {
   box-sizing: border-box;
-  width: min(760px, 100%);
+  /* 字体と寸法は #conversationModal に合わせる。配色だけを暗くする。
+     本編は content-box の 600px + 内側余白20px + 枠線2px で外形644px になるため、
+     ここでは外形を644pxに揃える。狭い画面では親の幅で止め、はみ出させない。 */
+  width: min(644px, 100%);
   padding: 20px;
-  border: 1px solid rgba(211, 181, 111, 0.7);
+  font-family: sans-serif;
+  border: 2px solid rgba(211, 181, 111, 0.7);
   border-radius: 4px;
   background: rgba(8, 7, 5, 0.92);
   box-shadow: 0 22px 70px rgba(0, 0, 0, 0.68), inset 0 0 40px rgba(207, 168, 87, 0.06);
@@ -199,6 +203,7 @@ body.opening-active {
 }
 /* 顔グラ枠。話者の姿が見えないことを、空の枠そのもので示す。 */
 .opening-message-portrait {
+  box-sizing: border-box;
   display: grid;
   flex: none;
   place-items: center;
@@ -214,22 +219,15 @@ body.opening-active {
   flex: 1;
   min-width: 0;
   min-height: 200px;
-  padding: 10px 14px;
+  padding: 10px;
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.035);
 }
 .opening-message-speaker {
   margin: 0 0 12px;
-  padding-bottom: 6px;
+  padding-bottom: 8px;
   border-bottom: 1px solid rgba(211, 181, 111, 0.35);
   color: #d8b968;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-.opening-message-text {
-  margin: 0;
-  font-size: clamp(0.98rem, 2vw, 1.12rem);
-  line-height: 1.85;
 }
 /* 台本の改行で区切った1行。行内の折り返しは自然な位置に任せる。 */
 .opening-message-line {
@@ -347,9 +345,6 @@ body.opening-active {
   .opening-story {
     padding: 12px;
   }
-  .opening-message-window {
-    padding: 14px;
-  }
   .opening-message-content {
     gap: 12px;
   }
@@ -360,7 +355,6 @@ body.opening-active {
   }
   .opening-message-dialogue {
     min-height: 128px;
-    line-height: 1.55;
   }
   .opening-story-actions {
     min-height: 38px;
