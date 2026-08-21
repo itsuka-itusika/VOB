@@ -59,6 +59,7 @@ import {
   isRaidActive
 } from "./raidRules.js";
 import { getCaptives } from "./captives.js";
+import { isSaltPillar } from "./domain/apocalypseRules.js";
 
 // 安全に戦列へ加える目安のターン数と、勝ち目を測るときの想定戦闘ターン数。
 const RAID_SAFE_SURVIVAL_TURNS = 2;
@@ -77,13 +78,14 @@ const SELF_RECOVERY_ACTION_SET = new Set([
 
 // 職の評価は jobMath.js の期待成果をそのまま使う。ここに計算式は持たない。
 // 産出する資源軸ごとの基本重みと、村が困っているときの効き幅だけを定める。
+// security の基礎重みが高いのは、警備の産出（最大12前後）が食料職（25〜40）より一桁小さいため。
 const AXIS_BASE_WEIGHTS = {
   food: 1,
   materials: 0.9,
   recovery: 0.8,
   funds: 0.35,
   mana: 0.3,
-  security: 0.3,
+  security: 1.2,
   tech: 0.25,
   happiness: 0.25
 };
@@ -91,8 +93,13 @@ const AXIS_URGENCY = {
   food: 3,
   materials: 2,
   recovery: 2.5,
-  funds: 1.5
+  funds: 1.5,
+  security: 2.5,
+  happiness: 3,
+  tech: 1.2
 };
+// 村全体へ効く職。同じ月に重ねても不足分を食い合うだけなので、2人目からは評価を薄める。
+const WHOLE_VILLAGE_JOBS = new Set(["警備", "神官", "シスター", "踊り子", "詩人", "バニー"]);
 
 function firstAvailable(candidates, table) {
   return candidates.find(item => table.includes(item)) || null;
@@ -137,14 +144,26 @@ function buildVillagePriorityContext(village) {
   const materialSeverity = normalizeSeverity((materialBaseline - (Number(village.materials) || 0)) / materialBaseline);
   const fundsBaseline = Math.max(40, population * 12 + (Number(village.building) || 0) * 0.5);
   const fundsSeverity = normalizeSeverity((fundsBaseline - (Number(village.funds) || 0)) / fundsBaseline);
+  const securityValue = Number(village.security) || 0;
+  const securitySeverity = normalizeSeverity(
+    (70 - securityValue) / 70 + (village.villageTraits.includes("荒廃") ? 0.35 : 0)
+  );
+  const avgHappiness = villagers.reduce((sum, person) => sum + (Number(person.happiness) || 0), 0) / population;
+  const happinessSeverity = normalizeSeverity((65 - avgHappiness) / 45);
+  const techBaseline = Math.max(30, population * 5);
+  const techSeverity = normalizeSeverity((techBaseline - (Number(village.tech) || 0)) / techBaseline);
 
   return {
     severityByAxis: {
       food: foodSeverity,
       materials: materialSeverity,
       recovery: recoverySeverity,
-      funds: fundsSeverity
+      funds: fundsSeverity,
+      security: securitySeverity,
+      happiness: happinessSeverity,
+      tech: techSeverity
     },
+    supportAssignCounts: new Map(),
     foodSeverity,
     recoverySeverity,
     materialSeverity,
@@ -158,12 +177,32 @@ function buildVillagePriorityContext(village) {
   };
 }
 
+// 全体に効く職と回復職は、名目値ではなく「実際に埋まる不足分」で評価する。
+// 満たされている村では自然と価値が下がり、困っている村では人数分の効果が乗る。
+function sumEffectiveGain(villagers, amount, getCurrent, filter = null) {
+  return villagers.reduce((sum, target) => {
+    if (isSaltPillar(target)) return sum;
+    if (filter && !filter(target)) return sum;
+    const deficit = Math.max(0, 100 - (Number(getCurrent(target)) || 0));
+    return sum + Math.min(Number(amount) || 0, deficit);
+  }, 0);
+}
+
+// 看護・あんまは体力が最も低い1人を癒す実処理に合わせ、その不足分を上限にする。
+function getLowestHpDeficit(villagers) {
+  const alive = villagers.filter(target => !isSaltPillar(target));
+  if (alive.length === 0) return 0;
+  const lowestHp = Math.min(...alive.map(target => Number(target.hp) || 0));
+  return Math.max(0, 100 - lowestHp);
+}
+
 /**
  * その職が1か月で生む期待成果を、資源軸ごとに返す。
  * 計算は jobMath.js の実処理と同じ関数へ委ね、ここでは軸へ振り分けるだけにする。
  * 対象外の行動（遊び、休養など）は null を返し、評価から外す。
  */
 function getExpectedYield(person, job, village) {
+  const villagers = Array.isArray(village?.villagers) ? village.villagers : [];
   switch (job) {
     case "農作業": return { food: calculateFarmYield(person, village) };
     case "狩猟": return { food: calculateHuntYield(person, village) };
@@ -191,18 +230,37 @@ function getExpectedYield(person, job, village) {
     }
     case "研究": return { tech: calculateResearchYield(person, village) };
     case "研究助手": return { tech: calculateResearchAssistantYield(person, village) };
-    case "警備": return { security: calculateGuardYield(person) };
-    case "看護": return { recovery: calculateNurseHeal(person, village) };
+    case "警備": {
+      const securityDeficit = Math.max(0, 100 - (Number(village?.security) || 0));
+      return { security: Math.min(calculateGuardYield(person), securityDeficit) };
+    }
+    case "看護":
+      return { recovery: Math.min(calculateNurseHeal(person, village), getLowestHpDeficit(villagers)) };
     case "あんま":
     case ACTION_MASSAGE_MALE:
     case ACTION_MASSAGE_FEMALE:
-      return { recovery: calculateMassageHeal(person, job) };
+      return { recovery: Math.min(calculateMassageHeal(person, job), getLowestHpDeficit(villagers)) };
     case "神官":
-    case "シスター":
-      return { recovery: calculatePriestMindHeal(person, village) };
-    case "踊り子": return { happiness: calculateDancerHappiness(person, village) };
-    case "詩人": return { happiness: calculatePoetHappiness(person, village) };
-    case "バニー": return { happiness: calculateBunnySupport(person) };
+    case "シスター": {
+      const heal = calculatePriestMindHeal(person, village);
+      return { recovery: sumEffectiveGain(villagers, heal, target => target.mp) };
+    }
+    case "踊り子": {
+      const gain = calculateDancerHappiness(person, village);
+      return { happiness: sumEffectiveGain(villagers, gain, target => target.happiness, target => target.spiritSex === "男") };
+    }
+    case "詩人": {
+      const gain = calculatePoetHappiness(person, village);
+      return { happiness: sumEffectiveGain(villagers, gain, target => target.happiness, target => target.spiritSex === "女") };
+    }
+    case "バニー": {
+      const gain = calculateBunnySupport(person);
+      const isMaleSpirit = target => target.spiritSex === "男";
+      return {
+        happiness: sumEffectiveGain(villagers, gain, target => target.happiness, isMaleSpirit),
+        recovery: sumEffectiveGain(villagers, gain, target => target.mp, isMaleSpirit)
+      };
+    }
     case "巫女": return { mana: calculateMikoMana(person) };
     default: return null;
   }
@@ -221,9 +279,18 @@ function scoreJob(person, job, context) {
   const yields = getExpectedYield(person, job, context?.village);
   if (!yields) return -Infinity;
 
-  return Object.entries(yields).reduce((score, [axis, amount]) => {
-    return score + (Number(amount) || 0) * getAxisWeight(axis, context);
+  const score = Object.entries(yields).reduce((total, [axis, amount]) => {
+    return total + (Number(amount) || 0) * getAxisWeight(axis, context);
   }, 0);
+  if (!WHOLE_VILLAGE_JOBS.has(job)) return score;
+  const assigned = context?.supportAssignCounts?.get(job) || 0;
+  return score / (1 + assigned);
+}
+
+// 同じ月に全体系職へ何人就いたかを記録し、以降の評価を薄める。
+function recordSupportAssignment(context, job) {
+  if (!context?.supportAssignCounts || !WHOLE_VILLAGE_JOBS.has(job)) return;
+  context.supportAssignCounts.set(job, (context.supportAssignCounts.get(job) || 0) + 1);
 }
 
 function chooseBestJob(person, context) {
@@ -512,6 +579,7 @@ export function autoAssignJobs(village) {
     }
     setPreferredAction(person, next.preferredAction);
     person.action = next.action;
+    recordSupportAssignment(priorityContext, next.preferredAction);
   });
 
   const lockedCount = village.villagers.filter(person => person.assignmentLocked).length;
