@@ -9,7 +9,7 @@ import { ACTION_CANNON, ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT, ACTION_TRAP
 import { getConversationLine, getDialogueLine } from "./dialogue/dialogueEngine.js";
 import { recordVillagerJoinHistory } from "./history.js";
 import { MERCHANT_SECRET_TREASURE_LINES } from "./data/dialogue/visitorLines.js";
-import { getCaptiveConversationLines } from "./data/dialogue/captiveLines.js";
+import { getCaptiveConversationLines, getCaptiveGroupKey } from "./data/dialogue/captiveLines.js";
 import { incrementTitleCounter, TITLE_COUNTER_KEYS } from "./titles.js";
 import { initializeNewVillagerFriendships } from "./relationships.js";
 import { isAtPopulationLimit } from "./domain/speciesTraits.js";
@@ -718,6 +718,8 @@ function markCaptiveSocialFailure(captive, actor, source, reason = "") {
 }
 
 function handleCaptiveSocialSuccess(captive, actor, successRate, source) {
+  // normalizeFormerCaptive が raiderType を消すため、属性キーは村人化の前に確定させる。
+  const joinLineKey = getCaptiveGroupKey(captive);
   releaseCaptive(theVillage, captive);
   normalizeFormerCaptive(captive);
   markFormerCaptiveJoin(theVillage, captive);
@@ -736,7 +738,7 @@ function handleCaptiveSocialSuccess(captive, actor, successRate, source) {
   recordVillagerJoinHistory(theVillage, captive, { recruiter: actor, source });
   refreshJobTable(captive, theVillage);
   theVillage.log(`${actor.name}の${source}により、${captive.name}が村人になりました。(成功率: ${Math.floor(successRate)}%)`);
-  logCaptiveLine(captive, { scene: "captiveJoin" });
+  logCaptiveLine(captive, { scene: "captiveJoin", key: joinLineKey });
   alert(`${source}成功！${captive.name}が村人になりました。`);
   closeConversationModal();
 }
