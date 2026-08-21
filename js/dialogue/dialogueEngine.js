@@ -258,7 +258,7 @@ export function getDialogueLines({ character, scene, key, context = {} }) {
     case "miracle":
       return selectToneLines(MIRACLE_RESULT_LINES[key], character, context);
     case "captiveJoin":
-      return selectToneLines(CAPTIVE_JOIN_LINES[key], character, context);
+      return selectToneLines(CAPTIVE_JOIN_LINES, character, context);
     case "captiveRelease":
       return selectToneLines(CAPTIVE_RELEASE_LINES, character, context);
     case "formerCaptive":

@@ -395,7 +395,7 @@ function getVisitorSocialCandidates() {
 }
 
 function calculateCaptivePersuasionSuccessRate(captive, persuader) {
-  const coefficient = getCaptiveSocialCoefficient(captive);
+  const coefficient = getCaptiveSocialCoefficient(captive, persuader);
   return Math.min(100, Math.max(0,
     coefficient * (persuader.chr / 20) * (persuader.int / 20) * 100
   ));
@@ -404,7 +404,7 @@ function calculateCaptivePersuasionSuccessRate(captive, persuader) {
 function calculateCaptiveSeductionSuccessRate(captive, seducer) {
   const check = canAttemptSeduction(captive, seducer);
   if (!check.ok) return 0;
-  const coefficient = getCaptiveSocialCoefficient(captive);
+  const coefficient = getCaptiveSocialCoefficient(captive, seducer);
   const targetLustMultiplier = getSeductionTargetLustMultiplier(captive);
   return Math.min(100, Math.max(0,
     coefficient * (seducer.chr / 20) * (seducer.sexdr / 20) * targetLustMultiplier * 100
@@ -736,7 +736,7 @@ function handleCaptiveSocialSuccess(captive, actor, successRate, source) {
   recordVillagerJoinHistory(theVillage, captive, { recruiter: actor, source });
   refreshJobTable(captive, theVillage);
   theVillage.log(`${actor.name}の${source}により、${captive.name}が村人になりました。(成功率: ${Math.floor(successRate)}%)`);
-  logCaptiveLine(captive, { scene: "captiveJoin", key: source });
+  logCaptiveLine(captive, { scene: "captiveJoin" });
   alert(`${source}成功！${captive.name}が村人になりました。`);
   closeConversationModal();
 }

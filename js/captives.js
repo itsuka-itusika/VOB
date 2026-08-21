@@ -34,6 +34,8 @@ export const CAPTIVE_SOCIAL_COEFFICIENTS = Object.freeze({
   "上位翼人": 0.04,
   "騎馬兵団兵": 0.06
 });
+// エクイナがセントールの捕虜を懐柔・誘惑する時の基礎係数倍率。
+export const CAPTIVE_EQUINA_CENTAUR_MULTIPLIER = 1.5;
 // 捕虜になった時点で失われる精神特性。群れを率いる立場も神の加護も、囚われた身では保てない。
 const CAPTIVITY_LOST_MIND_TRAITS = Object.freeze([
   "餓狼",
@@ -93,12 +95,17 @@ export function isCaptive(person, village) {
   );
 }
 
-export function getCaptiveSocialCoefficient(person) {
+export function getCaptiveSocialCoefficient(person, actor = null) {
   const mindTraits = Array.isArray(person?.mindTraits) ? person.mindTraits : [];
   if (mindTraits.includes("狂信")) return 0;
 
   const raiderType = String(person?.raiderType || person?.job || "");
-  return CAPTIVE_SOCIAL_COEFFICIENTS[raiderType] ?? CAPTIVE_SOCIAL_COEFFICIENT;
+  const coefficient = CAPTIVE_SOCIAL_COEFFICIENTS[raiderType] ?? CAPTIVE_SOCIAL_COEFFICIENT;
+  // セントールはエクイナから生まれる。同じ血筋の相手の言葉は通りやすい。
+  if (raiderType === "セントール" && actor?.race === "エクイナ") {
+    return coefficient * CAPTIVE_EQUINA_CENTAUR_MULTIPLIER;
+  }
+  return coefficient;
 }
 
 export function normalizeCaptive(person) {
