@@ -39,7 +39,9 @@ const RAID_LINE_LABELS = {
   [ACTION_CANNON]: "中衛",
   [ACTION_TRAP]: "後衛"
 };
-const CANNON_BLOCKED_MIND_TRAITS = ["文明忌避", "不殺"];
+const CANNON_BLOCKED_MIND_TRAITS = ["文明忌避"];
+// 戦いそのものを拒む精神特性。身を守る籠城だけは選べる。
+const PACIFIST_MIND_TRAITS = ["不殺", "非戦主義"];
 
 function traitList(person, key) {
   return Array.isArray(person?.[key]) ? person[key] : [];
@@ -68,6 +70,10 @@ export function getRaidActionBlockReason(person, action = "", { ignoreRoleTraits
   if (!ignoreRoleTraits && mindTraits.includes("襲撃者")) return "襲撃者";
   if (!ignoreRoleTraits && mindTraits.includes("訪問者")) return "訪問者";
   if (action === ACTION_DEFEND && mindTraits.includes("思春期")) return "思春期";
+  if (action && action !== ACTION_FORTIFY) {
+    const pacifistReason = PACIFIST_MIND_TRAITS.find(trait => mindTraits.includes(trait));
+    if (pacifistReason) return pacifistReason;
+  }
   const usesRaidTools = action === ACTION_TRAP || RAID_MIDDLE_ACTIONS.includes(action);
   if (usesRaidTools && bodyTraits.includes(FOUR_LEGGED_TRAIT)) {
     return FOUR_LEGGED_TRAIT;
@@ -107,7 +113,8 @@ export function getRaidActionSkipMessage(person, action = "戦闘", options = {}
     [HUMAN_BEAST_TRAIT]: `${name}は獣身では${label}の道具を扱えない。`,
     [WILD_MIND_TRAIT]: `${name}は野生の本能に従い、${label}の指示を受け付けない。`,
     "文明忌避": `${name}は文明の産物である${label}に触れようとしない。`,
-    "不殺": `${name}は不殺の誓いを守り、${label}を撃たない。`,
+    "不殺": `${name}は不殺の誓いを守り、${label}に加わらない。`,
+    "非戦主義": `${name}は戦いを望まず、${label}に加わらない。`,
     "体力尽き": `${name}は体力が尽きており、行動できない。`
   };
   return `【${label}】${messages[reason] || `${name}は行動不能。`}`;
@@ -120,13 +127,23 @@ export function getRaiderIncomingDamageMultiplier(person) {
   return 1;
 }
 
-export function canDefendInRaid(person) {
+/** 戦いを拒む精神特性を持つか。籠城以外の襲撃行動を選べない。 */
+export function isPacifistFighter(person) {
+  return hasAnyTrait(traitList(person, "mindTraits"), PACIFIST_MIND_TRAITS);
+}
+
+/** 前衛に立てるか。迎撃と籠城で共通する条件。 */
+function canJoinRaidFrontLine(person) {
   if (hasCommonRaidBlockingCondition(person)) return false;
   return !hasAnyTrait(traitList(person, "mindTraits"), RAID_DEFEND_UNABLE_MIND_TRAITS);
 }
 
+export function canDefendInRaid(person) {
+  return canJoinRaidFrontLine(person) && !isPacifistFighter(person);
+}
+
 export function canMakeTrapInRaid(person) {
-  if (hasCommonRaidBlockingCondition(person)) return false;
+  if (hasCommonRaidBlockingCondition(person) || isPacifistFighter(person)) return false;
   return !traitList(person, "bodyTraits").includes(FOUR_LEGGED_TRAIT) &&
     !traitList(person, "bodyTraits").includes(HUMAN_BEAST_TRAIT) &&
     !traitList(person, "mindTraits").includes(WILD_MIND_TRAIT);
@@ -202,7 +219,7 @@ export function canCannonInRaid(person, village = null) {
 }
 
 export function canFortifyInRaid(person, village = null) {
-  return canDefendInRaid(person) &&
+  return canJoinRaidFrontLine(person) &&
     !traitList(person, "mindTraits").includes(WILD_MIND_TRAIT) &&
     hasRaidUnlock(village, "hasWoodenFence", "woodenFence");
 }

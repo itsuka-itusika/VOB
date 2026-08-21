@@ -30,6 +30,7 @@ import {
   getActiveRaidTrapMakers,
   getRaidFrontlinerSlotCount,
   getRaidMiddleSlotCount,
+  isPacifistFighter,
   isRaidCombatAction
 } from "./raidRules.js";
 import { refreshJobTable } from "./domain/jobTables.js";
@@ -1011,6 +1012,11 @@ function canCounterAttack(target, village) {
 }
 
 function doCounterAttack(counterActor, target, village, result) {
+  // 反撃も攻撃なので、不殺・非戦主義は手を出さない。
+  if (isPacifistFighter(counterActor)) {
+    addRaidActionLog(result, `　　→ ${counterActor.name}は反撃せず、身を守るにとどめた。`);
+    return;
+  }
   let ret=calcAttackDamage(counterActor, target, true);
   let rdmg=Math.floor(ret.damage*0.5);
   rdmg = applyIncomingDamageModifiers(rdmg, target, village);

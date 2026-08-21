@@ -35,6 +35,7 @@ import {
 } from "./adventurerQuests.js";
 
 const DEFAULT_PORTRAIT_PATH = getPortraitAssetPath(DEFAULT_PORTRAIT_KEY);
+const SALT_PILLAR_CONVERSATION_LINE = "………（塩の柱は黙して何も語らない）";
 const SEDUCTION_MIN_LUST = 18;
 const TARGET_LUST_MULTIPLIER_MAX = 1.5;
 
@@ -65,6 +66,9 @@ function getCaptiveConversationLine(captive) {
 }
 
 function createConversationStatusHtml(character) {
+  if (isSaltPillar(character)) {
+    return `<p><strong></strong> ${SALT_PILLAR_CONVERSATION_LINE}</p>`;
+  }
   if (isCaptive(character, theVillage)) {
     return `
       <p><strong>捕虜:</strong> ${getCaptiveConversationLine(character)}</p>
@@ -114,10 +118,6 @@ function ensureMerchantStock(visitor) {
  * 会話モーダルを開く
  */
 export function openConversationModal(character) {
-  if (isSaltPillar(character)) {
-    theVillage.log(character.name + "は塩の柱となっており、話しかけることができない。");
-    return;
-  }
   const overlay = document.getElementById("conversationOverlay");
   const modal = document.getElementById("conversationModal");
   const portrait = document.getElementById("conversationPortrait");
@@ -141,9 +141,11 @@ export function openConversationModal(character) {
     console.error('Error loading portrait:', error);
     portrait.src = DEFAULT_PORTRAIT_PATH;
   }
-  portrait.style.cursor = "pointer";
-  portrait.title = "クリックで会話を更新";
-  portrait.onclick = () => refreshConversationText(character);
+  // 塩の柱は何度見ても同じ沈黙なので、会話の更新はさせない。
+  const isSilentSaltPillar = isSaltPillar(character);
+  portrait.style.cursor = isSilentSaltPillar ? "default" : "pointer";
+  portrait.title = isSilentSaltPillar ? "" : "クリックで会話を更新";
+  portrait.onclick = isSilentSaltPillar ? null : () => refreshConversationText(character);
 
   // キャラクター情報を表示するためのHTML要素を追加
   const characterInfo = document.getElementById("characterInfo");
