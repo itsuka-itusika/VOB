@@ -688,8 +688,9 @@ export function applyRaidFriendshipResults(village) {
     .sort((a, b) => b.damage - a.damage);
   const distinguished = damageEntries[0] ? nameToVillager.get(damageEntries[0].name) : null;
   if (distinguished) {
+    // 殊勲は他者からの評価なので、好感度は他の参加者から殊勲者への一方向で上げる。
     participants.forEach(person => {
-      if (person !== distinguished) adjustMutualFriendship(distinguished, person, 5);
+      if (person !== distinguished) adjustFriendshipScore(person, distinguished, 5);
     });
   }
 
