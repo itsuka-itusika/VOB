@@ -171,9 +171,9 @@ export const BUILDINGS = [
     materials: 50,
     funds: 100,
     tech: 300,
-    desc: "豊かな村で解放。酒造施設。「醸造」解放。規模+40",
+    desc: "豊かな村で解放。酒造施設。「醸造」解放。規模+30",
     isUnlocked: (village) => isScaleAtLeast(village, 180),
-    effect: standardBuildingEffect({ scale: 40, flag: "hasBrewery", log: "醸造所建設完了: 「醸造」解放、規模+40" })
+    effect: standardBuildingEffect({ scale: 30, flag: "hasBrewery", log: "醸造所建設完了: 「醸造」解放、規模+30" })
   },
   {
     id: "alchemy",
@@ -181,9 +181,9 @@ export const BUILDINGS = [
     materials: 50,
     funds: 100,
     tech: 200,
-    desc: "豊かな村で解放。錬金施設。「錬金術」解放。規模+40",
+    desc: "豊かな村で解放。錬金施設。「錬金術」解放。規模+30",
     isUnlocked: (village) => isScaleAtLeast(village, 180),
-    effect: standardBuildingEffect({ scale: 40, flag: "hasAlchemy", log: "錬金工房建設完了: 「錬金術」解放、規模+40" })
+    effect: standardBuildingEffect({ scale: 30, flag: "hasAlchemy", log: "錬金工房建設完了: 「錬金術」解放、規模+30" })
   },
   {
     id: "weaving",
@@ -308,12 +308,12 @@ export const BUILDINGS = [
     materials: 100,
     funds: 200,
     tech: 300,
-    desc: "繁栄した郷村で解放。錬金工房と醸造所の建設後に建設可能。襲撃中の中衛行動「火砲」解放。規模+30",
+    desc: "繁栄した郷村で解放。錬金工房と醸造所の建設後に建設可能。襲撃中の中衛行動「火砲」解放。規模+40",
     ...requireScaleAndBuildings(250, ["alchemy", "brewery"]),
     effect: standardBuildingEffect({
-      scale: 30,
+      scale: 40,
       flag: "hasArcaneFoundry",
-      log: "魔導工廠建設完了: 襲撃中の中衛行動「火砲」解放、規模+30"
+      log: "魔導工廠建設完了: 襲撃中の中衛行動「火砲」解放、規模+40"
     })
   },
   {
