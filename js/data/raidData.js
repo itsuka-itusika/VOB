@@ -878,7 +878,7 @@ export const RAIDER_TYPES = [
     exchangeImmune: true,
     uncapturable: true,
     ranges: {
-      hp: [200, 200],
+      hp: [350, 350],
       str: [28, 28],
       vit: [18, 18],
       dex: [28, 28],
@@ -918,7 +918,7 @@ export const RAIDER_TYPES = [
     exchangeImmune: true,
     uncapturable: true,
     ranges: {
-      hp: [180, 180],
+      hp: [280, 280],
       str: [32, 32],
       vit: [35, 35],
       dex: [30, 30],

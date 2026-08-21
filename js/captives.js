@@ -13,14 +13,14 @@ export const CAPTIVE_SOCIAL_COEFFICIENTS = Object.freeze({
   "野盗": 0.3,
   "傭兵団": 0.3,
   "傭兵射手": 0.2,
-  "ゴブリン": 0.4,
-  "ゴブリン射手": 0.3,
-  "ゴブリンリーダー": 0.2,
+  "ゴブリン": 0.5,
+  "ゴブリン射手": 0.5,
+  "ゴブリンリーダー": 0.4,
   "狼": 0.4,
-  "餓狼": 0.2,
+  "餓狼": 0.4,
   "キュクロプス": 0.2,
-  "ハーピー": 0.3,
-  "ハーピーの長": 0.2,
+  "ハーピー": 0.4,
+  "ハーピーの長": 0.3,
   "遊牧民": 0.3,
   "強遊牧民": 0.08,
   "セントール": 0.2,
@@ -35,7 +35,7 @@ export const CAPTIVE_SOCIAL_COEFFICIENTS = Object.freeze({
   "騎馬兵団兵": 0.06
 });
 // エクイナがセントールの捕虜を懐柔・誘惑する時の基礎係数倍率。
-export const CAPTIVE_EQUINA_CENTAUR_MULTIPLIER = 1.5;
+export const CAPTIVE_EQUINA_CENTAUR_MULTIPLIER = 2;
 // 捕虜になった時点で失われる精神特性。群れを率いる立場も神の加護も、囚われた身では保てない。
 const CAPTIVITY_LOST_MIND_TRAITS = Object.freeze([
   "餓狼",
