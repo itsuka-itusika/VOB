@@ -787,15 +787,15 @@ export class RandomEvents {
       }
       case "fight": {
         let candidates = getActiveVillagers(v).filter(x =>
-          x.spiritSex === "男" &&
           x.spiritAge >= 12 &&
-          x.eth <= 12
+          (x.eth <= 14 || (x.eth <= 18 && x.mp <= 40))
         );
 
         const pairs = [];
         candidates.forEach((a, index) => {
           candidates.slice(index + 1).forEach(b => {
-            if (getPairFriendshipMinimum(a, b) <= 19 &&
+            if (a.spiritSex === b.spiritSex &&
+                getPairFriendshipMinimum(a, b) <= 19 &&
                 !this.hasMutualRelationship(a, b, "天敵") &&
                 !this.hasFightBlockingRelationship(a, b)) {
               pairs.push([a, b]);
