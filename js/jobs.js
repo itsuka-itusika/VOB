@@ -109,7 +109,7 @@ export function handleAllVillagerJobs(village) {
 
   try {
     village.villagers.forEach(p => {
-      let saboProb = 40 - p.ind * 2;
+      let saboProb = 32 - p.ind * 2;
       if (saboProb < 0) saboProb = 0;
 
       let roll = randInt(1, 100);

@@ -5,13 +5,13 @@ import {
   BUILDING_REQUEST_DURATION_MONTHS
 } from "./data/buildingRequestData.js";
 import { getToneLookupKeys, resolveDialogueTone } from "./data/dialogue/toneProfiles.js";
-import { DEFAULT_PORTRAIT_KEY, getPortraitAssetPath } from "./data/portraitPaths.js";
+import { applyPortraitToElement } from "./data/portraitAtlas.js";
+import { DEFAULT_PORTRAIT_KEY } from "./data/portraitPaths.js";
 import { addDivineMight } from "./divineMight.js";
 import { getCaptives } from "./captives.js";
 import { getActiveVillagers } from "./domain/apocalypseRules.js";
 import { clampValue, getVillagerFoodConsumption, getVillagerWinterMaterialConsumption, randChoice } from "./util.js";
 
-const DEFAULT_PORTRAIT_PATH = getPortraitAssetPath(DEFAULT_PORTRAIT_KEY);
 const REQUEST_MODAL_ID = "buildingRequestModal";
 const REQUEST_OVERLAY_ID = "buildingRequestOverlay";
 const REQUEST_COMPLETE_MODAL_ID = "buildingRequestCompleteModal";
@@ -480,12 +480,11 @@ function renderBuildingRequestModal(request) {
 
   const portraitArea = document.createElement("div");
   portraitArea.className = "portrait-area";
-  const portrait = document.createElement("img");
-  portrait.src = getPortraitAssetPath(request.requesterPortraitFile);
-  portrait.alt = "";
-  portrait.onerror = () => {
-    portrait.src = DEFAULT_PORTRAIT_PATH;
-  };
+  const portrait = document.createElement("div");
+  applyPortraitToElement(portrait, {
+    name: request.requesterName,
+    portraitFile: request.requesterPortraitFile
+  });
   portraitArea.appendChild(portrait);
 
   const dialogueArea = document.createElement("div");
@@ -552,12 +551,11 @@ function renderBuildingRequestCompleteModal(completion) {
 
   const portraitArea = document.createElement("div");
   portraitArea.className = "portrait-area";
-  const portrait = document.createElement("img");
-  portrait.src = getPortraitAssetPath(completion.requesterPortraitFile);
-  portrait.alt = "";
-  portrait.onerror = () => {
-    portrait.src = DEFAULT_PORTRAIT_PATH;
-  };
+  const portrait = document.createElement("div");
+  applyPortraitToElement(portrait, {
+    name: completion.requesterName,
+    portraitFile: completion.requesterPortraitFile
+  });
   portraitArea.appendChild(portrait);
 
   const dialogueArea = document.createElement("div");

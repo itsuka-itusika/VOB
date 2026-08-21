@@ -2,35 +2,35 @@ const FESTIVAL_DATA = {
   newYear: {
     title: "新年祭",
     month: "1月",
-    image: "../images/festivals/new-year.jpg",
+    image: "../images/festivals/new-year.webp",
     flavor: "雪明かりの広場に火を入れ、村は新しい一年の無事を祈る。",
     effect: "全村人の体力+20、メンタル+20、幸福度+20から30。"
   },
   resurrection: {
     title: "復活祭",
     month: "3月",
-    image: "../images/festivals/resurrection.jpg",
+    image: "../images/festivals/resurrection.webp",
     flavor: "芽吹きの祭壇に祈りを捧げ、眠っていた生命力を呼び戻す。",
     effect: "全村人の体力+20、メンタル+20。"
   },
   summerSolstice: {
     title: "夏至祭",
     month: "6月",
-    image: "../images/festivals/summer-solstice.jpg",
+    image: "../images/festivals/summer-solstice.webp",
     flavor: "もっとも長い陽の下、花飾りと篝火が村の縁を結び直す。",
     effect: "全村人の体力+20、メンタル+20。結婚判定が発生。"
   },
   harvest: {
     title: "収穫祭",
     month: "10月",
-    image: "../images/festivals/harvest.jpg",
+    image: "../images/festivals/harvest.webp",
     flavor: "実りを分け合い、働いた身体に温かな食事と休息を与える。",
     effect: "全村人の体力+30、メンタル+10。秘宝「松かさの杖」を1本入手。松かさの杖は交換の奇跡・強と同じく、村人・捕虜・訪問者・襲撃者から2名を選んで肉体交換できる。"
   },
   stars: {
     title: "星霜祭",
     month: "12月",
-    image: "../images/festivals/stars.jpg",
+    image: "../images/festivals/stars.webp",
     flavor: "冬の星々を見上げ、過ぎた歳月とまだ見ぬ縁に祈りを捧げる。",
     effect: "恋人判定が発生。"
   }
@@ -83,7 +83,7 @@ export function showPineconeStaffIntroModal() {
   modal.setAttribute("role", "dialog");
   modal.setAttribute("aria-modal", "true");
   modal.innerHTML = `
-    <img class="event-modal-image" src="${new URL("../images/events/pinecone-staff.png", import.meta.url).href}" alt="">
+    <img class="event-modal-image" src="${new URL("../images/events/pinecone-staff.webp", import.meta.url).href}" alt="">
     <div class="event-modal-body">
       <h3>秘宝「松かさの杖」を入手</h3>
       <p>収穫祭の供物の中から、松かさを戴いた古い杖が見つかりました。杖には身体と魂の境を揺らす魔素が宿っています。</p>

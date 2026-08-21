@@ -1,5 +1,6 @@
 import { getDivineMightLevel, runAfterPendingDivineMightLevelUp } from "./divineMight.js";
 import { getPortraitAssetPath, INQUISITOR_PORTRAIT_FILES } from "./data/portraitPaths.js";
+import { getPortraitSpriteHtml } from "./data/portraitAtlas.js";
 import { pickInquisitorSpeechSet } from "./data/dialogue/inquisitorLines.js";
 import { isHeadmanElectionModalPendingOrOpen } from "./headmanElection.js";
 import { updateUI } from "./ui.js";
@@ -148,7 +149,7 @@ function getInquisitorBody(contentHtml, portraitPath) {
   return `
     <div class="heresy-inquisition-speaker">
       <div class="heresy-inquisition-portrait">
-        <img src="${portraitPath}" alt="異端審問官">
+        ${getPortraitSpriteHtml({ portraitFile: portraitPath }, { alt: "異端審問官" })}
       </div>
       <div class="heresy-inquisition-dialogue">
         <div class="heresy-inquisition-name">異端審問官｜新しき神の教会</div>

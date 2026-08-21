@@ -4,7 +4,8 @@ import {
   WISH_START_CHANCE,
   resolveWishLine
 } from "./data/wishData.js";
-import { DEFAULT_PORTRAIT_KEY, getPortraitAssetPath } from "./data/portraitPaths.js";
+import { applyPortraitToElement } from "./data/portraitAtlas.js";
+import { DEFAULT_PORTRAIT_KEY } from "./data/portraitPaths.js";
 import { addDivineMight } from "./divineMight.js";
 import { getActiveVillagers } from "./domain/apocalypseRules.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
@@ -476,12 +477,11 @@ function renderWishModal(wish, isCompletion) {
   content.className = "conversation-content";
   const portraitArea = document.createElement("div");
   portraitArea.className = "portrait-area";
-  const portrait = document.createElement("img");
-  portrait.src = getPortraitAssetPath(wish.requesterPortraitFile);
-  portrait.alt = "";
-  portrait.onerror = () => {
-    portrait.src = getPortraitAssetPath(DEFAULT_PORTRAIT_KEY);
-  };
+  const portrait = document.createElement("div");
+  applyPortraitToElement(portrait, {
+    name: wish.requesterName,
+    portraitFile: wish.requesterPortraitFile
+  });
   portraitArea.appendChild(portrait);
 
   const dialogueArea = document.createElement("div");

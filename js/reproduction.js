@@ -1,5 +1,6 @@
 import { Villager } from "./classes.js";
-import { randChoice, randInt, clampValue, randFloat, getPortraitPath } from "./util.js";
+import { randChoice, randInt, clampValue, randFloat } from "./util.js";
+import { getPortraitSpriteHtml } from "./data/portraitAtlas.js";
 import {
   generateRandomName,
   createRandomVillager,
@@ -1048,7 +1049,7 @@ function showBirthModal(village, mother, father, child) {
 function renderPortraitLine(character, line) {
   return `
     <div style="display:grid;grid-template-columns:72px 1fr;gap:12px;margin:12px 0;align-items:center;">
-      <img src="${getPortraitPath(character)}" alt="${character.name}" style="width:72px;height:72px;object-fit:cover;border:1px solid #ddd;background:#f6f0e6;">
+      ${getPortraitSpriteHtml(character, { size: 72, alt: character.name, extraStyle: "border:1px solid #ddd;background-color:#f6f0e6;" })}
       <p><strong>${character.name}</strong>: ${line}</p>
     </div>
   `;

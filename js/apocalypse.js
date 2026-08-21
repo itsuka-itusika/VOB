@@ -185,7 +185,7 @@ function chooseRandom(items, count) {
 }
 
 function stageImage(stage) {
-  return `images/events/apocalypse/apocalypse-${stage}.png`;
+  return `images/events/apocalypse/apocalypse-${stage}.webp`;
 }
 
 function recordStage(village, stage, title, text) {
@@ -307,7 +307,7 @@ function applyFifthCalamity(village) {
     title: "第五の角笛が吹かれた",
     message: "天の光を振り仰いだ勇気ある者たちの身体が、白い塩へと変わった。",
     effect: targets.length > 0 ? `${targetNames}に身体特性「塩の柱」が付与されました。` : "塩の柱になる村人はいませんでした。",
-    image: "images/events/apocalypse/apocalypse-5-salt-pillars.png"
+    image: "images/events/apocalypse/apocalypse-5-salt-pillars.webp"
   });
 }
 
@@ -338,7 +338,7 @@ export function startApocalypseFromGoldenStatue(village) {
     title: "天より響く怒り",
     message: "黄金像が完成した瞬間、晴れていた空が暗く閉ざされ、雷鳴にも似た怒りの声が天より響いた。",
     effect: "黙示録が始まりました。次月から、村へ七つの災厄が順に降りかかります。",
-    image: "images/events/apocalypse/apocalypse-start.png"
+    image: "images/events/apocalypse/apocalypse-start.webp"
   });
   updateUI(village);
 }

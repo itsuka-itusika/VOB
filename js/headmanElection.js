@@ -16,7 +16,7 @@ import { getActiveVillagers } from "./domain/apocalypseRules.js";
 const ELECTION_MONTH = 7;
 const ELECTION_INTERVAL_YEARS = 3;
 const ASSEMBLY_HALL_ID = "assemblyHall";
-const ELECTION_IMAGE = "../images/events/headman-election.jpg";
+const ELECTION_IMAGE = "../images/events/headman-election.webp";
 const RANKED_STATS = ["cou", "eth", "ind", "str", "int"];
 const MODAL_OVERLAY_ID = "headmanElectionOverlay";
 const MODAL_ID = "headmanElectionModal";

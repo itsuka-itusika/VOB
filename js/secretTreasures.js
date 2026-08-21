@@ -10,7 +10,8 @@ import {
   scheduleAnnunciationPaintingPregnancy,
   updateChildGrowthStage
 } from "./reproduction.js";
-import { clampValue, getPortraitPath, round3 } from "./util.js";
+import { clampValue, round3 } from "./util.js";
+import { applyPortraitToElement } from "./data/portraitAtlas.js";
 import { updateUI } from "./ui.js";
 import { addAcquiredStat, syncEffectiveStats } from "./domain/statLayers.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
@@ -18,7 +19,6 @@ import { MESSENGER_PASS_SECRET_TREASURE_ID } from "./data/tutorialData.js";
 import { getCaptives } from "./captives.js";
 import { DESPAIR_TRAIT, DISAPPOINTMENT_TRAIT } from "./domain/despair.js";
 import { getDialogueLine } from "./dialogue/dialogueEngine.js";
-import { DEFAULT_PORTRAIT_KEY, getPortraitAssetPath } from "./data/portraitPaths.js";
 import { getActiveVillagers, getVillagersIncludingSaltPillar } from "./domain/apocalypseRules.js";
 import { FOUR_LEGGED_TRAIT, syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
 
@@ -28,7 +28,6 @@ const BAD_MIND_TRAITS = ["心労", "抑鬱"];
 export const PINECONE_STAFF_SECRET_TREASURE_ID = "pinecone_staff";
 export const DRYAD_FRUIT_SECRET_TREASURE_ID = "dryad_fruit";
 export const ANNUNCIATION_PAINTING_SECRET_TREASURE_ID = "annunciation_painting";
-const DEFAULT_PORTRAIT_PATH = getPortraitAssetPath(DEFAULT_PORTRAIT_KEY);
 const SECRET_TREASURE_SELL_PRICES = {
   persephone_statue: 300,
   abundance_horn: 300,
@@ -277,11 +276,8 @@ function showDryadFruitModal(target, line) {
   const dialogue = document.getElementById("dryadFruitDialogue");
   if (!overlay || !modal || !portrait || !name || !dialogue) return;
 
-  portrait.src = getPortraitPath(target);
-  portrait.alt = `${target.name} portrait`;
-  portrait.onerror = () => {
-    portrait.src = DEFAULT_PORTRAIT_PATH;
-  };
+  portrait.setAttribute("aria-label", target.name || "肖像");
+  applyPortraitToElement(portrait, target);
   name.textContent = `${target.name}:`;
   dialogue.textContent = line || "森の息吹が、新たな身体に静かに満ちていく。";
   overlay.style.display = "block";

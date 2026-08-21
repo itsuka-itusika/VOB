@@ -1,6 +1,7 @@
 // relationships.js
 
-import { randInt, clampValue, getPortraitPath } from "./util.js";
+import { randInt, clampValue } from "./util.js";
+import { getPortraitSpriteHtml } from "./data/portraitAtlas.js";
 import { recordLoverHistory, recordMarriageHistory, recordSocialRelationHistory } from "./history.js";
 import { runAfterFestivalModals } from "./festivalModal.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
@@ -815,7 +816,7 @@ function showRelationshipModalNow(title, message, entries) {
   modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;max-width:580px;width:calc(100% - 32px);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
   const rows = entries.map(([person, line]) => `
     <div style="display:grid;grid-template-columns:72px 1fr;gap:12px;margin:12px 0;align-items:center;">
-      <img src="${getPortraitPath(person)}" alt="${person.name}" style="width:72px;height:72px;object-fit:cover;border:1px solid #ddd;background:#f6f0e6;">
+      ${getPortraitSpriteHtml(person, { size: 72, alt: person.name, extraStyle: "border:1px solid #ddd;background-color:#f6f0e6;" })}
       <p><strong>${person.name}</strong>: ${line}</p>
     </div>
   `).join("");
@@ -1033,7 +1034,7 @@ export function openFriendshipDetailModal(village, person) {
       <tr>
         <td class="friendship-detail-person">
           <button type="button" class="friendship-detail-portrait-button" data-open-friendship-person="${index}" aria-label="${escapeHtml(other.name)}の個人記録を見る">
-            <img src="${escapeHtml(getPortraitPath(other))}" alt="${escapeHtml(other.name)}">
+            ${getPortraitSpriteHtml(other, { alt: other.name })}
           </button>
           <span>${escapeHtml(other.name)}</span>
         </td>

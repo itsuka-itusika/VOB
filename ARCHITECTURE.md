@@ -30,7 +30,7 @@
 3. `updateUI(theVillage)` で初期画面を描画する。
 4. `js/app.js` がボタン操作用の関数を `window` に登録する。
 5. 表示モードを localStorage から復元し、PC / スマホ仮表示を切り替える。
-6. `js/openingScreen.js` が `OPENING.png` を使った開始画面を表示し、新規開始、localStorage 読込、JSON 読込のいずれかからゲーム画面へ進む。読込処理と、ローカル保存の概要を返す関数は `js/app.js` から渡す。
+6. `js/openingScreen.js` が `OPENING.webp` を使った開始画面を表示し、新規開始、localStorage 読込、JSON 読込のいずれかからゲーム画面へ進む。読込処理と、ローカル保存の概要を返す関数は `js/app.js` から渡す。
 7. 新規開始では固定の導入シーンへ進む。ゲーム開始後も `replayOpeningStory()` で見直せる。導入シーンは背景を暗転させ、まず中央にト書きを出し、それが消えて間を置いてから `js/data/openingScript.js` の台本を1メッセージずつ表示する。1メッセージは区切りごとに全文を一度に出し、文字送りはしない。表示枠はゲーム内の会話モーダル（`#conversationModal`）と同じ構成を暗い配色で再現したもので、顔グラ枠は話者が不明であることを示すために空にする。クリック、タップ、Enter、Space で進み、声を待っている間の入力は待ち時間の短縮になる。最後まで読むと、メッセージが消えてからゲーム画面へ切り替わる。
 
 ## 月次処理
@@ -116,7 +116,7 @@
 - `js/dictionary.js`
   - 用語検索を扱う。
 - `js/util.js`
-  - 乱数、丸め、上限下限、顔画像パス、消費量計算などの小さな共通関数を持つ。
+  - 乱数、丸め、上限下限、消費量計算などの小さな共通関数を持つ。
 
 ## domain と data
 
@@ -166,12 +166,23 @@
 ## 顔グラフィック画像
 
 - `portraitFile` / `adultPortraitFile` は `MA1.png` のような論理IDとして保存する。`images/portraits/...` の実パスは保存しない。旧セーブの幼児用ID（`T_D1.png` など）は読み込み時に同グループの基本顔IDへ移行する。
-- 表示時の実パス解決は `js/data/portraitPaths.js` に集約し、`getPortraitAssetPath()` で選択グループ別フォルダへ変換する。
+- 年齢差分・欠番・塩の柱を含む論理IDの解決は `js/data/portraitPaths.js` に集約する。表示時は `js/data/portraitAtlas.js` が確定IDを `js/data/portraitAtlas.generated.js` のマップへ引き、`images/atlas/` のWebPシートを背景画像として表示する。
 - 肉体特性が `老人` の人物は対応する `old`、`幼児` の人物は基本顔IDに対応する `young` を表示する。赤子は専用画像、少年・少女と中年は基本顔のまま扱う。年齢別フォルダがない選択グループは基本顔を使い、保存済みIDに対応する画像だけが欠けている場合は同じ選択グループの有効な顔IDへ再設定する。
 - 肉体特性が `塩の柱` の人物は、本人の顔ではなく `images/portraits/salt/` の塩像を表示する。年齢別の切り替えより優先し、同じ人物には常に同じ塩像を割り当てる。特性が外れると元の顔へ戻る。
 - 赤子、system 用画像を除き、基本顔グラは `images/portraits/<選択グループ>/`、年齢別顔グラはその配下の `old/` / `young/` に配置する。村人用、襲撃者用といった用途別フォルダでは分けない。
 - 村人、訪問者、襲撃者は可能な限り同じ人物生成・顔グラ参照システムで扱う。襲撃者として登場した人物グループを村人側でも使えるよう、顔グラの分類は役割ではなく見た目・種族などの選択グループを基準にする。
 - 特殊種族画像は `angel/` や `alseid/` のような選択グループフォルダに置き、論理IDは `ANGEL1.png` のような大文字prefix連番にする。旧アラクニド論理IDは読込時に `ARACHNID1.png` 形式へ正規化する。
+
+### 顔グラフィックの追加と生成
+
+1. 原本PNGを `images/portraits/<選択グループ>/` へ置く。年齢差分は同グループの `old/` または `young/` に置く。
+2. 新しい連番や選択グループを増やした場合は、`js/data/portraitPaths.js` の上限・フォルダ対応も更新する。
+3. リポジトリルートで `python tools/atlas/build_portrait_atlas.py` を実行する。
+4. 更新された `images/atlas/*.webp` と `js/data/portraitAtlas.generated.js` を原本PNGと一緒にコミットする。
+
+生成ツールは256pxタイルを最大8×8で詰め、各シートを2048×2048以下のWebPとして出力する。`children/` と `sample/` は原本確認用としてシートには含めるが、同名の現行顔IDを上書きしないようランタイムマップから除外する。`CHILD_SHADOW.svg` と `CHILD_SHADOW_BABY.svg` はアトラス化せず、そのまま表示する。
+
+itch.io向けzipは `python tools/package_itch.py` で `output/village-of-bacchus-itch.zip` に生成する。zipには顔原本PNGを含めず、アトラスと上記SVG 2枚だけを含める。スクリプトは出力ファイル数が1,000未満であることも検証する。
 
 ## 訪問者とレア種族
 

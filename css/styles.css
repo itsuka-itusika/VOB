@@ -44,7 +44,7 @@ body.opening-active {
   min-height: 100dvh;
   overflow: hidden;
   color: #f8efd8;
-  background: #17130e url("../images/OPENING.png") center / cover no-repeat;
+  background: #17130e url("../images/OPENING.webp") center / cover no-repeat;
   font-family: "Yu Mincho", "Hiragino Mincho ProN", "Hiragino Mincho Pro", serif;
   opacity: 1;
   isolation: isolate;
@@ -185,10 +185,8 @@ body.opening-active {
 /* 以下は会話モーダル（#conversationModal）の構成を、暗い配色で再現したもの。 */
 .opening-message-window {
   box-sizing: border-box;
-  /* 字体と寸法は #conversationModal に合わせる。配色だけを暗くする。
-     本編は content-box の 600px + 内側余白20px + 枠線2px で外形644px になるため、
-     ここでは外形を644pxに揃える。狭い画面では親の幅で止め、はみ出させない。 */
-  width: min(644px, 100%);
+  /* 本編の会話モーダルより少しだけ広げる。狭い画面では親の幅で止める。 */
+  width: min(680px, 100%);
   padding: 20px;
   font-family: sans-serif;
   border: 2px solid rgba(211, 181, 111, 0.7);
@@ -690,7 +688,7 @@ th, td {
 .log-area {
   height: 400px;
   overflow-y: auto;
-  --village-scale-image: url("../images/village-scale-01-unnamed-hamlet.jpg");
+  --village-scale-image: url("../images/village-scale-01-unnamed-hamlet.webp");
   background:
     linear-gradient(rgba(255,255,255,0.86), rgba(255,255,255,0.91)),
     var(--village-scale-image) center / cover no-repeat #fff;
@@ -779,7 +777,7 @@ select {
   z-index: 998;
 }
 #villageScaleModal {
-  --village-scale-image: url("../images/village-scale-01-unnamed-hamlet.jpg");
+  --village-scale-image: url("../images/village-scale-01-unnamed-hamlet.webp");
   position: fixed;
   top: 50%;
   left: 50%;
@@ -798,31 +796,31 @@ select {
 }
 body.scale-stage-0 .log-area,
 #villageScaleModal.scale-stage-0 {
-  --village-scale-image: url("../images/village-scale-01-unnamed-hamlet.jpg");
+  --village-scale-image: url("../images/village-scale-01-unnamed-hamlet.webp");
 }
 body.scale-stage-1 .log-area,
 #villageScaleModal.scale-stage-1 {
-  --village-scale-image: url("../images/village-scale-02-small-frontier-village.jpg");
+  --village-scale-image: url("../images/village-scale-02-small-frontier-village.webp");
 }
 body.scale-stage-2 .log-area,
 #villageScaleModal.scale-stage-2 {
-  --village-scale-image: url("../images/village-scale-03-border-village.jpg");
+  --village-scale-image: url("../images/village-scale-03-border-village.webp");
 }
 body.scale-stage-3 .log-area,
 #villageScaleModal.scale-stage-3 {
-  --village-scale-image: url("../images/village-scale-04-traveler-stop.jpg");
+  --village-scale-image: url("../images/village-scale-04-traveler-stop.webp");
 }
 body.scale-stage-4 .log-area,
 #villageScaleModal.scale-stage-4 {
-  --village-scale-image: url("../images/village-scale-05-rich-village.jpg");
+  --village-scale-image: url("../images/village-scale-05-rich-village.webp");
 }
 body.scale-stage-5 .log-area,
 #villageScaleModal.scale-stage-5 {
-  --village-scale-image: url("../images/village-scale-06-prosperous-rural-village.jpg");
+  --village-scale-image: url("../images/village-scale-06-prosperous-rural-village.webp");
 }
 body.scale-stage-6 .log-area,
 #villageScaleModal.scale-stage-6 {
-  --village-scale-image: url("../images/village-scale-07-autonomous-settlement.jpg");
+  --village-scale-image: url("../images/village-scale-07-autonomous-settlement.webp");
 }
 
 /* 黙示録が続く間は、画面の色調をわずかに不穏へ寄せる */
@@ -941,6 +939,13 @@ tr td:nth-child(25) {
   outline-offset: 2px;
 }
 
+.portrait-sprite {
+  background-repeat: no-repeat;
+  -webkit-user-select: none;
+  user-select: none;
+  caret-color: transparent;
+}
+
 .spirit-column {
   display: none;
 }
@@ -974,8 +979,6 @@ table.show-spirit-columns .spirit-column {
 .villager-portrait {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center 30%;
   display: block;
   transform: scale(1.34);
   transform-origin: center 28%;
@@ -1245,7 +1248,7 @@ table.show-spirit-columns .spirit-column {
   border-radius: 4px;
   background: #f7f0e3;
 }
-.raid-portrait-frame img {
+.raid-portrait-frame .portrait-sprite {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -1527,7 +1530,7 @@ section h2 {
   border: 1px solid #bda978;
   overflow: hidden;
 }
-.personal-history-portrait-frame img {
+.personal-history-portrait-frame .portrait-sprite {
   grid-area: 1 / 1;
   display: block;
   width: 100%;
@@ -1762,12 +1765,12 @@ section h2 {
   background: transparent;
   cursor: pointer;
 }
-.friendship-detail-portrait-button:hover img,
-.friendship-detail-portrait-button:focus img {
+.friendship-detail-portrait-button:hover .portrait-sprite,
+.friendship-detail-portrait-button:focus .portrait-sprite {
   border-color: #8b6d31;
   box-shadow: 0 0 0 2px rgba(139, 109, 49, 0.24);
 }
-.friendship-detail-person img {
+.friendship-detail-person .portrait-sprite {
   display: block;
   width: 42px;
   height: 42px;
@@ -1939,7 +1942,7 @@ section h2 {
   gap: 6px;
   font-weight: bold;
 }
-.raid-result-mvp-person img {
+.raid-result-mvp-person .portrait-sprite {
   width: 44px;
   height: 44px;
   object-fit: cover;
@@ -2029,7 +2032,7 @@ section h2 {
   margin-bottom: 12px;
 }
 
-.adventurer-quest-report-person img {
+.adventurer-quest-report-person .portrait-sprite {
   width: 96px;
   height: 96px;
   object-fit: cover;
@@ -2064,11 +2067,14 @@ section h2 {
   background: #eee7dd;
 }
 
-.heresy-inquisition-portrait img {
+.heresy-inquisition-portrait .portrait-sprite {
   display: block;
-  width: 100%;
+  position: relative;
+  left: 50%;
+  width: auto;
   height: 100%;
-  object-fit: cover;
+  aspect-ratio: 1;
+  transform: translateX(-50%);
 }
 
 .heresy-inquisition-dialogue {
@@ -2800,13 +2806,32 @@ section h2 {
   gap: 20px;
 }
 
+.conversation-portrait-column {
+  flex: 0 0 200px;
+  width: 200px;
+}
+
+.conversation-history-link {
+  display: inline-block;
+  margin-top: 6px;
+  color: #6b4f2a;
+  font-size: 0.85rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.conversation-history-link:hover,
+.conversation-history-link:focus {
+  color: #3d2b13;
+}
+
 .portrait-area {
   width: 200px;
   height: 200px;
   background: #f0f0f0;
 }
 
-.portrait-area img {
+.portrait-area .portrait-sprite {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -3083,7 +3108,7 @@ section h2 {
   background: #e7f0df;
 }
 
-.dryad-fruit-portrait-area img {
+.dryad-fruit-portrait-area .portrait-sprite {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -3129,7 +3154,7 @@ section h2 {
   background: #eee;
 }
 
-.exchange-character .portrait-area img {
+.exchange-character .portrait-area .portrait-sprite {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -3185,7 +3210,7 @@ section h2 {
   background: #eee;
 }
 
-.pan-flute-portrait img {
+.pan-flute-portrait .portrait-sprite {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -3917,7 +3942,7 @@ body.mobile-mode .friendship-detail-portrait-button {
   width: 36px;
   height: 36px;
 }
-body.mobile-mode .friendship-detail-person img {
+body.mobile-mode .friendship-detail-person .portrait-sprite {
   width: 36px;
   height: 36px;
 }
@@ -4015,6 +4040,10 @@ body.mobile-mode .tab-button {
 }
 body.mobile-mode .conversation-content {
   gap: 10px;
+}
+body.mobile-mode .conversation-portrait-column {
+  flex-basis: 128px;
+  width: 128px;
 }
 body.mobile-mode .portrait-area {
   flex: 0 0 128px;

@@ -1,6 +1,5 @@
 // util.js
 
-import { getPortraitAssetPathForCharacter } from "./data/portraitPaths.js";
 import { isGoblin, isWolf, YOUNG_WOLF_TRAIT } from "./domain/speciesTraits.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
 
@@ -69,15 +68,6 @@ export function randNormalInRange(min, max, mean = (min + max) / 2, stddev = (ma
   const value = num * stddev + mean;
   // 値を[min, max]にクランプし、整数に丸める
   return Math.round(clampValue(value, min, max));
-}
-
-/**
- * キャラクターの顔グラフィックパスを取得する共通関数
- * @param {Object} character - キャラクターオブジェクト
- * @returns {string} 顔グラフィックのパス
- */
-export function getPortraitPath(character) {
-  return getPortraitAssetPathForCharacter(character);
 }
 
 /**

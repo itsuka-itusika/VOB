@@ -1,5 +1,5 @@
 import { addStoredResource } from "./domain/resourceLimits.js";
-import { getPortraitPath } from "./util.js";
+import { getPortraitSpriteHtml } from "./data/portraitAtlas.js";
 import { grantSecretTreasure, pickRandomSecretTreasureDefinitions } from "./secretTreasures.js";
 import {
   ADVENTURER_QUEST_ACCEPTED_TRAIT,
@@ -288,7 +288,7 @@ export function showAdventurerQuestResultModals(reports) {
       <div class="event-modal-body">
         <h3>冒険者クエスト結果報告</h3>
         <div class="adventurer-quest-report-person">
-          <img src="${escapeHtml(getPortraitPath(report.adventurer))}" alt="">
+          ${getPortraitSpriteHtml(report.adventurer, { alt: report.adventurer.name })}
           <div>
             <p><strong>${escapeHtml(report.adventurer.name)}</strong></p>
             <p>${escapeHtml(dialogue)}</p>

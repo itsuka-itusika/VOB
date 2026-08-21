@@ -448,7 +448,7 @@
     </div>
     <div class="dryad-fruit-person">
       <div class="dryad-fruit-portrait-area">
-        <img id="dryadFruitPortrait" src="" alt="portrait">
+        <div id="dryadFruitPortrait" class="portrait-sprite" role="img" aria-label="肖像"></div>
       </div>
       <div class="dryad-fruit-dialogue-area">
         <strong id="dryadFruitName"></strong>
@@ -485,8 +485,11 @@
 <div id="conversationOverlay"></div>
 <div id="conversationModal">
   <div class="conversation-content">
-    <div class="portrait-area">
-      <img id="conversationPortrait" src="" alt="portrait">
+    <div class="conversation-portrait-column">
+      <div class="portrait-area">
+        <div id="conversationPortrait" class="portrait-sprite" role="img" aria-label="肖像"></div>
+      </div>
+      <a href="#personalHistoryModal" id="conversationHistoryLink" class="conversation-history-link" hidden>記録</a>
     </div>
     <div class="dialogue-area">
       <div id="characterInfo" class="character-info"></div>
@@ -510,7 +513,7 @@
     <div class="character-exchange">
       <div class="exchange-character">
         <div class="portrait-area">
-          <img id="exchangePortraitA" src="" alt="portrait A">
+          <div id="exchangePortraitA" class="portrait-sprite" role="img" aria-label="交換前の肖像"></div>
         </div>
         <div class="dialogue-area">
           <div id="exchangeTextA"></div>
@@ -518,7 +521,7 @@
       </div>
       <div class="exchange-character">
         <div class="portrait-area">
-          <img id="exchangePortraitB" src="" alt="portrait B">
+          <div id="exchangePortraitB" class="portrait-sprite" role="img" aria-label="交換後の肖像"></div>
         </div>
         <div class="dialogue-area">
           <div id="exchangeTextB"></div>

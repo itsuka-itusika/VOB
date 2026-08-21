@@ -1,9 +1,7 @@
 import { isHeadmanElectionModalPendingOrOpen } from "./headmanElection.js";
 import { getConversationLine } from "./dialogue/dialogueEngine.js";
-import { DEFAULT_PORTRAIT_KEY, getPortraitAssetPath } from "./data/portraitPaths.js";
-import { getPortraitPath } from "./util.js";
+import { applyPortraitToElement } from "./data/portraitAtlas.js";
 
-const DEFAULT_PORTRAIT_PATH = getPortraitAssetPath(DEFAULT_PORTRAIT_KEY);
 
 const MODAL_OVERLAY_ID = "raidWarningOverlay";
 const MODAL_ID = "raidWarningModal";
@@ -117,12 +115,8 @@ function showRaidWarningWhenReady() {
 
   const portraitArea = document.createElement("div");
   portraitArea.className = "portrait-area";
-  const portrait = document.createElement("img");
-  portrait.src = representative ? getPortraitPath(representative) : DEFAULT_PORTRAIT_PATH;
-  portrait.alt = "";
-  portrait.onerror = () => {
-    portrait.src = DEFAULT_PORTRAIT_PATH;
-  };
+  const portrait = document.createElement("div");
+  applyPortraitToElement(portrait, representative || null);
   portraitArea.appendChild(portrait);
 
   const dialogueArea = document.createElement("div");

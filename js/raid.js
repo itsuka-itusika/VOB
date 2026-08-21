@@ -1,6 +1,7 @@
 // raid.js
 
-import { randInt, randChoice, clampValue, shuffleArray, getPortraitPath } from "./util.js";
+import { randInt, randChoice, clampValue, shuffleArray } from "./util.js";
+import { applyPortraitToElement, getPortraitSpriteHtml } from "./data/portraitAtlas.js";
 import { getRaidRulesById } from "./data/raidData.js";
 import { damageRandomBuilding } from "./buildings.js";
 import { endOfMonthProcess, doFixedEventPost, doAgingProcess, runMonthStartPhase } from "./events.js";
@@ -1350,7 +1351,15 @@ function collectRaidResultInfo(village, isSuccess, isPartSuccess, resultReason =
         damage: topDamage,
         people: topNames.map(name => {
           const person = village.villagers.find(v => v.name === name);
-          return { name, portrait: person ? getPortraitPath(person) : "" };
+          return {
+            name,
+            portrait: person ? {
+              name: person.name,
+              portraitFile: person.portraitFile,
+              adultPortraitFile: person.adultPortraitFile,
+              bodyTraits: Array.isArray(person.bodyTraits) ? [...person.bodyTraits] : []
+            } : null
+          };
         })
       };
     }
@@ -1434,7 +1443,7 @@ function showRaidResultModal(info) {
         <div class="raid-result-mvp-label">殊勲</div>
         ${info.mvp.people.map(person => `
           <div class="raid-result-mvp-person">
-            ${person.portrait ? `<img src="${escapeRaidResultText(person.portrait)}" alt="">` : ""}
+            ${person.portrait ? getPortraitSpriteHtml(person.portrait, { size: 44, alt: person.name }) : ""}
             <span>${escapeRaidResultText(person.name)}</span>
           </div>`).join("")}
         <div class="raid-result-mvp-damage">与ダメージ ${Math.floor(info.mvp.damage)}</div>
@@ -1580,10 +1589,8 @@ function appendRaidPortraitCell(row, unit) {
   const frame = document.createElement("div");
   frame.className = "raid-portrait-frame";
 
-  const portrait = document.createElement("img");
-  portrait.src = getPortraitPath(unit);
-  portrait.alt = unit?.name || "";
-  portrait.loading = "lazy";
+  const portrait = document.createElement("div");
+  applyPortraitToElement(portrait, unit);
 
   frame.appendChild(portrait);
   cell.appendChild(frame);
@@ -1710,4 +1717,3 @@ function appendRaidStatSummaryCell(row, unit) {
   cell.appendChild(mindLine);
   row.appendChild(cell);
 }
-

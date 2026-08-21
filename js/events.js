@@ -1051,7 +1051,7 @@ function showSeasonChangeDialog(season) {
   if (typeof document === "undefined") return;
   const seasonData = {
     "春": {
-      image: "../images/seasons/spring.jpg",
+      image: "../images/seasons/spring.webp",
       message: "暖かな風が吹き、新しい命が芽吹く季節となりました。",
       accent: "#ffd6e7",
       tips: [
@@ -1060,7 +1060,7 @@ function showSeasonChangeDialog(season) {
       ]
     },
     "夏": {
-      image: "../images/seasons/summer.jpg",
+      image: "../images/seasons/summer.webp",
       message: "太陽が高く昇り、生命力溢れる季節となりました。",
       accent: "#ffe39a",
       tips: [
@@ -1070,7 +1070,7 @@ function showSeasonChangeDialog(season) {
       ]
     },
     "秋": {
-      image: "../images/seasons/autumn.jpg",
+      image: "../images/seasons/autumn.webp",
       message: "実りの秋を迎え、収穫の季節となりました。",
       accent: "#ffd08a",
       tips: [
@@ -1079,7 +1079,7 @@ function showSeasonChangeDialog(season) {
       ]
     },
     "冬": {
-      image: "../images/seasons/winter.jpg",
+      image: "../images/seasons/winter.webp",
       message: "寒さが厳しくなり、静かな季節となりました。",
       accent: "#d5e8ff",
       tips: [

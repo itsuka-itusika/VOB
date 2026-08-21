@@ -1,13 +1,13 @@
 import { theVillage } from "./main.js";
 import { updateUI } from "./ui.js";
-import { getPortraitPath, isForcedHealingAction } from "./util.js";
+import { isForcedHealingAction } from "./util.js";
+import { applyPortraitToElement } from "./data/portraitAtlas.js";
 import { ACTION_NONE, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { getPermanentStat } from "./domain/statLayers.js";
-import { DEFAULT_PORTRAIT_KEY, getPortraitAssetPath } from "./data/portraitPaths.js";
 import { ACTION_CANNON, ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT, ACTION_TRAP, RAID_ACTIONS, canPerformRaidAction, getRaidSlotLimitMessage } from "./raidRules.js";
 import { getConversationLine, getDialogueLine } from "./dialogue/dialogueEngine.js";
-import { recordVillagerJoinHistory } from "./history.js";
+import { openPersonalHistoryModal, recordVillagerJoinHistory } from "./history.js";
 import { getVisitorLineKey, MERCHANT_SECRET_TREASURE_LINES, VISITOR_JOIN_LINES } from "./data/dialogue/visitorLines.js";
 import { getCaptiveConversationLines, getCaptiveGroupKey } from "./data/dialogue/captiveLines.js";
 import { incrementTitleCounter, TITLE_COUNTER_KEYS } from "./titles.js";
@@ -35,7 +35,6 @@ import {
   openAdventurerQuestModal
 } from "./adventurerQuests.js";
 
-const DEFAULT_PORTRAIT_PATH = getPortraitAssetPath(DEFAULT_PORTRAIT_KEY);
 const SALT_PILLAR_CONVERSATION_LINE = "………（塩の柱は黙して何も語らない）";
 const SEDUCTION_MIN_LUST = 18;
 const TARGET_LUST_MULTIPLIER_MAX = 1.5;
@@ -132,24 +131,12 @@ export function openConversationModal(character) {
   const portrait = document.getElementById("conversationPortrait");
   const text = document.getElementById("conversationText");
   const actionButtons = document.getElementById("actionButtons");
+  const historyLink = document.getElementById("conversationHistoryLink");
 
-  if (!overlay || !modal || !portrait || !text || !actionButtons) return;
+  if (!overlay || !modal || !portrait || !text || !actionButtons || !historyLink) return;
 
-  // 共通関数を使用して顔グラフィックのパスを取得
-  const portraitPath = getPortraitPath(character);
-  console.log(`Character: ${character.name}, Portrait: ${portraitPath}`);
-
-  // 顔グラフィックを設定（エラーハンドリング付き）
-  try {
-    portrait.src = portraitPath;
-    portrait.onerror = () => {
-      console.error(`Portrait image not found: ${portraitPath}`);
-      portrait.src = DEFAULT_PORTRAIT_PATH;
-    };
-  } catch (error) {
-    console.error('Error loading portrait:', error);
-    portrait.src = DEFAULT_PORTRAIT_PATH;
-  }
+  portrait.setAttribute("aria-label", character.name || "肖像");
+  applyPortraitToElement(portrait, character);
   // 塩の柱は何度見ても同じ沈黙なので、会話の更新はさせない。
   const isSilentSaltPillar = isSaltPillar(character);
   portrait.style.cursor = isSilentSaltPillar ? "default" : "pointer";
@@ -165,6 +152,15 @@ export function openConversationModal(character) {
   }
 
   const isVillageMember = theVillage.villagers.includes(character);
+  historyLink.hidden = !isVillageMember;
+  historyLink.title = isVillageMember ? `${character.name}の記録を見る` : "";
+  historyLink.onclick = isVillageMember
+    ? event => {
+        event.preventDefault();
+        closeConversationModal();
+        openPersonalHistoryModal(theVillage, character);
+      }
+    : null;
   if (isVillageMember) {
     refreshJobTable(character, theVillage);
   }

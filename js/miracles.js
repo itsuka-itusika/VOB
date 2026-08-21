@@ -1,6 +1,7 @@
 // miracles.js
 
-import { clampValue, getPortraitPath, shuffleArray } from "./util.js";
+import { clampValue, shuffleArray } from "./util.js";
+import { applyPortraitToElement, getPortraitSpriteHtml } from "./data/portraitAtlas.js";
 import { addRelationship, removeRelationship, checkHasRelationship, hasLoverRelationship, getRelationshipTargetName, clearRelationshipsForDepartedVillager, addSpouseRelationships, raiseMutualFriendshipTo } from "./relationships.js";
 import { updateUI } from "./ui.js";  // 実行後にUIを更新する
 import { canExchangeBody, doExchange } from "./exchange.js";
@@ -9,7 +10,6 @@ import { refreshJobTable } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
 import { recordMarriageHistory, recordVillagerLeaveHistory } from "./history.js";
-import { DEFAULT_PORTRAIT_KEY, getPortraitAssetPath } from "./data/portraitPaths.js";
 import { clearHopeLossTraits, DESPAIR_TRAIT, DISAPPOINTMENT_TRAIT } from "./domain/despair.js";
 import { resolveDialogueTone } from "./data/dialogue/toneProfiles.js";
 import { getDialogueLine } from "./dialogue/dialogueEngine.js";
@@ -33,7 +33,6 @@ import {
   subtractDivineMight
 } from "./divineMight.js";
 
-const DEFAULT_PORTRAIT_PATH = getPortraitAssetPath(DEFAULT_PORTRAIT_KEY);
 const AUTONOMOUS_SETTLEMENT_SCALE = 350;
 const THUNDERBOLT_MIRACLE_DAMAGE = 80;
 const HEAVY_DRINKER_TRAIT = "酒豪";
@@ -295,14 +294,9 @@ function createExchangePreviewPerson(person) {
   const row = document.createElement("div");
   row.className = "miracle-exchange-preview-person";
 
-  const portrait = document.createElement("img");
+  const portrait = document.createElement("div");
   portrait.className = "miracle-exchange-preview-portrait";
-  portrait.src = getPortraitPath(person);
-  portrait.alt = "";
-  portrait.onerror = () => {
-    portrait.onerror = null;
-    portrait.src = DEFAULT_PORTRAIT_PATH;
-  };
+  applyPortraitToElement(portrait, person);
 
   const primaryBodyTrait = Array.isArray(person.bodyTraits) && person.bodyTraits.length > 0
     ? person.bodyTraits[0]
@@ -1300,7 +1294,7 @@ export function showMiracleResultModal(village, miracleName, message, people = [
   modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);box-sizing:border-box;background:#fff;padding:20px;max-width:620px;width:calc(100% - 32px);max-height:min(80vh,720px);overflow:auto;border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
   const rows = entries.map(({ person, line }) => `
     <div style="display:grid;grid-template-columns:72px 1fr;gap:12px;margin:12px 0;align-items:center;">
-      <img src="${getPortraitPath(person)}" alt="${person.name}" style="width:72px;height:72px;object-fit:cover;border:1px solid #ddd;background:#f6f0e6;">
+      ${getPortraitSpriteHtml(person, { size: 72, alt: person.name, extraStyle: "border:1px solid #ddd;background-color:#f6f0e6;" })}
       <p><strong>${person.name}</strong>: ${line}</p>
     </div>
   `).join("");
@@ -1362,9 +1356,9 @@ export function showMarriageMiracleModal(village, miracleName, pairs, options = 
 
   const rows = pairs.map(([a, b]) => `
     <div style="display:grid;grid-template-columns:72px 1fr;gap:12px;margin:12px 0;padding-bottom:12px;border-bottom:1px solid #ddd;align-items:center;">
-      <img src="${getPortraitPath(a)}" alt="${a.name}" style="width:72px;height:72px;object-fit:cover;">
+      ${getPortraitSpriteHtml(a, { size: 72, alt: a.name })}
       <p><strong>${a.name}</strong>: ${getMarriageMiracleLine(a, b, miracleName)}</p>
-      <img src="${getPortraitPath(b)}" alt="${b.name}" style="width:72px;height:72px;object-fit:cover;">
+      ${getPortraitSpriteHtml(b, { size: 72, alt: b.name })}
       <div>
         <p><strong>${b.name}</strong>: ${getMarriageMiracleLine(b, a, miracleName)}</p>
       </div>
@@ -1432,16 +1426,8 @@ function createPanFluteExchangePerson(person, line) {
 
   const portraitArea = document.createElement("div");
   portraitArea.className = "pan-flute-portrait";
-  const img = document.createElement("img");
-  try {
-    img.src = getPortraitPath(person);
-  } catch {
-    img.src = DEFAULT_PORTRAIT_PATH;
-  }
-  img.alt = `${person.name} portrait`;
-  img.onerror = () => {
-    img.src = DEFAULT_PORTRAIT_PATH;
-  };
+  const img = document.createElement("div");
+  applyPortraitToElement(img, person);
   portraitArea.appendChild(img);
 
   const dialogue = document.createElement("div");
@@ -1534,27 +1520,10 @@ export function openExchangeModal(personA, personB, options = {}) {
   if (title) title.textContent = options.title || "交換の奇跡";
   if (message) message.textContent = options.message || "二人の魂は互いの体を見て驚いている...";
 
-  // 顔グラフィックを設定（エラーハンドリング付き）
-  try {
-    // 共通関数を使用して顔グラフィックのパスを取得
-    // 注意: 交換後の状態を表示するため、personAの体はpersonBの顔グラフィックを表示
-    portraitA.src = getPortraitPath(personA);
-    portraitA.onerror = () => {
-      console.error(`Portrait image not found: ${portraitA.src}`);
-      portraitA.src = DEFAULT_PORTRAIT_PATH;
-    };
-
-    // 同様に、personBの体はpersonAの顔グラフィックを表示
-    portraitB.src = getPortraitPath(personB);
-    portraitB.onerror = () => {
-      console.error(`Portrait image not found: ${portraitB.src}`);
-      portraitB.src = DEFAULT_PORTRAIT_PATH;
-    };
-  } catch (error) {
-    console.error('Error loading portraits:', error);
-    portraitA.src = DEFAULT_PORTRAIT_PATH;
-    portraitB.src = DEFAULT_PORTRAIT_PATH;
-  }
+  portraitA.setAttribute("aria-label", personA.name || "肖像");
+  portraitB.setAttribute("aria-label", personB.name || "肖像");
+  applyPortraitToElement(portraitA, personA);
+  applyPortraitToElement(portraitB, personB);
 
   // 入れ替わり時のセリフを選ぶ。二人が並ぶため、同じ文にならないようにする。
   const usedLines = new Set();

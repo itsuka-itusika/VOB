@@ -1,4 +1,4 @@
-import { getPortraitPath } from "./util.js";
+import { applyPortraitToElement } from "./data/portraitAtlas.js";
 import { getPastPortraitFiles, isOriginalBodyOwner } from "./domain/portraitHistory.js";
 import { DEFAULT_PORTRAIT_KEY, isKnownPortraitKey, normalizePortraitKey } from "./data/portraitPaths.js";
 import { getPersonTitles } from "./titles.js";
@@ -762,18 +762,26 @@ function getPastPortraitCaption(entry, person, index, legacyOriginalBodyIndex) {
 
 function makePortraitStep(portraitFile, caption) {
   return {
-    path: getPortraitPath({ portraitFile }),
+    portraitFile: normalizePortraitKey(portraitFile),
     hasImage: hasPortraitImage(portraitFile),
     caption
   };
 }
 
 function makeCurrentPortraitStep(person) {
-  return makePortraitStep(person?.portraitFile, "現在の姿");
+  return {
+    ...makePortraitStep(person?.portraitFile, "現在の姿"),
+    character: {
+      name: person?.name,
+      portraitFile: person?.portraitFile,
+      adultPortraitFile: person?.adultPortraitFile,
+      bodyTraits: Array.isArray(person?.bodyTraits) ? [...person.bodyTraits] : []
+    }
+  };
 }
 
 function getPastPortraitSequence(person) {
-  const currentPath = makeCurrentPortraitStep(person).path;
+  const currentKey = makeCurrentPortraitStep(person).portraitFile;
   const entries = getPastPortraitFiles(person);
   const legacyOriginalBodyIndex = entries.findIndex(isLegacyOriginalBodyEntry);
   const pastPortraits = entries
@@ -781,7 +789,7 @@ function getPastPortraitSequence(person) {
       entry.portraitFile,
       getPastPortraitCaption(entry, person, index, legacyOriginalBodyIndex)
     ));
-  return pastPortraits.some(step => step.path !== currentPath) ? pastPortraits.reverse() : [];
+  return pastPortraits.some(step => step.portraitFile !== currentKey) ? pastPortraits.reverse() : [];
 }
 
 function renderPastPortraitControls(person) {
@@ -810,7 +818,7 @@ function renderPortraitFrame(person) {
   const unknownClass = currentPortrait.hasImage ? "" : " is-unknown";
   return `
     <div class="personal-history-portrait-frame${unknownClass}" data-personal-history-portrait-frame>
-      <img data-personal-history-portrait src="${escapeHtml(currentPortrait.path)}" alt="${escapeHtml(person.name)}"${hiddenAttr}>
+      <div class="portrait-sprite" role="img" aria-label="${escapeHtml(person.name)}" data-personal-history-portrait${hiddenAttr}></div>
       <span class="personal-history-portrait-unknown" data-personal-history-portrait-unknown${unknownHiddenAttr}>不明</span>
     </div>
   `;
@@ -827,20 +835,15 @@ function setPersonalHistoryPortrait(frame, portrait, unknown, step) {
   frame.classList.remove("is-unknown");
   unknown.hidden = true;
   portrait.hidden = false;
-  portrait.src = step.path;
+  applyPortraitToElement(portrait, step.character || { portraitFile: step.portraitFile });
 }
 
-function bindPersonalHistoryPortraitFallback(content) {
+function bindPersonalHistoryPortrait(content, person) {
   const frame = content.querySelector("[data-personal-history-portrait-frame]");
   const portrait = content.querySelector("[data-personal-history-portrait]");
   const unknown = content.querySelector("[data-personal-history-portrait-unknown]");
   if (!frame || !portrait || !unknown) return;
-
-  portrait.addEventListener("error", () => {
-    portrait.hidden = true;
-    unknown.hidden = false;
-    frame.classList.add("is-unknown");
-  });
+  setPersonalHistoryPortrait(frame, portrait, unknown, makeCurrentPortraitStep(person));
 }
 
 function bindPastPortraitControls(content) {
@@ -862,8 +865,8 @@ function bindPastPortraitControls(content) {
     currentPortrait = null;
     pastPortraits = [];
   }
-  if (!currentPortrait?.path) return;
-  pastPortraits = pastPortraits.filter(step => step?.path);
+  if (!currentPortrait?.portraitFile) return;
+  pastPortraits = pastPortraits.filter(step => step?.portraitFile);
 
   const portraitSteps = [currentPortrait, ...pastPortraits];
   let portraitIndex = 0;
@@ -959,7 +962,7 @@ export function openPersonalHistoryModal(village, person, options = {}) {
       ? `<div class="history-list">${events.map(event => renderHistoryEntry(event, { personName: person.name })).join("")}</div>`
       : `<div class="history-empty">この人物の歩みは、まだ村の帳面には記されていない。</div>`}
   `;
-  bindPersonalHistoryPortraitFallback(content);
+  bindPersonalHistoryPortrait(content, person);
   bindPastPortraitControls(content);
   bindDictionaryTerms(content);
   content.querySelector("[data-open-friendship-detail]")?.addEventListener("click", async () => {

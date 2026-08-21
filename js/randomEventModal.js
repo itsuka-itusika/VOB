@@ -1,4 +1,4 @@
-import { getPortraitPath } from "./util.js";
+import { applyPortraitToElement } from "./data/portraitAtlas.js";
 
 const DEFAULT_LINE = "なにかが起きたようだ。";
 const eventQueue = [];
@@ -85,18 +85,15 @@ function showNextRandomEventModal() {
         background: #fff;
       `;
 
-      const img = document.createElement("img");
-      img.src = getPortraitPath(character);
-      img.alt = character.name || "";
+      const img = document.createElement("div");
       img.style.cssText = `
         width: 100%;
         height: 100%;
-        object-fit: cover;
-        object-position: center 30%;
         transform: scale(1.34);
         transform-origin: center 28%;
         display: block;
       `;
+      applyPortraitToElement(img, character);
       frame.appendChild(img);
 
       const text = document.createElement("div");

@@ -50,7 +50,8 @@ import { getPopulationCount } from "./domain/speciesTraits.js";
 import { isUnassignedActionVillager } from "./domain/rules.js";
 import { showDictionaryEntry } from "./dictionary.js";
 import { combinedDictionaryData } from "./data/dictionaryData.js";
-import { getPortraitPath, getVillagerFoodConsumption } from "./util.js";
+import { getVillagerFoodConsumption } from "./util.js";
+import { applyPortraitToElement } from "./data/portraitAtlas.js";
 import { openPersonalHistoryModal } from "./history.js";
 import { formatRelationshipsForDisplay, hasHobbyMateRelationship } from "./relationships.js";
 import { getCaptives } from "./captives.js";
@@ -793,11 +794,9 @@ function appendPortraitCell(row, person) {
   const frame = document.createElement("div");
   frame.classList.add("villager-portrait-frame");
 
-  const portrait = document.createElement("img");
+  const portrait = document.createElement("div");
   portrait.classList.add("villager-portrait");
-  portrait.src = getPortraitPath(person);
-  portrait.alt = person.name;
-  portrait.loading = "lazy";
+  applyPortraitToElement(portrait, person);
 
   frame.appendChild(portrait);
   cell.appendChild(frame);
