@@ -14,7 +14,7 @@ import { getInitialScaleStageIndex } from "./villageScale.js";
 import { ensureCaptiveReleaseDeadline, normalizeCaptive } from "./captives.js";
 import { normalizeBuildingRequestState } from "./buildingRequests.js";
 import { normalizeWishState } from "./wishes.js";
-import { hasActiveBuildingFlag, normalizeDamagedBuildings, recalculateBuildingDerivedState } from "./domain/buildingState.js";
+import { normalizeDamagedBuildings, recalculateBuildingDerivedState } from "./domain/buildingState.js";
 import { normalizeVillageRoleForPerson, normalizeVillageRoles } from "./domain/villageRoles.js";
 
 const BODY_TRAIT_RENAMES = {
@@ -493,9 +493,6 @@ function convertObjectToVillage(dataObj) {
     : undefined;
   normalizeDamagedBuildings(v);
   recalculateBuildingDerivedState(v);
-  const baseVisitorLimit = hasActiveBuildingFlag(v, "hasTavern", "tavern") ? 2 : 1;
-  const prosperityVisitorBonus = (Number(v.building) || 0) >= 350 ? 1 : 0;
-  v.visitorLimit = Math.max(1, baseVisitorLimit + prosperityVisitorBonus);
   v.pendingGoldenRainPregnancies = Array.isArray(dataObj.pendingGoldenRainPregnancies)
     ? JSON.parse(JSON.stringify(dataObj.pendingGoldenRainPregnancies))
     : [];

@@ -130,7 +130,6 @@ export const BUILDINGS = [
     effect: standardBuildingEffect({
       scale: 20,
       flag: "hasTavern",
-      after: (village) => { village.visitorLimit = 2; },
       log: "酒場建設完了: 毎月の訪問者判定枠が最大2人、女性限定行動「バニー」解放、規模+20"
     })
   },

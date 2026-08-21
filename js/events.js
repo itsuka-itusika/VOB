@@ -28,7 +28,7 @@ import {
   applyForcedActionRestriction
 } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
-import { hasActiveBuildingFlag } from "./domain/buildingState.js";
+import { getVisitorLimit, hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
 import { getBalanceSimulationOptions } from "./balance/simulationOptions.js";
 import { isWolf, OLD_WOLF_TRAIT, syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
@@ -407,12 +407,6 @@ export function runMonthStartPhase(village) {
   tryTriggerBacchusGoldenStatueEvent(village);
   showAdventurerQuestResultModals(village.pendingAdventurerQuestReports);
   village.pendingAdventurerQuestReports = [];
-}
-
-function getVisitorLimit(village) {
-  const baseLimit = hasActiveBuildingFlag(village, "hasTavern", "tavern") ? 2 : 1;
-  const prosperityBonus = (Number(village.building) || 0) >= 350 ? 1 : 0;
-  return Math.max(1, baseLimit + prosperityBonus);
 }
 
 function getPublicBathMonthlyRecovery(person, village) {

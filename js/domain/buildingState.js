@@ -1,5 +1,9 @@
 const BASE_POP_LIMIT = 8;
 const HOUSE_POP_LIMIT_BONUS = 2;
+// 訪問者判定枠。酒場で2人になり、自治集落の規模でさらに1人増える。
+const BASE_VISITOR_LIMIT = 1;
+const TAVERN_VISITOR_LIMIT = 2;
+const AUTONOMOUS_SETTLEMENT_SCALE = 350;
 const DAMAGE_PROTECTED_BUILDING_IDS = new Set(["bacchusGoldenStatue"]);
 
 function normalizeBuildingId(id) {
@@ -97,11 +101,20 @@ function ensureNonHousePopLimitBonus(village) {
   return village.nonHousePopLimitBonus;
 }
 
+export function getVisitorLimit(village) {
+  const baseLimit = hasActiveBuildingFlag(village, "hasTavern", "tavern")
+    ? TAVERN_VISITOR_LIMIT
+    : BASE_VISITOR_LIMIT;
+  const prosperityBonus = (Number(village?.building) || 0) >= AUTONOMOUS_SETTLEMENT_SCALE ? 1 : 0;
+  return Math.max(1, baseLimit + prosperityBonus);
+}
+
 export function recalculateBuildingDerivedState(village) {
   if (!village) return;
   normalizeDamagedBuildings(village);
   const nonHouseBonus = ensureNonHousePopLimitBonus(village);
   village.popLimit = BASE_POP_LIMIT + nonHouseBonus + countActiveBuildings(village, "house") * HOUSE_POP_LIMIT_BONUS;
+  village.visitorLimit = getVisitorLimit(village);
 }
 
 export function addNonHousePopLimitBonus(village, amount) {
