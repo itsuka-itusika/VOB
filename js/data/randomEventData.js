@@ -11,7 +11,7 @@ export const EVENT_KIND_TITLES = {
 };
 
 export const EVENT_POOLS = {
-  good: ["wolfChild", "cat", "gold", "strangeRain", "fireworks", "hotSpring", "bathPerk", "hobbyFriends", "menFriendship", "lover", "pickup", "yuri", "tattoo", "fashion", "muscle", "selfPleasure"],
+  good: ["wolfChild", "cat", "gold", "strangeRain", "fireworks", "hotSpring", "bathPerk", "hobbyFriends", "thaw", "menFriendship", "lover", "pickup", "yuri", "tattoo", "fashion", "muscle", "selfPleasure"],
   bad: ["storm", "downpour", "heat", "fire", "thief", "rats", "lightning1", "lightning2", "snow", "fight", "loverArgument", "argument", "drunk", "epidemic"]
 };
 
@@ -30,6 +30,7 @@ export const EVENT_SUBJECTS = {
   hotSpring: "秘湯発見",
   bathPerk: "役得",
   hobbyFriends: "趣味仲間",
+  thaw: "雪解け",
   menFriendship: "男同士の友情",
   lover: "恋の気配",
   pickup: "ナンパ",
@@ -69,6 +70,7 @@ export const EVENT_MOODS = {
   hotSpring: "happy",
   bathPerk: "selfChange",
   hobbyFriends: "friendship",
+  thaw: "friendship",
   menFriendship: "friendship",
   lover: "romance",
   pickup: "romance",
@@ -314,6 +316,7 @@ export const EVENT_SECOND_LINE_BASES = {
   fireworks: "夜空が明るくなって、皆の顔も緩んでいる",
   hotSpring: "湯けむりの奥から、村の新しい楽しみが見つかった",
   bathPerk: "長風呂で気分がすっかりほぐれた",
+  thaw: "あれだけこじれた相手と、また言葉を交わせている",
   menFriendship: "こういう相手がいると少し強くなれる気がする",
   lover: "あの人のことが妙に頭から離れない",
   pickup: "自分から声をかける度胸が出た",

@@ -1,7 +1,7 @@
 // RandomEvents.js
 
 import { randInt, clampValue, round3 } from "./util.js";
-import { adjustMutualFriendship, doLoverCheck, addRelationship as addCategorizedRelationship, getPairFriendshipMinimum, isSingle, normalizeRelationship, parseRelationship } from "./relationships.js";
+import { adjustMutualFriendship, doLoverCheck, addRelationship as addCategorizedRelationship, getPairFriendshipMaximum, getPairFriendshipMinimum, isSingle, normalizeRelationship, parseRelationship } from "./relationships.js";
 import { canExchangeBody, doExchange } from "./exchange.js";
 import { showRandomEventModal } from "./randomEventModal.js";
 import { HobbyEffects } from "./HobbyEffects.js";
@@ -430,6 +430,25 @@ export class RandomEvents {
         }
         break;
       }
+      case "thaw": {
+        const villagers = getActiveVillagers(v);
+        const pairs = [];
+        villagers.forEach((a, index) => {
+          villagers.slice(index + 1).forEach(b => {
+            if (getPairFriendshipMaximum(a, b) <= -30) pairs.push([a, b]);
+          });
+        });
+        if (pairs.length === 0) {
+          return null;
+        }
+
+        const [a, b] = this.randChoice(pairs);
+        adjustMutualFriendship(a, b, 30);
+        this.addForcedSpeaker(a);
+        this.addForcedSpeaker(b);
+        v.log(`雪解け:${a.name}と${b.name}のわだかまりがほどけた。好感度+30`);
+        break;
+      }
       case "menFriendship": {
         let men = getActiveVillagers(v).filter(x => x.spiritSex === "男" && x.bodyAge >= 16);
         const pairs = [];
@@ -841,12 +860,20 @@ export class RandomEvents {
         }
 
         const [a, b] = this.randChoice(pairs);
-        adjustMutualFriendship(a, b, -20);
+        const friendship = adjustMutualFriendship(a, b, -20);
+        let friendshipLoss = 20;
+        if (friendship <= -1 && !this.hasMutualRelationship(a, b, "天敵")) {
+          this.addRelationship(a, `天敵:${b.name}`);
+          this.addRelationship(b, `天敵:${a.name}`);
+          adjustMutualFriendship(a, b, -30);
+          friendshipLoss += 30;
+          recordSocialRelationHistory(v, a, b, "天敵");
+        }
         a.happiness = clampValue(a.happiness - 10, 0, 100);
         b.happiness = clampValue(b.happiness - 10, 0, 100);
         this.addForcedSpeaker(a);
         this.addForcedSpeaker(b);
-        v.log(`言い争い:${a.name}と${b.name}は言葉をぶつけ合った。好感度-20,幸福-10`);
+        v.log(`言い争い:${a.name}と${b.name}は言葉をぶつけ合った。好感度-${friendshipLoss},幸福-10`);
         break;
       }
       case "drunk": {
