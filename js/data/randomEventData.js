@@ -11,7 +11,7 @@ export const EVENT_KIND_TITLES = {
 };
 
 export const EVENT_POOLS = {
-  good: ["wolfChild", "cat", "gold", "strangeRain", "fireworks", "hotSpring", "bathPerk", "hobbyFriends", "thaw", "menFriendship", "lover", "pickup", "yuri", "tattoo", "fashion", "muscle", "selfPleasure"],
+  good: ["wolfChild", "cat", "gold", "strangeRain", "fireworks", "hotSpring", "bathPerk", "hobbyFriends", "thaw", "menFriendship", "lover", "thunderboltLove", "pickup", "yuri", "tattoo", "fashion", "muscle", "selfPleasure"],
   bad: ["storm", "downpour", "heat", "fire", "thief", "rats", "lightning1", "lightning2", "snow", "fight", "loverArgument", "argument", "drunk", "epidemic"]
 };
 
@@ -36,6 +36,7 @@ export const EVENT_SUBJECTS = {
   thaw: "雪解け",
   menFriendship: "男同士の友情",
   lover: "恋の気配",
+  thunderboltLove: "電撃的な恋",
   pickup: "ナンパ",
   yuri: "百合の恋",
   tattoo: "刺青",
@@ -76,6 +77,7 @@ export const EVENT_MOODS = {
   thaw: "friendship",
   menFriendship: "friendship",
   lover: "romance",
+  thunderboltLove: "romance",
   pickup: "romance",
   yuri: "romance",
   tattoo: "selfChange",
@@ -322,6 +324,7 @@ export const EVENT_SECOND_LINE_BASES = {
   thaw: "あれだけこじれた相手と、また言葉を交わせている",
   menFriendship: "こういう相手がいると少し強くなれる気がする",
   lover: "あの人のことが妙に頭から離れない",
+  thunderboltLove: "あの人の姿が目に焼きついて離れない",
   pickup: "自分から声をかける度胸が出た",
   yuri: "この気持ちは相手が女でも変わらない",
   tattoo: "肌に刻んだ印を見るたび気持ちが引き締まる",

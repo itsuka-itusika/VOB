@@ -1,7 +1,7 @@
 // RandomEvents.js
 
 import { randInt, clampValue, round3 } from "./util.js";
-import { adjustMutualFriendship, doLoverCheck, addRelationship as addCategorizedRelationship, getPairFriendshipMaximum, getPairFriendshipMinimum, isSingle, normalizeRelationship, parseRelationship } from "./relationships.js";
+import { adjustMutualFriendship, areSiblings, doLoverCheck, addRelationship as addCategorizedRelationship, getFriendshipScore, getPairFriendshipMaximum, getPairFriendshipMinimum, isSingle, normalizeRelationship, parseRelationship, setFriendshipScore } from "./relationships.js";
 import { canExchangeBody, doExchange } from "./exchange.js";
 import { showRandomEventModal } from "./randomEventModal.js";
 import { HobbyEffects } from "./HobbyEffects.js";
@@ -43,6 +43,7 @@ const VILLAGER_STATE_KEYS = [
   "bodySex", "bodyAge", "bodyOwner", "race", "portraitFile"
 ];
 const YURI_BLOCKING_RELATION_PREFIXES = ["天敵", "母", "父", "子", "夫", "妻", "恋人"];
+const THUNDERBOLT_LOVE_BLOCKING_RELATION_PREFIXES = ["恋人", "夫", "妻", "母", "父", "子"];
 const FIGHT_ALLOWED_RELATION_PREFIXES = new Set(["村設立の同志", "仕事仲間"]);
 
 function hasMindTrait(person, trait) {
@@ -509,6 +510,28 @@ export class RandomEvents {
         if (!doLoverCheck(v, { source: "ランダムイベント" })) {
           return null;
         }
+        break;
+      }
+      case "thunderboltLove": {
+        const villagers = getActiveVillagers(v);
+        const pairs = [];
+        villagers.forEach(a => {
+          if (!isSingle(a) || Number(a.spiritAge) < 12) return;
+          villagers.forEach(b => {
+            if (a === b) return;
+            if (b.bodySex === a.spiritSex) return;
+            if (Number(b.bodyAge) < 16) return;
+            if (getFriendshipScore(a, b) > 19) return;
+            if (this.hasPairRelationship(a, b, THUNDERBOLT_LOVE_BLOCKING_RELATION_PREFIXES)) return;
+            if (areSiblings(a, b)) return;
+            pairs.push([a, b]);
+          });
+        });
+        if (pairs.length === 0) return null;
+
+        const [a, b] = this.randChoice(pairs);
+        setFriendshipScore(a, b, 59);
+        v.log(`電撃的な恋:${a.name}は心臓を射貫かれたような衝撃を受け恋に落ちた。${b.name}への好感度が59になった`);
         break;
       }
       case "yuri": {

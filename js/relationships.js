@@ -112,7 +112,7 @@ function getParentNames(person) {
 }
 
 /** きょうだいか。両者の間に直接の関係がないため、親をたどって判定する。 */
-function areSiblings(a, b) {
+export function areSiblings(a, b) {
   const parentsOfB = new Set(getParentNames(b));
   if (parentsOfB.size === 0) return false;
   return getParentNames(a).some(name => parentsOfB.has(name));
