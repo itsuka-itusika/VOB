@@ -12,7 +12,7 @@ import { getVillageScaleStage } from "../../js/villageScale.js";
 import { createVillageSnapshot } from "./resultSchema.js?v=20260822-balance-58";
 import { drainKnownModals, waitUntil } from "./modalDriver.js?v=20260822-balance-56";
 
-export const SCENARIO_VERSION = 27;
+export const SCENARIO_VERSION = 28;
 export const BEGINNER_PLAYER_MODEL_VERSION = 2;
 export const STANDARD_PLAYER_MODEL_VERSION = 3;
 export const EXPERT_PLAYER_MODEL_VERSION = 4;
@@ -1458,7 +1458,8 @@ const TRACKED_RELATIONSHIP_PREFIXES = Object.freeze({
   bestFriends: new Set(["親友"]),
   nemeses: new Set(["天敵"]),
   lovers: new Set(["恋人"]),
-  spouses: new Set(["夫", "妻"])
+  spouses: new Set(["夫", "妻"]),
+  workmates: new Set(["仕事仲間"])
 });
 
 function averageNumbers(values) {
@@ -1489,16 +1490,20 @@ function collectActiveRelationshipPairs(villagers, prefixes) {
   return pairs.size;
 }
 
-function collectFormerNemesisPairs(villagers) {
+function collectRelationshipPairsByPrefix(villagers, prefix) {
   const pairs = new Set();
   villagers.forEach(person => {
     (Array.isArray(person.relationships) ? person.relationships : []).forEach(raw => {
       const parsed = parseRelationship(raw);
-      if (parsed?.prefix !== "かつての天敵" || !parsed.target) return;
+      if (parsed?.prefix !== prefix || !parsed.target) return;
       pairs.add([person.name, parsed.target].sort().join("\u0000"));
     });
   });
   return pairs;
+}
+
+function collectFormerNemesisPairs(villagers) {
+  return collectRelationshipPairsByPrefix(villagers, "かつての天敵");
 }
 
 function collectFriendshipBands(pairMinimums) {
@@ -1656,6 +1661,7 @@ async function runProgression({ api, frame }, modelId, options = {}) {
   const relationshipEvents = [];
   let relationshipHistoryIndex = Array.isArray(village.historyEvents) ? village.historyEvents.length : 0;
   let formerNemesisPairs = trackRelationships ? collectFormerNemesisPairs(village.villagers) : new Set();
+  let workmatePairs = trackRelationships ? collectRelationshipPairsByPrefix(village.villagers, "仕事仲間") : new Set();
   let previousWarnings = { food: false, materials: false };
   const counters = {
     raids: 0,
@@ -1885,6 +1891,20 @@ async function runProgression({ api, frame }, modelId, options = {}) {
         });
       });
       formerNemesisPairs = currentFormerNemesisPairs;
+      const currentWorkmatePairs = collectRelationshipPairsByPrefix(village.villagers, "仕事仲間");
+      currentWorkmatePairs.forEach(pairKey => {
+        if (workmatePairs.has(pairKey)) return;
+        relationshipEvents.push({
+          elapsedMonths,
+          year: Number(village.year) || 0,
+          month: Number(village.month) || 0,
+          category: "workmate",
+          people: pairKey.split("\u0000"),
+          source: "relationshipState",
+          title: ""
+        });
+      });
+      workmatePairs = currentWorkmatePairs;
       relationshipTimeline.push(collectRelationshipSnapshot(village, elapsedMonths, foundingNames));
     }
 
