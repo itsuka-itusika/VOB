@@ -1,5 +1,5 @@
 import { addHistoryEvent, recordApocalypsePersonalHistory } from "./history.js";
-import { startRaidEvent } from "./raidStart.js";
+import { resetRaidUiAfterAvoidance, startRaidEvent } from "./raidStart.js";
 import { clearRaidWarningModal } from "./raidWarningModal.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import {
@@ -408,6 +408,8 @@ function clearApocalypseRaid(village) {
     const raidModal = document.getElementById("raidModal");
     if (raidOverlay) raidOverlay.style.display = "none";
     if (raidModal) raidModal.style.display = "none";
+    // 「防衛開始」に変わったボタンなどを通常の表示へ戻す。
+    resetRaidUiAfterAvoidance();
   }
 }
 

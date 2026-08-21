@@ -531,7 +531,7 @@ export function avoidCurrentRaidWithMessengerPass(village, { consumeTreasure = t
   return true;
 }
 
-function resetRaidUiAfterAvoidance() {
+export function resetRaidUiAfterAvoidance() {
   if (typeof document === "undefined") return;
 
   const raidSection = document.getElementById("raidEnemiesSection");
@@ -677,6 +677,18 @@ export function startRaidEvent(village, options = {}) {
   const raidDefinition = options.raidDefinition ||
     getRaidDefinitionFromPendingRaid(pendingRaid) ||
     selectRaidDefinition(village, options.raidTableId);
+  const enemyGroups = getResolvedEnemyGroups(raidDefinition, pendingRaid);
+  const plannedEnemyCount = enemyGroups.reduce((sum, group) => sum + (Number(group.count) || 0), 0);
+  // 襲撃者を1体も用意できない襲撃は成立しない。
+  // そのまま進めると、迎撃者の有無だけで敗北か完全成功かが決まってしまう。
+  if (plannedEnemyCount <= 0) {
+    village.log(`【襲撃中止】${raidDefinition.name}は村へたどり着きませんでした。`);
+    village.pendingRaid = null;
+    village.monthsSinceRaid = 0;
+    village.raidCooldown = 1;
+    return;
+  }
+
   village.log(pendingRaid
     ? `【襲撃発生】予兆のあった${raidDefinition.name}が村へ押し寄せました。`
     : `【襲撃発生】${raidDefinition.name}が村へ押し寄せました。`);
@@ -691,7 +703,7 @@ export function startRaidEvent(village, options = {}) {
   clearDefeatedRaidEnemies(village);
   village.currentRaid = createRaidState(raidDefinition);
 
-  getResolvedEnemyGroups(raidDefinition, pendingRaid).forEach(group => {
+  enemyGroups.forEach(group => {
     for (let i = 0; i < group.count; i++) {
       const existingNames = [
         ...village.villagers.map(person => person.name),

@@ -104,6 +104,19 @@ function getOppositeSex(sex) {
   return null;
 }
 
+function getParentNames(person) {
+  return getParsedRelationships(person)
+    .filter(parsed => PARENT_RELATION_PREFIXES.has(parsed.prefix) && parsed.target)
+    .map(parsed => parsed.target);
+}
+
+/** きょうだいか。両者の間に直接の関係がないため、親をたどって判定する。 */
+function areSiblings(a, b) {
+  const parentsOfB = new Set(getParentNames(b));
+  if (parentsOfB.size === 0) return false;
+  return getParentNames(a).some(name => parentsOfB.has(name));
+}
+
 function isLoverCandidate(a, b) {
   if (!a || !b || a === b) return false;
   if (isSaltPillar(a) || isSaltPillar(b)) return false;
@@ -112,10 +125,12 @@ function isLoverCandidate(a, b) {
   if (!expectedBodySex) return false;
   return isSingle(b)
     && !hasLoverBlockingRelationship(a, b)
+    && !areSiblings(a, b)
     && !hasBodyTrait(b, "四足歩行")
     && !hasBodyTrait(b, "人面獣身")
     && getPairFriendshipMinimum(a, b) >= 30
     && b.bodySex === expectedBodySex
+    && b.spiritAge >= 16
     && b.bodyAge >= 16
     && b.bodyAge >= a.bodyAge - 10
     && b.bodyAge <= a.spiritAge + 8;
@@ -154,8 +169,7 @@ export function doMarriageCheck(village) {
   if (!bName) return;
 
   let b = village.villagers.find(xx=>xx.name===bName);
-  if (!b || isSaltPillar(b)) return;
-  if (!b) return;
+  if (!b || isSaltPillar(b) || b.spiritAge < 18) return;
 
   let rA = Math.min(100, (a.ind+a.eth)*2);
   let rB = Math.min(100, (b.ind+b.eth)*2);
@@ -200,6 +214,7 @@ const GENETIC_RELATION_PREFIXES = new Set(["遺伝母", "遺伝父"]);
 const LOVER_RELATION_PREFIXES = new Set(["恋人"]);
 const SPOUSE_RELATION_PREFIXES = new Set(["夫", "妻"]);
 const PARENT_CHILD_RELATION_PREFIXES = new Set(["母", "父", "子"]);
+const PARENT_RELATION_PREFIXES = new Set(["母", "父", "遺伝母", "遺伝父"]);
 const LOVER_BLOCKING_RELATION_PREFIXES = new Set([
   ...SPOUSE_RELATION_PREFIXES,
   ...PARENT_CHILD_RELATION_PREFIXES,
@@ -1112,7 +1127,8 @@ export function clearRelationshipsForDepartedVillager(village, departed) {
       return !referencesDeparted;
     });
 
-    if (removedSpouse) {
+    // 奇跡による重婚を残すため、ほかに配偶者がいる場合は既婚のままにする。
+    if (removedSpouse && !hasRelationshipPrefix(person, SPOUSE_RELATION_PREFIXES)) {
       person.relationships = person.relationships.filter(rel => rel !== "既婚");
     }
   });
