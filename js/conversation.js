@@ -8,7 +8,7 @@ import { DEFAULT_PORTRAIT_KEY, getPortraitAssetPath } from "./data/portraitPaths
 import { ACTION_CANNON, ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT, ACTION_TRAP, RAID_ACTIONS, canPerformRaidAction, getRaidSlotLimitMessage } from "./raidRules.js";
 import { getConversationLine, getDialogueLine } from "./dialogue/dialogueEngine.js";
 import { recordVillagerJoinHistory } from "./history.js";
-import { MERCHANT_SECRET_TREASURE_LINES } from "./data/dialogue/visitorLines.js";
+import { getVisitorLineKey, MERCHANT_SECRET_TREASURE_LINES, VISITOR_JOIN_LINES } from "./data/dialogue/visitorLines.js";
 import { getCaptiveConversationLines, getCaptiveGroupKey } from "./data/dialogue/captiveLines.js";
 import { incrementTitleCounter, TITLE_COUNTER_KEYS } from "./titles.js";
 import { initializeNewVillagerFriendships } from "./relationships.js";
@@ -66,9 +66,9 @@ function getCaptiveConversationLine(captive) {
   return randFrom(getCaptiveConversationLines(captive, { failed }));
 }
 
-// 捕虜まわりの一回きりのセリフは、訪問者の到着時と同じくログへ流す。
+// 加入や解放など、一回きりのセリフは訪問者の到着時と同じくログへ流す。
 // 塩の柱は口をきけないため出さない。
-function logCaptiveLine(person, { scene, key = "" }) {
+function logCharacterLine(person, { scene, key = "" }) {
   if (isSaltPillar(person)) return;
   const line = getDialogueLine({ character: person, scene, key });
   if (line) theVillage.log(`${person.name}「${line}」`);
@@ -215,7 +215,7 @@ export function openConversationModal(character) {
       releaseCaptiveButton.addEventListener("click", () => {
         releaseCaptive(theVillage, character);
         theVillage.log(`${character.name}を解放しました`);
-        logCaptiveLine(character, { scene: "captiveRelease" });
+        logCharacterLine(character, { scene: "captiveRelease" });
         closeConversationModal();
         updateUI(theVillage);
       });
@@ -738,7 +738,7 @@ function handleCaptiveSocialSuccess(captive, actor, successRate, source) {
   recordVillagerJoinHistory(theVillage, captive, { recruiter: actor, source });
   refreshJobTable(captive, theVillage);
   theVillage.log(`${actor.name}の${source}により、${captive.name}が村人になりました。(成功率: ${Math.floor(successRate)}%)`);
-  logCaptiveLine(captive, { scene: "captiveJoin", key: joinLineKey });
+  logCharacterLine(captive, { scene: "captiveJoin", key: joinLineKey });
   alert(`${source}成功！${captive.name}が村人になりました。`);
   closeConversationModal();
 }
@@ -982,6 +982,8 @@ function handleRecruitmentSuccess(visitor, recruiter, successRate = 0, source = 
   const originalVisitor = visitor;
   // 訪問者のタイプを取得（名前から抽出）
   const visitorType = visitor.name.includes("の") ? visitor.name.split("の")[0] : null;
+  // 名前の「◯◯の」を削る前に、加入セリフのキーを確定させる。
+  const joinLineKey = getVisitorLineKey(visitor, VISITOR_JOIN_LINES);
 
   visitor.mindTraits = visitor.mindTraits.filter(t => t !== "訪問者");
   setPreferredAction(visitor, ACTION_NONE);
@@ -1016,6 +1018,7 @@ function handleRecruitmentSuccess(visitor, recruiter, successRate = 0, source = 
   refreshJobTable(visitor, theVillage);
 
   theVillage.log(`${recruiter.name}の${source}により、${visitor.name}が村人になりました。(成功率: ${Math.floor(successRate)}%)`);
+  logCharacterLine(visitor, { scene: "visitorJoin", key: joinLineKey });
   alert(`${source}成功！${visitor.name}が村人になりました。`);
 
   // モーダルを閉じる

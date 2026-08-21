@@ -22,6 +22,8 @@ import {
   VISITOR_APOCALYPSE_GENERIC_LINES,
   VISITOR_APOCALYPSE_LINES,
   VISITOR_GENERIC_LINES,
+  VISITOR_JOIN_GENERIC_LINES,
+  VISITOR_JOIN_LINES,
   VISITOR_LINES
 } from "../data/dialogue/visitorLines.js";
 import {
@@ -263,6 +265,8 @@ export function getDialogueLines({ character, scene, key, context = {} }) {
       return selectToneLines(CAPTIVE_RELEASE_LINES, character, context);
     case "formerCaptive":
       return selectToneLines(FORMER_CAPTIVE_LINES[key], character, context);
+    case "visitorJoin":
+      return asLineArray(VISITOR_JOIN_LINES[key] || VISITOR_JOIN_GENERIC_LINES, context);
     case "visitor":
       return getVisitorLines(key, context);
     default:
