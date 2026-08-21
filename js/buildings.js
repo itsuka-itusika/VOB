@@ -537,7 +537,7 @@ function createBuildingItem(building, village) {
     destroyButton.className = "building-button destroy";
     destroyButton.textContent = "黄金像を破壊";
     destroyButton.onclick = () => {
-      const message = "バッカスの黄金像を破壊しますか？\n黙示録は中断され、交換の奇跡の消費魔素半減効果も失われます。\n建築解放フラグは残るため、後から再建できます。";
+      const message = "バッカスの黄金像を破壊しますか？\n黙示録は中断され、交換の奇跡の消費魔素半減効果も失われます。\nこの後もう一度建築できます。";
       if (!confirm(message)) return;
       if (destroyBacchusGoldenStatue(village)) openBuildingModal(village);
     };

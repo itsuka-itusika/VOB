@@ -515,7 +515,7 @@ export function autoAssignJobs(village) {
   });
 
   const lockedCount = village.villagers.filter(person => person.assignmentLocked).length;
-  village.log(`自動割り振り: ${changed}人の行動を更新しました。固定${lockedCount}人は除外 (食料${priorityContext.foodSeverity.toFixed(2)}, 回復${priorityContext.recoverySeverity.toFixed(2)}, 資材${priorityContext.materialSeverity.toFixed(2)}, 資金${priorityContext.fundsSeverity.toFixed(2)})`);
+  village.log(`自動割り振り: ${changed}人の行動を更新しました。固定${lockedCount}人は除外`);
 }
 
 export function autoAssignRaidActions(village) {
