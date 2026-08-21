@@ -182,7 +182,7 @@ export function estimateRaidActionDamage(person, action, village = null) {
   const averageVitality = getAverageEnemyVitality(village);
 
   if (action === ACTION_TRAP) {
-    return Math.max(0, Math.floor((stat("dex") * stat("int") / 400) * 30));
+    return Math.max(0, Math.floor((stat("dex") * stat("int") / 400) * 40 - averageVitality));
   }
 
   let base = 0;
@@ -191,7 +191,7 @@ export function estimateRaidActionDamage(person, action, village = null) {
     const magical = Math.max(0, Math.floor((stat("mag") * stat("cou") / 400) * 25));
     base = Math.max(physical, magical);
   } else if (action === ACTION_SHOOT) {
-    base = Math.max(0, Math.floor((stat("dex") * stat("cou") / 400) * 40 - averageVitality * 1.5));
+    base = Math.max(0, Math.floor((stat("dex") * stat("cou") / 400) * 40 - averageVitality * 1.2));
   } else if (action === ACTION_CANNON) {
     base = Math.max(0, Math.floor((stat("mag") * stat("int") / 400) * 20));
   } else {

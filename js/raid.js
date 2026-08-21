@@ -737,7 +737,7 @@ function doOneTrapAction(action, village) {
     addRaidActionLog(result, "【罠作成】狙える敵がいない");
     return result;
   }
-  let dmg = Math.floor((p.dex*p.int/400)*30);
+  let dmg = Math.max(0, Math.floor((p.dex*p.int/400)*40 - e.vit));
   dmg = applyIncomingDamageModifiers(dmg, e, village);
   const saltPillarShattered = applyRaidDamage(e, dmg);
   recordRaidFriendshipDamage(village, p, dmg);
@@ -958,7 +958,7 @@ function calcRangedDamage(atk, def) {
       attackText: "遠距離魔法"
     };
   }
-  const damage = Math.floor(((atk.dex * atk.cou) / 400) * 40 - def.vit * 1.5);
+  const damage = Math.floor(((atk.dex * atk.cou) / 400) * 40 - def.vit * 1.2);
   return {
     damage: Math.max(0, damage),
     isMagic: false,
