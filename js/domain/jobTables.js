@@ -97,7 +97,6 @@ const HUMAN_BEAST_BLOCKED_ACTIONS = new Set([
   "醸造",
   "錬金術",
   "機織り",
-  "詩人",
   "踊り子",
   "バニー",
   "巫女",
