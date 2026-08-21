@@ -3501,12 +3501,12 @@ body.mobile-mode #raidEnemiesTable td {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-body.mobile-mode #villagersTable td:nth-child(18),
-body.mobile-mode #villagersTable td:nth-child(24),
-body.mobile-mode #visitorsTable td:nth-child(18),
-body.mobile-mode #visitorsTable td:nth-child(24),
-body.mobile-mode #raidEnemiesTable td:nth-child(18),
-body.mobile-mode #raidEnemiesTable td:nth-child(24) {
+body.mobile-mode #villagersTable td:nth-child(19),
+body.mobile-mode #villagersTable td:nth-child(25),
+body.mobile-mode #visitorsTable td:nth-child(19),
+body.mobile-mode #visitorsTable td:nth-child(25),
+body.mobile-mode #raidEnemiesTable td:nth-child(19),
+body.mobile-mode #raidEnemiesTable td:nth-child(25) {
   overflow: visible;
   text-overflow: clip;
   white-space: normal;

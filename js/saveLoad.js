@@ -148,9 +148,20 @@ export async function loadVillageFromJsonFile(file) {
 export function saveVillageToLocalStorage(village) {
   const dataObj = convertVillageToObject(village);
   const jsonStr = JSON.stringify(dataObj);
-  localStorage.setItem("villageSave", jsonStr);
+  try {
+    localStorage.setItem("villageSave", jsonStr);
+  } catch (error) {
+    // 容量超過などで保存できないことがある。黙って失敗させない。
+    village.log("ローカルストレージへの保存に失敗しました");
+    if (typeof window !== "undefined" && typeof window.alert === "function") {
+      window.alert("ローカル保存に失敗しました。ブラウザの保存容量が足りない可能性があります。JSON保存をお試しください。");
+    }
+    console.error("saveVillageToLocalStorage failed:", error);
+    return false;
+  }
 
   village.log("ローカルストレージに保存しました");
+  return true;
 }
 
 /**

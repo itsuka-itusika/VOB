@@ -743,7 +743,7 @@ export class RandomEvents {
         if (getActiveVillagers(v).length > 0) {
           let t = this.randChoice(getActiveVillagers(v));
           t.hp = clampValue(t.hp - 50, 0, 100);
-          t.bodyTraits.push("負傷");
+          if (!t.bodyTraits.includes("負傷")) t.bodyTraits.push("負傷");
           v.log(`落雷1:${t.name}体力-50,負傷`);
         }
         break;

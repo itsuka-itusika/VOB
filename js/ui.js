@@ -1223,6 +1223,11 @@ let sortState = {
   isAsc: true    // 昇順ならtrue
 };
 
+// 列番号は index.html の村人一覧テーブルと対応する。列を増減したら両方を合わせること。
+// 行動と役職はプルダウンのため、並べ替えの対象にしない。
+const SORTABLE_VILLAGER_COLUMNS = [4, 5, 6, 7, 8, 9, 10, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23];
+const NUMERIC_VILLAGER_COLUMNS = [5, 7, 8, 9, 10, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23];
+
 /**
  * テーブルヘッダーにソート機能を追加
  */
@@ -1231,7 +1236,7 @@ function setupTableSort() {
   if (!table) return;
   const headers = table.querySelectorAll("thead th");
 
-  const sortableColumns = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 21, 22];
+  const sortableColumns = SORTABLE_VILLAGER_COLUMNS;
 
   sortableColumns.forEach(colIndex => {
     const header = headers[colIndex];
@@ -1268,7 +1273,7 @@ function sortVillagerTable(colIndex, isAsc) {
     let bVal = b.cells[colIndex]?.textContent ?? "";
 
     // 数値の場合は数値としてソート
-    if ([5,7,8,9,10,12,13,14,15,16,18,19,20,21,22].includes(colIndex)) {
+    if (NUMERIC_VILLAGER_COLUMNS.includes(colIndex)) {
       aVal = Number(aVal);
       bVal = Number(bVal);
     }

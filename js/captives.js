@@ -203,14 +203,19 @@ export function processCaptiveReleaseDeadlines(village) {
   return dueCaptives;
 }
 
+export function isRaider(person) {
+  return Array.isArray(person?.mindTraits) && person.mindTraits.includes("襲撃者");
+}
+
 export function isCapturableRaider(person) {
-  if (!person) return false;
-  if (person.uncapturable) return false;
-  return Array.isArray(person.mindTraits) && person.mindTraits.includes("襲撃者");
+  if (!person || person.uncapturable) return false;
+  return isRaider(person);
 }
 
 export function recordDefeatedRaidEnemy(village, enemy) {
-  if (!village || !enemy || !isCapturableRaider(enemy)) return;
+  // 撃退数の集計に使うため、捕虜にできない襲撃者もここでは記録する。
+  // 捕虜候補への絞り込みは tryCaptureRaidPrisoner 側で行う。
+  if (!village || !isRaider(enemy)) return;
   if (!Array.isArray(village.defeatedRaidEnemies)) {
     village.defeatedRaidEnemies = [];
   }

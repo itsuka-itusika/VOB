@@ -149,6 +149,7 @@ export function onNextTurn() {
   if (theVillage.villagers.length===0) {
     theVillage.log("村人ゼロ→バッカスは眠りに...(GameOver)");
     theVillage.gameOver=true;
+    updateUI(theVillage);
     return;
   }
   theVillage.month++;
