@@ -339,7 +339,7 @@ export class RandomEvents {
           let t = this.randChoice(getActiveVillagers(v));
           let inc = randInt(20, 30);
           t.happiness = clampValue(t.happiness + inc, 0, 100);
-          v.log(`子猫イベント:${t.name}幸福+${inc}`);
+          v.log(`猫との出会い:${t.name}幸福+${inc}`);
         }
         break;
       }
@@ -749,7 +749,7 @@ export class RandomEvents {
         let loss = Math.floor(v.funds * 0.1);
         v.funds = clampValue(v.funds - loss, 0, 99999);
         v.security = clampValue(v.security - 5, 0, 100);
-        v.log(`窃盗団:資金-${loss},治安-5`);
+        v.log(`盗賊団:資金-${loss},治安-5`);
         break;
       }
       case "rats": {
