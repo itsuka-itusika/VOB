@@ -263,7 +263,7 @@ function addRaidActionsIfAllowed(person, village) {
   if (!villageTraits.includes("襲撃中")) return;
 
   const raidActions = [];
-  if (canDefendInRaid(person)) raidActions.push(ACTION_DEFEND);
+  if (canDefendInRaid(person, village)) raidActions.push(ACTION_DEFEND);
   if (canFortifyInRaid(person, village)) raidActions.push(ACTION_FORTIFY);
   if (canShootInRaid(person, village)) raidActions.push(ACTION_SHOOT);
   if (canCannonInRaid(person, village)) raidActions.push(ACTION_CANNON);

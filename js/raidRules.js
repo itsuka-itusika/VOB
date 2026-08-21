@@ -258,8 +258,12 @@ function canJoinRaidFrontLine(person) {
   return !hasAnyTrait(traitList(person, "mindTraits"), RAID_DEFEND_UNABLE_MIND_TRAITS);
 }
 
-export function canDefendInRaid(person) {
-  return canJoinRaidFrontLine(person) && !isPacifistFighter(person);
+export function canDefendInRaid(person, village = null) {
+  if (!canJoinRaidFrontLine(person)) return false;
+  // 戦いを拒む者も、籠城が使えるまでは前衛に立って身を挺することはできる。
+  // 攻撃は加えないため、木柵が建った後は被弾の軽い籠城だけを選ばせる。
+  if (isPacifistFighter(person)) return !canFortifyInRaid(person, village);
+  return true;
 }
 
 export function canMakeTrapInRaid(person) {
@@ -321,7 +325,7 @@ export function getRaidMiddleSlotCount(village = null) {
 }
 
 function canJoinRaidMiddleLine(person, village) {
-  return canDefendInRaid(person) &&
+  return canDefendInRaid(person, village) &&
     getRaidMiddleSlotCount(village) > 0 &&
     !traitList(person, "bodyTraits").includes(FOUR_LEGGED_TRAIT) &&
     !traitList(person, "bodyTraits").includes(HUMAN_BEAST_TRAIT) &&
@@ -354,7 +358,7 @@ export function isRaidCombatAction(action) {
 
 export function canPerformRaidAction(person, action, village = null) {
   const canPerformByRole = action === ACTION_DEFEND
-    ? canDefendInRaid(person)
+    ? canDefendInRaid(person, village)
     : action === ACTION_FORTIFY
       ? canFortifyInRaid(person, village)
       : action === ACTION_SHOOT

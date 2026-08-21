@@ -433,7 +433,7 @@ function getRaidAssignmentProfile(person, village) {
     : (person.preferredAction || JOB_NONE);
 
   const allowed = {
-    [ACTION_DEFEND]: canDefendInRaid(person) && canUseAction(person, ACTION_DEFEND),
+    [ACTION_DEFEND]: canDefendInRaid(person, village) && canUseAction(person, ACTION_DEFEND),
     [ACTION_FORTIFY]: canFortifyInRaid(person, village) && canUseAction(person, ACTION_FORTIFY),
     [ACTION_SHOOT]: canShootInRaid(person, village) && canUseAction(person, ACTION_SHOOT),
     [ACTION_CANNON]: canCannonInRaid(person, village) && canUseAction(person, ACTION_CANNON),
