@@ -468,7 +468,7 @@ export class RandomEvents {
           x.bodyAge >= 12 && x.bodyAge <= 30 &&
           x.spiritAge >= 16 &&
           !hasMindTrait(x, "神聖") &&
-          !x.relationships.some(r => r.includes("既婚") || r.includes("恋人"))
+          isSingle(x)
         );
 
         if (candidates.length >= 2) {
