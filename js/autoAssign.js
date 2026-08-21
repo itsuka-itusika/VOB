@@ -41,8 +41,12 @@ import {
   ACTION_FORTIFY,
   ACTION_SHOOT,
   ACTION_TRAP,
+  RAID_ACTIONS,
   canCannonInRaid,
   estimateRaidActionDamage,
+  getAverageEnemyAttack,
+  getEnemyTotalHp,
+  getRaidIncomingDamageMultiplier,
   canFortifyInRaid,
   canDefendInRaid,
   canMakeTrapInRaid,
@@ -55,6 +59,10 @@ import {
   isRaidActive
 } from "./raidRules.js";
 import { getCaptives } from "./captives.js";
+
+// 安全に戦列へ加える目安のターン数と、勝ち目を測るときの想定戦闘ターン数。
+const RAID_SAFE_SURVIVAL_TURNS = 2;
+const RAID_WIN_ESTIMATE_TURNS = 3;
 
 const JOB_NONE = ACTION_NONE;
 const JOB_REST = ACTION_REST;
@@ -296,19 +304,13 @@ function chooseAssignment(person, village, context) {
   };
 }
 
-function getHealthFactor(person) {
-  const hp = Number(person.hp) || 0;
-  const mp = Number(person.mp) || 0;
-  return Math.max(0, Math.min(1.2, ((hp * 0.75) + (mp * 0.25)) / 100));
+function canUseAction(person, action) {
+  return Array.isArray(person.actionTable) && person.actionTable.includes(action);
 }
 
 /** 手で火砲に就けた村人か。火砲は自動では選ばないため、割り振りの対象外にする。 */
 function isManualCannoneer(person, village) {
   return person?.action === ACTION_CANNON && canCannonInRaid(person, village);
-}
-
-function canUseAction(person, action) {
-  return Array.isArray(person.actionTable) && person.actionTable.includes(action);
 }
 
 function chooseRaidFallbackAction(person, currentPreferred, currentAction) {
@@ -326,77 +328,32 @@ function chooseRaidFallbackAction(person, currentPreferred, currentAction) {
     JOB_NONE;
 }
 
-export function getExpectedDefenderDamage(person, village = null) {
-  return estimateRaidActionDamage(person, ACTION_DEFEND, village);
+/**
+ * 迎撃の想定ダメージ。tools/balance の測定からも参照する。
+ * useBaseStats は、一時的な増減を除いた素の能力で比べたいときに使う。
+ */
+export function getExpectedDefenderDamage(person, { useBaseStats = false } = {}) {
+  const source = useBaseStats && person?.baseStats
+    ? { ...person, ...person.baseStats }
+    : person;
+  return estimateRaidActionDamage(source, ACTION_DEFEND, null);
 }
 
-function getExpectedTrapDamage(person) {
-  return estimateRaidActionDamage(person, ACTION_TRAP, null);
+/** その行動で何ターン耐えられるかの目安。被弾しない罠は常に安全とみなす。 */
+function getSurvivableTurns(person, action, village) {
+  const incoming = getAverageEnemyAttack(village) * getRaidIncomingDamageMultiplier(action, village);
+  if (incoming <= 0) return Number.POSITIVE_INFINITY;
+  return (Number(person.hp) || 0) / incoming;
 }
 
-function getExpectedShootDamage(person, village) {
-  return estimateRaidActionDamage(person, ACTION_SHOOT, village);
+/** 安全に就ける行動か。想定ターン数ぶん耐えられることを求める。 */
+function canJoinSafely(person, action, village) {
+  return getSurvivableTurns(person, action, village) >= RAID_SAFE_SURVIVAL_TURNS;
 }
 
-function isSafeDefender(person) {
-  return (Number(person.hp) || 0) >= 55 && (Number(person.mp) || 0) >= 20;
-}
-
-function isSafeFortifier(person) {
-  return (Number(person.hp) || 0) >= 50 && (Number(person.mp) || 0) >= 15;
-}
-
-function isSafeShooter(person) {
-  return (Number(person.hp) || 0) >= 35 && (Number(person.mp) || 0) >= 10;
-}
-
-function isSafeTrapMaker(person) {
-  return (Number(person.hp) || 0) >= 35 && (Number(person.mp) || 0) >= 10;
-}
-
-function getDefenderScore(person, village) {
-  const attack = getExpectedDefenderDamage(person, village);
-  if (attack <= 0) return -Infinity;
-
-  return (
-    attack * 2.2
-    + (Number(person.vit) || 0) * 1.4
-    + (Number(person.cou) || 0) * 1.8
-    + (Number(person.hp) || 0) * 0.45
-  ) * getHealthFactor(person);
-}
-
-function getTrapScore(person) {
-  const damage = getExpectedTrapDamage(person);
-  return (
-    damage * 4
-    + (Number(person.dex) || 0) * 2.65
-    + (Number(person.int) || 0) * 2.45
-    + (Number(person.ind) || 0) * 1.0
-    + (Number(person.cou) || 0) * 0.4
-    + (Number(person.mp) || 0) * 0.1
-  );
-}
-
-function getShooterScore(person, village) {
-  const damage = getExpectedShootDamage(person, village);
-  if (damage <= 0) return -Infinity;
-
-  return (
-    damage * 3.2
-    + (Number(person.dex) || 0) * 2.0
-    + (Number(person.cou) || 0) * 1.7
-    + (Number(person.hp) || 0) * 0.25
-  ) * getHealthFactor(person);
-}
-
-function getFortifierScore(person) {
-  return (
-    (Number(person.vit) || 0) * 2.4
-    + (Number(person.hp) || 0) * 0.8
-    + (Number(person.cou) || 0) * 1.2
-    + (Number(person.str) || 0) * 0.6
-  ) * getHealthFactor(person);
+/** 一撃で倒れないか。これを割る者は、勝ち目がどうあれ戦列に加えない。 */
+function canJoinAtAll(person, action, village) {
+  return getSurvivableTurns(person, action, village) > 1;
 }
 
 function getRaidAssignmentProfile(person, village) {
@@ -407,151 +364,133 @@ function getRaidAssignmentProfile(person, village) {
   const keptPreferred = Array.isArray(person.jobTable) && person.jobTable.includes(currentPreferred)
     ? currentPreferred
     : (person.preferredAction || JOB_NONE);
-  const fallbackAction = chooseRaidFallbackAction(person, keptPreferred, currentAction);
-  const canDefendByRule = canDefendInRaid(person);
-  const canTrapByRule = canMakeTrapInRaid(person);
-  const canShootByRule = canShootInRaid(person, village);
-  const canFortifyByRule = canFortifyInRaid(person, village);
 
-  const defenderDamage = getExpectedDefenderDamage(person, village);
-  const trapDamage = getExpectedTrapDamage(person);
-  const shootDamage = getExpectedShootDamage(person, village);
-  const canDefend = canDefendByRule && canUseAction(person, ACTION_DEFEND) && isSafeDefender(person) && defenderDamage >= 8;
-  const canTrap = canTrapByRule && canUseAction(person, ACTION_TRAP) && isSafeTrapMaker(person) && trapDamage >= 6;
-  const canShoot = canShootByRule && canUseAction(person, ACTION_SHOOT) && isSafeShooter(person) && shootDamage >= 5;
-  const canFortify = canFortifyByRule && canUseAction(person, ACTION_FORTIFY) && isSafeFortifier(person);
+  const allowed = {
+    [ACTION_DEFEND]: canDefendInRaid(person) && canUseAction(person, ACTION_DEFEND),
+    [ACTION_FORTIFY]: canFortifyInRaid(person, village) && canUseAction(person, ACTION_FORTIFY),
+    [ACTION_SHOOT]: canShootInRaid(person, village) && canUseAction(person, ACTION_SHOOT),
+    [ACTION_CANNON]: canCannonInRaid(person, village) && canUseAction(person, ACTION_CANNON),
+    [ACTION_TRAP]: canMakeTrapInRaid(person) && canUseAction(person, ACTION_TRAP)
+  };
+  const damage = {};
+  RAID_ACTIONS.forEach(action => {
+    damage[action] = allowed[action] ? estimateRaidActionDamage(person, action, village) : 0;
+  });
 
   return {
     person,
-    fallback: { preferredAction: keptPreferred, action: fallbackAction },
-    forcedNormal: !canDefendByRule && !canTrapByRule && !canShootByRule && !canFortifyByRule,
-    canDefend,
-    canTrap,
-    canShoot,
-    canFortify,
-    defenderScore: canDefend ? getDefenderScore(person, village) : -Infinity,
-    trapScore: canTrap ? getTrapScore(person) : -Infinity,
-    shooterScore: canShoot ? getShooterScore(person, village) : -Infinity,
-    fortifierScore: canFortify ? getFortifierScore(person) : -Infinity,
-    defenderDamage: canDefend ? defenderDamage : 0,
-    trapDamage: canTrap ? trapDamage : 0,
-    shootDamage: canShoot ? shootDamage : 0
+    fallback: {
+      preferredAction: keptPreferred,
+      action: chooseRaidFallbackAction(person, keptPreferred, currentAction)
+    },
+    allowed,
+    damage
   };
 }
 
-function getMinimumFrontliners(village, profiles) {
+/** 罠の合計と、戦闘参加者が想定ターン数で出す火力の合計。 */
+function estimateVillageFirepower(village, profiles, assignments) {
+  let total = 0;
+  profiles.forEach(profile => {
+    const action = assignments.get(profile.person)?.action;
+    if (!isRaidAction(action)) return;
+    const damage = profile.damage[action] || 0;
+    total += action === ACTION_TRAP ? damage : damage * RAID_WIN_ESTIMATE_TURNS;
+  });
+  return total;
+}
+
+function hasWinningChance(village, profiles, assignments) {
+  return estimateVillageFirepower(village, profiles, assignments) >= getEnemyTotalHp(village);
+}
+
+/**
+ * 適性の高い者から枠へ埋める。
+ * 前衛 → 罠 → 中衛 → 籠城 の順に流し、枠に入れなかった者は通常職へ残す。
+ */
+function fillRaidRoles(village, profiles, assignments) {
   const enemyCount = Array.isArray(village.raidEnemies) ? village.raidEnemies.length : 0;
-  const activeProfiles = profiles.filter(profile => !profile.forcedNormal && (profile.canDefend || profile.canFortify || profile.canShoot || profile.canTrap));
-  const frontOptions = activeProfiles.filter(profile =>
-    (profile.canDefend && Number.isFinite(profile.defenderScore)) ||
-    (profile.canFortify && Number.isFinite(profile.fortifierScore))
-  );
+  const budget = {
+    front: getRaidFrontlinerSlotCount(village),
+    middle: getRaidMiddleSlotCount(village),
+    trap: getRaidTrapMakerSlotCount(village)
+  };
+  const frontTarget = Math.min(budget.front, Math.max(1, Math.ceil(enemyCount / 2)));
+  const assigned = new Set();
 
-  if (frontOptions.length === 0 || activeProfiles.length === 0) {
-    return 0;
-  }
+  const eligible = (profile, action) => {
+    if (assigned.has(profile.person)) return false;
+    if (!profile.allowed[action]) return false;
+    if (action !== ACTION_TRAP && profile.damage[action] <= 0) return false;
+    return canJoinSafely(profile.person, action, village);
+  };
 
-  return Math.min(
-    frontOptions.length,
-    getRaidFrontlinerSlotCount(village),
-    Math.max(1, Math.ceil(Math.min(enemyCount || 1, activeProfiles.length) / 2))
-  );
-}
+  const take = (action, limit, resolveAction = () => action) => {
+    if (limit <= 0) return 0;
+    const picked = profiles
+      .filter(profile => eligible(profile, action))
+      .sort((a, b) => b.damage[action] - a.damage[action])
+      .slice(0, limit);
+    picked.forEach(profile => {
+      assignments.set(profile.person, {
+        preferredAction: profile.fallback.preferredAction,
+        action: resolveAction(profile)
+      });
+      assigned.add(profile.person);
+    });
+    return picked.length;
+  };
 
-function enforceShooterSlots(village, profiles, assignments) {
-  const shooterSlots = getRaidMiddleSlotCount(village);
-  if (!Number.isFinite(shooterSlots)) return;
-
-  const assignedShooters = profiles
-    .filter(profile => assignments.get(profile.person)?.action === ACTION_SHOOT)
-    .sort((a, b) => b.shooterScore - a.shooterScore);
-
-  assignedShooters.slice(shooterSlots).forEach(profile => {
-    assignments.set(profile.person, profile.fallback);
-  });
-}
-
-function enforceTrapMakerSlots(village, profiles, assignments) {
-  const assignedTrapMakers = profiles
-    .filter(profile => assignments.get(profile.person)?.action === ACTION_TRAP)
-    .sort((a, b) => b.trapScore - a.trapScore);
-  assignedTrapMakers.slice(getRaidTrapMakerSlotCount(village)).forEach(profile => {
-    assignments.set(profile.person, profile.fallback);
-  });
-}
-
-function enforceFrontlinerSlots(village, profiles, assignments) {
-  const assignedFrontliners = profiles
-    .filter(profile => [ACTION_DEFEND, ACTION_FORTIFY].includes(assignments.get(profile.person)?.action))
-    .sort((a, b) => Math.max(b.defenderScore, b.fortifierScore) - Math.max(a.defenderScore, a.fortifierScore));
-  assignedFrontliners.slice(getRaidFrontlinerSlotCount(village)).forEach(profile => {
-    assignments.set(profile.person, profile.fallback);
-  });
+  budget.front -= take(ACTION_DEFEND, frontTarget);
+  budget.trap -= take(ACTION_TRAP, budget.trap);
+  // 中衛は射撃と火砲で枠を分け合う。本人がより多く出せる方に就ける。
+  budget.middle -= take(ACTION_SHOOT, budget.middle, profile =>
+    profile.allowed[ACTION_CANNON] && profile.damage[ACTION_CANNON] > profile.damage[ACTION_SHOOT]
+      ? ACTION_CANNON
+      : ACTION_SHOOT);
+  budget.middle -= take(ACTION_CANNON, budget.middle);
+  budget.front -= take(ACTION_FORTIFY, budget.front);
+  return assigned;
 }
 
 function buildRaidAssignments(village, targets) {
-  const assignments = new Map();
   const profiles = targets.map(person => getRaidAssignmentProfile(person, village));
-  const minimumFrontliners = getMinimumFrontliners(village, profiles);
-  const frontlinerSlots = new Set(
-    profiles
-      .filter(profile => !profile.forcedNormal && (
-        (profile.canDefend && Number.isFinite(profile.defenderScore)) ||
-        (profile.canFortify && Number.isFinite(profile.fortifierScore))
-      ))
-      .sort((a, b) => Math.max(b.defenderScore, b.fortifierScore) - Math.max(a.defenderScore, a.fortifierScore))
-      .slice(0, minimumFrontliners)
-      .map(profile => profile.person)
-  );
+  const assignments = new Map();
+  profiles.forEach(profile => assignments.set(profile.person, profile.fallback));
 
-  profiles.forEach(profile => {
-    if (profile.forcedNormal || (!profile.canDefend && !profile.canFortify && !profile.canShoot && !profile.canTrap)) {
-      assignments.set(profile.person, profile.fallback);
-      return;
+  // まず安全に戦える者だけで組む。
+  const assigned = fillRaidRoles(village, profiles, assignments);
+  if (hasWinningChance(village, profiles, assignments)) {
+    return { assignments, hasChance: true };
+  }
+
+  // 勝ち目が立たないときだけ、危険を承知で1人ずつ足す。立った時点で打ち切る。
+  const reserves = profiles
+    .filter(profile => !assigned.has(profile.person))
+    .sort((a, b) => Math.max(...RAID_ACTIONS.map(action => b.damage[action])) -
+      Math.max(...RAID_ACTIONS.map(action => a.damage[action])));
+  const added = [];
+
+  for (const profile of reserves) {
+    // 被弾の小さい籠城を優先し、就けなければ迎撃で加わる。
+    const action = [ACTION_FORTIFY, ACTION_DEFEND].find(candidate =>
+      profile.allowed[candidate] &&
+      profile.damage[candidate] > 0 &&
+      canJoinAtAll(profile.person, candidate, village));
+    if (!action) continue;
+
+    assignments.set(profile.person, { preferredAction: profile.fallback.preferredAction, action });
+    added.push(profile);
+    if (hasWinningChance(village, profiles, assignments)) {
+      return { assignments, hasChance: true };
     }
+  }
 
-    if (frontlinerSlots.has(profile.person)) {
-      const action = profile.canDefend && profile.defenderScore >= profile.fortifierScore * 0.8
-        ? ACTION_DEFEND
-        : (profile.canFortify ? ACTION_FORTIFY : ACTION_DEFEND);
-      assignments.set(profile.person, { preferredAction: profile.fallback.preferredAction, action });
-      return;
-    }
-
-    if (profile.canShoot && profile.shooterScore >= Math.max(profile.trapScore, profile.defenderScore) * 0.9) {
-      assignments.set(profile.person, { preferredAction: profile.fallback.preferredAction, action: ACTION_SHOOT });
-      return;
-    }
-
-    if (profile.canTrap && (!profile.canDefend || profile.trapDamage >= profile.defenderDamage * 0.82)) {
-      assignments.set(profile.person, { preferredAction: profile.fallback.preferredAction, action: ACTION_TRAP });
-      return;
-    }
-
-    if (profile.canShoot) {
-      assignments.set(profile.person, { preferredAction: profile.fallback.preferredAction, action: ACTION_SHOOT });
-      return;
-    }
-
-    if (profile.canDefend) {
-      assignments.set(profile.person, { preferredAction: profile.fallback.preferredAction, action: ACTION_DEFEND });
-      return;
-    }
-
-    if (profile.canFortify) {
-      assignments.set(profile.person, { preferredAction: profile.fallback.preferredAction, action: ACTION_FORTIFY });
-      return;
-    }
-
-    assignments.set(profile.person, profile.fallback);
-  });
-
-  enforceShooterSlots(village, profiles, assignments);
-  enforceTrapMakerSlots(village, profiles, assignments);
-  enforceFrontlinerSlots(village, profiles, assignments);
-
-  return assignments;
+  // 総力でも勝てないなら、危険な増員は損なので取り消す。
+  added.forEach(profile => assignments.set(profile.person, profile.fallback));
+  return { assignments, hasChance: false };
 }
+
 
 export function autoAssignJobs(village) {
   let changed = 0;
@@ -589,12 +528,12 @@ export function autoAssignRaidActions(village) {
   const allVillagers = Array.isArray(village.villagers) ? village.villagers : [];
   // 固定中の村人と、手で火砲に就けた村人はそのままにする。
   const targets = allVillagers.filter(person => !person.assignmentLocked && !isManualCannoneer(person, village));
-  const raidAssignments = buildRaidAssignments(village, targets);
+  const { assignments, hasChance } = buildRaidAssignments(village, targets);
 
   targets.forEach(person => {
     const currentPreferred = person.preferredAction || person.job || JOB_NONE;
     const currentAction = person.action;
-    const next = raidAssignments.get(person);
+    const next = assignments.get(person);
     if (!next) return;
 
     if (currentAction !== next.action || currentPreferred !== next.preferredAction) {
@@ -605,10 +544,14 @@ export function autoAssignRaidActions(village) {
   });
 
   const readiness = getRaidReadiness(village);
-  const defenders = readiness.defenders.length;
-  const fortifiers = readiness.fortifiers.length;
-  const shooters = readiness.shooters.length;
-  const trapMakers = readiness.trapMakers.length;
-  const nonParticipants = Math.max(0, targets.length - readiness.participantCount);
-  village.log(`防衛割り振り: ${changed}人を更新しました。迎撃${defenders}人、籠城${fortifiers}人、射撃${shooters}人、罠作成${trapMakers}人、不参加${nonParticipants}人`);
+  const parts = [
+    `迎撃${readiness.defenders.length}人`,
+    `籠城${readiness.fortifiers.length}人`,
+    `射撃${readiness.shooters.length}人`,
+    `火砲${readiness.cannoneers.length}人`,
+    `罠作成${readiness.trapMakers.length}人`,
+    `不参加${Math.max(0, allVillagers.length - readiness.participantCount)}人`
+  ];
+  const note = hasChance ? "" : "（勝ち目薄。撤退も一考）";
+  village.log(`防衛割り振り: ${changed}人を更新しました。${parts.join("、")}${note}`);
 }
