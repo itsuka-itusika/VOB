@@ -74,6 +74,13 @@ const MIND_CONDITION_CANDIDATES = [
   { trait: "心労", scene: "condition", key: "mentalStress", priority: CONVERSATION_PRIORITY.NORMAL }
 ];
 
+// 戦いを拒む精神特性を持つ村人は、襲撃中の会話を本人の立場に合わせて差し替える。
+// より具体的な誓いである不殺を先に見る。
+const RAID_STATUS_KEYS_BY_MIND_TRAIT = [
+  { trait: "不殺", key: "raidNoKilling" },
+  { trait: "非戦主義", key: "raidPacifist" }
+];
+
 export function pickDialogueLine(value, context = {}) {
   if (Array.isArray(value)) {
     if (value.length === 0) return null;
@@ -397,6 +404,11 @@ function getVisitorType(visitor) {
   return getVisitorLineKey(visitor, VISITOR_LINES);
 }
 
+function getRaidStatusKey(character) {
+  const entry = RAID_STATUS_KEYS_BY_MIND_TRAIT.find(item => hasTrait(character, item.trait, "mindTraits"));
+  return entry ? entry.key : "raid";
+}
+
 export function collectConversationCandidates({ character, village, context = {} }) {
   const candidates = [];
   const villageTraits = Array.isArray(village?.villageTraits) ? village.villageTraits : [];
@@ -410,7 +422,7 @@ export function collectConversationCandidates({ character, village, context = {}
   if (villageTraits.includes("襲撃中")) {
     addCandidate(candidates, character, {
       scene: "status",
-      key: "raid",
+      key: getRaidStatusKey(character),
       priority: CONVERSATION_PRIORITY.EMERGENCY
     }, sharedContext);
   }
