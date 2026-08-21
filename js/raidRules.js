@@ -8,6 +8,9 @@ export const ACTION_SHOOT = "射撃";
 export const ACTION_CANNON = "火砲";
 export const ACTION_FORTIFY = "籠城";
 export const TRAIT_UNDER_RAID = "襲撃中";
+// 襲撃者の兵科。中衛の攻撃式を決める。
+export const RAID_ATTACK_RANGED_MAGIC = "rangedMagic";
+export const RAID_ATTACK_CANNON = "cannon";
 // 罠で付与する一時状態。付与された次の戦闘ターンだけ行動できない。
 export const RAID_STUN_EFFECT = "足止め";
 export const RAID_MIDDLE_ACTIONS = [ACTION_SHOOT, ACTION_CANNON];
@@ -223,6 +226,16 @@ export function getAverageEnemyAttack(village) {
 
   const total = enemies.reduce((sum, enemy) => {
     const stat = key => Number(enemy[key]) || 0;
+    // 中衛は隊列ごとの攻撃式に合わせる。近接式で一律に見ると火砲や遠距離魔法を過大評価する。
+    if (enemy.raidPosition === "middle") {
+      if (enemy.raidAttackType === RAID_ATTACK_CANNON) {
+        return sum + Math.max(0, (stat("mag") * stat("int") / 400) * 20);
+      }
+      if (enemy.raidAttackType === RAID_ATTACK_RANGED_MAGIC) {
+        return sum + Math.max(0, (stat("mag") * stat("cou") / 400) * 20);
+      }
+      return sum + Math.max(0, (stat("dex") * stat("cou") / 400) * 40 - averageVitality * 1.2);
+    }
     const physical = Math.max(0, (stat("str") * stat("cou") / 400) * 50 - averageVitality);
     const magical = Math.max(0, (stat("mag") * stat("cou") / 400) * 25);
     return sum + Math.max(physical, magical);

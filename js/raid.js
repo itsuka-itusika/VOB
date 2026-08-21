@@ -20,6 +20,8 @@ import {
   RAID_CANNON_INCOMING_DAMAGE_MULTIPLIER,
   RAID_MIDDLE_ACTIONS,
   RAID_MIDDLE_INCOMING_DAMAGE_MULTIPLIER,
+  RAID_ATTACK_CANNON,
+  RAID_ATTACK_RANGED_MAGIC,
   applyRaidStunEffect,
   canPerformRaidAction,
   clearRaidStunEffect,
@@ -53,7 +55,6 @@ const RAID_PHASE_COMBAT = "combat";
 const RAID_POSITION_FRONT = "front";
 const RAID_POSITION_MIDDLE = "middle";
 const RAID_TARGET_WEAKEST_HIGH_CHANCE = "weakestHighChance";
-const RAID_ATTACK_RANGED_MAGIC = "rangedMagic";
 const RAID_WEAKEST_TARGET_CHANCE = 0.8;
 const APOCALYPSE_GRAND_CRUSADE_ID = "apocalypse-grand-crusade";
 const APOCALYPSE_UPPER_WINGED_ID = "apocalypse-upper-winged";
@@ -485,7 +486,8 @@ function getVillageCombatants(village) {
 
 /** 火砲はターンの最後に撃つため、行動順と被ダメージ倍率を射撃と分けて扱う。 */
 function isCannonUnit(unit, village) {
-  return !isEnemyUnit(unit, village) && unit?.action === ACTION_CANNON;
+  if (isEnemyUnit(unit, village)) return unit?.raidAttackType === RAID_ATTACK_CANNON;
+  return unit?.action === ACTION_CANNON;
 }
 
 function getAliveEnemies(village) {
@@ -944,7 +946,7 @@ function canActInCombat(actor, village) {
 }
 
 function calcRangedDamage(atk, def) {
-  if (atk?.action === ACTION_CANNON) {
+  if (atk?.action === ACTION_CANNON || atk?.raidAttackType === RAID_ATTACK_CANNON) {
     return {
       damage: Math.max(0, Math.floor(((atk.mag * atk.int) / 400) * 20)),
       isMagic: true,
@@ -968,6 +970,7 @@ function calcRangedDamage(atk, def) {
 
 function getAttackLogLabel(actor, village, attackResult, isRanged) {
   if (isEnemyUnit(actor, village) && attackResult?.attackText === "遠距離魔法") return "【敵の攻撃】";
+  if (isEnemyUnit(actor, village) && attackResult?.attackText === ACTION_CANNON) return `【敵の${ACTION_CANNON}】`;
   if (isEnemyUnit(actor, village)) return isRanged ? "【敵の射撃】" : "【敵の攻撃】";
   if (attackResult?.attackText === ACTION_CANNON) return `【${ACTION_CANNON}】`;
   return isRanged ? "【射撃】" : "【迎撃】";
