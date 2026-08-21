@@ -249,6 +249,28 @@ export class RandomEvents {
   }
 
   /**
+   * 電撃的な恋の候補ペアを列挙する。
+   * 本人は独り身で精神年齢12以上、相手は近親や伴侶でなく、本人から見た好感度がまだ低い者に限る。
+   */
+  static collectThunderboltLovePairs(v) {
+    const villagers = getActiveVillagers(v);
+    const pairs = [];
+    villagers.forEach(a => {
+      if (!isSingle(a) || Number(a.spiritAge) < 12) return;
+      villagers.forEach(b => {
+        if (a === b) return;
+        if (b.bodySex === a.spiritSex) return;
+        if (Number(b.bodyAge) < 16) return;
+        if (getFriendshipScore(a, b) > 19) return;
+        if (this.hasPairRelationship(a, b, THUNDERBOLT_LOVE_BLOCKING_RELATION_PREFIXES)) return;
+        if (areSiblings(a, b)) return;
+        pairs.push([a, b]);
+      });
+    });
+    return pairs;
+  }
+
+  /**
    * ミシックイベント(1%)
    */
   static doMythicEvent(v) {
@@ -285,6 +307,13 @@ export class RandomEvents {
       .filter(person => (person.race || "人間") !== "狼" && Number(person.bodyAge) <= 9);
     if (growthPotionCandidates.length > 0 && Math.random() < 0.2) {
       cands.push({ type: "strangeGrowthPotion", vill: this.randChoice(growthPotionCandidates) });
+    }
+
+    // 電撃的な恋は2人組で成立するため、成立し得る組を1つだけ候補に載せる。
+    const thunderboltLovePairs = this.collectThunderboltLovePairs(v);
+    if (thunderboltLovePairs.length > 0) {
+      const [lover, beloved] = this.randChoice(thunderboltLovePairs);
+      cands.push({ type: "thunderboltLove", vill: lover, target: beloved });
     }
 
     if (cands.length === 0) {
@@ -325,8 +354,18 @@ export class RandomEvents {
         v.log(`怪しい薬:${p.name}は怪しい薬を頭からかぶり、肉体だけが急成長した。肉体年齢${beforeAge}歳→16歳、肉体能力が潜在値まで成長`);
         break;
       }
+      case "thunderboltLove": {
+        setFriendshipScore(p, c.target, 59);
+        v.log(`電撃的な恋:${p.name}は心臓を射貫かれたような衝撃を受け恋に落ちた。${c.target.name}への好感度が59になった`);
+        break;
+      }
     }
-    recordMythicEventHistory(v, c.type, p, { subject: EVENT_SUBJECTS[c.type] });
+    recordMythicEventHistory(v, c.type, p, {
+      subject: EVENT_SUBJECTS[c.type],
+      text: c.type === "thunderboltLove"
+        ? `${p.name}は${c.target.name}に心臓を射貫かれ、一目で恋に落ちた。`
+        : undefined
+    });
     return c.type;
   }
 
@@ -510,28 +549,6 @@ export class RandomEvents {
         if (!doLoverCheck(v, { source: "ランダムイベント" })) {
           return null;
         }
-        break;
-      }
-      case "thunderboltLove": {
-        const villagers = getActiveVillagers(v);
-        const pairs = [];
-        villagers.forEach(a => {
-          if (!isSingle(a) || Number(a.spiritAge) < 12) return;
-          villagers.forEach(b => {
-            if (a === b) return;
-            if (b.bodySex === a.spiritSex) return;
-            if (Number(b.bodyAge) < 16) return;
-            if (getFriendshipScore(a, b) > 19) return;
-            if (this.hasPairRelationship(a, b, THUNDERBOLT_LOVE_BLOCKING_RELATION_PREFIXES)) return;
-            if (areSiblings(a, b)) return;
-            pairs.push([a, b]);
-          });
-        });
-        if (pairs.length === 0) return null;
-
-        const [a, b] = this.randChoice(pairs);
-        setFriendshipScore(a, b, 59);
-        v.log(`電撃的な恋:${a.name}は心臓を射貫かれたような衝撃を受け恋に落ちた。${b.name}への好感度が59になった`);
         break;
       }
       case "yuri": {
