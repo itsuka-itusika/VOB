@@ -786,10 +786,9 @@ function appendNumberCell(row, value) {
 function appendPortraitCell(row, person) {
   const cell = document.createElement("td");
   cell.classList.add("villager-portrait-cell");
-  if (!isSaltPillar(person)) {
-    cell.style.cursor = "pointer";
-    cell.onclick = () => openConversationFor(person);
-  }
+  // 塩の柱も会話モーダルを開ける。沈黙の表示は conversation.js 側で扱う。
+  cell.style.cursor = "pointer";
+  cell.onclick = () => openConversationFor(person);
 
   const frame = document.createElement("div");
   frame.classList.add("villager-portrait-frame");
@@ -819,10 +818,8 @@ function appendIdentityCells(row, person) {
   appendPortraitCell(row, person);
 
   const nameCell = appendTextCell(row, person.name);
-  if (!isSaltPillar(person)) {
-    nameCell.style.cursor = "pointer";
-    nameCell.onclick = () => openConversationFor(person);
-  }
+  nameCell.style.cursor = "pointer";
+  nameCell.onclick = () => openConversationFor(person);
 
   appendTextCell(row, person.bodyOwner);
   appendDictionaryCell(row, [person.race || "人間"], { category: "race" });

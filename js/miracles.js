@@ -253,10 +253,43 @@ function getMiracleTargetCount(mid) {
   return 0;
 }
 
+// 癒し・酒杯が取り除くデバフ特性。選択リストの表示と効果処理で同じ並びを使う。
+const HEAL_MIRACLE_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "疫病", "産褥", "凍え"];
+const GOBLET_MIRACLE_MIND_TRAITS = ["心労", "抑鬱", DISAPPOINTMENT_TRAIT, DESPAIR_TRAIT];
+
+const MIRACLE_CONDITION_SORTS = {
+  body: { traits: HEAL_MIRACLE_BODY_TRAITS, traitKey: "bodyTraits", statKey: "hp", statLabel: "体力" },
+  mind: { traits: GOBLET_MIRACLE_MIND_TRAITS, traitKey: "mindTraits", statKey: "mp", statLabel: "メンタル" }
+};
+
+/** 選択リストの並び順。取り除ける特性が多い順、次に対象の値が低い順。 */
+function sortByMiracleCondition(entries, sort) {
+  return [...entries].sort((a, b) => {
+    const traitDiff = getMiracleConditionTraits(b.person, sort).length -
+      getMiracleConditionTraits(a.person, sort).length;
+    if (traitDiff !== 0) return traitDiff;
+    return (Number(a.person[sort.statKey]) || 0) - (Number(b.person[sort.statKey]) || 0);
+  });
+}
+
+function getMiracleConditionTraits(person, sort) {
+  const traits = Array.isArray(person?.[sort.traitKey]) ? person[sort.traitKey] : [];
+  return sort.traits.filter(trait => traits.includes(trait));
+}
+
+function formatMiracleConditionLabel(person, suffix, sort) {
+  const traits = getMiracleConditionTraits(person, sort);
+  const detail = [`${sort.statLabel}${Math.floor(Number(person[sort.statKey]) || 0)}`]
+    .concat(traits.length > 0 ? traits.join("・") : [])
+    .join(" / ");
+  return `${person.name}${suffix}（${detail}）`;
+}
+
 function getMiracleTargetOptions(mid) {
   if (mid === "17") return { raidersOnly: true };
   if (mid === "12") return { normalExchangeOnly: true, includeSaltPillar: true };
-  if (mid === "6" || mid === "16") return { villagersOnly: true, includeCaptives: true };
+  if (mid === "6") return { villagersOnly: true, includeCaptives: true, conditionSort: "body" };
+  if (mid === "16") return { villagersOnly: true, includeCaptives: true, conditionSort: "mind" };
   if (mid === "3" || mid === "7" || mid === "11") return { villagersOnly: true };
   if (mid === "13") return { includeSaltPillar: true, excludeExchangeImmune: true };
   return {};
@@ -535,6 +568,24 @@ function createVillagerSelect(id, village, options = {}) {
   op0.value="";
   op0.textContent="(選択)";
   sel.appendChild(op0);
+
+  // 状態で並べ替える奇跡は、村人と捕虜をまとめて一覧にする。
+  const conditionSort = MIRACLE_CONDITION_SORTS[options.conditionSort];
+  if (conditionSort) {
+    const entries = village.villagers
+      .filter(vv => !isSaltPillar(vv))
+      .map(person => ({ person, suffix: "" }))
+      .concat(getCaptives(village)
+        .filter(vv => !isSaltPillar(vv))
+        .map(person => ({ person, suffix: "(捕虜)" })));
+    sortByMiracleCondition(entries, conditionSort).forEach(entry => {
+      const opp = document.createElement("option");
+      opp.value = entry.person.name;
+      opp.textContent = formatMiracleConditionLabel(entry.person, entry.suffix, conditionSort);
+      sel.appendChild(opp);
+    });
+    return sel;
+  }
 
   // 村人を追加
   if (!options.raidersOnly) {
@@ -919,10 +970,9 @@ function forceMarriage(a,b,v) {
 
 /** 癒し: 負傷など回復 */
 function healMiracle(p,v) {
-  let arr=["負傷","重体","疲労","過労","飢餓","疫病","産褥","凍え"];
   let recoveredTraits = [];
 
-  arr.forEach(trait => {
+  HEAL_MIRACLE_BODY_TRAITS.forEach(trait => {
     if (p.bodyTraits.includes(trait)) {
       recoveredTraits.push(trait);
       p.bodyTraits = p.bodyTraits.filter(t => t !== trait);
@@ -946,7 +996,7 @@ function healMiracle(p,v) {
 function gobletMiracle(p,v) {
   const recoveredTraits = [];
 
-  ["心労","抑鬱", DISAPPOINTMENT_TRAIT, DESPAIR_TRAIT].forEach(trait => {
+  GOBLET_MIRACLE_MIND_TRAITS.forEach(trait => {
     if (p.mindTraits.includes(trait)) {
       recoveredTraits.push(trait);
       p.mindTraits = p.mindTraits.filter(t => t !== trait);

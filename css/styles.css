@@ -2825,6 +2825,11 @@ section h2 {
   color: #3d2b13;
 }
 
+/* display 指定が hidden 属性の既定値に勝つため、非表示を明示する。 */
+.conversation-history-link[hidden] {
+  display: none;
+}
+
 .portrait-area {
   width: 200px;
   height: 200px;
