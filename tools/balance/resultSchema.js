@@ -4,7 +4,7 @@ import {
   isForcedHealingAction
 } from "../../js/util.js";
 
-export const BALANCE_RESULT_SCHEMA_VERSION = 7;
+export const BALANCE_RESULT_SCHEMA_VERSION = 9;
 
 const CHILD_BODY_TRAITS = new Set(["赤子", "幼児", "少年", "少女"]);
 
@@ -84,6 +84,7 @@ export function createVillageSnapshot(village) {
       dying: countTrait(villagers, "危篤"),
       averageHp: average(villagers, "hp"),
       averageMp: average(villagers, "mp"),
+      averageHappiness: average(villagers, "happiness"),
       minimumHp: minimum(villagers, "hp"),
       minimumMp: minimum(villagers, "mp"),
       below80Hp: villagers.filter(person => (Number(person?.hp) || 0) < 80).length,
@@ -223,7 +224,15 @@ function median(values) {
 function summarizeRelationshipResults(completed) {
   const tracked = completed.filter(result => result.relationships);
   if (tracked.length === 0) return null;
-  const categories = ["bestFriend", "nemesis", "lover", "breakup", "marriage", "birth"];
+  const categories = [
+    "bestFriend",
+    "nemesis",
+    "nemesisResolved",
+    "lover",
+    "breakup",
+    "marriage",
+    "birth"
+  ];
   const eventSummary = Object.fromEntries(categories.map(category => {
     const counts = tracked.map(result =>
       asArray(result.relationships?.events).filter(event => event.category === category).length
@@ -246,6 +255,7 @@ function summarizeRelationshipResults(completed) {
       total,
       averagePerRun: total / tracked.length,
       runsWithEvent: counts.filter(value => value > 0).length,
+      runRate: counts.filter(value => value > 0).length / tracked.length,
       firstOccurrence: {
         averageMonth: firstMonths.length > 0
           ? firstMonths.reduce((sum, value) => sum + value, 0) / firstMonths.length
@@ -305,6 +315,124 @@ function summarizeRelationshipResults(completed) {
     events: eventSummary,
     timeline
   };
+}
+
+function summarizeProgressionRaids(completed) {
+  const raids = completed.flatMap(result => asArray(result.raidResults));
+  const failedRaids = raids.filter(raid => raid?.outcome === "failure");
+  const outcomes = raids.reduce((counts, raid) => {
+    const outcome = raid?.outcome || "unknown";
+    counts[outcome] = (counts[outcome] || 0) + 1;
+    return counts;
+  }, { complete: 0, partial: 0, failure: 0 });
+  const total = raids.length;
+  const sumField = (section, key) => raids.reduce(
+    (sum, raid) => sum + (Number(raid?.[section]?.[key]) || 0),
+    0
+  );
+  const averageField = (section, key) => total > 0 ? sumField(section, key) / total : 0;
+  const failuresByModule = Array.from(failedRaids.reduce((groups, raid) => {
+    const raidId = raid?.raidId || "unknown";
+    if (!groups.has(raidId)) groups.set(raidId, []);
+    groups.get(raidId).push(raid);
+    return groups;
+  }, new Map()).entries()).map(([raidId, failures]) => {
+    const participantValues = failures.map(raid => Number(raid?.participation?.total) || 0);
+    const averageParticipants = key => failures.reduce(
+      (sum, raid) => sum + (Number(raid?.participation?.[key]) || 0),
+      0
+    ) / failures.length;
+    return {
+      raidId,
+      raidName: failures.find(raid => raid?.raidName)?.raidName || raidId,
+      failures: failures.length,
+      participation: {
+        average: averageParticipants("total"),
+        minimum: Math.min(...participantValues),
+        maximum: Math.max(...participantValues),
+        averageFront: averageParticipants("front"),
+        averageMiddle: averageParticipants("middle"),
+        averageRear: averageParticipants("rear")
+      }
+    };
+  }).sort((a, b) => b.failures - a.failures || a.raidId.localeCompare(b.raidId));
+
+  return {
+    total,
+    runsWithRaid: completed.filter(result => asArray(result.raidResults).length > 0).length,
+    runRate: completed.length > 0
+      ? completed.filter(result => asArray(result.raidResults).length > 0).length / completed.length
+      : null,
+    averagePerRun: completed.length > 0 ? total / completed.length : null,
+    outcomes,
+    outcomeRates: Object.fromEntries(Object.entries(outcomes).map(([key, count]) => [
+      key,
+      total > 0 ? count / total : null
+    ])),
+    failuresByModule,
+    losses: {
+      averagePerRaid: {
+        food: averageField("losses", "food"),
+        materials: averageField("losses", "materials"),
+        funds: averageField("losses", "funds"),
+        mana: averageField("losses", "mana"),
+        security: averageField("losses", "security"),
+        happiness: averageField("losses", "happiness"),
+        totalHp: averageField("losses", "totalHp"),
+        damagedBuildings: averageField("losses", "damagedBuildings")
+      },
+      raidsWithBuildingDamage: raids.filter(raid => (Number(raid.losses?.damagedBuildings) || 0) > 0).length
+    },
+    casualties: {
+      averageInjured: averageField("casualties", "injured"),
+      averageCritical: averageField("casualties", "critical"),
+      averageDying: averageField("casualties", "dying"),
+      averageDown: averageField("casualties", "down")
+    }
+  };
+}
+
+function summarizeFinalProgression(completed) {
+  const definitions = {
+    mana: result => result.final?.resources?.mana,
+    scale: result => result.final?.resources?.scale,
+    villagers: result => result.final?.population?.villagers
+  };
+  return Object.fromEntries(Object.entries(definitions).map(([key, getter]) => {
+    const values = completed.map(getter).filter(value => Number.isFinite(Number(value))).map(Number);
+    return [key, {
+      average: values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : null,
+      median: median(values),
+      minimum: values.length > 0 ? Math.min(...values) : null,
+      maximum: values.length > 0 ? Math.max(...values) : null
+    }];
+  }));
+}
+
+function summarizeProgressionTimeline(completed) {
+  const groups = new Map();
+  completed.forEach(result => {
+    asArray(result.checkpoints).forEach(checkpoint => {
+      const elapsedMonths = Number(checkpoint?.elapsedMonths) || 0;
+      if (!groups.has(elapsedMonths)) groups.set(elapsedMonths, []);
+      groups.get(elapsedMonths).push(checkpoint.snapshot);
+    });
+  });
+  return Array.from(groups.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([elapsedMonths, snapshots]) => {
+      const averageField = getter => {
+        const values = snapshots.map(getter).filter(value => Number.isFinite(Number(value))).map(Number);
+        return values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+      };
+      return {
+        elapsedMonths,
+        runs: snapshots.length,
+        mana: averageField(snapshot => snapshot.resources?.mana),
+        scale: averageField(snapshot => snapshot.resources?.scale),
+        villagers: averageField(snapshot => snapshot.population?.villagers)
+      };
+    });
 }
 
 export function summarizeBatch(results) {
@@ -380,6 +508,9 @@ export function summarizeBatch(results) {
       maximumFinal: finalMana.length > 0 ? Math.max(...finalMana) : null
     },
     raidOutcomes: outcomes,
+    progressionRaids: summarizeProgressionRaids(completed),
+    finalProgression: summarizeFinalProgression(completed),
+    progressionTimeline: summarizeProgressionTimeline(completed),
     raidStress: summarizeRaidStressResults(completed),
     relationships: summarizeRelationshipResults(completed),
     recovery: {

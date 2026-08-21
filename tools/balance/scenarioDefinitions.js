@@ -9,10 +9,10 @@ import { canDefendInRaid, getRaidActionBlockReason } from "../../js/raidRules.js
 import { getFriendshipScore, parseRelationship } from "../../js/relationships.js";
 import { getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "../../js/util.js";
 import { getVillageScaleStage } from "../../js/villageScale.js";
-import { createVillageSnapshot } from "./resultSchema.js?v=20260818-balance-48";
-import { drainKnownModals, waitUntil } from "./modalDriver.js?v=20260818-balance-25";
+import { createVillageSnapshot } from "./resultSchema.js?v=20260822-balance-58";
+import { drainKnownModals, waitUntil } from "./modalDriver.js?v=20260822-balance-56";
 
-export const SCENARIO_VERSION = 24;
+export const SCENARIO_VERSION = 27;
 export const BEGINNER_PLAYER_MODEL_VERSION = 2;
 export const STANDARD_PLAYER_MODEL_VERSION = 3;
 export const EXPERT_PLAYER_MODEL_VERSION = 4;
@@ -581,12 +581,23 @@ function getRaidResultReason(village) {
 
 async function resolveActiveRaid({ api, frame, telemetry = null }) {
   const village = api.getVillage();
-  await drainKnownModals(frame);
-  api.nextTurn();
-  await waitUntil(
-    () => frame.contentDocument?.getElementById("raidModal")?.style.display === "block",
-    { reason: "raid_modal_timeout" }
-  );
+  let raidModalOpened = false;
+  for (let attempt = 0; attempt < 20 && !raidModalOpened; attempt++) {
+    await drainKnownModals(frame);
+    api.nextTurn();
+    await new Promise(resolve => window.setTimeout(resolve, 10));
+    raidModalOpened = frame.contentDocument?.getElementById("raidModal")?.style.display === "block";
+  }
+  if (!raidModalOpened) {
+    const visibleModals = [...(frame.contentDocument?.querySelectorAll("[id$='Modal'], [role='dialog']") || [])]
+      .filter(element => {
+        const style = frame.contentWindow?.getComputedStyle(element);
+        return style && style.display !== "none" && style.visibility !== "hidden";
+      })
+      .map(element => element.id || element.getAttribute("role") || element.tagName)
+      .filter(Boolean);
+    throw new Error(`raid_modal_timeout:${visibleModals.join(",") || "none"}`);
+  }
 
   for (let step = 0; step < 1200; step++) {
     if (!village.villageTraits.includes("襲撃中") && !village.isRaidFinalizing) break;
@@ -1478,6 +1489,18 @@ function collectActiveRelationshipPairs(villagers, prefixes) {
   return pairs.size;
 }
 
+function collectFormerNemesisPairs(villagers) {
+  const pairs = new Set();
+  villagers.forEach(person => {
+    (Array.isArray(person.relationships) ? person.relationships : []).forEach(raw => {
+      const parsed = parseRelationship(raw);
+      if (parsed?.prefix !== "かつての天敵" || !parsed.target) return;
+      pairs.add([person.name, parsed.target].sort().join("\u0000"));
+    });
+  });
+  return pairs;
+}
+
 function collectFriendshipBands(pairMinimums) {
   const bands = {
     hatred: 0,
@@ -1620,6 +1643,7 @@ async function runProgression({ api, frame }, modelId, options = {}) {
   const initial = createVillageSnapshot(village);
   const checkpoints = [];
   const raidPreparations = [];
+  const raidResults = [];
   const routineMiracles = [];
   const crisisCheckpoints = [];
   const economicBreakdowns = [];
@@ -1631,6 +1655,7 @@ async function runProgression({ api, frame }, modelId, options = {}) {
     : [];
   const relationshipEvents = [];
   let relationshipHistoryIndex = Array.isArray(village.historyEvents) ? village.historyEvents.length : 0;
+  let formerNemesisPairs = trackRelationships ? collectFormerNemesisPairs(village.villagers) : new Set();
   let previousWarnings = { food: false, materials: false };
   const counters = {
     raids: 0,
@@ -1677,6 +1702,17 @@ async function runProgression({ api, frame }, modelId, options = {}) {
       counters.raidHealingManaSpent += miracles.reduce((sum, miracle) => sum + miracle.manaSpent, 0);
       counters.raidHealingFundsSpent += miracles.reduce((sum, miracle) => sum + miracle.fundsSpent, 0);
       api.autoAssignRaidActions();
+      const raidId = village.currentRaid?.id || village.currentRaid?.raidId || null;
+      const raidDefinition = getRaidModuleById(raidId);
+      const participation = {
+        front: village.villagers.filter(person => ["迎撃", "籠城"].includes(person.action)).length,
+        middle: village.villagers.filter(person => ["射撃", "火砲"].includes(person.action)).length,
+        rear: village.villagers.filter(person => person.action === "罠作成").length
+      };
+      participation.total = participation.front + participation.middle + participation.rear;
+      const beforeRaid = createVillageSnapshot(village);
+      const villagerRefs = village.villagers.slice();
+      const totalHpBefore = sumUnitHp(villagerRefs);
       raidPreparations.push({
         elapsedMonths,
         phase: "active",
@@ -1691,8 +1727,46 @@ async function runProgression({ api, frame }, modelId, options = {}) {
       });
       crisisObservation = observeCrisisState(village);
       const outcome = await resolveActiveRaid({ api, frame });
+      const afterRaid = createVillageSnapshot(village);
+      const loss = key => Math.max(
+        0,
+        (Number(beforeRaid.resources?.[key]) || 0) - (Number(afterRaid.resources?.[key]) || 0)
+      );
+      raidResults.push({
+        elapsedMonths: Math.max(0, elapsedMonths - 1),
+        raidId,
+        raidName: raidDefinition?.name || village.currentRaid?.name || raidId,
+        outcome,
+        participation,
+        resultReason: getRaidResultReason(village),
+        losses: {
+          food: loss("food"),
+          materials: loss("materials"),
+          funds: loss("funds"),
+          mana: loss("mana"),
+          security: loss("security"),
+          happiness: Math.max(
+            0,
+            (Number(beforeRaid.population?.averageHappiness) || 0) -
+              (Number(afterRaid.population?.averageHappiness) || 0)
+          ),
+          totalHp: Math.max(0, totalHpBefore - sumUnitHp(villagerRefs)),
+          damagedBuildings: Math.max(
+            0,
+            afterRaid.damagedBuildings.length - beforeRaid.damagedBuildings.length
+          )
+        },
+        casualties: {
+          injured: afterRaid.population.injured,
+          critical: afterRaid.population.critical,
+          dying: afterRaid.population.dying,
+          down: villagerRefs.filter(person => (Number(person.hp) || 0) <= 0).length
+        }
+      });
       counters.raids++;
       if (outcome) counters.raidOutcomes[outcome]++;
+      elapsedMonths--;
+      continue;
     } else {
       const recordRoutineMiracle = (used, category) => {
         if (!used) return;
@@ -1763,8 +1837,15 @@ async function runProgression({ api, frame }, modelId, options = {}) {
         if (unnecessaryBuild) counters.unnecessaryBuildingActions++;
       }
       crisisObservation = observeCrisisState(village);
-      api.nextTurn();
-      await drainKnownModals(frame);
+      const monthIndexBefore = (Number(village.year) || 0) * 12 + (Number(village.month) || 0);
+      let monthAdvanced = false;
+      for (let attempt = 0; attempt < 20 && !monthAdvanced; attempt++) {
+        api.nextTurn();
+        await drainKnownModals(frame);
+        const monthIndexAfter = (Number(village.year) || 0) * 12 + (Number(village.month) || 0);
+        monthAdvanced = monthIndexAfter !== monthIndexBefore;
+      }
+      if (!monthAdvanced) throw new Error("month_advance_timeout");
     }
 
     const crisisResult = collectCrisisState(village, crisisObservation, elapsedMonths);
@@ -1790,6 +1871,20 @@ async function runProgression({ api, frame }, modelId, options = {}) {
       const relationshipResult = collectRelationshipEvents(village, relationshipHistoryIndex, elapsedMonths);
       relationshipHistoryIndex = relationshipResult.historyIndex;
       relationshipEvents.push(...relationshipResult.events);
+      const currentFormerNemesisPairs = collectFormerNemesisPairs(village.villagers);
+      currentFormerNemesisPairs.forEach(pairKey => {
+        if (formerNemesisPairs.has(pairKey)) return;
+        relationshipEvents.push({
+          elapsedMonths,
+          year: Number(village.year) || 0,
+          month: Number(village.month) || 0,
+          category: "nemesisResolved",
+          people: pairKey.split("\u0000"),
+          source: "relationshipState",
+          title: ""
+        });
+      });
+      formerNemesisPairs = currentFormerNemesisPairs;
       relationshipTimeline.push(collectRelationshipSnapshot(village, elapsedMonths, foundingNames));
     }
 
@@ -1806,6 +1901,7 @@ async function runProgression({ api, frame }, modelId, options = {}) {
     checkpoints,
     counters,
     raidPreparations,
+    raidResults,
     routineMiracles,
     crisisCheckpoints,
     economicBreakdowns,

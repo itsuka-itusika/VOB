@@ -155,45 +155,63 @@ function hasBodyTrait(person, trait) {
  * 結婚チェック (夏至祭などで呼ばれる)
  */
 export function doMarriageCheck(village) {
-  let c = village.villagers.filter(x=>
+  const candidates = village.villagers.filter(x=>
     x.spiritAge>=18
     && !isSaltPillar(x)
     && hasLoverRelationship(x)
     && !checkHasRelationship(x,"既婚")
   );
-  if (c.length===0) {
+  if (candidates.length===0) {
     village.log("結婚判定:該当者なし");
     return;
   }
-  let a = randChoice(c);
-  let bName = getRelationshipTargetName(a, "恋人");
-  if (!bName) return;
+  const candidateByName = new Map(candidates.map(person => [person.name, person]));
+  const seenPairs = new Set();
+  const pairs = [];
+  candidates.forEach(a => {
+    const b = candidateByName.get(getRelationshipTargetName(a, "恋人"));
+    if (!b || getRelationshipTargetName(b, "恋人") !== a.name) return;
+    const pairKey = [a.name, b.name].sort().join("\u0000");
+    if (seenPairs.has(pairKey)) return;
+    seenPairs.add(pairKey);
+    pairs.push([a, b]);
+  });
+  if (pairs.length===0) {
+    village.log("結婚判定:該当カップルなし");
+    return;
+  }
 
-  let b = village.villagers.find(xx=>xx.name===bName);
-  if (!b || isSaltPillar(b) || b.spiritAge < 18) return;
+  const successfulPairs = [];
+  pairs.forEach(([a, b]) => {
+    let rA = Math.min(100, (a.ind+a.eth)*2.5);
+    let rB = Math.min(100, (b.ind+b.eth)*2.5);
+    let sc = clampValue((rA*rB)/10000, 0.2, 1);
 
-  let rA = Math.min(100, (a.ind+a.eth)*2);
-  let rB = Math.min(100, (b.ind+b.eth)*2);
-  let sc = clampValue((rA*rB)/10000, 0.2, 1);
+    if (Math.random()<=sc) {
+      removeRelationship(a,`恋人:${b.name}`);
+      removeRelationship(b,`恋人:${a.name}`);
+      addRelationship(a,"既婚");
+      addRelationship(b,"既婚");
+      a.happiness=clampValue(a.happiness+50,0,100);
+      b.happiness=clampValue(b.happiness+50,0,100);
 
-  if (Math.random()<=sc) {
-    removeRelationship(a,`恋人:${b.name}`);
-    removeRelationship(b,`恋人:${a.name}`);
-    addRelationship(a,"既婚");
-    addRelationship(b,"既婚");
-    a.happiness=clampValue(a.happiness+50,0,100);
-    b.happiness=clampValue(b.happiness+50,0,100);
+      addSpouseRelationships(a, b);
+      recordMarriageHistory(village, a, b, { source: "夏至祭" });
+      successfulPairs.push([a, b]);
+      village.log(`${a.name}と${b.name}結婚成功`);
+    } else {
+      village.log(`${a.name}と${b.name}結婚失敗`);
+    }
+  });
 
-    addSpouseRelationships(a, b);
-    recordMarriageHistory(village, a, b, { source: "夏至祭" });
-
-    village.log(`${a.name}と${b.name}結婚成功`);
-    showRelationshipModal("結婚", `${a.name}と${b.name}が結婚しました。`, [
+  if (successfulPairs.length > 0) {
+    const message = successfulPairs.length === 1
+      ? `${successfulPairs[0][0].name}と${successfulPairs[0][1].name}が結婚しました。`
+      : `${successfulPairs.length}組の恋人たちが結婚しました。`;
+    showRelationshipModal("結婚", message, successfulPairs.flatMap(([a, b]) => [
       [a, getMarriageLine(a, b)],
       [b, getMarriageLine(b, a)]
-    ]);
-  } else {
-    village.log(`${a.name}と${b.name}結婚失敗`);
+    ]));
   }
 }
 
