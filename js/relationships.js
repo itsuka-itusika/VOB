@@ -82,8 +82,13 @@ export function doLoverCheck(village, options = {}) {
 
 export function isSingle(person) {
   return !checkHasRelationship(person,"既婚") &&
-    !checkHasRelationship(person,"恋人") &&
+    !hasLoverRelationship(person) &&
     !hasRelationshipPrefix(person, SPOUSE_RELATION_PREFIXES);
+}
+
+/** 恋人がいるか。「元恋人」を恋人と誤判定しないよう、前置きで判定する。 */
+export function hasLoverRelationship(person) {
+  return hasRelationshipPrefix(person, LOVER_RELATION_PREFIXES);
 }
 
 function getOppositeSex(sex) {
@@ -130,7 +135,7 @@ export function doMarriageCheck(village) {
   let c = village.villagers.filter(x=>
     x.spiritAge>=18
     && !isSaltPillar(x)
-    && checkHasRelationship(x,"恋人")
+    && hasLoverRelationship(x)
     && !checkHasRelationship(x,"既婚")
   );
   if (c.length===0) {
@@ -185,6 +190,7 @@ const FRIEND_RELATION_PREFIXES = new Set([
 ]);
 const FAMILY_RELATION_PREFIXES = new Set(["夫", "妻", "母", "父", "子"]);
 const GENETIC_RELATION_PREFIXES = new Set(["遺伝母", "遺伝父"]);
+const LOVER_RELATION_PREFIXES = new Set(["恋人"]);
 const SPOUSE_RELATION_PREFIXES = new Set(["夫", "妻"]);
 const PARENT_CHILD_RELATION_PREFIXES = new Set(["母", "父", "子"]);
 const LOVER_BLOCKING_RELATION_PREFIXES = new Set([

@@ -1,7 +1,7 @@
 // miracles.js
 
 import { clampValue, getPortraitPath } from "./util.js";
-import { addRelationship, removeRelationship, checkHasRelationship, getRelationshipTargetName, clearRelationshipsForDepartedVillager, addSpouseRelationships, raiseMutualFriendshipTo } from "./relationships.js";
+import { addRelationship, removeRelationship, checkHasRelationship, hasLoverRelationship, getRelationshipTargetName, clearRelationshipsForDepartedVillager, addSpouseRelationships, raiseMutualFriendshipTo } from "./relationships.js";
 import { updateUI } from "./ui.js";  // 実行後にUIを更新する
 import { canExchangeBody, doExchange } from "./exchange.js";
 import { createRandomVisitor, createRandomVisitorOfType, determineSpeechType } from "./createVillagers.js";
@@ -232,7 +232,7 @@ function getHearthMiraclePairs(village) {
   const pairs = [];
   const done = new Set();
   village.villagers.forEach(a => {
-    if (done.has(a) || isSaltPillar(a) || !checkHasRelationship(a, "恋人") || checkHasRelationship(a, "既婚")) return;
+    if (done.has(a) || isSaltPillar(a) || !hasLoverRelationship(a) || checkHasRelationship(a, "既婚")) return;
     const bName = getRelationshipTargetName(a, "恋人");
     const b = bName ? village.villagers.find(person => person.name === bName) : null;
     if (!b || done.has(b) || isSaltPillar(b) || checkHasRelationship(b, "既婚")) return;

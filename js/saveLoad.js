@@ -445,7 +445,11 @@ function convertObjectToVillage(dataObj) {
   if (Array.isArray(dataObj.buildings)) {
     v.buildings = [...dataObj.buildings];
   }
-  v.apocalypseStarted = !!dataObj.apocalypseStarted || v.buildings.includes("bacchusGoldenStatue");
+  // 黄金像からの推定は、apocalypseStarted を持たない旧セーブの救済に限る。
+  // クリア済みの村へ適用すると、像が残っているせいで黙示録が再開してしまう。
+  v.apocalypseStarted = hasOwn(dataObj, "apocalypseStarted")
+    ? !!dataObj.apocalypseStarted
+    : (!v.apocalypseCleared && v.buildings.includes("bacchusGoldenStatue"));
   v.apocalypseStage = Math.max(0, Math.min(7, Math.floor(normalizeFiniteNumber(dataObj.apocalypseStage, 0))));
   const hasLocustTrait = v.villageTraits.includes("飛蝗");
   const inferredLocustMonths = v.apocalypseStarted && v.apocalypseStage >= 2

@@ -763,6 +763,8 @@ function processPendingGoldenRainPregnancies(village) {
     }
 
     const mother = village.villagers.find(person => matchesPendingMysticTarget(entry, person));
+    // 対象が死亡・離脱していれば予約ごと消える。判定関数へ渡す前に外す。
+    if (!mother) return;
     if (isSaltPillar(mother)) {
       remaining.push(entry);
       return;
@@ -770,11 +772,9 @@ function processPendingGoldenRainPregnancies(village) {
     const canReceive = isAnnunciation
       ? canReceiveAnnunciationPregnancy(mother)
       : canReceiveGoldenRainPregnancy(mother);
-    if (!mother || !canReceive) {
-      if (mother) {
-        const sourceName = isAnnunciation ? "告天使の絵画の光" : "黄金の雨の兆し";
-        village.log(`${mother.name}への${sourceName}は、妊娠には至りませんでした。`);
-      }
+    if (!canReceive) {
+      const sourceName = isAnnunciation ? "告天使の絵画の光" : "黄金の雨の兆し";
+      village.log(`${mother.name}への${sourceName}は、妊娠には至りませんでした。`);
       return;
     }
 
