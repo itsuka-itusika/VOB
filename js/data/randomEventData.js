@@ -15,6 +15,9 @@ export const EVENT_POOLS = {
   bad: ["storm", "downpour", "heat", "fire", "thief", "rats", "lightning1", "lightning2", "snow", "fight", "loverArgument", "argument", "drunk", "epidemic"]
 };
 
+// 村全体へ一律に効くイベント。同じ状況を何人も語る意味がないため、代表1人だけが反応する。
+export const SINGLE_SPEAKER_EVENTS = new Set(["fireworks", "hotSpring", "heat", "snow"]);
+
 export const EVENT_SUBJECTS = {
   "狩猟神": "狩女神の祝福",
   "太陽神": "太陽神の寵愛",

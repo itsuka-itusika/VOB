@@ -32,7 +32,8 @@ import {
   EVENT_MOODS,
   EVENT_POOLS,
   EVENT_SECOND_LINE_BASES,
-  EVENT_SUBJECTS
+  EVENT_SUBJECTS,
+  SINGLE_SPEAKER_EVENTS
 } from "./data/randomEventData.js";
 
 const VILLAGER_STATE_KEYS = [
@@ -100,7 +101,7 @@ export class RandomEvents {
     return getChildlikeRandomEventLine(character, { eventKey, kind, mood });
   }
 
-  static createEventLine(kind, character, eventKey) {
+  static createEventLine(kind, character, eventKey, variantIndex = null) {
     return getDialogueLine({
       character,
       scene: "randomEvent",
@@ -108,7 +109,8 @@ export class RandomEvents {
       context: {
         kind,
         subject: this.getEventSubject(eventKey, kind),
-        mood: this.getEventMood(eventKey, kind)
+        mood: this.getEventMood(eventKey, kind),
+        variantIndex
       }
     }) || "...";
   }
@@ -163,18 +165,25 @@ export class RandomEvents {
     if (this.shouldSuppressRandomEventAnnouncement(eventKey)) return;
 
     const changedVillagers = this.collectChangedVillagers(village, beforeState);
-    const speakers = [...new Set([...changedVillagers, ...this._forcedSpeakers])];
+    let speakers = [...new Set([...changedVillagers, ...this._forcedSpeakers])];
     if (speakers.length === 0 && getActiveVillagers(village).length > 0) {
       // 資源のみが変化したイベントでも代表者のセリフを表示
       const rep = this.randChoice(getActiveVillagers(village));
       if (rep) speakers.push(rep);
     }
+    if (SINGLE_SPEAKER_EVENTS.has(eventKey) && speakers.length > 1) {
+      speakers = [this.randChoice(speakers)];
+    }
     const title = EVENT_SUBJECTS[eventKey] || EVENT_KIND_TITLES[kind] || "ランダムイベント";
     const message = logs.length > 0 ? logs.join("\n") : `${phase}ランダムイベントが発生しました。`;
 
     try {
+      // 複数人が話すイベントでは、話者ごとに別の候補を割り当ててセリフの重複を避ける。
       const participants = speakers
-        .map(p => this.participant(p, this.createEventLine(kind, p, eventKey)));
+        .map((p, index) => this.participant(
+          p,
+          this.createEventLine(kind, p, eventKey, speakers.length > 1 ? index : null)
+        ));
       this.announce(title, message, participants);
     } catch (error) {
       console.error("Random event announcement failed", error);

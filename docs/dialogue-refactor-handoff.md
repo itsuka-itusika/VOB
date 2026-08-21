@@ -116,6 +116,8 @@
 
 通常会話では `collectConversationCandidates` が候補を集め、候補が持つ最大 priority の中からランダムに1つ選ぶ。同じ scene/key の重複候補は追加されない。また、現在の口調で取得できる行がない候補は追加されない。
 
+ランダムイベントで複数人が話す場合、`getRandomEventLine` は context の `variantIndex` を受け取る。口調に対する値が2つ以上の配列なら `pickLineByVariant` が話者の並び順で候補を選び分け、同じ口調の村人が並んでもセリフが被らないようにする。`variantIndex` が渡らない場合（話者が1人の場合）は従来どおり `pickDialogueLine` がランダムに選ぶ。
+
 現在の候補:
 
 - 村特性 `襲撃中`: `status/raid`, `EMERGENCY`

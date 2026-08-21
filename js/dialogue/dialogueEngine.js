@@ -158,7 +158,13 @@ export function selectRandomEventLineBySpeechType(group, speechType, character, 
   return findLineByKeys(group, keys);
 }
 
-function getRandomEventLine(character, eventKey, { kind = null, subject = null, mood = null } = {}) {
+// 同じイベントで複数人が話す場合に、セリフが被らないよう話者ごとの候補を選び分ける。
+function pickLineByVariant(value, variantIndex) {
+  if (!Number.isInteger(variantIndex) || !Array.isArray(value) || value.length < 2) return null;
+  return pickDialogueLine(value[variantIndex % value.length]);
+}
+
+function getRandomEventLine(character, eventKey, { kind = null, subject = null, mood = null, variantIndex = null } = {}) {
   const isBodyExchangeEvent = eventKey === "lightning2";
   if (!isBodyExchangeEvent) {
     const childLine = getChildlikeRandomEventLine(character, { eventKey, kind, mood });
@@ -173,7 +179,7 @@ function getRandomEventLine(character, eventKey, { kind = null, subject = null, 
   const eventLine = selectRandomEventLineBySpeechType(EVENT_LINES_BY_SPEECH_TYPE[eventKey], speechType, character, {
     extraKeys: isBodyExchangeEvent && !isChildlikeDialogueTone(speechType) ? [sourceRaceLineKey] : []
   });
-  if (eventLine) return pickDialogueLine(eventLine);
+  if (eventLine) return pickLineByVariant(eventLine, variantIndex) || pickDialogueLine(eventLine);
 
   if (isBodyExchangeEvent) {
     const childLine = getChildlikeRandomEventLine(character, { eventKey, kind, mood });
@@ -184,7 +190,7 @@ function getRandomEventLine(character, eventKey, { kind = null, subject = null, 
   const eventMood = mood || getRandomEventMood(eventKey, kind);
   const group = fallbackLines[eventMood] || fallbackLines[kind] || fallbackLines.happy;
   const selected = selectRandomEventLineBySpeechType(expandEventVillagerLines(group), speechType, character);
-  return pickDialogueLine(selected);
+  return pickLineByVariant(selected, variantIndex) || pickDialogueLine(selected);
 }
 
 function getRandomEventSecondLine(character, eventKey, { base = null, speechType = null, kind = null, mood = null } = {}) {

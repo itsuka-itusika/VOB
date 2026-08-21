@@ -1,6 +1,6 @@
 // miracles.js
 
-import { clampValue, getPortraitPath } from "./util.js";
+import { clampValue, getPortraitPath, shuffleArray } from "./util.js";
 import { addRelationship, removeRelationship, checkHasRelationship, hasLoverRelationship, getRelationshipTargetName, clearRelationshipsForDepartedVillager, addSpouseRelationships, raiseMutualFriendshipTo } from "./relationships.js";
 import { updateUI } from "./ui.js";  // 実行後にUIを更新する
 import { canExchangeBody, doExchange } from "./exchange.js";
@@ -1231,20 +1231,41 @@ function getDepartureMiracleLine(person) {
   return randFrom(lines[type] || lines[person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
 }
 
+// 反応を並べる人数の上限。村人全員を対象にする奇跡でも、この人数までを代表として表示する。
+const MIRACLE_RESULT_MAX_SPEAKERS = 3;
+
+// 代表を選ぶ際、同じセリフになる相手は後回しにしてセリフの重複を避ける。
+function pickMiracleResultSpeakers(targets, miracleName) {
+  if (targets.length <= MIRACLE_RESULT_MAX_SPEAKERS) {
+    return targets.map(person => ({ person, line: getGenericMiracleLine(person, miracleName) }));
+  }
+  const picked = [];
+  const usedLines = new Set();
+  shuffleArray(targets).forEach(person => {
+    if (picked.length >= MIRACLE_RESULT_MAX_SPEAKERS) return;
+    const line = getGenericMiracleLine(person, miracleName);
+    if (usedLines.has(line)) return;
+    usedLines.add(line);
+    picked.push({ person, line });
+  });
+  return picked;
+}
+
 export function showMiracleResultModal(village, miracleName, message, people = [], options = {}) {
   if (typeof document === "undefined") return;
-  const entries = (people || []).filter(Boolean);
-  if (entries.length === 0 && !options.allowEmpty) return;
+  const targets = (people || []).filter(Boolean);
+  if (targets.length === 0 && !options.allowEmpty) return;
+  const entries = pickMiracleResultSpeakers(targets, miracleName);
   const overlay = document.createElement("div");
   overlay.className = "effect-result-overlay";
   overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;";
   const modal = document.createElement("div");
   modal.className = "effect-result-modal";
   modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);box-sizing:border-box;background:#fff;padding:20px;max-width:620px;width:calc(100% - 32px);max-height:min(80vh,720px);overflow:auto;border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
-  const rows = entries.map(person => `
+  const rows = entries.map(({ person, line }) => `
     <div style="display:grid;grid-template-columns:72px 1fr;gap:12px;margin:12px 0;align-items:center;">
       <img src="${getPortraitPath(person)}" alt="${person.name}" style="width:72px;height:72px;object-fit:cover;border:1px solid #ddd;background:#f6f0e6;">
-      <p><strong>${person.name}</strong>: ${getGenericMiracleLine(person, miracleName)}</p>
+      <p><strong>${person.name}</strong>: ${line}</p>
     </div>
   `).join("");
   modal.innerHTML = `
