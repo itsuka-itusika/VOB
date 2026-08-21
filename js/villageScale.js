@@ -33,13 +33,13 @@ export const VILLAGE_SCALE_STAGES = [
     threshold: 250,
     title: "繁栄した郷村",
     description: "近隣の中でも存在感を持ち、領主や教会の帳簿にも載りうる村です。",
-    effects: ["魔導工廠、牢獄が建設可能", "櫓の設置数上限3", "訪問者の枠+1"]
+    effects: ["魔導工廠、牢獄が建設可能", "櫓の設置数上限3"]
   },
   {
     threshold: 350,
     title: "自治集落",
     description: "ただの村ではなく、外部から管理や警戒の対象として見られる共同体です。",
-    effects: ["櫓の設置数上限4"]
+    effects: ["櫓の設置数上限4", "訪問者の枠+1"]
   }
 ];
 

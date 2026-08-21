@@ -494,7 +494,7 @@ function convertObjectToVillage(dataObj) {
   normalizeDamagedBuildings(v);
   recalculateBuildingDerivedState(v);
   const baseVisitorLimit = hasActiveBuildingFlag(v, "hasTavern", "tavern") ? 2 : 1;
-  const prosperityVisitorBonus = (Number(v.building) || 0) >= 250 ? 1 : 0;
+  const prosperityVisitorBonus = (Number(v.building) || 0) >= 350 ? 1 : 0;
   v.visitorLimit = Math.max(1, baseVisitorLimit + prosperityVisitorBonus);
   v.pendingGoldenRainPregnancies = Array.isArray(dataObj.pendingGoldenRainPregnancies)
     ? JSON.parse(JSON.stringify(dataObj.pendingGoldenRainPregnancies))

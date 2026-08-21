@@ -411,7 +411,7 @@ export function runMonthStartPhase(village) {
 
 function getVisitorLimit(village) {
   const baseLimit = hasActiveBuildingFlag(village, "hasTavern", "tavern") ? 2 : 1;
-  const prosperityBonus = (Number(village.building) || 0) >= 250 ? 1 : 0;
+  const prosperityBonus = (Number(village.building) || 0) >= 350 ? 1 : 0;
   return Math.max(1, baseLimit + prosperityBonus);
 }
 
