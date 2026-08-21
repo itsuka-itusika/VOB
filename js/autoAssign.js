@@ -13,10 +13,13 @@ import {
 } from "./domain/jobTables.js";
 import { getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "./util.js";
 import {
+  ACTION_CANNON,
   ACTION_DEFEND,
   ACTION_FORTIFY,
   ACTION_SHOOT,
   ACTION_TRAP,
+  canCannonInRaid,
+  estimateRaidActionDamage,
   canFortifyInRaid,
   canDefendInRaid,
   canMakeTrapInRaid,
@@ -41,8 +44,6 @@ const JOB_REST = ACTION_REST;
 const JOB_LEISURE = ACTION_LEISURE;
 const JOB_HEAL = "\u7642\u990a";
 const JOB_LAST_MOMENTS = "\u81e8\u7d42";
-const TRAIT_PACIFIST = "\u975e\u6226\u4e3b\u7fa9";
-const TRAIT_NO_KILLING = "\u4e0d\u6bba";
 const JOB_FOOD_SET = new Set([
   "\u8fb2\u4f5c\u696d",
   "\u72e9\u731f",
@@ -366,6 +367,11 @@ function getHealthFactor(person) {
   return Math.max(0, Math.min(1.2, ((hp * 0.75) + (mp * 0.25)) / 100));
 }
 
+/** 手で火砲に就けた村人か。火砲は自動では選ばないため、割り振りの対象外にする。 */
+function isManualCannoneer(person, village) {
+  return person?.action === ACTION_CANNON && canCannonInRaid(person, village);
+}
+
 function canUseAction(person, action) {
   return Array.isArray(person.actionTable) && person.actionTable.includes(action);
 }
@@ -385,35 +391,16 @@ function chooseRaidFallbackAction(person, currentPreferred, currentAction) {
     JOB_NONE;
 }
 
-export function getExpectedDefenderDamage(person, { useBaseStats = false } = {}) {
-  const mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
-  if (mindTraits.includes(TRAIT_PACIFIST) || mindTraits.includes(TRAIT_NO_KILLING)) return 0;
-
-  const stats = useBaseStats && person.baseStats ? person.baseStats : person;
-  const physical = ((Number(stats.str) || 0) * (Number(stats.cou) || 0) / 400) * 50;
-  const magical = ((Number(stats.mag) || 0) * (Number(stats.cou) || 0) / 400) * 25;
-  let traitMultiplier = 1;
-  if (mindTraits.includes("歴戦")) traitMultiplier *= 1.2;
-  else if (mindTraits.includes("戦慣れ")) traitMultiplier *= 1.1;
-  return Math.max(physical, magical) * traitMultiplier;
+export function getExpectedDefenderDamage(person, village = null) {
+  return estimateRaidActionDamage(person, ACTION_DEFEND, village);
 }
 
 function getExpectedTrapDamage(person) {
-  return ((Number(person.dex) || 0) * (Number(person.int) || 0) / 400) * 30;
+  return estimateRaidActionDamage(person, ACTION_TRAP, null);
 }
 
 function getExpectedShootDamage(person, village) {
-  const mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
-  if (mindTraits.includes(TRAIT_PACIFIST) || mindTraits.includes(TRAIT_NO_KILLING)) return 0;
-
-  const enemies = Array.isArray(village?.raidEnemies)
-    ? village.raidEnemies.filter(enemy => (Number(enemy.hp) || 0) > 0)
-    : [];
-  const avgEnemyVit = enemies.length > 0
-    ? enemies.reduce((sum, enemy) => sum + (Number(enemy.vit) || 0), 0) / enemies.length
-    : 0;
-  const damage = ((Number(person.dex) || 0) * (Number(person.cou) || 0) / 400) * 40 - avgEnemyVit * 1.5;
-  return Math.max(0, damage);
+  return estimateRaidActionDamage(person, ACTION_SHOOT, village);
 }
 
 function isSafeDefender(person) {
@@ -432,8 +419,8 @@ function isSafeTrapMaker(person) {
   return (Number(person.hp) || 0) >= 35 && (Number(person.mp) || 0) >= 10;
 }
 
-function getDefenderScore(person) {
-  const attack = getExpectedDefenderDamage(person);
+function getDefenderScore(person, village) {
+  const attack = getExpectedDefenderDamage(person, village);
   if (attack <= 0) return -Infinity;
 
   return (
@@ -491,7 +478,7 @@ function getRaidAssignmentProfile(person, village) {
   const canShootByRule = canShootInRaid(person, village);
   const canFortifyByRule = canFortifyInRaid(person, village);
 
-  const defenderDamage = getExpectedDefenderDamage(person);
+  const defenderDamage = getExpectedDefenderDamage(person, village);
   const trapDamage = getExpectedTrapDamage(person);
   const shootDamage = getExpectedShootDamage(person, village);
   const canDefend = canDefendByRule && canUseAction(person, ACTION_DEFEND) && isSafeDefender(person) && defenderDamage >= 8;
@@ -507,7 +494,7 @@ function getRaidAssignmentProfile(person, village) {
     canTrap,
     canShoot,
     canFortify,
-    defenderScore: canDefend ? getDefenderScore(person) : -Infinity,
+    defenderScore: canDefend ? getDefenderScore(person, village) : -Infinity,
     trapScore: canTrap ? getTrapScore(person) : -Infinity,
     shooterScore: canShoot ? getShooterScore(person, village) : -Infinity,
     fortifierScore: canFortify ? getFortifierScore(person) : -Infinity,
@@ -634,7 +621,12 @@ function buildRaidAssignments(village, targets) {
 export function autoAssignJobs(village) {
   let changed = 0;
   const priorityContext = buildVillagePriorityContext(village);
-  const targets = village.villagers.filter(person => !person.assignmentLocked);
+  // 襲撃中は、防衛に就いている村人の配置を通常職で上書きしない。
+  const raidActive = isRaidActive(village);
+  const targets = village.villagers.filter(person => {
+    if (person.assignmentLocked) return false;
+    return !(raidActive && isRaidAction(person.action));
+  });
 
   targets.forEach(person => {
     const next = chooseAssignment(person, village, priorityContext);
@@ -659,7 +651,9 @@ export function autoAssignRaidActions(village) {
   }
 
   let changed = 0;
-  const targets = Array.isArray(village.villagers) ? village.villagers : [];
+  const allVillagers = Array.isArray(village.villagers) ? village.villagers : [];
+  // 固定中の村人と、手で火砲に就けた村人はそのままにする。
+  const targets = allVillagers.filter(person => !person.assignmentLocked && !isManualCannoneer(person, village));
   const raidAssignments = buildRaidAssignments(village, targets);
 
   targets.forEach(person => {

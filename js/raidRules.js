@@ -142,6 +142,44 @@ export function applyOffensiveTraitDamage(person, damage) {
   return base;
 }
 
+/** 生存中の襲撃者の平均耐久。想定ダメージの見積もりに使う。 */
+export function getAverageEnemyVitality(village) {
+  const enemies = Array.isArray(village?.raidEnemies)
+    ? village.raidEnemies.filter(enemy => (Number(enemy.hp) || 0) > 0)
+    : [];
+  if (enemies.length === 0) return 0;
+  return enemies.reduce((sum, enemy) => sum + (Number(enemy.vit) || 0), 0) / enemies.length;
+}
+
+/**
+ * 襲撃行動1回あたりの想定ダメージ。
+ * 想定ダメージ表示と自動割り振りで同じ値を使うため、ここに集約する。
+ * 籠城は迎撃と同じ近接攻撃を行う。罠は攻撃特性の影響を受けない。
+ */
+export function estimateRaidActionDamage(person, action, village = null) {
+  if (!person) return 0;
+  const stat = key => Number(person[key]) || 0;
+  const averageVitality = getAverageEnemyVitality(village);
+
+  if (action === ACTION_TRAP) {
+    return Math.max(0, Math.floor((stat("dex") * stat("int") / 400) * 30));
+  }
+
+  let base = 0;
+  if (action === ACTION_DEFEND || action === ACTION_FORTIFY) {
+    const physical = Math.max(0, Math.floor((stat("str") * stat("cou") / 400) * 50 - averageVitality));
+    const magical = Math.max(0, Math.floor((stat("mag") * stat("cou") / 400) * 25));
+    base = Math.max(physical, magical);
+  } else if (action === ACTION_SHOOT) {
+    base = Math.max(0, Math.floor((stat("dex") * stat("cou") / 400) * 40 - averageVitality * 1.5));
+  } else if (action === ACTION_CANNON) {
+    base = Math.max(0, Math.floor((stat("mag") * stat("int") / 400) * 20));
+  } else {
+    return 0;
+  }
+  return applyOffensiveTraitDamage(person, base);
+}
+
 /** 前衛に立てるか。迎撃と籠城で共通する条件。 */
 function canJoinRaidFrontLine(person) {
   if (hasCommonRaidBlockingCondition(person)) return false;

@@ -61,7 +61,12 @@ import {
   RAID_ACTIONS,
   RAID_CANNON_INCOMING_DAMAGE_MULTIPLIER,
   RAID_MIDDLE_INCOMING_DAMAGE_MULTIPLIER,
-  applyOffensiveTraitDamage,
+  ACTION_CANNON,
+  ACTION_DEFEND,
+  ACTION_FORTIFY,
+  ACTION_SHOOT,
+  ACTION_TRAP,
+  estimateRaidActionDamage,
   getFortifyDamageMultiplier,
   getRaidSlotLimitMessage,
   isRaidActionSlotAvailable
@@ -474,38 +479,6 @@ function getRandomTradingRewardPart(person, calculateYield = calculateTradingYie
   return formatRandomHarvestReward("資金", calculateYield(person, 30), calculateYield(person, 70), calculateYield(person, 0));
 }
 
-function estimateDefendDamage(person, village) {
-  const enemies = Array.isArray(village.raidEnemies)
-    ? village.raidEnemies.filter(enemy => Number(enemy.hp) > 0)
-    : [];
-  const avgEnemyVit = enemies.length > 0
-    ? enemies.reduce((sum, enemy) => sum + (Number(enemy.vit) || 0), 0) / enemies.length
-    : 0;
-  const physical = Math.max(0, Math.floor((((Number(person.str) || 0) * (Number(person.cou) || 0)) / 400) * 50 - avgEnemyVit));
-  const magical = Math.max(0, Math.floor((((Number(person.mag) || 0) * (Number(person.cou) || 0)) / 400) * 25));
-  return applyOffensiveTraitDamage(person, Math.max(physical, magical));
-}
-
-function estimateTrapDamage(person) {
-  return Math.floor(((Number(person.dex) || 0) * (Number(person.int) || 0) / 400) * 30);
-}
-
-function estimateCannonDamage(person) {
-  const base = Math.max(0, Math.floor((((Number(person.mag) || 0) * (Number(person.int) || 0)) / 400) * 20));
-  return applyOffensiveTraitDamage(person, base);
-}
-
-function estimateShootDamage(person, village) {
-  const enemies = Array.isArray(village.raidEnemies)
-    ? village.raidEnemies.filter(enemy => Number(enemy.hp) > 0)
-    : [];
-  const avgEnemyVit = enemies.length > 0
-    ? enemies.reduce((sum, enemy) => sum + (Number(enemy.vit) || 0), 0) / enemies.length
-    : 0;
-  const base = Math.max(0, Math.floor((((Number(person.dex) || 0) * (Number(person.cou) || 0)) / 400) * 40 - avgEnemyVit * 1.5));
-  return applyOffensiveTraitDamage(person, base);
-}
-
 function getTaskEstimateParts(person, task, village) {
   const chr = Number(person.chr) || 0;
   const cou = Number(person.cou) || 0;
@@ -647,19 +620,19 @@ function getTaskEstimateParts(person, task, village) {
       break;
     }
     case "迎撃":
-      parts = [`想定ダメージ${estimateDefendDamage(person, village)}`];
+      parts = [`想定ダメージ${estimateRaidActionDamage(person, ACTION_DEFEND, village)}`, "反撃あり"];
       break;
     case "籠城":
-      parts = ["攻撃なし", `被弾${getFortifyDamageMultiplier(village)}倍`, "反撃あり"];
+      parts = [`想定ダメージ${estimateRaidActionDamage(person, ACTION_FORTIFY, village)}`, `被弾${getFortifyDamageMultiplier(village)}倍`, "反撃あり"];
       break;
     case "射撃":
-      parts = [`想定ダメージ${estimateShootDamage(person, village)}`, "先制", `被弾${RAID_MIDDLE_INCOMING_DAMAGE_MULTIPLIER}倍`, "反撃なし"];
+      parts = [`想定ダメージ${estimateRaidActionDamage(person, ACTION_SHOOT, village)}`, "先制", `被弾${RAID_MIDDLE_INCOMING_DAMAGE_MULTIPLIER}倍`, "反撃なし"];
       break;
     case "火砲":
-      parts = [`想定ダメージ${estimateCannonDamage(person)}`, "後攻", `被弾${RAID_CANNON_INCOMING_DAMAGE_MULTIPLIER}倍`, "反撃なし"];
+      parts = [`想定ダメージ${estimateRaidActionDamage(person, ACTION_CANNON, village)}`, "後攻", `被弾${RAID_CANNON_INCOMING_DAMAGE_MULTIPLIER}倍`, "反撃なし"];
       break;
     case "罠作成":
-      parts = [`想定ダメージ${estimateTrapDamage(person)}`];
+      parts = [`想定ダメージ${estimateRaidActionDamage(person, ACTION_TRAP, village)}`];
       break;
   }
 
