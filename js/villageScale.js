@@ -15,10 +15,7 @@ export const VILLAGE_SCALE_STAGES = [
     threshold: 70,
     title: "辺境の村",
     description: "外から見ても一つの村として認識される規模になりました。",
-    effects: [
-      "貯蔵庫、集会所、営倉が建設可能",
-      "訪問者に冒険者、学者、レア種族、エクイナが加わる"
-    ]
+    effects: ["貯蔵庫、集会所、営倉が建設可能"]
   },
   {
     threshold: 120,
@@ -36,7 +33,7 @@ export const VILLAGE_SCALE_STAGES = [
     threshold: 250,
     title: "繁栄した郷村",
     description: "近隣の中でも存在感を持ち、領主や教会の帳簿にも載りうる村です。",
-    effects: ["魔導工廠、牢獄が建設可能", "櫓の設置数上限3", "訪問者の枠+1、訪問者にサテュロス、メナドが加わる"]
+    effects: ["魔導工廠、牢獄が建設可能", "櫓の設置数上限3", "訪問者の枠+1"]
   },
   {
     threshold: 350,
