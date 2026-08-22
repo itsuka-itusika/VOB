@@ -2,7 +2,8 @@ import {
   BUILDING_REQUEST_COMPLETION_LINES,
   BUILDING_REQUEST_DEFINITIONS,
   BUILDING_REQUEST_DISCOUNT_RATE,
-  BUILDING_REQUEST_DURATION_MONTHS
+  BUILDING_REQUEST_DURATION_MONTHS,
+  resolveBuildingRequestLine
 } from "./data/buildingRequestData.js";
 import { getToneLookupKeys, resolveDialogueTone } from "./data/dialogue/toneProfiles.js";
 import { applyPortraitToElement } from "./data/portraitAtlas.js";
@@ -112,7 +113,13 @@ export function tryStartBuildingRequest(village, buildings) {
   const match = randChoice(candidate.matches);
   if (!match) return null;
 
-  const line = randChoice(getBuildingRequestRuleLines(match.rule, match.person)) || `村に${candidate.definition.name}がほしいです。`;
+  const { lines, raw } = getBuildingRequestRuleLines(match.rule, match.person);
+  const line = resolveBuildingRequestLine(
+    randChoice(lines),
+    { buildingName: candidate.definition.name },
+    match.person,
+    { raw }
+  ) || `村に${candidate.definition.name}がほしいです。`;
   const request = {
     buildingId: candidate.definition.buildingId,
     buildingName: candidate.definition.name,
@@ -189,8 +196,9 @@ function getDiscountedCost(cost) {
 }
 
 function getBuildingRequestRuleLines(rule, person) {
+  if (Array.isArray(rule?.rawLines)) return { lines: rule.rawLines, raw: true };
   const sexKey = person?.spiritSex === "女" ? "female" : "male";
-  return rule?.linesBySpiritSex?.[sexKey] || rule?.lines || [];
+  return { lines: rule?.linesBySpiritSex?.[sexKey] || rule?.lines || [], raw: false };
 }
 
 function getBuildingRequestCandidates(village, buildings = []) {
