@@ -34,12 +34,15 @@ function refreshVillageJobTables(village) {
 }
 
 function standardBuildingEffect({ scale, flag, log, after }) {
-  return (village) => {
+  const effect = (village) => {
     village.building += scale;
     if (flag) ensureBuildingFlags(village)[flag] = true;
     if (after) after(village);
     village.log(log);
   };
+  // デバッグでまとめてフラグを立てられるよう、立てるフラグ名を残す。
+  effect.buildingFlag = flag || "";
+  return effect;
 }
 
 function isScaleAtLeast(village, threshold) {
@@ -341,6 +344,23 @@ export const BUILDINGS = [
     onConstructed: startApocalypseFromGoldenStatue
   }
 ];
+
+// イベントでしか立たない建築の解放フラグ。黄金像は建立イベントの解放フラグを持つ。
+const BUILDING_UNLOCK_FLAGS = ["canBuildPublicBath", "canBuildStorehouse", BACCHUS_GOLDEN_STATUE_UNLOCK_FLAG];
+
+/**
+ * デバッグ用。建築の解放フラグと効果フラグをまとめて立てる。
+ * 黄金像の建設済みフラグは、実際に建てて黙示録を始める導線を潰すため立てない。
+ */
+export function unlockAllBuildingFlags(village) {
+  const flags = ensureBuildingFlags(village);
+  BUILDINGS.forEach(building => {
+    const flag = building.effect?.buildingFlag;
+    if (flag) flags[flag] = true;
+  });
+  BUILDING_UNLOCK_FLAGS.forEach(flag => { flags[flag] = true; });
+  return flags;
+}
 
 function getBuildingNameById(buildingId) {
   return BUILDINGS.find(building => building.id === buildingId)?.name || buildingId;

@@ -262,7 +262,7 @@ const MIRACLE_CONDITION_SORTS = {
   mind: { traits: GOBLET_MIRACLE_MIND_TRAITS, traitKey: "mindTraits", statKey: "mp", statLabel: "ﾒﾝﾀﾙ" }
 };
 
-// 選択リストに出す立場。捕虜・訪問者・襲撃者は同時には持たない。
+// 名前の後ろへ出す立場。捕虜・訪問者・襲撃者は同時には持たない。
 const POSITION_MIND_TRAITS = ["捕虜", "訪問者", "襲撃者"];
 // 交換の奇跡の選択リストに出す、肉体側の状態異常。重い順に並べる。
 const EXCHANGE_MIRACLE_BODY_TRAITS = [
@@ -306,14 +306,14 @@ function getMiracleOptionDetails(person, labelKind) {
 }
 
 function formatMiracleOptionLabel(person, labelKind) {
+  const position = getPositionTrait(person);
   const parts = [
     person.race || "-",
     person.uiSexDisplay || person.bodySex || person.sex || "-",
     `${person.bodyAge ?? person.age ?? "-"}歳`,
-    getPositionTrait(person),
     ...getMiracleOptionDetails(person, labelKind)
   ];
-  return `${person.name}　${parts.filter(Boolean).join("/")}`;
+  return `${person.name}${position ? `(${position})` : ""}　${parts.filter(Boolean).join("/")}`;
 }
 
 function getMiracleTargetOptions(mid) {

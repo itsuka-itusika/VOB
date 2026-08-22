@@ -824,8 +824,20 @@ body.scale-stage-6 .log-area,
 }
 
 /* 黙示録が続く間は、画面の色調をわずかに不穏へ寄せる */
+body.apocalypse-mode {
+  background: #f3e2df;
+}
 body.apocalypse-mode header {
   background: #3a1414;
+}
+/* スマホ表示の帯にも効かせるため、モバイル側の指定より詳細度を上げる。 */
+body.apocalypse-mode .resource-panel,
+body.mobile-mode.apocalypse-mode .resource-panel {
+  background: #e6c7c2;
+  border-color: #a45f5f;
+}
+body.apocalypse-mode .resource-box {
+  border-color: #c49a95;
 }
 body.apocalypse-mode .log-area {
   background:
@@ -2443,6 +2455,15 @@ section h2 {
 }
 .building-button.repair:not(:disabled):hover {
   background: #7a5f2d;
+}
+.building-button.destroy {
+  margin-top: 8px;
+}
+.building-button.destroy:not(:disabled) {
+  background: #c62828;
+}
+.building-button.destroy:not(:disabled):hover {
+  background: #9e1f1f;
 }
 .built-list {
   display: flex;

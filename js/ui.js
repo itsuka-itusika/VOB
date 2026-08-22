@@ -1094,7 +1094,8 @@ export function updateUI(v) {
   const rp = document.getElementById("resourcePanel");
   if (!rp) return;
   applyVillageScaleArtClass(v.building);
-  document.body?.classList.toggle("apocalypse-mode", isApocalypseActive(v));
+  const apocalypseActive = isApocalypseActive(v);
+  document.body?.classList.toggle("apocalypse-mode", apocalypseActive);
   const villageInfoHeading = document.getElementById("villageInfoHeading");
   const scaleTitle = getVillageScaleTitle(v.building);
   const divineStatus = getDivineMightStatus(v);
@@ -1120,7 +1121,8 @@ export function updateUI(v) {
   } else if (v.villageTraits.includes("冬")) {
     seasonColor = "#f5f5f5"; // 薄いグレー
   }
-  rp.style.backgroundColor = seasonColor;
+  // 黙示録中は季節色を出さず、CSS の赤系の帯に任せる。
+  rp.style.backgroundColor = apocalypseActive ? "" : seasonColor;
 
   rp.innerHTML = `
     ${mobileScaleTitleBox}
