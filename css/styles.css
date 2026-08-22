@@ -2106,34 +2106,6 @@ section h2 {
   color: #4b3627;
 }
 
-.heresy-inquisition-cost {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 12px;
-  padding: 8px 12px;
-  border: 1px solid #d8c9bb;
-  background: #f8f3eb;
-}
-
-.heresy-inquisition-cost strong {
-  color: #7b2020;
-}
-
-.heresy-inquisition-cost small {
-  color: #666;
-}
-
-.heresy-inquisition-cost.is-short {
-  border-color: #b34a4a;
-  background: #fbeeee;
-}
-
-.heresy-inquisition-cost.is-short small {
-  font-weight: bold;
-  color: #8b1e1e;
-}
-
 .heresy-inquisition-result {
   margin-top: 10px !important;
   font-weight: bold;
@@ -4014,6 +3986,10 @@ body.mobile-mode .heresy-inquisition-speaker {
 }
 body.mobile-mode .heresy-inquisition-buttons button {
   flex: 1 1 120px;
+}
+/* 費用を添えたもてなしのラベルは長いので、狭い画面では1行を丸ごと使う。 */
+body.mobile-mode .heresy-inquisition-buttons .heresy-hospitality-button {
+  flex: 1 1 100%;
 }
 body.mobile-mode .dryad-fruit-person {
   grid-template-columns: 92px minmax(0, 1fr);

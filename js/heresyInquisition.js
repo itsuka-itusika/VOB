@@ -165,23 +165,16 @@ function showInquisitionChoiceModal(village) {
   const portraitPath = getRandomInquisitorPortraitPath();
   const speech = pickInquisitorSpeechSet();
   const canAfford = funds >= cost;
-  const fundsText = canAfford ? `所持 ${funds}` : `所持 ${funds}／不足 ${cost - funds}`;
 
   createModalLayer({
     overlayId: "heresyInquisitionOverlay",
     modalId: "heresyInquisitionModal",
     title: "異端審問",
-    bodyHtml: getInquisitorBody(`
-      <p>${speech.opening}</p>
-      <div class="heresy-inquisition-cost${canAfford ? "" : " is-short"}">
-        <span>もてなし費用</span>
-        <strong>資金 ${cost}</strong>
-        <small>${fundsText}</small>
-      </div>
-    `, portraitPath),
+    bodyHtml: getInquisitorBody(`<p>${speech.opening}</p>`, portraitPath),
     buttons: [
       {
-        label: "もてなす",
+        // 費用は独立した欄を作らず、選択肢そのものに添えて読ませる。
+        label: `もてなす（費用${cost}/所持${funds}）`,
         className: "heresy-hospitality-button",
         disabledReason: canAfford ? "" : `もてなしには資金${cost}が必要です（所持${funds}）`,
         onClick: () => handleHospitality(village, cost, portraitPath, speech)
