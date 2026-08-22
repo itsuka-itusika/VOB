@@ -69,6 +69,9 @@ const RAID_FRONTLINE_MIN_DAMAGE_SHARE = 1 / 3;
 
 // 食料の備蓄が何か月ぶんあれば十分とみなすか。
 const FOOD_SUFFICIENT_MONTHS = 3;
+// 資材が余っているかを測るときに見込む、建築へ回す分。
+// 月々の消費だけで測ると、建築の元手まで余剰とみなしてしまう。
+const BUILDING_MATERIAL_RESERVE = 100;
 
 const JOB_NONE = ACTION_NONE;
 const JOB_REST = ACTION_REST;
@@ -168,6 +171,7 @@ function buildVillagePriorityContext(village) {
     Math.max(0, (62 - avgRecovery) / 18) + Math.max(0, lowConditionRatio - 0.25)
   );
   const materialBaseline = Math.max(20, monthlyMaterialCost + population * 4);
+  const materialSurplusBaseline = Math.max(materialBaseline, BUILDING_MATERIAL_RESERVE + population * 8);
   const materialSeverity = normalizeSeverity((materialBaseline - (Number(village.materials) || 0)) / materialBaseline);
   const fundsBaseline = Math.max(40, population * 12 + (Number(village.building) || 0) * 0.5);
   const fundsSeverity = normalizeSeverity((fundsBaseline - (Number(village.funds) || 0)) / fundsBaseline);
@@ -193,7 +197,7 @@ function buildVillagePriorityContext(village) {
     },
     surplusByAxis: {
       food: getSurplusRatio(village.food, foodBaseline),
-      materials: getSurplusRatio(village.materials, materialBaseline),
+      materials: getSurplusRatio(village.materials, materialSurplusBaseline),
       funds: getSurplusRatio(village.funds, fundsBaseline),
       tech: getSurplusRatio(village.tech, techBaseline)
     },
