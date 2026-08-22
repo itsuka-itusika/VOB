@@ -25,6 +25,7 @@ export const HISTORY_EVENT_TYPES = Object.freeze({
   PREGNANCY: "pregnancy",
   ADULTHOOD: "adulthood",
   CRITICAL: "critical",
+  EPIDEMIC: "epidemic",
   APOCALYPSE: "apocalypse"
 });
 
@@ -47,6 +48,7 @@ const HISTORY_TYPE_LABELS = Object.freeze({
   [HISTORY_EVENT_TYPES.PREGNANCY]: "妊娠",
   [HISTORY_EVENT_TYPES.ADULTHOOD]: "成人",
   [HISTORY_EVENT_TYPES.CRITICAL]: "危篤",
+  [HISTORY_EVENT_TYPES.EPIDEMIC]: "疫病",
   [HISTORY_EVENT_TYPES.APOCALYPSE]: "黙示録"
 });
 
@@ -410,8 +412,21 @@ export function recordCriticalHistory(village, person, options = {}) {
     people: [person],
     importance: "minor",
     scope: HISTORY_SCOPES.PERSON,
-    tags: ["危篤", reason],
-    dedupeKey: `critical:${person.name}`
+    tags: ["危篤", reason]
+  });
+}
+
+export function recordEpidemicHistory(village, person, options = {}) {
+  if (!person) return;
+  const source = options.source || "感染";
+  addHistoryEvent(village, {
+    type: HISTORY_EVENT_TYPES.EPIDEMIC,
+    title: `${person.name}、病に倒れる`,
+    text: `${person.name}が病に倒れた。`,
+    people: [person],
+    importance: "minor",
+    scope: HISTORY_SCOPES.PERSON,
+    tags: ["疫病", source]
   });
 }
 
@@ -647,6 +662,8 @@ function getPersonalHistoryText(event, personName) {
       return "成人した。";
     case HISTORY_EVENT_TYPES.CRITICAL:
       return "危篤となった。";
+    case HISTORY_EVENT_TYPES.EPIDEMIC:
+      return "病に倒れた。";
     case HISTORY_EVENT_TYPES.MYTHIC_EVENT:
       return cleanRecordText(event.text).replace(`${personName}が`, "").trim() || cleanRecordText(event.text || event.title);
     default:

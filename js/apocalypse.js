@@ -1,4 +1,4 @@
-import { addHistoryEvent, recordApocalypsePersonalHistory } from "./history.js";
+import { addHistoryEvent, recordApocalypsePersonalHistory, recordEpidemicHistory } from "./history.js";
 import { resetRaidUiAfterAvoidance, startRaidEvent } from "./raidStart.js";
 import { clearRaidWarningModal } from "./raidWarningModal.js";
 import { refreshJobTable } from "./domain/jobTables.js";
@@ -269,6 +269,7 @@ function applyFourthCalamity(village) {
     person.bodyTraits.push("疫病");
     syncEffectiveStats(person);
     refreshJobTable(person, village);
+    recordEpidemicHistory(village, person, { source: "第四の災厄" });
   });
   const targetNames = targets.map(person => person.name).join("、") || "対象者なし";
   recordStage(village, 4, "第四の角笛が吹かれた", "青白き騎士《疫病》が現れ、村に病が蔓延した。");

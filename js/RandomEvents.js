@@ -16,7 +16,7 @@ import { addStoredResource } from "./domain/resourceLimits.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { getActiveVillagers, getVillagersIncludingSaltPillar } from "./domain/apocalypseRules.js";
 import { addAcquiredStat, syncEffectiveStats } from "./domain/statLayers.js";
-import { recordHobbyAwakeningHistory, recordLoverHistory, recordMythicEventHistory, recordSocialRelationHistory, recordVillagerJoinHistory } from "./history.js";
+import { recordEpidemicHistory, recordHobbyAwakeningHistory, recordLoverHistory, recordMythicEventHistory, recordSocialRelationHistory, recordVillagerJoinHistory } from "./history.js";
 import { updateUI } from "./ui.js";
 import {
   getChildlikeRandomEventLine,
@@ -987,6 +987,7 @@ export class RandomEvents {
           person.hp = clampValue(round3((Number(person.hp) || 0) * 0.5), 0, 100);
           syncEffectiveStats(person);
           refreshJobTable(person, v);
+          recordEpidemicHistory(v, person, { source: "疫病の流行" });
           this.addForcedSpeaker(person);
 
           const villageTraits = Array.isArray(v.villageTraits) ? v.villageTraits : (v.villageTraits = []);

@@ -5,7 +5,12 @@ import { doLoverCheck, doMarriageCheck, clearRelationshipsForDepartedVillager, p
 import { createRandomVillager, createRandomVisitor } from "./createVillagers.js";
 import { processRaidScheduleAtMonthStart } from "./raidSchedule.js";
 import { RandomEvents } from "./RandomEvents.js";
-import { recordCriticalHistory, recordVillagerDeathHistory, recordVillagerLeaveHistory } from "./history.js";
+import {
+  recordCriticalHistory,
+  recordEpidemicHistory,
+  recordVillagerDeathHistory,
+  recordVillagerLeaveHistory
+} from "./history.js";
 import {
   handleBirthAndPostpartum,
   handlePendingMysticPregnancies,
@@ -151,6 +156,7 @@ function processPendingEpidemicInfections(village) {
       person.bodyTraits.push(TRAIT_EPIDEMIC);
       syncEffectiveStats(person);
       refreshJobTable(person, village);
+      recordEpidemicHistory(village, person, { source: "感染" });
       village.log(`${person.name}は疫病に感染した`);
     }
   });
