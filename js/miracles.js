@@ -259,16 +259,22 @@ const GOBLET_MIRACLE_MIND_TRAITS = ["心労", "抑鬱", DISAPPOINTMENT_TRAIT, DE
 
 const MIRACLE_CONDITION_SORTS = {
   body: { traits: HEAL_MIRACLE_BODY_TRAITS, traitKey: "bodyTraits", statKey: "hp", statLabel: "体力" },
-  mind: { traits: GOBLET_MIRACLE_MIND_TRAITS, traitKey: "mindTraits", statKey: "mp", statLabel: "メンタル" }
+  mind: { traits: GOBLET_MIRACLE_MIND_TRAITS, traitKey: "mindTraits", statKey: "mp", statLabel: "ﾒﾝﾀﾙ" }
 };
 
+// 選択リストに出す立場。捕虜・訪問者・襲撃者は同時には持たない。
+const POSITION_MIND_TRAITS = ["捕虜", "訪問者", "襲撃者"];
+// 交換の奇跡の選択リストに出す、肉体側の状態異常。重い順に並べる。
+const EXCHANGE_MIRACLE_BODY_TRAITS = [
+  "塩の柱", "危篤", "重体", "疫病", "負傷", "臨月", "産褥", "過労", "疲労", "飢餓", "凍え", "曝露"
+];
+
 /** 選択リストの並び順。取り除ける特性が多い順、次に対象の値が低い順。 */
-function sortByMiracleCondition(entries, sort) {
-  return [...entries].sort((a, b) => {
-    const traitDiff = getMiracleConditionTraits(b.person, sort).length -
-      getMiracleConditionTraits(a.person, sort).length;
+function sortByMiracleCondition(people, sort) {
+  return [...people].sort((a, b) => {
+    const traitDiff = getMiracleConditionTraits(b, sort).length - getMiracleConditionTraits(a, sort).length;
     if (traitDiff !== 0) return traitDiff;
-    return (Number(a.person[sort.statKey]) || 0) - (Number(b.person[sort.statKey]) || 0);
+    return (Number(a[sort.statKey]) || 0) - (Number(b[sort.statKey]) || 0);
   });
 }
 
@@ -277,21 +283,47 @@ function getMiracleConditionTraits(person, sort) {
   return sort.traits.filter(trait => traits.includes(trait));
 }
 
-function formatMiracleConditionLabel(person, suffix, sort) {
-  const traits = getMiracleConditionTraits(person, sort);
-  const detail = [`${sort.statLabel}${Math.floor(Number(person[sort.statKey]) || 0)}`]
-    .concat(traits.length > 0 ? traits.join("・") : [])
-    .join(" / ");
-  return `${person.name}${suffix}（${detail}）`;
+function getPositionTrait(person) {
+  const mindTraits = Array.isArray(person?.mindTraits) ? person.mindTraits : [];
+  return POSITION_MIND_TRAITS.find(trait => mindTraits.includes(trait)) || "";
+}
+
+/** 奇跡ごとに、選択の判断へ要る分だけを名前の後ろへ並べる。 */
+function getMiracleOptionDetails(person, labelKind) {
+  if (labelKind === "exchange") {
+    const traits = Array.isArray(person.bodyTraits) ? person.bodyTraits : [];
+    return [EXCHANGE_MIRACLE_BODY_TRAITS.filter(trait => traits.includes(trait)).join("・")];
+  }
+  if (labelKind === "departure") {
+    return [`幸福${Math.floor(Number(person.happiness) || 0)}`];
+  }
+  const sort = MIRACLE_CONDITION_SORTS[labelKind];
+  if (!sort) return [];
+  return [
+    `${sort.statLabel}${Math.floor(Number(person[sort.statKey]) || 0)}`,
+    getMiracleConditionTraits(person, sort).join("・")
+  ];
+}
+
+function formatMiracleOptionLabel(person, labelKind) {
+  const parts = [
+    person.race || "-",
+    person.uiSexDisplay || person.bodySex || person.sex || "-",
+    `${person.bodyAge ?? person.age ?? "-"}歳`,
+    getPositionTrait(person),
+    ...getMiracleOptionDetails(person, labelKind)
+  ];
+  return `${person.name}　${parts.filter(Boolean).join("/")}`;
 }
 
 function getMiracleTargetOptions(mid) {
   if (mid === "17") return { raidersOnly: true };
-  if (mid === "12") return { normalExchangeOnly: true, includeSaltPillar: true };
+  if (mid === "12") return { normalExchangeOnly: true, includeSaltPillar: true, labelKind: "exchange" };
   if (mid === "6") return { villagersOnly: true, includeCaptives: true, conditionSort: "body" };
   if (mid === "16") return { villagersOnly: true, includeCaptives: true, conditionSort: "mind" };
-  if (mid === "3" || mid === "7" || mid === "11") return { villagersOnly: true };
-  if (mid === "13") return { includeSaltPillar: true, excludeExchangeImmune: true };
+  if (mid === "11") return { villagersOnly: true, labelKind: "departure" };
+  if (mid === "3" || mid === "7") return { villagersOnly: true };
+  if (mid === "13") return { includeSaltPillar: true, excludeExchangeImmune: true, labelKind: "exchange" };
   return {};
 }
 
@@ -326,7 +358,7 @@ const MIRACLE_PREVIEW_LAYERS = {
   },
   mind: {
     statKey: "mp",
-    statLabel: "メンタル",
+    statLabel: "ﾒﾝﾀﾙ",
     traitKey: "mindTraits",
     stats: [["int", "知"], ["ind", "勤"], ["eth", "倫"], ["cou", "勇"], ["sexdr", "色"]]
   }
@@ -589,21 +621,21 @@ function createVillagerSelect(id, village, options = {}) {
   op0.textContent="(選択)";
   sel.appendChild(op0);
 
+  const labelKind = options.labelKind || options.conditionSort || "";
+  const addOption = (person) => {
+    const opp = document.createElement("option");
+    opp.value = person.name;
+    opp.textContent = formatMiracleOptionLabel(person, labelKind);
+    sel.appendChild(opp);
+  };
+
   // 状態で並べ替える奇跡は、村人と捕虜をまとめて一覧にする。
   const conditionSort = MIRACLE_CONDITION_SORTS[options.conditionSort];
   if (conditionSort) {
-    const entries = village.villagers
-      .filter(vv => !isSaltPillar(vv))
-      .map(person => ({ person, suffix: "" }))
-      .concat(getCaptives(village)
-        .filter(vv => !isSaltPillar(vv))
-        .map(person => ({ person, suffix: "(捕虜)" })));
-    sortByMiracleCondition(entries, conditionSort).forEach(entry => {
-      const opp = document.createElement("option");
-      opp.value = entry.person.name;
-      opp.textContent = formatMiracleConditionLabel(entry.person, entry.suffix, conditionSort);
-      sel.appendChild(opp);
-    });
+    const targets = village.villagers
+      .concat(getCaptives(village))
+      .filter(vv => !isSaltPillar(vv));
+    sortByMiracleCondition(targets, conditionSort).forEach(addOption);
     return sel;
   }
 
@@ -612,32 +644,17 @@ function createVillagerSelect(id, village, options = {}) {
     village.villagers
       .filter(vv => options.includeSaltPillar || !isSaltPillar(vv))
       .filter(vv => !options.normalExchangeOnly || isNormalExchangeCandidate(vv, village))
-      .forEach(vv=>{
-      let opp=document.createElement("option");
-      opp.value=vv.name;
-      opp.textContent=vv.name;
-      sel.appendChild(opp);
-    });
+      .forEach(addOption);
   }
 
   if (!options.raidersOnly && options.normalExchangeOnly) {
-    getCaptives(village).forEach(vv=>{
-      let opp=document.createElement("option");
-      opp.value=vv.name;
-      opp.textContent=`${vv.name}(捕虜)`;
-      sel.appendChild(opp);
-    });
+    getCaptives(village).forEach(addOption);
   }
 
   if (options.includeCaptives) {
     getCaptives(village)
       .filter(vv => options.includeSaltPillar || !isSaltPillar(vv))
-      .forEach(vv=>{
-      let opp=document.createElement("option");
-      opp.value=vv.name;
-      opp.textContent=`${vv.name}(捕虜)`;
-      sel.appendChild(opp);
-      });
+      .forEach(addOption);
   }
 
   if (options.normalExchangeOnly || options.villagersOnly) {
@@ -646,29 +663,14 @@ function createVillagerSelect(id, village, options = {}) {
 
   // 訪問者を追加
   if (!options.raidersOnly) {
-    getCaptives(village).forEach(vv=>{
-      let opp=document.createElement("option");
-      opp.value=vv.name;
-      opp.textContent=`${vv.name}(捕虜)`;
-      sel.appendChild(opp);
-    });
-    village.visitors.forEach(vv=>{
-      let opp=document.createElement("option");
-      opp.value=vv.name;
-      opp.textContent=`${vv.name}(訪問者)`;
-      sel.appendChild(opp);
-    });
+    getCaptives(village).forEach(addOption);
+    village.visitors.forEach(addOption);
   }
 
   // 襲撃者を追加
   village.raidEnemies
     .filter(vv => (!options.raidersOnly || Number(vv.hp) > 0) && (!options.excludeExchangeImmune || canExchangeBody(vv)))
-    .forEach(vv=>{
-    let opp=document.createElement("option");
-    opp.value=vv.name;
-    opp.textContent=`${vv.name}(襲撃者)`;
-    sel.appendChild(opp);
-  });
+    .forEach(addOption);
 
   return sel;
 }
