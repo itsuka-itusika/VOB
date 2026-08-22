@@ -5,7 +5,7 @@ import { applyPortraitToElement, getPortraitSpriteHtml } from "./data/portraitAt
 import { addRelationship, removeRelationship, checkHasRelationship, hasLoverRelationship, getRelationshipTargetName, clearRelationshipsForDepartedVillager, addSpouseRelationships, raiseMutualFriendshipTo } from "./relationships.js";
 import { updateUI } from "./ui.js";  // 実行後にUIを更新する
 import { canExchangeBody, doExchange } from "./exchange.js";
-import { createRandomVisitor, createRandomVisitorOfType, determineSpeechType } from "./createVillagers.js";
+import { createRandomVisitor, createRandomVisitorOfType, determineSpeechType, EXCLUSIVE_BODY_TRAITS, EXCLUSIVE_MIND_TRAITS } from "./createVillagers.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
@@ -268,6 +268,15 @@ const POSITION_MIND_TRAITS = ["捕虜", "訪問者", "襲撃者"];
 const EXCHANGE_MIRACLE_BODY_TRAITS = [
   "塩の柱", "危篤", "重体", "疫病", "負傷", "臨月", "産褥", "過労", "疲労", "飢餓", "凍え", "曝露"
 ];
+// 奇跡ごとに、選択リストとプレビューへ出す情報の種類。指定がない奇跡は種族・性別・年齢だけを出す。
+const MIRACLE_TARGET_DETAIL_KINDS = {
+  "3": "cupid",
+  "6": "body",
+  "11": "departure",
+  "12": "exchange",
+  "13": "exchange",
+  "16": "mind"
+};
 
 /** 選択リストの並び順。取り除ける特性が多い順、次に対象の値が低い順。 */
 function sortByMiracleCondition(people, sort) {
@@ -288,16 +297,44 @@ function getPositionTrait(person) {
   return POSITION_MIND_TRAITS.find(trait => mindTraits.includes(trait)) || "";
 }
 
+/** 訪問者や襲撃者の「ハーピーのベアトリス」から、種別を外した呼び名を取り出す。 */
+function getShortPersonName(person) {
+  const name = String(person?.name || "");
+  if (!getPositionTrait(person)) return name;
+  const separatorIndex = name.indexOf("の");
+  return separatorIndex >= 0 ? name.slice(separatorIndex + 1) : name;
+}
+
+// 排他特性は循環参照を避けるため、モジュール初期化時ではなく呼び出し時に参照する。
+function getExclusiveTrait(person, traitKey, exclusiveTraits) {
+  const traits = Array.isArray(person?.[traitKey]) ? person[traitKey] : [];
+  return traits.find(trait => exclusiveTraits.includes(trait)) || "";
+}
+
+function pickTraits(person, traitKey, order) {
+  const traits = Array.isArray(person?.[traitKey]) ? person[traitKey] : [];
+  return order.filter(trait => traits.includes(trait));
+}
+
 /** 奇跡ごとに、選択の判断へ要る分だけを名前の後ろへ並べる。 */
-function getMiracleOptionDetails(person, labelKind) {
-  if (labelKind === "exchange") {
-    const traits = Array.isArray(person.bodyTraits) ? person.bodyTraits : [];
-    return [EXCHANGE_MIRACLE_BODY_TRAITS.filter(trait => traits.includes(trait)).join("・")];
+function getMiracleTargetDetails(person, detailKind, { forPreview = false } = {}) {
+  if (detailKind === "exchange") {
+    const bodyTraits = [
+      getExclusiveTrait(person, "bodyTraits", EXCLUSIVE_BODY_TRAITS),
+      ...pickTraits(person, "bodyTraits", EXCHANGE_MIRACLE_BODY_TRAITS)
+    ].filter(Boolean);
+    return [`体力${Math.floor(Number(person.hp) || 0)}`, bodyTraits.join("・")];
   }
-  if (labelKind === "departure") {
+  if (detailKind === "cupid") {
+    // 結婚相手を選ぶ場面なので、プレビューでは中身の人柄まで見せる。
+    const traits = [getExclusiveTrait(person, "bodyTraits", EXCLUSIVE_BODY_TRAITS)];
+    if (forPreview) traits.push(getExclusiveTrait(person, "mindTraits", EXCLUSIVE_MIND_TRAITS));
+    return [traits.filter(Boolean).join("・")];
+  }
+  if (detailKind === "departure") {
     return [`幸福${Math.floor(Number(person.happiness) || 0)}`];
   }
-  const sort = MIRACLE_CONDITION_SORTS[labelKind];
+  const sort = MIRACLE_CONDITION_SORTS[detailKind];
   if (!sort) return [];
   return [
     `${sort.statLabel}${Math.floor(Number(person[sort.statKey]) || 0)}`,
@@ -305,25 +342,31 @@ function getMiracleOptionDetails(person, labelKind) {
   ];
 }
 
-function formatMiracleOptionLabel(person, labelKind) {
-  const position = getPositionTrait(person);
-  const parts = [
+function getMiracleTargetParts(person, detailKind, options = {}) {
+  return [
     person.race || "-",
     person.uiSexDisplay || person.bodySex || person.sex || "-",
     `${person.bodyAge ?? person.age ?? "-"}歳`,
-    ...getMiracleOptionDetails(person, labelKind)
-  ];
-  return `${person.name}${position ? `(${position})` : ""}　${parts.filter(Boolean).join("/")}`;
+    ...getMiracleTargetDetails(person, detailKind, options)
+  ].filter(Boolean);
+}
+
+function formatMiracleTargetName(person) {
+  const position = getPositionTrait(person);
+  return `${getShortPersonName(person)}${position ? `(${position})` : ""}`;
+}
+
+function formatMiracleOptionLabel(person, detailKind) {
+  return `${formatMiracleTargetName(person)}　${getMiracleTargetParts(person, detailKind).join("/")}`;
 }
 
 function getMiracleTargetOptions(mid) {
   if (mid === "17") return { raidersOnly: true };
-  if (mid === "12") return { normalExchangeOnly: true, includeSaltPillar: true, labelKind: "exchange" };
+  if (mid === "12") return { normalExchangeOnly: true, includeSaltPillar: true };
   if (mid === "6") return { villagersOnly: true, includeCaptives: true, conditionSort: "body" };
   if (mid === "16") return { villagersOnly: true, includeCaptives: true, conditionSort: "mind" };
-  if (mid === "11") return { villagersOnly: true, labelKind: "departure" };
-  if (mid === "3" || mid === "7") return { villagersOnly: true };
-  if (mid === "13") return { includeSaltPillar: true, excludeExchangeImmune: true, labelKind: "exchange" };
+  if (mid === "3" || mid === "7" || mid === "11") return { villagersOnly: true };
+  if (mid === "13") return { includeSaltPillar: true, excludeExchangeImmune: true };
   return {};
 }
 
@@ -348,29 +391,17 @@ function areMiracleTargetsReady(mid) {
   return Boolean(targetA && targetB && targetA.value && targetB.value && targetA.value !== targetB.value);
 }
 
-// 対象プレビューで見せる層。酒杯のように精神へ効く奇跡は mind を使う。
+// 交換・戦神・雷霆のプレビューで見せる層。肉体を丸ごと見せたい奇跡で使う。
 const MIRACLE_PREVIEW_LAYERS = {
   body: {
     statKey: "hp",
     statLabel: "体力",
     traitKey: "bodyTraits",
     stats: [["str", "筋"], ["vit", "耐"], ["dex", "器"], ["mag", "魔"], ["chr", "魅"]]
-  },
-  mind: {
-    statKey: "mp",
-    statLabel: "ﾒﾝﾀﾙ",
-    traitKey: "mindTraits",
-    stats: [["int", "知"], ["ind", "勤"], ["eth", "倫"], ["cou", "勇"], ["sexdr", "色"]]
   }
 };
 
-const MIRACLE_PREVIEW_LAYER_IDS = { "16": "mind" };
-
-function getMiraclePreviewLayer(mid) {
-  return MIRACLE_PREVIEW_LAYERS[MIRACLE_PREVIEW_LAYER_IDS[mid]] || MIRACLE_PREVIEW_LAYERS.body;
-}
-
-function createMiraclePreviewPerson(person, layer) {
+function createMiraclePreviewRow(person) {
   const row = document.createElement("div");
   row.className = "miracle-preview-person";
 
@@ -378,16 +409,41 @@ function createMiraclePreviewPerson(person, layer) {
   portrait.className = "miracle-preview-portrait";
   applyPortraitToElement(portrait, person);
 
+  const details = document.createElement("div");
+  row.appendChild(portrait);
+  row.appendChild(details);
+  return { row, details };
+}
+
+/** 交換のように、肉体の中身をすべて見せるプレビュー。 */
+function createMiracleFullPreviewPerson(person, layer) {
+  const { row, details } = createMiraclePreviewRow(person);
   const traits = Array.isArray(person[layer.traitKey]) ? person[layer.traitKey] : [];
   const stats = layer.stats
     .map(([key, label]) => `${label}${Math.floor(Number(person[key]) || 0)}`)
     .join(" ");
-  const details = document.createElement("div");
-  details.textContent = `${person.name}：${person.race || "-"} / ${person.uiSexDisplay || person.bodySex || person.sex || "-"} / ${person.bodyAge ?? person.age ?? "-"}歳 / ${layer.statLabel}${Math.floor(Number(person[layer.statKey]) || 0)} / ${stats} /（${traits.length > 0 ? traits.join("・") : "-"}）`;
-
-  row.appendChild(portrait);
-  row.appendChild(details);
+  details.textContent = `${formatMiracleTargetName(person)}：${person.race || "-"} / ${person.uiSexDisplay || person.bodySex || person.sex || "-"} / ${person.bodyAge ?? person.age ?? "-"}歳 / ${layer.statLabel}${Math.floor(Number(person[layer.statKey]) || 0)} / ${stats} /（${traits.length > 0 ? traits.join("・") : "-"}）`;
   return row;
+}
+
+/** 選択リストの項目と同じ内容を見せるプレビュー。 */
+function createMiracleTargetPreviewPerson(person, detailKind) {
+  const { row, details } = createMiraclePreviewRow(person);
+  const parts = getMiracleTargetParts(person, detailKind, { forPreview: true });
+  details.textContent = `${formatMiracleTargetName(person)}：${parts.join(" / ")}`;
+  return row;
+}
+
+function createMiraclePreviewPerson(person, mid) {
+  const detailKind = MIRACLE_TARGET_DETAIL_KINDS[mid] || "";
+  if (!detailKind || isExchangeMiracle(mid)) {
+    return createMiracleFullPreviewPerson(person, MIRACLE_PREVIEW_LAYERS.body);
+  }
+  return createMiracleTargetPreviewPerson(person, detailKind);
+}
+
+function isExchangeMiracle(mid) {
+  return mid === "12" || mid === "13";
 }
 
 function updateMiraclePreview(mid, village, preview) {
@@ -398,7 +454,6 @@ function updateMiraclePreview(mid, village, preview) {
     return;
   }
 
-  const layer = getMiraclePreviewLayer(mid);
   const personA = findMiracleTargetByName(document.getElementById("targetA")?.value, village);
 
   if (targetCount === 2) {
@@ -408,13 +463,13 @@ function updateMiraclePreview(mid, village, preview) {
       return;
     }
     const rows = [];
-    if (["12", "13"].includes(mid)) {
+    if (isExchangeMiracle(mid)) {
       const description = document.createElement("div");
       description.className = "miracle-preview-description";
       description.textContent = "種族・性別・年齢・体力・身体能力・身体特性が入れ替わります。";
       rows.push(description);
     }
-    rows.push(createMiraclePreviewPerson(personA, layer), createMiraclePreviewPerson(personB, layer));
+    rows.push(createMiraclePreviewPerson(personA, mid), createMiraclePreviewPerson(personB, mid));
     preview.replaceChildren(...rows);
     return;
   }
@@ -423,7 +478,7 @@ function updateMiraclePreview(mid, village, preview) {
     preview.textContent = "対象を選択してください。";
     return;
   }
-  preview.replaceChildren(createMiraclePreviewPerson(personA, layer));
+  preview.replaceChildren(createMiraclePreviewPerson(personA, mid));
 }
 
 function updateMiracleActionButton(mid, button, village, costInfo, preview) {
@@ -481,7 +536,7 @@ function createMiracleTargetControls(miracle, village, button, costInfo) {
   const controls = document.createElement("div");
   controls.className = "miracle-targets";
 
-  const options = getMiracleTargetOptions(miracle.id);
+  const options = { ...getMiracleTargetOptions(miracle.id), miracleId: miracle.id };
   const targetA = createVillagerSelect("targetA", village, options);
   const targetB = targetCount === 2 ? createVillagerSelect("targetB", village, options) : null;
 
@@ -621,11 +676,11 @@ function createVillagerSelect(id, village, options = {}) {
   op0.textContent="(選択)";
   sel.appendChild(op0);
 
-  const labelKind = options.labelKind || options.conditionSort || "";
+  const detailKind = MIRACLE_TARGET_DETAIL_KINDS[options.miracleId] || "";
   const addOption = (person) => {
     const opp = document.createElement("option");
     opp.value = person.name;
-    opp.textContent = formatMiracleOptionLabel(person, labelKind);
+    opp.textContent = formatMiracleOptionLabel(person, detailKind);
     sel.appendChild(opp);
   };
 

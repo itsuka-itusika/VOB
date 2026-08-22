@@ -65,12 +65,46 @@ function getCaptiveConversationLine(captive) {
   return randFrom(getCaptiveConversationLines(captive, { failed }));
 }
 
-// 加入や解放など、一回きりのセリフは訪問者の到着時と同じくログへ流す。
-// 塩の柱は口をきけないため出さない。
-function logCharacterLine(person, { scene, key = "" }) {
+/**
+ * 加入や解放など、一回きりのセリフを会話モーダルで見せる。
+ * 会話の引き直しや行動ボタンは出さず、そのセリフだけを残す。
+ * 塩の柱は口をきけないため出さない。
+ */
+function openCharacterLineModal(person, { scene, key = "" }) {
   if (isSaltPillar(person)) return;
   const line = getDialogueLine({ character: person, scene, key });
-  if (line) theVillage.log(`${person.name}「${line}」`);
+  if (!line) return;
+
+  const overlay = document.getElementById("conversationOverlay");
+  const modal = document.getElementById("conversationModal");
+  const portrait = document.getElementById("conversationPortrait");
+  const text = document.getElementById("conversationText");
+  const actionButtons = document.getElementById("actionButtons");
+  const historyLink = document.getElementById("conversationHistoryLink");
+  if (!overlay || !modal || !portrait || !text || !actionButtons || !historyLink) return;
+
+  portrait.setAttribute("aria-label", person.name || "肖像");
+  applyPortraitToElement(portrait, person);
+  portrait.style.cursor = "default";
+  portrait.title = "";
+  portrait.onclick = null;
+
+  const characterInfo = document.getElementById("characterInfo");
+  if (characterInfo) {
+    characterInfo.innerHTML = `
+      <div class="character-name">${person.name}｜${person.race}｜${person.uiSexDisplay || person.bodySex}｜${person.bodyAge}歳</div>
+    `;
+  }
+
+  historyLink.hidden = true;
+  historyLink.onclick = null;
+
+  text.innerHTML = `<p><strong></strong> ${line}</p>`;
+  actionButtons.innerHTML = "";
+  actionButtons.style.display = "none";
+
+  overlay.style.display = "block";
+  modal.style.display = "block";
 }
 
 function createConversationStatusHtml(character) {
@@ -211,9 +245,9 @@ export function openConversationModal(character) {
       releaseCaptiveButton.addEventListener("click", () => {
         releaseCaptive(theVillage, character);
         theVillage.log(`${character.name}を解放しました`);
-        logCharacterLine(character, { scene: "captiveRelease" });
         closeConversationModal();
         updateUI(theVillage);
+        openCharacterLineModal(character, { scene: "captiveRelease" });
       });
     }
   } else if (isVisitor) {
@@ -511,14 +545,15 @@ function openRecruitmentModal(visitor) {
 
     // 勧誘判定
     if (Math.random() * 100 < successRate) {
+      // 加入のセリフを会話モーダルで見せるため、先に選択用モーダルだけ閉じる。
+      closeRecruitmentModal();
       handleRecruitmentSuccess(visitor, recruiter, successRate);
-    } else {
-      // 失敗
-      visitor.mindTraits.push("勧誘失敗");
-      theVillage.log(`${recruiter.name}の勧誘は失敗しました。(成功率: ${Math.floor(successRate)}%)`);
-      alert("勧誘に失敗しました。");
+      return;
     }
 
+    visitor.mindTraits.push("勧誘失敗");
+    theVillage.log(`${recruiter.name}の勧誘は失敗しました。(成功率: ${Math.floor(successRate)}%)`);
+    alert("勧誘に失敗しました。");
     closeRecruitmentModal();
     closeConversationModal();
     updateUI(theVillage);
@@ -645,14 +680,15 @@ function openSeductionModal(visitor) {
 
     // 誘惑判定
     if (Math.random() * 100 < successRate) {
+      // 加入のセリフを会話モーダルで見せるため、先に選択用モーダルだけ閉じる。
+      closeSeductionModal();
       handleRecruitmentSuccess(visitor, seducer, successRate, "誘惑");
-    } else {
-      // 失敗
-      visitor.mindTraits.push("勧誘失敗");
-      theVillage.log(`${seducer.name}の誘惑は失敗しました。(成功率: ${Math.floor(successRate)}%)`);
-      alert("誘惑に失敗しました。");
+      return;
     }
 
+    visitor.mindTraits.push("勧誘失敗");
+    theVillage.log(`${seducer.name}の誘惑は失敗しました。(成功率: ${Math.floor(successRate)}%)`);
+    alert("誘惑に失敗しました。");
     closeSeductionModal();
     closeConversationModal();
     updateUI(theVillage);
@@ -734,9 +770,10 @@ function handleCaptiveSocialSuccess(captive, actor, successRate, source) {
   recordVillagerJoinHistory(theVillage, captive, { recruiter: actor, source });
   refreshJobTable(captive, theVillage);
   theVillage.log(`${actor.name}の${source}により、${captive.name}が村人になりました。(成功率: ${Math.floor(successRate)}%)`);
-  logCharacterLine(captive, { scene: "captiveJoin", key: joinLineKey });
-  alert(`${source}成功！${captive.name}が村人になりました。`);
   closeConversationModal();
+  updateUI(theVillage);
+  alert(`${source}成功！${captive.name}が村人になりました。`);
+  openCharacterLineModal(captive, { scene: "captiveJoin", key: joinLineKey });
 }
 
 function closeCaptiveSocialModal(overlayId, modalId) {
@@ -826,11 +863,13 @@ function openCaptiveSocialModal(captive, source) {
       ? calculateCaptiveSeductionSuccessRate(captive, actor)
       : calculateCaptivePersuasionSuccessRate(captive, actor);
     if (Math.random() * 100 < successRate) {
+      // 加入のセリフを会話モーダルで見せるため、先に選択用モーダルだけ閉じる。
+      closeCaptiveSocialModal(overlayId, modalId);
       handleCaptiveSocialSuccess(captive, actor, successRate, source);
-    } else {
-      markCaptiveSocialFailure(captive, actor, source, `成功率:${Math.floor(successRate)}%`);
+      return;
     }
 
+    markCaptiveSocialFailure(captive, actor, source, `成功率:${Math.floor(successRate)}%`);
     closeCaptiveSocialModal(overlayId, modalId);
     closeConversationModal();
     updateUI(theVillage);
@@ -1014,9 +1053,8 @@ function handleRecruitmentSuccess(visitor, recruiter, successRate = 0, source = 
   refreshJobTable(visitor, theVillage);
 
   theVillage.log(`${recruiter.name}の${source}により、${visitor.name}が村人になりました。(成功率: ${Math.floor(successRate)}%)`);
-  logCharacterLine(visitor, { scene: "visitorJoin", key: joinLineKey });
-  alert(`${source}成功！${visitor.name}が村人になりました。`);
-
-  // モーダルを閉じる
   closeConversationModal();
+  updateUI(theVillage);
+  alert(`${source}成功！${visitor.name}が村人になりました。`);
+  openCharacterLineModal(visitor, { scene: "visitorJoin", key: joinLineKey });
 }

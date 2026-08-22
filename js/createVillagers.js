@@ -746,12 +746,8 @@ export function determineSpeechType(character) {  // export を追加
   return (character.spiritSex || character.bodySex) === "男" ? speechTypes.male : speechTypes.female;
 }
 
-/**
- * 肉体/精神特性を判定して付与
- */
-export function assignBodyMindTraits(v) {
-  // 例: "病弱","華奢" など
-  const bodyTraitDefinitions = [
+// 排他の身体特性。条件を満たす候補から1つだけ選んで付く。
+const BODY_TRAIT_DEFINITIONS = [
     { name: "虚弱", condition: (v) => v.vit <= 10 && v.chr <= 16 },
     { name: "華やか", condition: (v) => v.bodySex === "女" && v.dex >= 20 && v.chr >= 20 },
     { name: "やせ型", condition: (v) => v.vit <= 12 && v.vit >= 10 && v.chr <= 16 },
@@ -810,20 +806,10 @@ export function assignBodyMindTraits(v) {
     { name: "目立たない", condition: (v) => v.bodySex === "男" && v.vit <= 19 && v.chr <= 15},
     { name: "小汚い", condition: (v) => v.bodySex === "男" && v.int <=3 && v.chr <= 11 },
     { name: "冴えない", condition: (v) => v.bodySex === "男" && v.int <= 14 && v.chr <= 13 },
-  ];
-  let bodyTraitCandidates = [];
-  bodyTraitDefinitions.forEach(def => {
-    if (def.condition(v)) {
-      bodyTraitCandidates.push(def.name);
-    }
-  });
-  if (bodyTraitCandidates.length>0) {
-    let chosen = randChoice(bodyTraitCandidates);
-    v.bodyTraits.push(chosen);
-  }
+];
 
-  // 精神特性例: "独善的","才女"など
-  const mindTraitDefinitions = [
+// 排他の精神特性。条件を満たす候補から1つだけ選んで付く。
+const MIND_TRAIT_DEFINITIONS = [
     { name: "独善的", condition: (v) => v.chr <= 13 && v.eth >= 22 },
     { name: "読書家", condition: (v) => v.int >= 20 && v.ind >= 18 },
     { name: "小市民", condition: (v) => v.cou <= 16 && v.ind >= 17 && v.eth >= 17  && v.eth <= 22 },
@@ -923,9 +909,30 @@ export function assignBodyMindTraits(v) {
     { name: "才女", condition: (v) => v.bodySex === "女" && v.int >= 20 && v.ind >= 18 && v.eth >= 16 },
     { name: "才色兼備", condition: (v) => v.bodySex === "女" && v.int >= 20 && v.chr >= 22 },
     { name: "肉食系", condition: (v) => v.bodySex === "女" && v.chr <= 23 && v.sexdr >= 20},
-  ];
+];
+
+export const EXCLUSIVE_BODY_TRAITS = [...new Set(BODY_TRAIT_DEFINITIONS.map(def => def.name))];
+export const EXCLUSIVE_MIND_TRAITS = [...new Set(MIND_TRAIT_DEFINITIONS.map(def => def.name))];
+
+/**
+ * 肉体/精神特性を判定して付与
+ */
+export function assignBodyMindTraits(v) {
+  // 例: "病弱","華奢" など
+  let bodyTraitCandidates = [];
+  BODY_TRAIT_DEFINITIONS.forEach(def => {
+    if (def.condition(v)) {
+      bodyTraitCandidates.push(def.name);
+    }
+  });
+  if (bodyTraitCandidates.length>0) {
+    let chosen = randChoice(bodyTraitCandidates);
+    v.bodyTraits.push(chosen);
+  }
+
+  // 精神特性例: "独善的","才女"など
   let mindTraitCandidates = [];
-  mindTraitDefinitions.forEach(def => {
+  MIND_TRAIT_DEFINITIONS.forEach(def => {
     if (def.condition(v)) {
       mindTraitCandidates.push(def.name);
     }
