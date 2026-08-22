@@ -64,6 +64,11 @@ import { isSaltPillar } from "./domain/apocalypseRules.js";
 // 安全に戦列へ加える目安のターン数と、勝ち目を測るときの想定戦闘ターン数。
 const RAID_SAFE_SURVIVAL_TURNS = 2;
 const RAID_WIN_ESTIMATE_TURNS = 3;
+// 前衛は枠いっぱいまで出すが、最も火力のある者に対しこの割合へ届かない者は出さない。
+const RAID_FRONTLINE_MIN_DAMAGE_SHARE = 1 / 3;
+
+// 食料の備蓄が何か月ぶんあれば十分とみなすか。
+const FOOD_SUFFICIENT_MONTHS = 3;
 
 const JOB_NONE = ACTION_NONE;
 const JOB_REST = ACTION_REST;
@@ -78,15 +83,18 @@ const SELF_RECOVERY_ACTION_SET = new Set([
 
 // 職の評価は jobMath.js の期待成果をそのまま使う。ここに計算式は持たない。
 // 産出する資源軸ごとの基本重みと、村が困っているときの効き幅だけを定める。
-// security の基礎重みが高いのは、警備の産出（最大12前後）が食料職（25〜40）より一桁小さいため。
+// 基礎重みは「重み×その職の平均産出」が次の順になるよう決める。
+//   食料・資材＝資金・技術 ≧ 治安 ≧ 他者回復 ≧ 幸福
+// 産出の桁が軸ごとに違うため、重み単体の大小は順位と一致しない。
+// （警備は8前後、食料・資材・資金・技術の各職は18〜26前後）
 const AXIS_BASE_WEIGHTS = {
   food: 1,
-  materials: 0.9,
-  recovery: 0.8,
-  funds: 0.35,
+  materials: 1.05,
+  recovery: 0.67,
+  funds: 0.95,
   mana: 0.3,
-  security: 1.2,
-  tech: 0.25,
+  security: 2,
+  tech: 1.1,
   happiness: 0.25
 };
 const AXIS_URGENCY = {
@@ -98,6 +106,10 @@ const AXIS_URGENCY = {
   happiness: 3,
   tech: 1.2
 };
+// 貯め込んでも自然には価値が下がらない軸を、基準量を超えた分だけ減衰させる。
+// 回復・幸福・治安は産出側が不足分で頭打ちになるため、ここでは扱わない。
+const AXIS_SURPLUS_DAMPING = 0.6;
+const AXIS_SURPLUS_FLOOR = 0.25;
 // 村全体へ効く職。同じ月に重ねても不足分を食い合うだけなので、2人目からは評価を薄める。
 const WHOLE_VILLAGE_JOBS = new Set(["警備", "神官", "シスター", "踊り子", "詩人", "バニー"]);
 
@@ -123,6 +135,19 @@ function normalizeSeverity(value) {
   return Math.max(0, Math.min(1.35, value));
 }
 
+// 備蓄が基準量を超えている度合い。1未満なら余剰なしとして1を返す。
+function getSurplusRatio(amount, baseline) {
+  if (!(baseline > 0)) return 1;
+  return Math.max(1, (Number(amount) || 0) / baseline);
+}
+
+// 余っている軸の重みを緩やかに落とす。偏って溜まり続ける技術や資金に効く。
+function getSurplusDamping(axis, context) {
+  const ratio = context?.surplusByAxis?.[axis];
+  if (!ratio || ratio <= 1) return 1;
+  return Math.max(AXIS_SURPLUS_FLOOR, 1 / (1 + (ratio - 1) * AXIS_SURPLUS_DAMPING));
+}
+
 function buildVillagePriorityContext(village) {
   const villagers = Array.isArray(village.villagers) ? village.villagers : [];
   const population = villagers.length || 1;
@@ -134,9 +159,11 @@ function buildVillagePriorityContext(village) {
   const lowConditionCount = villagers.filter(person => (Number(person.hp) || 0) <= 55 || (Number(person.mp) || 0) <= 55).length;
   const lowConditionRatio = lowConditionCount / population;
   const foodProjected = (Number(village.food) || 0) - monthlyFoodCost;
+  // 備蓄3か月ぶんを「十分」とみなす。村の安定条件と同じ基準に揃える。
+  const foodBaseline = Math.max(20, monthlyFoodCost * FOOD_SUFFICIENT_MONTHS);
   const foodSeverity = foodProjected < 0
     ? normalizeSeverity(1 + Math.abs(foodProjected) / Math.max(20, monthlyFoodCost))
-    : normalizeSeverity((monthlyFoodCost * 1.3 - (Number(village.food) || 0)) / Math.max(20, monthlyFoodCost));
+    : normalizeSeverity((foodBaseline - (Number(village.food) || 0)) / Math.max(20, monthlyFoodCost * 2));
   const recoverySeverity = normalizeSeverity(
     Math.max(0, (62 - avgRecovery) / 18) + Math.max(0, lowConditionRatio - 0.25)
   );
@@ -150,7 +177,8 @@ function buildVillagePriorityContext(village) {
   );
   const avgHappiness = villagers.reduce((sum, person) => sum + (Number(person.happiness) || 0), 0) / population;
   const happinessSeverity = normalizeSeverity((65 - avgHappiness) / 45);
-  const techBaseline = Math.max(30, population * 5);
+  // 櫓(技術50)や環濠(技術100)まで届く量を基準にする。
+  const techBaseline = Math.max(60, population * 8);
   const techSeverity = normalizeSeverity((techBaseline - (Number(village.tech) || 0)) / techBaseline);
 
   return {
@@ -162,6 +190,12 @@ function buildVillagePriorityContext(village) {
       security: securitySeverity,
       happiness: happinessSeverity,
       tech: techSeverity
+    },
+    surplusByAxis: {
+      food: getSurplusRatio(village.food, foodBaseline),
+      materials: getSurplusRatio(village.materials, materialBaseline),
+      funds: getSurplusRatio(village.funds, fundsBaseline),
+      tech: getSurplusRatio(village.tech, techBaseline)
     },
     supportAssignCounts: new Map(),
     foodSeverity,
@@ -272,7 +306,7 @@ function getAxisWeight(axis, context) {
   const urgency = AXIS_URGENCY[axis];
   if (!urgency || !context) return base;
   const severity = context.severityByAxis[axis] || 0;
-  return base * (1 + severity * urgency);
+  return base * (1 + severity * urgency) * getSurplusDamping(axis, context);
 }
 
 function scoreJob(person, job, context) {
@@ -473,16 +507,15 @@ function hasWinningChance(village, profiles, assignments) {
 
 /**
  * 適性の高い者から枠へ埋める。
- * 前衛 → 罠 → 中衛 → 籠城 の順に流し、枠に入れなかった者は通常職へ残す。
+ * 中衛 → 罠 → 迎撃 → 籠城 の順に流し、枠に入れなかった者は通常職へ残す。
+ * 中衛と罠は枠が狭く反撃も受けないため、前衛より先に確保する。
  */
 function fillRaidRoles(village, profiles, assignments) {
-  const enemyCount = Array.isArray(village.raidEnemies) ? village.raidEnemies.length : 0;
   const budget = {
     front: getRaidFrontlinerSlotCount(village),
     middle: getRaidMiddleSlotCount(village),
     trap: getRaidTrapMakerSlotCount(village)
   };
-  const frontTarget = Math.min(budget.front, Math.max(1, Math.ceil(enemyCount / 2)));
   const assigned = new Set();
 
   const eligible = (profile, action) => {
@@ -492,11 +525,15 @@ function fillRaidRoles(village, profiles, assignments) {
     return canJoinSafely(profile.person, action, village);
   };
 
-  const take = (action, limit, resolveAction = () => action) => {
+  const take = (action, limit, resolveAction = () => action, minDamageShare = 0) => {
     if (limit <= 0) return 0;
-    const picked = profiles
+    const ranked = profiles
       .filter(profile => eligible(profile, action))
-      .sort((a, b) => b.damage[action] - a.damage[action])
+      .sort((a, b) => b.damage[action] - a.damage[action]);
+    // 火力が見劣りする者を無理に出すと、戦果より被害の方が大きくなる。
+    const threshold = (ranked[0]?.damage[action] || 0) * minDamageShare;
+    const picked = ranked
+      .filter(profile => profile.damage[action] >= threshold)
       .slice(0, limit);
     picked.forEach(profile => {
       assignments.set(profile.person, {
@@ -508,15 +545,15 @@ function fillRaidRoles(village, profiles, assignments) {
     return picked.length;
   };
 
-  budget.front -= take(ACTION_DEFEND, frontTarget);
-  budget.trap -= take(ACTION_TRAP, budget.trap);
   // 中衛は射撃と火砲で枠を分け合う。本人がより多く出せる方に就ける。
   budget.middle -= take(ACTION_SHOOT, budget.middle, profile =>
     profile.allowed[ACTION_CANNON] && profile.damage[ACTION_CANNON] > profile.damage[ACTION_SHOOT]
       ? ACTION_CANNON
       : ACTION_SHOOT);
   budget.middle -= take(ACTION_CANNON, budget.middle);
-  budget.front -= take(ACTION_FORTIFY, budget.front);
+  budget.trap -= take(ACTION_TRAP, budget.trap);
+  budget.front -= take(ACTION_DEFEND, budget.front, () => ACTION_DEFEND, RAID_FRONTLINE_MIN_DAMAGE_SHARE);
+  budget.front -= take(ACTION_FORTIFY, budget.front, () => ACTION_FORTIFY, RAID_FRONTLINE_MIN_DAMAGE_SHARE);
   return assigned;
 }
 
