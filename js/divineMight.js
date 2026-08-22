@@ -64,14 +64,15 @@ export function getDivineMightLevel(village) {
   return getDivineMightLevelForAmount(getDivineMightAmount(village), village);
 }
 
-export function getNextDivineMightLevelInfo(level) {
-  return DIVINE_MIGHT_LEVELS.find(entry => entry.level > level) || null;
+// 黙示録踏破が条件のレベルは、踏破するまで伏せる。存在を先に見せるとネタバレになる。
+export function getNextDivineMightLevelInfo(level, village = null) {
+  return DIVINE_MIGHT_LEVELS.find(entry => entry.level > level && isDivineMightLevelAvailable(entry, village)) || null;
 }
 
 export function getDivineMightStatus(village) {
   const amount = getDivineMightAmount(village);
   const level = getDivineMightLevelForAmount(amount, village);
-  const next = getNextDivineMightLevelInfo(level);
+  const next = getNextDivineMightLevelInfo(level, village);
   // 最高レベル到達後は次の閾値がないため、数値ではなく max と表示する。
   const thresholdLabel = next ? formatDivineMightAmount(next.threshold) : "max";
   return {
@@ -282,7 +283,7 @@ export function showPendingDivineMightLevelUpModal(village, afterClose = null) {
   village.pendingDivineMightLevelUp = null;
 
   const unlockedNames = getUnlockedMiracleNamesBetween(pending.fromLevel + 1, pending.toLevel);
-  const next = getNextDivineMightLevelInfo(pending.toLevel);
+  const next = getNextDivineMightLevelInfo(pending.toLevel, village);
   const nextNames = next ? getMiracleNames(next.miracleIds) : [];
 
   const overlay = document.createElement("div");

@@ -727,8 +727,8 @@ th, td {
   background: #fff;
   border: 2px solid #aaa;
   box-shadow: 2px 2px 8px rgba(0,0,0,0.3);
-  width: 800px;
-  max-width: 90%;
+  width: 1020px;
+  max-width: 94%;
   max-height: 90vh;
   box-sizing: border-box;
   padding: 20px;
@@ -2107,10 +2107,11 @@ section h2 {
 }
 
 .heresy-inquisition-cost {
-  display: grid;
-  grid-template-columns: 1fr auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
   gap: 4px 12px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   border: 1px solid #d8c9bb;
   background: #f8f3eb;
 }
@@ -2120,36 +2121,23 @@ section h2 {
 }
 
 .heresy-inquisition-cost small {
-  grid-column: 1 / -1;
   color: #666;
 }
 
-.heresy-inquisition-warning,
-.heresy-inquisition-result {
-  margin-top: 10px !important;
+.heresy-inquisition-cost.is-short {
+  border-color: #b34a4a;
+  background: #fbeeee;
+}
+
+.heresy-inquisition-cost.is-short small {
   font-weight: bold;
   color: #8b1e1e;
 }
 
-.heresy-inquisition-choices {
-  margin: 12px 0 0;
-  padding: 10px 12px;
-  list-style: none;
-  border: 1px solid #d8c9bb;
-  background: #fdfaf5;
-  font-size: 0.88rem;
-  line-height: 1.6;
-}
-
-.heresy-inquisition-choices li + li {
-  margin-top: 6px;
-}
-
-.heresy-inquisition-choices strong {
-  display: inline-block;
-  min-width: 5.5em;
-  margin-right: 8px;
-  color: #4b3627;
+.heresy-inquisition-result {
+  margin-top: 10px !important;
+  font-weight: bold;
+  color: #8b1e1e;
 }
 
 .heresy-inquisition-buttons {

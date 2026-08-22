@@ -297,14 +297,6 @@ function getPositionTrait(person) {
   return POSITION_MIND_TRAITS.find(trait => mindTraits.includes(trait)) || "";
 }
 
-/** 訪問者や襲撃者の「ハーピーのベアトリス」から、種別を外した呼び名を取り出す。 */
-function getShortPersonName(person) {
-  const name = String(person?.name || "");
-  if (!getPositionTrait(person)) return name;
-  const separatorIndex = name.indexOf("の");
-  return separatorIndex >= 0 ? name.slice(separatorIndex + 1) : name;
-}
-
 // 排他特性は循環参照を避けるため、モジュール初期化時ではなく呼び出し時に参照する。
 function getExclusiveTrait(person, traitKey, exclusiveTraits) {
   const traits = Array.isArray(person?.[traitKey]) ? person[traitKey] : [];
@@ -319,11 +311,10 @@ function pickTraits(person, traitKey, order) {
 /** 奇跡ごとに、選択の判断へ要る分だけを名前の後ろへ並べる。 */
 function getMiracleTargetDetails(person, detailKind, { forPreview = false } = {}) {
   if (detailKind === "exchange") {
-    const bodyTraits = [
-      getExclusiveTrait(person, "bodyTraits", EXCLUSIVE_BODY_TRAITS),
-      ...pickTraits(person, "bodyTraits", EXCHANGE_MIRACLE_BODY_TRAITS)
-    ].filter(Boolean);
-    return [`体力${Math.floor(Number(person.hp) || 0)}`, bodyTraits.join("・")];
+    return [
+      `体力${Math.floor(Number(person.hp) || 0)}`,
+      pickTraits(person, "bodyTraits", EXCHANGE_MIRACLE_BODY_TRAITS).join("・")
+    ];
   }
   if (detailKind === "cupid") {
     // 結婚相手を選ぶ場面なので、プレビューでは中身の人柄まで見せる。
@@ -353,7 +344,7 @@ function getMiracleTargetParts(person, detailKind, options = {}) {
 
 function formatMiracleTargetName(person) {
   const position = getPositionTrait(person);
-  return `${getShortPersonName(person)}${position ? `(${position})` : ""}`;
+  return `${person.name}${position ? `(${position})` : ""}`;
 }
 
 function formatMiracleOptionLabel(person, detailKind) {
@@ -645,9 +636,7 @@ function renderMiracleCards(village, selectedId = "12") {
   if (select) select.value = currentId;
   const divineStatus = getDivineMightStatus(village);
   const nextDivineText = divineStatus.next
-    ? (divineStatus.next.requiresApocalypseClear
-        ? `次Lv${divineStatus.next.level}: 黙示録の四騎士撃退で解放`
-        : `次Lv${divineStatus.next.level}: 神威${divineStatus.next.threshold}まで残り${Math.ceil(divineStatus.remaining)}`)
+    ? `次Lv${divineStatus.next.level}: 神威${divineStatus.next.threshold}まで残り${Math.ceil(divineStatus.remaining)}`
     : "すべて解放済み";
 
   content.innerHTML = `

@@ -165,9 +165,7 @@ function showInquisitionChoiceModal(village) {
   const portraitPath = getRandomInquisitorPortraitPath();
   const speech = pickInquisitorSpeechSet();
   const canAfford = funds >= cost;
-  const shortageText = canAfford
-    ? ""
-    : `<p class="heresy-inquisition-warning">現在の資金では、もてなしに必要な費用を用意できません。</p>`;
+  const fundsText = canAfford ? `所持 ${funds}` : `所持 ${funds}／不足 ${cost - funds}`;
 
   createModalLayer({
     overlayId: "heresyInquisitionOverlay",
@@ -175,31 +173,38 @@ function showInquisitionChoiceModal(village) {
     title: "異端審問",
     bodyHtml: getInquisitorBody(`
       <p>${speech.opening}</p>
-      <div class="heresy-inquisition-cost">
+      <div class="heresy-inquisition-cost${canAfford ? "" : " is-short"}">
         <span>もてなし費用</span>
         <strong>資金 ${cost}</strong>
-        <small>現在の資金 ${funds}</small>
+        <small>${fundsText}</small>
       </div>
-      ${shortageText}
-      <ul class="heresy-inquisition-choices">
-        <li><strong>もてなす</strong>資金${cost}を支払います。村に変化はありません。</li>
-        <li><strong>追い払う</strong>村に「異端」が記録され、襲撃の傾向が変わります。取り消しはできません。</li>
-      </ul>
     `, portraitPath),
     buttons: [
       {
         label: "もてなす",
         className: "heresy-hospitality-button",
-        disabledReason: canAfford ? "" : `もてなしには資金${cost}が必要です（現在${funds}）`,
+        disabledReason: canAfford ? "" : `もてなしには資金${cost}が必要です（所持${funds}）`,
         onClick: () => handleHospitality(village, cost, portraitPath, speech)
       },
       {
         label: "追い払う",
         className: "heresy-expulsion-button",
-        onClick: () => handleExpulsion(village, portraitPath, speech)
+        onClick: () => confirmExpulsion(village, portraitPath, speech)
       }
     ]
   });
+}
+
+// 取り消せない選択なので、リスクは選択モーダルへ並べず、実行の直前に確かめる。
+function confirmExpulsion(village, portraitPath, speech) {
+  const message = [
+    "異端審問官を追い払いますか？",
+    "",
+    "村特性「異端」が付き、襲撃が異端専用のものへ切り替わります。",
+    "一度付いた「異端」は取り消せません。"
+  ].join("\n");
+  if (!confirm(message)) return;
+  handleExpulsion(village, portraitPath, speech);
 }
 
 function handleHospitality(village, cost, portraitPath, speech) {
@@ -232,7 +237,7 @@ function showHospitalityResultModal(cost, portraitPath, speech) {
     title: "異端審問：もてなし",
     bodyHtml: getInquisitorBody(`
       <p>${speech.hospitality}</p>
-      <p class="heresy-inquisition-result">資金-${cost}。村に「異端」は付きませんでした。</p>
+      <p class="heresy-inquisition-result">資金 -${cost}</p>
     `, portraitPath),
     buttons: [{
       label: "閉じる",
@@ -250,9 +255,8 @@ function showExpulsionResultModal(portraitPath, speech) {
     ...ids,
     title: "異端審問：追放",
     bodyHtml: getInquisitorBody(`
-      <p>村人たちは異端審問官を村の外へ追い立てた。</p>
       <p>${speech.expulsion}</p>
-      <p class="heresy-inquisition-result">村特性「異端」が付き、異端専用の襲撃テーブルへ切り替わりました。</p>
+      <p class="heresy-inquisition-result">村特性「異端」が付いた</p>
     `, portraitPath),
     buttons: [{
       label: "閉じる",
