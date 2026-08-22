@@ -232,7 +232,14 @@ function getWinterMonthsToPrepare(month) {
   return 3;
 }
 
+// 火砲を選べない者が魔導兵器を望むのは筋が通らないため、工廠の要望からは外す。
+const ARCANE_FOUNDRY_BLOCKING_MIND_TRAITS = ["文明忌避", "不殺"];
+
 function doesRuleMatch(ruleId, person) {
+  if (ruleId.startsWith("arcaneFoundry_") &&
+      hasMindTrait(person, ARCANE_FOUNDRY_BLOCKING_MIND_TRAITS)) {
+    return false;
+  }
   switch (ruleId) {
     case "tavern_playful_trait":
       return hasMindTrait(person, ["チャラい", "女好き", "遊び人", "享楽的"]);
@@ -323,6 +330,15 @@ function doesRuleMatch(ruleId, person) {
       return hasAnyTrait(person, ["神秘的", "ミステリアス", "あやしげ", "胡散臭い", "天然", "夢想家"]);
     case "alchemy_free_research":
       return hasHobby(person, ["自由研究"]);
+
+    case "arcaneFoundry_alchemist":
+      return isDoingAction(person, ["錬金術"]);
+    case "arcaneFoundry_mad":
+      return hasAnyTrait(person, ["マッド", "天才肌", "頭脳派", "才気煥発"]);
+    case "arcaneFoundry_veteran":
+      return hasAnyTrait(person, ["負傷"]) || hasRelationship(person, "戦友");
+    case "arcaneFoundry_craftsman":
+      return hasAnyTrait(person, ["職人気質", "仕事の鬼", "仕事好き"]);
 
     case "weaving_arachnid":
       return person.race === "アラクニド" || hasAnyTrait(person, ["糸吐き"]);

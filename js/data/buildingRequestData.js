@@ -169,6 +169,16 @@ export const BUILDING_REQUEST_DEFINITIONS = [
     ]
   },
   {
+    buildingId: "arcaneFoundry",
+    name: "魔導工廠",
+    rules: [
+      { id: "arcaneFoundry_alchemist", lines: ["釜の火では、もう作れるものが頭打ちです。魔導工廠があれば、溜めた魔素を火に変えて、村の外へ向けられます。"] },
+      { id: "arcaneFoundry_mad", lines: ["魔素は祈るためだけのものではありません。筒に込めて撃ち出せます。魔導工廠さえあれば、私が組み上げてみせます。"] },
+      { id: "arcaneFoundry_veteran", lines: ["前の襲撃で、こちらの槍は届きませんでした。魔導工廠があれば、あの距離から撃ち返せます。次は誰も転がしたくありません。"] },
+      { id: "arcaneFoundry_craftsman", lines: ["醸造も錬金も回るようになりました。次は、村を守る道具をこの手で作る番です。魔導工廠を建ててください。"] }
+    ]
+  },
+  {
     buildingId: "weaving",
     name: "機織小屋",
     rules: [
