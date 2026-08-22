@@ -35,6 +35,7 @@ import {
   EVENT_SUBJECTS,
   SINGLE_SPEAKER_EVENTS
 } from "./data/randomEventData.js";
+import { WOLF_FOUNDLING_LINES } from "./data/dialogue/randomEventLines.js";
 
 const VILLAGER_STATE_KEYS = [
   "hp", "mp", "happiness",
@@ -249,7 +250,7 @@ export class RandomEvents {
   }
 
   /**
-   * 電撃的な恋の候補ペアを列挙する。
+   * 突然の恋の候補ペアを列挙する。
    * 本人は独り身で精神年齢12以上、相手は近親や伴侶でなく、本人から見た好感度がまだ低い者に限る。
    */
   static collectThunderboltLovePairs(v) {
@@ -309,7 +310,7 @@ export class RandomEvents {
       cands.push({ type: "strangeGrowthPotion", vill: this.randChoice(growthPotionCandidates) });
     }
 
-    // 電撃的な恋は2人組で成立するため、成立し得る組を1つだけ候補に載せる。
+    // 突然の恋は2人組で成立するため、成立し得る組を1つだけ候補に載せる。
     const thunderboltLovePairs = this.collectThunderboltLovePairs(v);
     if (thunderboltLovePairs.length > 0) {
       const [lover, beloved] = this.randChoice(thunderboltLovePairs);
@@ -356,7 +357,7 @@ export class RandomEvents {
       }
       case "thunderboltLove": {
         setFriendshipScore(p, c.target, 59);
-        v.log(`電撃的な恋:${p.name}は心臓を射貫かれたような衝撃を受け恋に落ちた。${c.target.name}への好感度が59になった`);
+        v.log(`突然の恋:${p.name}は心臓を射貫かれたような衝撃を受け恋に落ちた。${c.target.name}への好感度が59になった`);
         break;
       }
     }
@@ -379,16 +380,18 @@ export class RandomEvents {
       case "wolfChild": {
         if (v.villagers.some(person => person.race === "狼")) return null;
 
+        // 姿を見せてから選ばせるため、村へ迎える前に子狼を作る。森へ返す場合は破棄する。
+        const wolf = createWolfFoundling(v);
         v.log("狼の子供が村に迷い込んできた。");
         showRandomEventModal({
           title: "狼の子供",
           message: "森の端から、まだ幼い狼の子供が一匹、村へ迷い込んできました。どうしますか？",
           closeOnOverlay: false,
+          participants: [this.participant(wolf, this.resolveLineValue(WOLF_FOUNDLING_LINES))],
           actions: [
             {
               label: "村で飼う",
               onSelect: () => {
-                const wolf = createWolfFoundling(v);
                 v.villagers.push(wolf);
                 recordVillagerJoinHistory(v, wolf, { source: "保護" });
                 v.log(`${wolf.name}（0歳の狼）を村で飼うことにした。`);

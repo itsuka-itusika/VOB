@@ -651,7 +651,7 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     elder: "恋の気配か。若い心はよう揺れるものじゃ。"
   }),
   thunderboltLove: makeEventSpecificLines({
-    subject: "電撃的な恋",
+    subject: "突然の恋",
     normalM: "まずいな。目が合った途端、あの人しか見えなくなった。",
     politeM: "……いけません。胸の奥を、まっすぐ射抜かれてしまいました。",
     strongM: "なんだ今のは！ 心の臓を撃ち抜かれたみたいだ！",
@@ -1267,6 +1267,13 @@ export function expandEventVillagerLines(group) {
 
   return expanded;
 }
+
+// 狼の子供は言葉を持たないため、鳴き声と様子だけを返す。
+export const WOLF_FOUNDLING_LINES = [
+  "くぅん……。（村人たちを見上げ、しきりに鼻先を鳴らしている）",
+  "くぅん。（警戒しながらも、その場を離れようとしない）",
+  "……くぅ。（おそるおそる、一歩だけ近づいてきた）"
+];
 
 export const EVENT_LINES_BY_SPEECH_TYPE = Object.fromEntries(
   Object.entries(EVENT_SPEECH_TYPE_LINES).map(([eventKey, group]) => [

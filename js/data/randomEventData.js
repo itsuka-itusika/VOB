@@ -25,7 +25,7 @@ export const EVENT_SUBJECTS = {
   "地母神": "地母神の慈愛",
   goldenRain: "黄金の雨",
   strangeGrowthPotion: "怪しい薬の急成長",
-  thunderboltLove: "電撃的な恋",
+  thunderboltLove: "突然の恋",
   wolfChild: "狼の子供",
   cat: "猫との出会い",
   gold: "金貨の発見",
