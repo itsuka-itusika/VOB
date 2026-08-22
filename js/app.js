@@ -1,5 +1,5 @@
 import { autoAssignJobs, autoAssignRaidActions } from "./autoAssign.js";
-import { openBuildingModal, closeBuildingModal, unlockAllBuildingFlags } from "./buildings.js";
+import { openBuildingModal, closeBuildingModal, unlockAllBuildings } from "./buildings.js";
 import { createRandomVillager, createRandomVisitor, getVisitorTypeChoices } from "./createVillagers.js";
 import "./dictionary.js";
 import { addNonHousePopLimitBonus } from "./domain/buildingState.js";
@@ -117,6 +117,16 @@ function unlockVobDebugFeatures() {
 function prepareApocalypseDebugState() {
   unlockVobDebugFeatures();
   theVillage.mana = APOCALYPSE_DEBUG_RESOURCE_AMOUNT;
+  theVillage.divineMight = Math.max(Number(theVillage.divineMight) || 0, APOCALYPSE_DEBUG_DIVINE_MIGHT);
+  theVillage.building = Math.max(Number(theVillage.building) || 0, APOCALYPSE_DEBUG_VILLAGE_SCALE);
+  // 規模を一気に上げるので、次の建築で発展段階のモーダルが連続しないようにする。
+  theVillage.scaleTitleStage = getVillageScaleStage(theVillage.building).index;
+
+  if (!theVillage.buildingFlags || typeof theVillage.buildingFlags !== "object") {
+    theVillage.buildingFlags = {};
+  }
+  // 櫓のように上限数が規模で決まる建築があるため、規模を上げたあとに建てる。
+  const builtCount = unlockAllBuildings(theVillage);
 
   if (!Array.isArray(theVillage.villagers)) theVillage.villagers = [];
   const addedVillagers = [];
@@ -138,16 +148,7 @@ function prepareApocalypseDebugState() {
   const populationShortfall = theVillage.villagers.length - theVillage.popLimit;
   if (populationShortfall > 0) addNonHousePopLimitBonus(theVillage, populationShortfall);
 
-  if (!theVillage.buildingFlags || typeof theVillage.buildingFlags !== "object") {
-    theVillage.buildingFlags = {};
-  }
-  unlockAllBuildingFlags(theVillage);
-
-  theVillage.divineMight = Math.max(Number(theVillage.divineMight) || 0, APOCALYPSE_DEBUG_DIVINE_MIGHT);
-  theVillage.building = Math.max(Number(theVillage.building) || 0, APOCALYPSE_DEBUG_VILLAGE_SCALE);
-  // 規模を一気に上げるので、次の建築で発展段階のモーダルが連続しないようにする。
-  theVillage.scaleTitleStage = getVillageScaleStage(theVillage.building).index;
-  return addedVillagers.length;
+  return { addedVillagerCount: addedVillagers.length, builtCount };
 }
 
 function runDebugAction() {
@@ -165,8 +166,9 @@ function runDebugAction() {
   }
 
   if (command === "APO") {
-    const addedCount = prepareApocalypseDebugState();
-    theVillage.log(`【デバッグ】APO準備を完了しました。資源と魔素を10000にし、全秘宝を入手、村人を15人まで補充（追加${addedCount}人）、神威を${APOCALYPSE_DEBUG_DIVINE_MIGHT}にして奇跡を全解放、規模を${APOCALYPSE_DEBUG_VILLAGE_SCALE}にして建築の解放フラグと設置上限を最大にしました`);
+    const { addedVillagerCount, builtCount } = prepareApocalypseDebugState();
+    const builtText = builtCount > 0 ? `。黄金像を除く全建築を上限数まで建設しました（計${builtCount}棟）` : "";
+    theVillage.log(`【デバッグ】APO準備を完了しました。資源と魔素を10000にし、全秘宝を入手、村人を15人まで補充（追加${addedVillagerCount}人）、神威を${APOCALYPSE_DEBUG_DIVINE_MIGHT}にして奇跡を全解放、規模を${APOCALYPSE_DEBUG_VILLAGE_SCALE}にして建築の解放フラグと設置上限を最大にしました${builtText}`);
     updateUI(theVillage);
     return;
   }

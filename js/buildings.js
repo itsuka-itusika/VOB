@@ -349,17 +349,36 @@ export const BUILDINGS = [
 const BUILDING_UNLOCK_FLAGS = ["canBuildPublicBath", "canBuildStorehouse", BACCHUS_GOLDEN_STATUE_UNLOCK_FLAG];
 
 /**
- * デバッグ用。建築の解放フラグと効果フラグをまとめて立てる。
- * 黄金像の建設済みフラグは、実際に建てて黙示録を始める導線を潰すため立てない。
+ * デバッグ用。建築の解放フラグを立て、黄金像を除くすべての建築を上限数まで建てた状態にする。
+ * 効果はフラグと派生値の再計算で賄うため、各建築の effect は呼ばない。
+ * 黄金像は、実際に建てて黙示録を始める導線を残すため建てない。
+ * 上限数は規模で決まる建築があるため、規模を上げたあとに呼ぶこと。
+ * @returns {number} 新たに建てた棟数
  */
-export function unlockAllBuildingFlags(village) {
+export function unlockAllBuildings(village) {
   const flags = ensureBuildingFlags(village);
   BUILDINGS.forEach(building => {
     const flag = building.effect?.buildingFlag;
     if (flag) flags[flag] = true;
   });
   BUILDING_UNLOCK_FLAGS.forEach(flag => { flags[flag] = true; });
-  return flags;
+
+  if (!Array.isArray(village.buildings)) village.buildings = [];
+  let builtCount = 0;
+  BUILDINGS.forEach(building => {
+    if (building.id === BACCHUS_GOLDEN_STATUE_BUILDING_ID) return;
+    const limit = building.allowMultiple ? getBuildingMaxCount(building, village) : 1;
+    const target = Number.isFinite(limit) ? limit : 1;
+    const shortfall = target - countBuiltBuildings(village, building.id);
+    for (let i = 0; i < shortfall; i++) {
+      village.buildings.push(building.id);
+      builtCount++;
+    }
+  });
+
+  recalculateBuildingDerivedState(village);
+  refreshVillageJobTables(village);
+  return builtCount;
 }
 
 function getBuildingNameById(buildingId) {
