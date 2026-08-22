@@ -61,11 +61,16 @@ import {
 import { getCaptives } from "./captives.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
 
-// 安全に戦列へ加える目安のターン数と、勝ち目を測るときの想定戦闘ターン数。
-const RAID_SAFE_SURVIVAL_TURNS = 2;
+// 勝ち目を測るときの想定戦闘ターン数。
 const RAID_WIN_ESTIMATE_TURNS = 3;
 // 前衛は枠いっぱいまで出すが、最も火力のある者に対しこの割合へ届かない者は出さない。
 const RAID_FRONTLINE_MIN_DAMAGE_SHARE = 1 / 3;
+// 一撃を耐えられない村人でも、この体力があれば前衛・中衛へ加える。
+// 数で押されているときは基準を下げ、こちらが上回るときは健康な者だけを出す。
+const RAID_JOIN_HP_OUTNUMBERED = 50;
+const RAID_JOIN_HP_ADVANTAGE = 65;
+// この種族が混じる襲撃は一撃が重く、耐えられる者がほとんど出ないため常に緩い基準を使う。
+const RAID_HEAVY_HITTER_RACES = new Set(["キュクロプス", "スフィンクス"]);
 
 // 食料の備蓄が何か月ぶんあれば十分とみなすか。
 const FOOD_SUFFICIENT_MONTHS = 3;
@@ -451,14 +456,38 @@ function getSurvivableTurns(person, action, village) {
   return (Number(person.hp) || 0) / incoming;
 }
 
-/** 安全に就ける行動か。想定ターン数ぶん耐えられることを求める。 */
-function canJoinSafely(person, action, village) {
-  return getSurvivableTurns(person, action, village) >= RAID_SAFE_SURVIVAL_TURNS;
-}
-
-/** 一撃で倒れないか。これを割る者は、勝ち目がどうあれ戦列に加えない。 */
+/** 一撃で倒れないか。 */
 function canJoinAtAll(person, action, village) {
   return getSurvivableTurns(person, action, village) > 1;
+}
+
+function hasHeavyHitterEnemy(village) {
+  const enemies = Array.isArray(village?.raidEnemies) ? village.raidEnemies : [];
+  return enemies.some(enemy => RAID_HEAVY_HITTER_RACES.has(enemy?.race) ||
+    RAID_HEAVY_HITTER_RACES.has(enemy?.raiderType));
+}
+
+/** 前衛・中衛へ加わるのに要る体力。守り手の数が敵に届かないときは基準を下げる。 */
+function getRaidJoinHpThreshold(village, profiles) {
+  if (hasHeavyHitterEnemy(village)) return RAID_JOIN_HP_OUTNUMBERED;
+  const enemyCount = Array.isArray(village?.raidEnemies) ? village.raidEnemies.length : 0;
+  const lineCapable = profiles.filter(profile =>
+    profile.allowed[ACTION_DEFEND] || profile.allowed[ACTION_FORTIFY] ||
+    profile.allowed[ACTION_SHOOT] || profile.allowed[ACTION_CANNON]).length;
+  const lineCapacity = Math.min(
+    lineCapable,
+    getRaidFrontlinerSlotCount(village) + getRaidMiddleSlotCount(village)
+  );
+  return lineCapacity <= enemyCount ? RAID_JOIN_HP_OUTNUMBERED : RAID_JOIN_HP_ADVANTAGE;
+}
+
+/**
+ * 戦列へ加えられる体力か。一撃を耐えられるか、基準体力があればよい。
+ * 罠作成は狙われないため、体力を問わない。
+ */
+function canJoinRaidLine(person, action, village, hpThreshold) {
+  if (action === ACTION_TRAP) return true;
+  return canJoinAtAll(person, action, village) || (Number(person.hp) || 0) >= hpThreshold;
 }
 
 function getRaidAssignmentProfile(person, village) {
@@ -509,10 +538,20 @@ function hasWinningChance(village, profiles, assignments) {
   return estimateVillageFirepower(village, profiles, assignments) >= getEnemyTotalHp(village);
 }
 
+const RAID_ACTION_SLOTS = {
+  [ACTION_DEFEND]: "front",
+  [ACTION_FORTIFY]: "front",
+  [ACTION_SHOOT]: "middle",
+  [ACTION_CANNON]: "middle",
+  [ACTION_TRAP]: "trap"
+};
+// 見込みダメージが並んだときの優先。迎撃は毎ターン攻撃するため籠城より先に埋める。
+const RAID_ACTION_TIE_ORDER = [ACTION_SHOOT, ACTION_CANNON, ACTION_TRAP, ACTION_DEFEND, ACTION_FORTIFY];
+
 /**
- * 適性の高い者から枠へ埋める。
- * 中衛 → 罠 → 迎撃 → 籠城 の順に流し、枠に入れなかった者は通常職へ残す。
- * 中衛と罠は枠が狭く反撃も受けないため、前衛より先に確保する。
+ * 体力条件を満たす村人を、本人が最も戦果を出せる役へ就ける。
+ * 見込みダメージの高い組から順に枠を埋めるため、役の優先順ではなく本人の得意で決まる。
+ * 枠に入れなかった者は通常職へ残す。
  */
 function fillRaidRoles(village, profiles, assignments) {
   const budget = {
@@ -520,44 +559,43 @@ function fillRaidRoles(village, profiles, assignments) {
     middle: getRaidMiddleSlotCount(village),
     trap: getRaidTrapMakerSlotCount(village)
   };
+  const hpThreshold = getRaidJoinHpThreshold(village, profiles);
   const assigned = new Set();
 
   const eligible = (profile, action) => {
-    if (assigned.has(profile.person)) return false;
     if (!profile.allowed[action]) return false;
     if (action !== ACTION_TRAP && profile.damage[action] <= 0) return false;
-    return canJoinSafely(profile.person, action, village);
+    return canJoinRaidLine(profile.person, action, village, hpThreshold);
   };
 
-  const take = (action, limit, resolveAction = () => action, minDamageShare = 0) => {
-    if (limit <= 0) return 0;
-    const ranked = profiles
-      .filter(profile => eligible(profile, action))
-      .sort((a, b) => b.damage[action] - a.damage[action]);
-    // 火力が見劣りする者を無理に出すと、戦果より被害の方が大きくなる。
-    const threshold = (ranked[0]?.damage[action] || 0) * minDamageShare;
-    const picked = ranked
-      .filter(profile => profile.damage[action] >= threshold)
-      .slice(0, limit);
-    picked.forEach(profile => {
-      assignments.set(profile.person, {
-        preferredAction: profile.fallback.preferredAction,
-        action: resolveAction(profile)
-      });
-      assigned.add(profile.person);
+  // 火力が見劣りする者を無理に前衛へ出すと、戦果より被害の方が大きくなる。
+  const frontDamages = profiles.flatMap(profile => [ACTION_DEFEND, ACTION_FORTIFY]
+    .filter(action => eligible(profile, action))
+    .map(action => profile.damage[action]));
+  const frontDamageFloor = Math.max(0, ...frontDamages) * RAID_FRONTLINE_MIN_DAMAGE_SHARE;
+  const meetsFrontDamage = (profile, action) => RAID_ACTION_SLOTS[action] !== "front" ||
+    profile.damage[action] >= frontDamageFloor;
+
+  const candidates = [];
+  profiles.forEach(profile => {
+    RAID_ACTIONS.forEach(action => {
+      if (!eligible(profile, action) || !meetsFrontDamage(profile, action)) return;
+      candidates.push({ profile, action, damage: profile.damage[action] });
     });
-    return picked.length;
-  };
+  });
+  candidates.sort((a, b) => (b.damage - a.damage) ||
+    (RAID_ACTION_TIE_ORDER.indexOf(a.action) - RAID_ACTION_TIE_ORDER.indexOf(b.action)));
 
-  // 中衛は射撃と火砲で枠を分け合う。本人がより多く出せる方に就ける。
-  budget.middle -= take(ACTION_SHOOT, budget.middle, profile =>
-    profile.allowed[ACTION_CANNON] && profile.damage[ACTION_CANNON] > profile.damage[ACTION_SHOOT]
-      ? ACTION_CANNON
-      : ACTION_SHOOT);
-  budget.middle -= take(ACTION_CANNON, budget.middle);
-  budget.trap -= take(ACTION_TRAP, budget.trap);
-  budget.front -= take(ACTION_DEFEND, budget.front, () => ACTION_DEFEND, RAID_FRONTLINE_MIN_DAMAGE_SHARE);
-  budget.front -= take(ACTION_FORTIFY, budget.front, () => ACTION_FORTIFY, RAID_FRONTLINE_MIN_DAMAGE_SHARE);
+  candidates.forEach(({ profile, action }) => {
+    const slot = RAID_ACTION_SLOTS[action];
+    if (assigned.has(profile.person) || budget[slot] <= 0) return;
+    assignments.set(profile.person, {
+      preferredAction: profile.fallback.preferredAction,
+      action
+    });
+    assigned.add(profile.person);
+    budget[slot] -= 1;
+  });
   return assigned;
 }
 
