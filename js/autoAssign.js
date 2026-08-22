@@ -467,6 +467,17 @@ function hasHeavyHitterEnemy(village) {
     RAID_HEAVY_HITTER_RACES.has(enemy?.raiderType));
 }
 
+/**
+ * 敵が強いか。重い一撃を持つ種族が混じるか、前衛の過半が想定戦闘ターンを耐えられない場合。
+ */
+function hasStrongRaidEnemies(village, frontProfiles) {
+  if (hasHeavyHitterEnemy(village)) return true;
+  if (frontProfiles.length === 0) return false;
+  const fragile = frontProfiles.filter(profile =>
+    getSurvivableTurns(profile.person, ACTION_DEFEND, village) < RAID_WIN_ESTIMATE_TURNS).length;
+  return fragile * 2 > frontProfiles.length;
+}
+
 /** 前衛・中衛へ加わるのに要る体力。守り手の数が敵に届かないときは基準を下げる。 */
 function getRaidJoinHpThreshold(village, profiles) {
   if (hasHeavyHitterEnemy(village)) return RAID_JOIN_HP_OUTNUMBERED;
@@ -586,7 +597,8 @@ function fillRaidRoles(village, profiles, assignments) {
   candidates.sort((a, b) => (b.damage - a.damage) ||
     (RAID_ACTION_TIE_ORDER.indexOf(a.action) - RAID_ACTION_TIE_ORDER.indexOf(b.action)));
 
-  candidates.forEach(({ profile, action }) => {
+  const frontPicked = [];
+  const place = ({ profile, action }) => {
     const slot = RAID_ACTION_SLOTS[action];
     if (assigned.has(profile.person) || budget[slot] <= 0) return;
     assignments.set(profile.person, {
@@ -595,8 +607,35 @@ function fillRaidRoles(village, profiles, assignments) {
     });
     assigned.add(profile.person);
     budget[slot] -= 1;
-  });
+    if (slot === "front") frontPicked.push(profile);
+  };
+
+  // 前衛が空だと村人全体が的になるため、最も火力のある1人だけは他の役より先に確保する。
+  const firstFront = candidates.find(candidate => RAID_ACTION_SLOTS[candidate.action] === "front");
+  if (firstFront) place(firstFront);
+  candidates.forEach(place);
+
+  applyFortifyPreference(village, assignments, frontPicked);
   return assigned;
+}
+
+/**
+ * 守りを固めるべき場面では、前衛を籠城へ回す。
+ * 前衛が1人しかいないとき、または人数で押せていても敵が強いときに切り替える。
+ */
+function applyFortifyPreference(village, assignments, frontPicked) {
+  if (frontPicked.length === 0) return;
+  const enemyCount = Array.isArray(village?.raidEnemies) ? village.raidEnemies.length : 0;
+  const shouldFortify = frontPicked.length === 1 ||
+    (frontPicked.length > enemyCount && hasStrongRaidEnemies(village, frontPicked));
+  if (!shouldFortify) return;
+
+  frontPicked.forEach(profile => {
+    if (!profile.allowed[ACTION_FORTIFY]) return;
+    const current = assignments.get(profile.person);
+    if (!current || current.action === ACTION_FORTIFY) return;
+    assignments.set(profile.person, { ...current, action: ACTION_FORTIFY });
+  });
 }
 
 function buildRaidAssignments(village, targets) {
