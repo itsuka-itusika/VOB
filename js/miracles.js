@@ -74,11 +74,11 @@ export const MIRACLES = [
   {id:"1",  name:"豊穣の奇跡(100)", cost:100, desc:"今月のみ、農作業・伐採・狩猟・漁・採集の成果と醸造の食料獲得2倍"},
   {id:"2",  name:"マナの奇跡(40)",  cost:40,  desc:"食料+80"},
   {id:"3",  name:"クピドの奇跡(80)", cost:80, desc:"2人を強制結婚(条件無視)"},
-  {id:"4",  name:"宴会の奇跡(人数×15)", cost:-1, desc:"全員体力/メンタル+20,幸福+20,失望/絶望解除。酒豪は回復量1.5倍 (資金×人数分も要)"},
-  {id:"5",  name:"狂宴の奇跡(人数×30)", cost:-2, desc:"全員体力/メンタル+60,幸福+50,失望/絶望解除,倫理↓,好色+15。酒豪は回復量1.5倍"},
+  {id:"4",  name:"宴会の奇跡(人数×15)", cost:-1, desc:"全員体力/メンタル+20,幸福+20,失望/絶望解除 (資金×人数分も要)"},
+  {id:"5",  name:"狂宴の奇跡(人数×30)", cost:-2, desc:"全員体力/メンタル+60,幸福+50,失望/絶望解除,倫理↓,好色+15"},
   {id:"6",  name:"癒しの奇跡(80)", cost:80, desc:"1人の負傷/重体/疫病/疲労等回復,体力+50"},
   {id:"20", name:"清拭の奇跡(60)", cost:60, desc:"3ヶ月間、村特性「清浄」を付与し、疫病の感染と重体の危篤化を防ぐ"},
-  {id:"16", name:"酒杯の奇跡(50)", cost:50, desc:"1人の心労/抑鬱/失望/絶望回復,メンタル+50,幸福+30,酩酊付与。酒豪は回復量1.5倍"},
+  {id:"16", name:"酒杯の奇跡(50)", cost:50, desc:"1人の心労/抑鬱/失望/絶望回復,メンタル+50,幸福+30,酩酊付与"},
   {id:"7",  name:"戦神の奇跡(80)", cost:80, desc:"1人に火星の加護(3ヶ月,筋力/耐久/勇気+7,知力/勤勉/倫理*0.2)"},
   {id:"8",  name:"竈女神の奇跡(40)", cost:40, desc:"恋人を結婚100%(対象なしなら使用不可)"},
   {id:"9",  name:"常春の奇跡(300)", cost:300,desc:"村特性→春に固定。次の季節まで継続"},
@@ -316,26 +316,42 @@ function areMiracleTargetsReady(mid) {
   return Boolean(targetA && targetB && targetA.value && targetB.value && targetA.value !== targetB.value);
 }
 
-function describeMiracleTarget(person) {
-  if (!person) return "";
-  const sex = person.uiSexDisplay || person.bodySex || person.sex || "-";
-  const age = person.bodyAge ?? person.age ?? "-";
-  return `${person.name}: ${person.race || "-"} / ${sex} / ${age}歳 / 筋${person.str} 耐${person.vit} 器${person.dex} 魔${person.mag} 魅${person.chr}`;
+// 対象プレビューで見せる層。酒杯のように精神へ効く奇跡は mind を使う。
+const MIRACLE_PREVIEW_LAYERS = {
+  body: {
+    statKey: "hp",
+    statLabel: "体力",
+    traitKey: "bodyTraits",
+    stats: [["str", "筋"], ["vit", "耐"], ["dex", "器"], ["mag", "魔"], ["chr", "魅"]]
+  },
+  mind: {
+    statKey: "mp",
+    statLabel: "メンタル",
+    traitKey: "mindTraits",
+    stats: [["int", "知"], ["ind", "勤"], ["eth", "倫"], ["cou", "勇"], ["sexdr", "色"]]
+  }
+};
+
+const MIRACLE_PREVIEW_LAYER_IDS = { "16": "mind" };
+
+function getMiraclePreviewLayer(mid) {
+  return MIRACLE_PREVIEW_LAYERS[MIRACLE_PREVIEW_LAYER_IDS[mid]] || MIRACLE_PREVIEW_LAYERS.body;
 }
 
-function createExchangePreviewPerson(person) {
+function createMiraclePreviewPerson(person, layer) {
   const row = document.createElement("div");
-  row.className = "miracle-exchange-preview-person";
+  row.className = "miracle-preview-person";
 
   const portrait = document.createElement("div");
-  portrait.className = "miracle-exchange-preview-portrait";
+  portrait.className = "miracle-preview-portrait";
   applyPortraitToElement(portrait, person);
 
-  const primaryBodyTrait = Array.isArray(person.bodyTraits) && person.bodyTraits.length > 0
-    ? person.bodyTraits[0]
-    : "-";
+  const traits = Array.isArray(person[layer.traitKey]) ? person[layer.traitKey] : [];
+  const stats = layer.stats
+    .map(([key, label]) => `${label}${Math.floor(Number(person[key]) || 0)}`)
+    .join(" ");
   const details = document.createElement("div");
-  details.textContent = `${person.name}：${person.race || "-"} / ${person.uiSexDisplay || person.bodySex || person.sex || "-"} / ${person.bodyAge ?? person.age ?? "-"}歳 / 筋${Math.floor(Number(person.str) || 0)} 耐${Math.floor(Number(person.vit) || 0)} 器${Math.floor(Number(person.dex) || 0)} 魔${Math.floor(Number(person.mag) || 0)} 魅${Math.floor(Number(person.chr) || 0)} /（${primaryBodyTrait}）`;
+  details.textContent = `${person.name}：${person.race || "-"} / ${person.uiSexDisplay || person.bodySex || person.sex || "-"} / ${person.bodyAge ?? person.age ?? "-"}歳 / ${layer.statLabel}${Math.floor(Number(person[layer.statKey]) || 0)} / ${stats} /（${traits.length > 0 ? traits.join("・") : "-"}）`;
 
   row.appendChild(portrait);
   row.appendChild(details);
@@ -344,34 +360,38 @@ function createExchangePreviewPerson(person) {
 
 function updateMiraclePreview(mid, village, preview) {
   if (!preview) return;
-  const targetA = document.getElementById("targetA");
-  const targetB = document.getElementById("targetB");
-  const personA = findMiracleTargetByName(targetA?.value, village);
-  const personB = findMiracleTargetByName(targetB?.value, village);
-
-  if (["12", "13"].includes(mid)) {
-    if (personA && personB && personA !== personB) {
-      const description = document.createElement("div");
-      description.className = "miracle-exchange-preview-description";
-      description.textContent = "種族・性別・年齢・身体能力が入れ替わります。";
-      preview.replaceChildren(
-        description,
-        createExchangePreviewPerson(personA),
-        createExchangePreviewPerson(personB)
-      );
-    } else {
-      preview.textContent = "2人を選ぶと、交換する肉体の情報を表示します。";
-    }
+  const targetCount = getMiracleTargetCount(mid);
+  if (targetCount === 0) {
+    preview.textContent = "";
     return;
   }
 
-  if (personA) {
-    preview.textContent = describeMiracleTarget(personA);
-  } else if (getMiracleTargetCount(mid) > 0) {
-    preview.textContent = "対象を選択してください。";
-  } else {
-    preview.textContent = "";
+  const layer = getMiraclePreviewLayer(mid);
+  const personA = findMiracleTargetByName(document.getElementById("targetA")?.value, village);
+
+  if (targetCount === 2) {
+    const personB = findMiracleTargetByName(document.getElementById("targetB")?.value, village);
+    if (!personA || !personB || personA === personB) {
+      preview.textContent = "2人を選ぶと、対象の情報を表示します。";
+      return;
+    }
+    const rows = [];
+    if (["12", "13"].includes(mid)) {
+      const description = document.createElement("div");
+      description.className = "miracle-preview-description";
+      description.textContent = "種族・性別・年齢・体力・身体能力・身体特性が入れ替わります。";
+      rows.push(description);
+    }
+    rows.push(createMiraclePreviewPerson(personA, layer), createMiraclePreviewPerson(personB, layer));
+    preview.replaceChildren(...rows);
+    return;
   }
+
+  if (!personA) {
+    preview.textContent = "対象を選択してください。";
+    return;
+  }
+  preview.replaceChildren(createMiraclePreviewPerson(personA, layer));
 }
 
 function updateMiracleActionButton(mid, button, village, costInfo, preview) {

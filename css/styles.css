@@ -2607,11 +2607,11 @@ section h2 {
   border-top: 1px solid #eee;
 }
 
-.miracle-exchange-preview-description {
+.miracle-preview-description {
   margin-bottom: 6px;
 }
 
-.miracle-exchange-preview-person {
+.miracle-preview-person {
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr);
   gap: 6px;
@@ -2620,7 +2620,7 @@ section h2 {
   overflow-wrap: anywhere;
 }
 
-.miracle-exchange-preview-portrait {
+.miracle-preview-portrait {
   display: block;
   width: 32px;
   height: 32px;
