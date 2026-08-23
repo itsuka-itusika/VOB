@@ -720,13 +720,14 @@ th, td {
 }
 
 /* モーダル(奇跡) */
+/* 奇跡・秘宝は「神界の事務帳簿」: 白地に軽銀のプレートが並ぶ意匠で揃える */
 #miracleModal {
   position: fixed;
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
-  background: #fff;
-  border: 2px solid #aaa;
-  box-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+  background: #fdfdfe;
+  border: 1px solid #c6cacf;
+  box-shadow: 0 18px 48px rgba(30, 34, 40, 0.35);
   width: 1020px;
   max-width: 94%;
   max-height: 90vh;
@@ -1846,6 +1847,37 @@ section h2 {
   padding: 12px 0;
   line-height: 1.8;
 }
+/* 秘宝モーダルも奇跡と同じ軽銀プレートの帳簿意匠 */
+#secretTreasureModal {
+  background: #fdfdfe;
+  border: 1px solid #c6cacf;
+  box-shadow: 0 18px 48px rgba(30, 34, 40, 0.35);
+}
+#miracleModal .modal-header,
+#secretTreasureModal .modal-header {
+  padding-bottom: 8px;
+  border-bottom: 2px solid #aab0b7;
+  color: #3c4248;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+  font-size: 1.15rem;
+  letter-spacing: 0.18em;
+}
+#miracleModal .modal-buttons button,
+#secretTreasureModal .modal-buttons button {
+  background: linear-gradient(180deg, #f6f8f9, #d9dee2);
+  border: 1px solid;
+  border-color: #ffffff #7f868d #7f868d #f0f2f4;
+  border-radius: 2px;
+  color: #2b3036;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+  letter-spacing: 0.14em;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+  padding: 4px 14px;
+}
+#miracleModal .modal-buttons button:hover,
+#secretTreasureModal .modal-buttons button:hover {
+  background: linear-gradient(180deg, #eaeef0, #cbd1d6);
+}
 .secret-treasure-target-label {
   display: grid;
   gap: 6px;
@@ -1865,13 +1897,23 @@ section h2 {
   flex-direction: column;
   gap: 6px;
   padding: 12px;
-  background: #fafafa;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  background: linear-gradient(165deg, #eef1f3 0%, #dfe4e8 48%, #d4dade 74%, #e8ebee 100%);
+  border: 3px solid;
+  border-color: #fafbfc #8d949b #7f868d #edf0f2;
+  border-radius: 2px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -2px 5px rgba(55, 62, 70, 0.16),
+    0 3px 10px rgba(55, 62, 70, 0.20);
+  color: #2f353b;
 }
 .secret-treasure-item.active {
-  background: #fff;
-  border-color: #888;
+  background: linear-gradient(165deg, #f5f7f8 0%, #e8ecef 48%, #dde2e6 74%, #f0f2f4 100%);
+  border-color: #ffffff #767d84 #6a7178 #f4f6f8;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -2px 5px rgba(55, 62, 70, 0.14),
+    0 0 12px rgba(141, 148, 155, 0.5);
 }
 .secret-treasure-item-header {
   display: flex;
@@ -1881,26 +1923,33 @@ section h2 {
 }
 .secret-treasure-item-header h4 {
   margin: 0;
+  color: #2b3036;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 .secret-treasure-count {
   flex-shrink: 0;
-  padding: 1px 6px;
-  background: #eee;
-  border-radius: 3px;
-  color: #555;
+  padding: 1px 7px;
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid #8d949b;
+  border-radius: 2px;
+  color: #525a62;
   font-size: 0.8rem;
 }
 .secret-treasure-desc {
   flex: 1;
-  color: #555;
+  color: #3d444b;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
   font-size: 0.92rem;
 }
 .secret-treasure-price {
-  color: #777;
+  color: #525a62;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
   font-size: 0.88rem;
 }
 .secret-treasure-reason {
-  color: #c62828;
+  color: #96242c;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
   font-size: 0.88rem;
 }
 .secret-treasure-actions {
@@ -1911,6 +1960,26 @@ section h2 {
 .secret-treasure-actions button {
   flex: 1;
   padding: 6px;
+  border-radius: 2px;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+}
+.secret-treasure-actions button:not(:disabled) {
+  background: linear-gradient(180deg, #f6f8f9, #d9dee2);
+  border: 1px solid;
+  border-color: #ffffff #7f868d #7f868d #f0f2f4;
+  color: #2b3036;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+.secret-treasure-actions button:not(:disabled):hover {
+  background: linear-gradient(180deg, #eaeef0, #cbd1d6);
+}
+.secret-treasure-actions button:disabled {
+  background: #dfe2e5;
+  border: 1px solid #c3c8cd;
+  color: #868d94;
+  cursor: not-allowed;
 }
 
 .event-modal-overlay {
@@ -2514,7 +2583,9 @@ section h2 {
 .miracle-resources {
   display: flex;
   gap: 20px;
-  background: #f5f5f5;
+  background: #f6f8f9;
+  border: 1px solid #d4d8dc;
+  color: #3c4248;
   padding: 10px;
   margin-bottom: 15px;
   border-radius: 4px;
@@ -2529,33 +2600,47 @@ section h2 {
   margin-top: 10px;
 }
 
+/* カード = 軽銀のプレート。面取りは左上から光が当たる4辺別色で表す */
 .miracle-item {
-  border: 1px solid #ddd;
+  background: linear-gradient(165deg, #eef1f3 0%, #dfe4e8 48%, #d4dade 74%, #e8ebee 100%);
+  border: 3px solid;
+  border-color: #fafbfc #8d949b #7f868d #edf0f2;
   padding: 15px;
-  background: #f9f9f9;
-  border-radius: 4px;
+  border-radius: 2px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -2px 5px rgba(55, 62, 70, 0.16),
+    0 3px 10px rgba(55, 62, 70, 0.20);
+  color: #2f353b;
   transition: all 0.2s;
   cursor: pointer;
 }
 
 .miracle-item:hover,
 .miracle-item.active {
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  background: linear-gradient(165deg, #f5f7f8 0%, #e8ecef 48%, #dde2e6 74%, #f0f2f4 100%);
 }
 
 .miracle-item.active {
-  border-color: #2196F3;
-  background: #f7fbff;
+  border-color: #ffffff #767d84 #6a7178 #f4f6f8;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -2px 5px rgba(55, 62, 70, 0.14),
+    0 0 12px rgba(141, 148, 155, 0.5);
 }
 
 .miracle-item.locked {
   cursor: default;
-  background: #f1f1f1;
+  background: linear-gradient(165deg, #e8eaec, #dcdfe2);
+  border-color: #eff1f3 #a0a6ad #949aa1 #e6e9eb;
   opacity: 0.82;
 }
 
 .miracle-item.locked:hover {
-  box-shadow: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -2px 5px rgba(55, 62, 70, 0.16),
+    0 3px 10px rgba(55, 62, 70, 0.20);
 }
 
 .miracle-header {
@@ -2568,24 +2653,30 @@ section h2 {
 
 .miracle-header h4 {
   margin: 0;
-  color: #333;
+  color: #2b3036;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+  /* 刻印: 文字の下側に光の縁 */
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .miracle-mark {
-  background: #2196F3;
-  color: white;
-  padding: 2px 8px;
-  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid #8d949b;
+  color: #525a62;
+  padding: 1px 7px;
+  border-radius: 2px;
   font-size: 0.8em;
   white-space: nowrap;
 }
 
 .miracle-mark.locked {
-  background: #777;
+  border-color: #b4bac0;
+  color: #868d94;
 }
 
 .miracle-desc {
-  color: #666;
+  color: #3d444b;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
   margin-bottom: 10px;
   min-height: 2.4em;
 }
@@ -2594,12 +2685,14 @@ section h2 {
   display: flex;
   gap: 10px;
   font-size: 0.9em;
-  color: #555;
+  color: #525a62;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
   margin-bottom: 10px;
 }
 
 .miracle-reason {
-  color: #f44336;
+  color: #96242c;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
   font-size: 0.9em;
   margin-bottom: 10px;
 }
@@ -2609,9 +2702,10 @@ section h2 {
   gap: 8px;
   margin: 10px 0;
   padding: 10px;
-  background: #fff;
-  border: 1px solid #e4e4e4;
-  border-radius: 4px;
+  background: #fdfdfe;
+  border: 1px solid #a0a6ad;
+  border-radius: 2px;
+  box-shadow: inset 0 1px 3px rgba(55, 62, 70, 0.14);
 }
 
 .miracle-target {
@@ -2658,26 +2752,33 @@ section h2 {
   object-position: center 30%;
 }
 
+/* ボタン = プレスした軽銀の金具 */
 .miracle-button {
   width: 100%;
   padding: 8px;
-  border: none;
-  border-radius: 4px;
+  border-radius: 2px;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+  letter-spacing: 0.14em;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .miracle-button:not(:disabled) {
-  background: #673AB7;
-  color: white;
+  background: linear-gradient(180deg, #f6f8f9, #d9dee2);
+  border: 1px solid;
+  border-color: #ffffff #7f868d #7f868d #f0f2f4;
+  color: #2b3036;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .miracle-button:not(:disabled):hover {
-  background: #512DA8;
+  background: linear-gradient(180deg, #eaeef0, #cbd1d6);
 }
 
 .miracle-button:disabled {
-  background: #ddd;
+  background: #dfe2e5;
+  border: 1px solid #c3c8cd;
+  color: #868d94;
   cursor: not-allowed;
 }
 
