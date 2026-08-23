@@ -116,6 +116,10 @@ function unlockVobDebugFeatures() {
 
 function prepareApocalypseDebugState() {
   unlockVobDebugFeatures();
+  // 実プレイでは黄金像の解放条件に村特性「異端」が必要なため、デバッグ状態にも付与する。
+  // これがないと、黙示録中に本来は発生しない異端審問が毎月起こり続ける。
+  if (!Array.isArray(theVillage.villageTraits)) theVillage.villageTraits = [];
+  if (!theVillage.villageTraits.includes("異端")) theVillage.villageTraits.push("異端");
   theVillage.mana = APOCALYPSE_DEBUG_RESOURCE_AMOUNT;
   theVillage.divineMight = Math.max(Number(theVillage.divineMight) || 0, APOCALYPSE_DEBUG_DIVINE_MIGHT);
   theVillage.building = Math.max(Number(theVillage.building) || 0, APOCALYPSE_DEBUG_VILLAGE_SCALE);
@@ -168,7 +172,7 @@ function runDebugAction() {
   if (command === "APO") {
     const { addedVillagerCount, builtCount } = prepareApocalypseDebugState();
     const builtText = builtCount > 0 ? `。黄金像を除く全建築を上限数まで建設しました（計${builtCount}棟）` : "";
-    theVillage.log(`【デバッグ】APO準備を完了しました。資源と魔素を10000にし、全秘宝を入手、村人を15人まで補充（追加${addedVillagerCount}人）、神威を${APOCALYPSE_DEBUG_DIVINE_MIGHT}にして奇跡を全解放、規模を${APOCALYPSE_DEBUG_VILLAGE_SCALE}にして建築の解放フラグと設置上限を最大にしました${builtText}`);
+    theVillage.log(`【デバッグ】APO準備を完了しました。資源と魔素を10000にし、全秘宝を入手、村特性「異端」を付与、村人を15人まで補充（追加${addedVillagerCount}人）、神威を${APOCALYPSE_DEBUG_DIVINE_MIGHT}にして奇跡を全解放、規模を${APOCALYPSE_DEBUG_VILLAGE_SCALE}にして建築の解放フラグと設置上限を最大にしました${builtText}`);
     updateUI(theVillage);
     return;
   }
