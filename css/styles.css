@@ -2477,7 +2477,8 @@ section h2 {
 
 .miracle-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  /* 情報量が増えたので、幅を広げた分は列数ではなく1枚あたりの幅へ回す。 */
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
   gap: 15px;
   margin-top: 10px;
 }
