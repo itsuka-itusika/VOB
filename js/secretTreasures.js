@@ -657,7 +657,7 @@ function renderTargetSelect(village, definition, container) {
         option.textContent = getTargetOptionLabel(person, village);
         select.appendChild(option);
       });
-      container.querySelector(".secret-treasure-description")?.before(label);
+      container.appendChild(label);
     });
     return;
   }
@@ -672,7 +672,80 @@ function renderTargetSelect(village, definition, container) {
     option.textContent = `${person.name}（肉体${person.bodyAge}歳 / 精神${person.spiritAge}歳）`;
     select.appendChild(option);
   });
-  container.querySelector(".secret-treasure-description")?.before(label);
+  container.appendChild(label);
+}
+
+// カード一覧で対象選択中の秘宝。定義idまたはラベルをキーにする。
+let selectedTreasureKey = null;
+
+function getSecretTreasureGroupKey(entry) {
+  const definition = getSecretTreasureDefinition(entry);
+  return definition ? definition.id : getSecretTreasureLabel(entry);
+}
+
+/** 同じ秘宝をまとめ、代表エントリと所持数、先頭の所持位置を返す。 */
+function groupSecretTreasures(secretTreasures) {
+  const groups = new Map();
+  secretTreasures.forEach((entry, index) => {
+    const key = getSecretTreasureGroupKey(entry);
+    if (!groups.has(key)) {
+      groups.set(key, { key, entry, index, count: 0 });
+    }
+    groups.get(key).count++;
+  });
+  return [...groups.values()];
+}
+
+function createSecretTreasureItem(group, village) {
+  const definition = getSecretTreasureDefinition(group.entry);
+  const needsTarget = !!definition?.target;
+  const isActive = group.key === selectedTreasureKey;
+  const usable = isSecretTreasureUsable(village, definition);
+  const reason = getSecretTreasureBlockedReason(village, definition);
+  const sellPrice = Number(definition?.sellPrice) || 0;
+
+  const div = document.createElement("div");
+  div.className = `secret-treasure-item${isActive ? " active" : ""}`;
+  div.innerHTML = `
+    <div class="secret-treasure-item-header">
+      <h4>${getSecretTreasureLabel(group.entry)}</h4>
+      ${group.count > 1 ? `<span class="secret-treasure-count">所持数: ${group.count}</span>` : ""}
+    </div>
+    <div class="secret-treasure-desc">${definition ? definition.desc : "この秘宝はまだ利用効果が定義されていません。"}</div>
+    <div class="secret-treasure-price">売却価格: 資金${sellPrice}</div>
+    ${reason ? `<div class="secret-treasure-reason">使用不可: ${reason}</div>` : ""}
+  `;
+
+  if (isActive && needsTarget && usable) {
+    renderTargetSelect(village, definition, div);
+  }
+
+  const actions = document.createElement("div");
+  actions.className = "secret-treasure-actions";
+
+  const useButton = document.createElement("button");
+  useButton.type = "button";
+  useButton.disabled = !usable;
+  if (needsTarget && !isActive) {
+    useButton.textContent = "対象選択";
+    useButton.onclick = () => {
+      selectedTreasureKey = group.key;
+      renderSecretTreasureModal(village);
+    };
+  } else {
+    useButton.textContent = "使う";
+    useButton.onclick = () => useSecretTreasureAt(village, group.index);
+  }
+  actions.appendChild(useButton);
+
+  const sellButton = document.createElement("button");
+  sellButton.type = "button";
+  sellButton.textContent = "売る";
+  sellButton.onclick = () => sellSecretTreasureAt(village, group.index);
+  actions.appendChild(sellButton);
+
+  div.appendChild(actions);
+  return div;
 }
 
 function renderSecretTreasureModal(village) {
@@ -685,37 +758,11 @@ function renderSecretTreasureModal(village) {
     return;
   }
 
-  content.innerHTML = `
-    <label class="secret-treasure-select-label">
-      <span>秘宝を選択:</span>
-      <select id="secretTreasureSelect"></select>
-    </label>
-    <div id="secretTreasureDescription" class="secret-treasure-description"></div>
-  `;
-
-  const select = content.querySelector("#secretTreasureSelect");
-  secretTreasures.forEach((entry, index) => {
-    const definition = getSecretTreasureDefinition(entry);
-    const option = document.createElement("option");
-    option.value = String(index);
-    option.textContent = getSecretTreasureLabel(entry);
-    select.appendChild(option);
+  content.innerHTML = '<div class="secret-treasure-grid"></div>';
+  const grid = content.querySelector(".secret-treasure-grid");
+  groupSecretTreasures(secretTreasures).forEach(group => {
+    grid.appendChild(createSecretTreasureItem(group, village));
   });
-
-  const updateDescription = () => {
-    const definition = getSecretTreasureDefinition(secretTreasures[Number(select.value)]);
-    const description = content.querySelector("#secretTreasureDescription");
-    renderTargetSelect(village, definition, content);
-    if (description) {
-      const reason = getSecretTreasureBlockedReason(village, definition);
-      const sellPrice = Number(definition?.sellPrice) || 0;
-      description.textContent = definition
-        ? `${definition.desc} 売却価格: 資金${sellPrice}。${reason ? ` 使用不可: ${reason}` : ""}`
-        : "この秘宝はまだ利用効果が定義されていません。";
-    }
-  };
-  select.addEventListener("change", updateDescription);
-  updateDescription();
 }
 
 export function openSecretTreasureModal(village) {
@@ -741,11 +788,8 @@ export function closeSecretTreasureModal() {
   if (modal) modal.style.display = "none";
 }
 
-export function useSelectedSecretTreasure(village) {
-  const select = document.getElementById("secretTreasureSelect");
-  if (!select) return;
+function useSecretTreasureAt(village, index) {
   const secretTreasures = ensureSecretTreasures(village);
-  const index = Number(select.value);
   const definition = getSecretTreasureDefinition(secretTreasures[index]);
   if (!isSecretTreasureUsable(village, definition)) {
     village.log(`【秘宝】${getSecretTreasureBlockedReason(village, definition)}`);
@@ -784,11 +828,8 @@ export function useSelectedSecretTreasure(village) {
   updateUI(village);
 }
 
-export function sellSelectedSecretTreasure(village) {
-  const select = document.getElementById("secretTreasureSelect");
-  if (!select) return;
+function sellSecretTreasureAt(village, index) {
   const secretTreasures = ensureSecretTreasures(village);
-  const index = Number(select.value);
   const definition = getSecretTreasureDefinition(secretTreasures[index]);
   if (!definition) {
     village.log("【秘宝】売却できない秘宝です");

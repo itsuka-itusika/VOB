@@ -1846,25 +1846,71 @@ section h2 {
   padding: 12px 0;
   line-height: 1.8;
 }
-.secret-treasure-select-label,
 .secret-treasure-target-label {
   display: grid;
   gap: 6px;
+  margin-top: 4px;
 }
-.secret-treasure-select-label select,
 .secret-treasure-target-label select {
   width: 100%;
   max-width: 360px;
 }
-.secret-treasure-target-label {
-  margin-top: 10px;
+.secret-treasure-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
 }
-.secret-treasure-description {
-  margin-top: 12px;
-  padding: 10px;
-  background: #f5f5f5;
+.secret-treasure-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  background: #fafafa;
+  border: 1px solid #ddd;
   border-radius: 4px;
+}
+.secret-treasure-item.active {
+  background: #fff;
+  border-color: #888;
+}
+.secret-treasure-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.secret-treasure-item-header h4 {
+  margin: 0;
+}
+.secret-treasure-count {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  background: #eee;
+  border-radius: 3px;
   color: #555;
+  font-size: 0.8rem;
+}
+.secret-treasure-desc {
+  flex: 1;
+  color: #555;
+  font-size: 0.92rem;
+}
+.secret-treasure-price {
+  color: #777;
+  font-size: 0.88rem;
+}
+.secret-treasure-reason {
+  color: #c62828;
+  font-size: 0.88rem;
+}
+.secret-treasure-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.secret-treasure-actions button {
+  flex: 1;
+  padding: 6px;
 }
 
 .event-modal-overlay {

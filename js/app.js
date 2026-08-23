@@ -22,7 +22,7 @@ import {
   saveVillageToJsonFile,
   saveVillageToLocalStorage
 } from "./saveLoad.js";
-import { closeDryadFruitModal, closeSecretTreasureModal, openSecretTreasureModal, SECRET_TREASURES, sellSelectedSecretTreasure, useSelectedSecretTreasure } from "./secretTreasures.js";
+import { closeDryadFruitModal, closeSecretTreasureModal, openSecretTreasureModal, SECRET_TREASURES } from "./secretTreasures.js";
 import { RAID_MODULES } from "./data/raidData.js";
 import { updateUI } from "./ui.js";
 import { getCaptives } from "./captives.js";
@@ -381,8 +381,6 @@ function bindGlobalHandlers() {
     openHistoryModal: () => openHistoryModal(theVillage),
     closeHistoryModal,
     closePersonalHistoryModal,
-    useSelectedSecretTreasure: () => useSelectedSecretTreasure(theVillage),
-    sellSelectedSecretTreasure: () => sellSelectedSecretTreasure(theVillage),
     onAutoAssignJobs: () => {
       autoAssignJobs(theVillage);
       updateUI(theVillage);
