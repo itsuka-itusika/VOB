@@ -331,9 +331,9 @@ export const BUILDINGS = [
   {
     id: BACCHUS_GOLDEN_STATUE_BUILDING_ID,
     name: "バッカスの黄金像",
-    materials: 500,
+    materials: 300,
     funds: 1500,
-    tech: 1000,
+    tech: 300,
     desc: "黄金像建立イベントで解放。交換の奇跡と交換の奇跡・強の消費魔素を半分にする。建設すると次月から七つの災厄が始まる。建設後は破壊可能。",
     isUnlocked: (village) => !!village?.buildingFlags?.[BACCHUS_GOLDEN_STATUE_UNLOCK_FLAG],
     confirmWith: confirmBacchusGoldenStatueBuild,
