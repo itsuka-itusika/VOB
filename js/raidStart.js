@@ -370,6 +370,7 @@ function createRaidEnemy(village, raiderType, existingNames, enemyGroup = null) 
   e.raidTargeting = raiderType.raidTargeting || "frontFirst";
   e.raidAttackType = raiderType.raidAttackType || "";
   e.uiSexDisplay = raiderType.uiSexDisplay || "";
+  e.uiAgeDisplay = raiderType.uiAgeDisplay || "";
   e.exchangeImmune = !!raiderType.exchangeImmune;
   e.uncapturable = !!raiderType.uncapturable;
   const speechType = getRaiderSpeechType(e);

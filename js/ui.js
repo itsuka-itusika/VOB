@@ -825,14 +825,14 @@ function appendIdentityCells(row, person) {
   appendDictionaryCell(row, [person.race || "人間"], { category: "race" });
   // bodySex/bodyAge と spiritSex/spiritAge は別仕様。表示時も統合しない。
   appendTextCell(row, person.uiSexDisplay || person.bodySex);
-  appendTextCell(row, person.bodyAge);
+  appendTextCell(row, person.uiAgeDisplay || person.bodyAge);
   const spiritSexCell = appendTextCell(row, person.uiSexDisplay || person.spiritSex, "spirit-column");
   if (!person.uiSexDisplay && person.spiritSex === "男") {
     spiritSexCell.classList.add("male-basic");
   } else if (!person.uiSexDisplay && person.spiritSex === "女") {
     spiritSexCell.classList.add("female-basic");
   }
-  appendTextCell(row, person.spiritAge, "spirit-column");
+  appendTextCell(row, person.uiAgeDisplay || person.spiritAge, "spirit-column");
   appendNumberCell(row, person.hp);
   appendNumberCell(row, person.mp);
   appendTextCell(row, Math.floor(Number(person.happiness) || 0), "happiness-cell");

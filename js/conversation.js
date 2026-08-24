@@ -97,7 +97,7 @@ function openCharacterLineModal(person, { scene, key = "" }) {
   const characterInfo = document.getElementById("characterInfo");
   if (characterInfo) {
     characterInfo.innerHTML = `
-      <div class="character-name">${person.name}｜${person.race}｜${person.uiSexDisplay || person.bodySex}｜${person.bodyAge}歳</div>
+      <div class="character-name">${person.name}｜${person.race}｜${person.uiSexDisplay || person.bodySex}｜${person.uiAgeDisplay || `${person.bodyAge}歳`}</div>
     `;
   }
 
@@ -186,7 +186,7 @@ export function openConversationModal(character) {
   const characterInfo = document.getElementById("characterInfo");
   if (characterInfo) {
     characterInfo.innerHTML = `
-      <div class="character-name">${character.name}｜${character.race}｜${character.uiSexDisplay || character.bodySex}｜${character.bodyAge}歳</div>
+      <div class="character-name">${character.name}｜${character.race}｜${character.uiSexDisplay || character.bodySex}｜${character.uiAgeDisplay || `${character.bodyAge}歳`}</div>
     `;
   }
 
