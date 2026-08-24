@@ -1163,16 +1163,17 @@ function finalizeRaidPartSuccess(village) {
 }
 
 /**
- * ただ一人の前衛が迎撃で敵を全滅させたとき、その村人へ「一騎当千」を贈る。
- * 前衛の行動が確定している、襲撃者を片付ける前に呼ぶ。
+ * ただ一人の前衛が敵を全滅させたとき、その村人へ「一騎当千」を贈る。
+ * 迎撃でも籠城でもよい。前衛の行動が確定している、襲撃者を片付ける前に呼ぶ。
  */
 function grantSoloDefenderTitle(village) {
   const frontliners = getActiveRaidFrontliners(village);
   if (frontliners.length !== 1) return;
   const hero = frontliners[0];
-  if (hero.action !== ACTION_DEFEND) return;
+  if (hero.action !== ACTION_DEFEND && hero.action !== ACTION_FORTIFY) return;
   if (!grantTitle(hero, "soloDefender")) return;
-  village.log(`【称号】${hero.name}は単身で迎え撃ち、「一騎当千」を得た`);
+  const stance = hero.action === ACTION_FORTIFY ? "単身で守り抜き" : "単身で迎え撃ち";
+  village.log(`【称号】${hero.name}は${stance}、「一騎当千」を得た`);
 }
 
 /** 襲撃終了処理 */
