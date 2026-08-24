@@ -2479,6 +2479,39 @@ body.mobile-mode .random-event-image {
     url("data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20width='220'%20height='220'><filter%20id='w'><feTurbulence%20type='fractalNoise'%20baseFrequency='0.006%200.25'%20numOctaves='3'%20stitchTiles='stitch'/><feColorMatrix%20type='saturate'%20values='0'/></filter><rect%20width='220'%20height='220'%20filter='url(%23w)'%20opacity='0.24'/></svg>"),
     linear-gradient(180deg, #f6e9d2 0%, #eddcb8 55%, #e4d0a8 100%);
 }
+/* 黄金像だけは、木の板ではなく打ち出した黄金の板に載せる。 */
+.building-item.is-golden,
+.building-item.is-golden:hover {
+  background-image:
+    url("data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20width='200'%20height='200'><filter%20id='g'><feTurbulence%20type='fractalNoise'%20baseFrequency='0.9'%20numOctaves='3'%20stitchTiles='stitch'/><feColorMatrix%20type='saturate'%20values='0'/></filter><rect%20width='200'%20height='200'%20filter='url(%23g)'%20opacity='0.16'/></svg>"),
+    linear-gradient(165deg, #fbeec2 0%, #eed68d 45%, #dcbb62 78%, #f4e4ad 100%);
+  background-size: 200px 200px, auto;
+  border-color: #fffbe8 #9a7526 #86651f #f8eec6;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 253, 240, 0.85),
+    inset 0 -2px 6px rgba(112, 82, 20, 0.24),
+    0 3px 10px rgba(92, 68, 16, 0.30);
+  color: #4a3208;
+}
+.building-item.is-golden .building-header h4 {
+  color: #432d05;
+  text-shadow: 0 1px 0 rgba(255, 252, 232, 0.7);
+}
+.building-item.is-golden .building-desc,
+.building-item.is-golden .building-cost,
+.building-item.is-golden .building-status,
+.building-item.is-golden .building-repair-cost {
+  color: #5b4210;
+  text-shadow: 0 1px 0 rgba(255, 252, 232, 0.55);
+}
+.building-item.is-golden .building-reason {
+  color: #8f2318;
+  text-shadow: 0 1px 0 rgba(255, 252, 232, 0.5);
+}
+.building-item.is-golden .building-cost-original {
+  color: #8a7238;
+}
+
 .building-header {
   display: flex;
   justify-content: space-between;
