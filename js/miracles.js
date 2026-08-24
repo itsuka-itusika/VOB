@@ -253,6 +253,23 @@ function getMiracleTargetCount(mid) {
   return 0;
 }
 
+// まとめて行使できる奇跡。1人ぶんの効果と費用を、選んだ人数へそのまま掛ける。
+const MULTI_TARGET_MIRACLE_IDS = new Set(["6", "16", "11"]);
+
+/** 複数選択のチェックが入っているか。対象を1人しか取らない奇跡では常に false。 */
+function isMiracleMultiMode(mid) {
+  if (!MULTI_TARGET_MIRACLE_IDS.has(mid)) return false;
+  return Boolean(document.getElementById("miracleMultiToggle")?.checked);
+}
+
+/** 複数選択で選ばれている名前。単数モードなら空配列。 */
+function getMiracleMultiTargetNames(mid) {
+  if (!isMiracleMultiMode(mid)) return [];
+  const list = document.getElementById("miracleMultiList");
+  if (!list) return [];
+  return [...list.querySelectorAll("input[type=\"checkbox\"]:checked")].map(box => box.value);
+}
+
 // 癒し・酒杯が取り除くデバフ特性。選択リストの表示と効果処理で同じ並びを使う。
 const HEAL_MIRACLE_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "疫病", "産褥", "凍え"];
 const GOBLET_MIRACLE_MIND_TRAITS = ["心労", "抑鬱", DISAPPOINTMENT_TRAIT, DESPAIR_TRAIT];
@@ -395,6 +412,7 @@ function areMiracleTargetsReady(mid) {
   if (mid === "18") {
     return Boolean(document.getElementById("riotRaidTable")?.value);
   }
+  if (isMiracleMultiMode(mid)) return getMiracleMultiTargetNames(mid).length > 0;
   const count = getMiracleTargetCount(mid);
   if (count === 0) return true;
   const targetA = document.getElementById("targetA");
@@ -466,6 +484,13 @@ function updateMiraclePreview(mid, village, preview) {
     return;
   }
 
+  // 複数選択では一覧側に各自の状態が出ているため、ここは人数だけを添える。
+  if (isMiracleMultiMode(mid)) {
+    const chosen = getMiracleMultiTargetNames(mid).length;
+    preview.textContent = chosen === 0 ? "対象を選択してください。" : `${chosen}人を選択中。`;
+    return;
+  }
+
   const personA = findMiracleTargetByName(document.getElementById("targetA")?.value, village);
 
   if (targetCount === 2) {
@@ -494,10 +519,16 @@ function updateMiraclePreview(mid, village, preview) {
 }
 
 function updateMiracleActionButton(mid, button, village, costInfo, preview) {
-  const reason = getMiracleBlockReason(costInfo, village, mid);
+  const chosenCount = getMiracleMultiTargetNames(mid).length;
+  const totalCost = costInfo.mana * Math.max(1, chosenCount);
+  const multiCostInfo = chosenCount > 1 ? { ...costInfo, mana: totalCost } : costInfo;
+  const reason = getMiracleBlockReason(multiCostInfo, village, mid);
   const targetsReady = areMiracleTargetsReady(mid);
   button.disabled = Boolean(reason) || !targetsReady;
-  button.textContent = reason || (targetsReady ? "行使" : "対象を選んでください");
+  button.textContent = reason ||
+    (targetsReady
+      ? (chosenCount > 1 ? `${chosenCount}人へ行使（魔素${totalCost}）` : "行使")
+      : "対象を選んでください");
   updateMiraclePreview(mid, village, preview);
 }
 
@@ -605,18 +636,75 @@ function createMiracleTargetControls(miracle, village, button, costInfo) {
     label.appendChild(span);
     label.appendChild(select);
     controls.appendChild(label);
+    return label;
   };
 
-  addControl(targetCount === 2 ? "対象A" : "対象", targetA);
+  const singleRow = addControl(targetCount === 2 ? "対象A" : "対象", targetA);
   if (targetB) addControl("対象B", targetB);
-  controls.appendChild(preview);
+
+  const refresh = () => updateMiracleActionButton(miracle.id, button, village, costInfo, preview);
+
+  if (MULTI_TARGET_MIRACLE_IDS.has(miracle.id)) {
+    const multiList = createMiracleMultiTargetList(targetA, refresh);
+    multiList.hidden = true;
+    controls.appendChild(multiList);
+    controls.appendChild(createMiracleMultiToggleRow(preview, singleRow, multiList, refresh));
+  } else {
+    controls.appendChild(preview);
+  }
 
   [targetA, targetB].filter(Boolean).forEach(select => {
-    select.addEventListener("change", () => updateMiracleActionButton(miracle.id, button, village, costInfo, preview));
+    select.addEventListener("change", refresh);
   });
 
-  updateMiracleActionButton(miracle.id, button, village, costInfo, preview);
+  refresh();
   return controls;
+}
+
+/** 単数用の select と同じ候補・同じ表記で、チェックボックスの一覧を作る。 */
+function createMiracleMultiTargetList(select, onChange) {
+  const list = document.createElement("div");
+  list.className = "miracle-multi-list";
+  list.id = "miracleMultiList";
+
+  [...select.options].filter(option => option.value).forEach(option => {
+    const item = document.createElement("label");
+    item.className = "miracle-multi-item";
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.value = option.value;
+    box.addEventListener("change", onChange);
+    const text = document.createElement("span");
+    text.textContent = option.textContent;
+    item.append(box, text);
+    list.appendChild(item);
+  });
+
+  return list;
+}
+
+/** 「対象を選択してください」の右に置く複数選択の切り替え。 */
+function createMiracleMultiToggleRow(preview, singleRow, multiList, onChange) {
+  const row = document.createElement("div");
+  row.className = "miracle-multi-row";
+
+  const toggleLabel = document.createElement("label");
+  toggleLabel.className = "miracle-multi-toggle";
+  const toggle = document.createElement("input");
+  toggle.type = "checkbox";
+  toggle.id = "miracleMultiToggle";
+  const toggleText = document.createElement("span");
+  toggleText.textContent = "複数選択";
+  toggleLabel.append(toggle, toggleText);
+
+  toggle.addEventListener("change", () => {
+    singleRow.hidden = toggle.checked;
+    multiList.hidden = !toggle.checked;
+    onChange();
+  });
+
+  row.append(preview, toggleLabel);
+  return row;
 }
 
 function setSelectedMiracle(id, village) {
@@ -786,6 +874,60 @@ function isNormalExchangeCandidate(person, village) {
   return village.villagers.includes(person) || getCaptives(village).includes(person);
 }
 
+// まとめて行使したときの、効果と結び文。1人ぶんの処理をそのまま人数分呼ぶ。
+const MULTI_TARGET_MIRACLE_HANDLERS = {
+  "6": {
+    name: "癒しの奇跡",
+    apply: (person, village) => healMiracle(person, village, { showModal: false }),
+    message: names => `${names}の傷と身体の疲れが癒されました。`
+  },
+  "16": {
+    name: "酒杯の奇跡",
+    apply: (person, village) => gobletMiracle(person, village, { showModal: false }),
+    message: names => `${names}の心に甘い酔いが満ちました。`
+  },
+  "11": {
+    name: "出立の奇跡",
+    apply: (person, village) => departureMiracle(person, village, { showModal: false }),
+    message: names => `${names}は村を去りました。`
+  }
+};
+
+function isMiracleMultiTargetValid(mid, person, village) {
+  if (!person || isSaltPillar(person)) return false;
+  if (mid === "11") return village.villagers.includes(person);
+  return village.villagers.includes(person) || getCaptives(village).includes(person);
+}
+
+/** 結び文に出す名前。多いときは頭から並べ、残りは人数で添える。 */
+function formatMultiTargetNames(people) {
+  const shown = people.slice(0, MIRACLE_RESULT_MAX_SPEAKERS).map(person => person.name).join("、");
+  const rest = people.length - Math.min(people.length, MIRACLE_RESULT_MAX_SPEAKERS);
+  return rest > 0 ? `${shown}ほか${rest}人` : shown;
+}
+
+/** 選ばれた全員へまとめて行使する。1人でも対象外がいれば行使せず魔素を戻す。 */
+function applyMultiTargetMiracle(village, mid, people, cost) {
+  const handler = MULTI_TARGET_MIRACLE_HANDLERS[mid];
+  if (!handler) return false;
+
+  if (people.length === 0 || people.some(person => !isMiracleMultiTargetValid(mid, person, village))) {
+    village.log(`【${handler.name}】対象にできない相手が含まれています`);
+    refundMiracleMana(village, cost);
+    return false;
+  }
+
+  people.forEach(person => handler.apply(person, village));
+  showMiracleResultModal(
+    village,
+    handler.name,
+    handler.message(formatMultiTargetNames(people)),
+    people,
+    { noteOmitted: true }
+  );
+  return true;
+}
+
 /**
  * 奇跡実行
  */
@@ -802,6 +944,11 @@ export function performMiracle(village) {
 
   // コスト計算
   let cost = getMiracleCostInfo(info, village).mana;
+  // まとめて行使するときは、1人ぶんの費用を人数分そのまま掛ける。
+  const multiTargets = getMiracleMultiTargetNames(mid)
+    .map(name => findMiracleTargetByName(name, village))
+    .filter(Boolean);
+  if (multiTargets.length > 0) cost *= multiTargets.length;
   let vc = village.villagers.length;
   if (info.cost===-1) {
     // 宴会(人数×15)
@@ -941,6 +1088,10 @@ export function performMiracle(village) {
           forceMarriage(vA,vB,village);
           break;
         case "6": // 癒し(1人回復)
+          if (multiTargets.length > 0) {
+            if (!applyMultiTargetMiracle(village, mid, multiTargets, cost)) return;
+            break;
+          }
           if (!vA || (!village.villagers.includes(vA) && !getCaptives(village).includes(vA))) {
             village.log("【癒し】対象1人を選択");
             refundMiracleMana(village, cost);
@@ -971,6 +1122,10 @@ export function performMiracle(village) {
           }
           break;
         case "16": // 酒杯(1人回復)
+          if (multiTargets.length > 0) {
+            if (!applyMultiTargetMiracle(village, mid, multiTargets, cost)) return;
+            break;
+          }
           if (!vA || (!village.villagers.includes(vA) && !getCaptives(village).includes(vA))) {
             village.log("【酒杯】対象1人を選択");
             refundMiracleMana(village, cost);
@@ -1016,6 +1171,10 @@ export function performMiracle(village) {
           travelerMiracle(village);
           break;
         case "11": // 出立
+          if (multiTargets.length > 0) {
+            if (!applyMultiTargetMiracle(village, mid, multiTargets, cost)) return;
+            break;
+          }
           if (!vA || !village.villagers.includes(vA)) {
             village.log("【出立の奇跡】対象1人を選択");
             refundMiracleMana(village, cost);
@@ -1098,7 +1257,7 @@ function forceMarriage(a,b,v) {
 }
 
 /** 癒し: 負傷など回復 */
-function healMiracle(p,v) {
+function healMiracle(p,v,{ showModal = true } = {}) {
   let recoveredTraits = [];
 
   HEAL_MIRACLE_BODY_TRAITS.forEach(trait => {
@@ -1118,11 +1277,11 @@ function healMiracle(p,v) {
   let recoveryMsg = recoveredTraits.length > 0 ?
     `${recoveredTraits.join(",")}を回復,` : "";
   v.log(`【癒しの奇跡】${p.name}${recoveryMsg}体力+50`);
-  showMiracleResultModal(v, "癒しの奇跡", `${p.name}の傷と身体の疲れが癒されました。`, [p]);
+  if (showModal) showMiracleResultModal(v, "癒しの奇跡", `${p.name}の傷と身体の疲れが癒されました。`, [p]);
 }
 
 /** 酒杯: 心を満たし、当月だけ酩酊を付与 */
-function gobletMiracle(p,v) {
+function gobletMiracle(p,v,{ showModal = true } = {}) {
   const recoveredTraits = [];
 
   GOBLET_MIRACLE_MIND_TRAITS.forEach(trait => {
@@ -1147,7 +1306,7 @@ function gobletMiracle(p,v) {
   const recoveryMsg = recoveredTraits.length > 0 ?
     `${recoveredTraits.join(",")}を回復,` : "";
   v.log(`【酒杯の奇跡】${p.name}${recoveryMsg}メンタル+${mentalRecovery},幸福+${happinessRecovery},酩酊付与`);
-  showMiracleResultModal(v, "酒杯の奇跡", `${p.name}の心に甘い酔いが満ちました。`, [p]);
+  if (showModal) showMiracleResultModal(v, "酒杯の奇跡", `${p.name}の心に甘い酔いが満ちました。`, [p]);
 }
 
 /** 戦神(戦神の加護) */
@@ -1253,7 +1412,7 @@ function marketMiracle(v) {
 }
 
 /** 出立の奇跡(対象を離脱→幸福度分魔素取得) */
-function departureMiracle(p,v) {
+function departureMiracle(p,v,{ showModal = true } = {}) {
   let bonus = p.happiness;
   v.mana=clampValue(v.mana+bonus,0,99999);
   recordVillagerLeaveHistory(v, p, { source: "出立の奇跡" });
@@ -1263,7 +1422,7 @@ function departureMiracle(p,v) {
     clearRelationshipsForDepartedVillager(v, p);
     v.villagers.splice(idx,1);
   }
-  showMiracleResultModal(v, "出立の奇跡", `${p.name}は村を去りました。`, [p]);
+  if (showModal) showMiracleResultModal(v, "出立の奇跡", `${p.name}は村を去りました。`, [p]);
 }
 
 function getChildlikeMiracleLine(person) {
@@ -1442,7 +1601,7 @@ function getDepartureMiracleLine(person) {
 }
 
 // 反応を並べる人数の上限。村人全員を対象にする奇跡でも、この人数までを代表として表示する。
-const MIRACLE_RESULT_MAX_SPEAKERS = 3;
+const MIRACLE_RESULT_MAX_SPEAKERS = 4;
 
 // 代表を選ぶ際、同じセリフになる相手は後回しにしてセリフの重複を避ける。
 function pickMiracleResultSpeakers(targets, miracleName) {
@@ -1477,10 +1636,12 @@ export function showMiracleResultModal(village, miracleName, message, people = [
       <p><strong>${person.name}</strong>: ${line}</p>
     </div>
   `).join("");
+  const omitted = options.noteOmitted ? Math.max(0, targets.length - entries.length) : 0;
   modal.innerHTML = `
     <h2>${miracleName}</h2>
     <p>${message}</p>
     ${rows}
+    ${omitted > 0 ? `<p>ほか${omitted}人は省略しました。</p>` : ""}
     <button type="button" data-close-miracle-result-modal>閉じる</button>
   `;
   document.body.appendChild(overlay);

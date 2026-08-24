@@ -2775,6 +2775,58 @@ body.mobile-mode .random-event-image {
   min-width: 0;
 }
 
+/* display 指定が hidden 属性の既定値に勝つため、非表示を明示する。 */
+.miracle-target[hidden],
+.miracle-multi-list[hidden] {
+  display: none;
+}
+
+/* 「対象を選択してください」の右に複数選択の切り替えを並べる */
+.miracle-multi-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.miracle-multi-row .miracle-preview {
+  flex: 1;
+  min-width: 0;
+}
+
+.miracle-multi-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  padding-top: 5px;
+  font-size: 0.86em;
+  color: #3d444b;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.miracle-multi-list {
+  display: grid;
+  gap: 4px;
+  max-height: 190px;
+  overflow-y: auto;
+  margin: 4px 0 8px;
+  padding: 8px;
+  background: #fdfdfe;
+  border: 1px solid #a0a6ad;
+  border-radius: 2px;
+  box-shadow: inset 0 1px 3px rgba(55, 62, 70, 0.14);
+}
+
+.miracle-multi-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9em;
+  cursor: pointer;
+}
+
 .miracle-preview {
   color: #444;
   font-size: 0.86em;
