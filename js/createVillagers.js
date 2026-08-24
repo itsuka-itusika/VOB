@@ -1080,6 +1080,17 @@ function getRareVisitorWeight(entry, village = null) {
   return entry.weight;
 }
 
+/**
+ * 稀人の奇跡などで、その種族を名指しで呼べるか。
+ * 同族制限を持つ種族は、村や訪問者に同族がいる間は呼べない。
+ * RARE_VISITOR_TYPES の外にいる種族（エクイナ・サテュロス・メナド）は制限なし。
+ */
+export function isRareVisitorTypeAvailable(type, village = null) {
+  const entry = RARE_VISITOR_TYPES.find(item => item.type === type);
+  if (!entry) return true;
+  return getRareVisitorWeight(entry, village) > 0;
+}
+
 function buildRareVisitorType(entry) {
   return {
     ...entry.visitor,

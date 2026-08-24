@@ -5,7 +5,7 @@ import { applyPortraitToElement, getPortraitSpriteHtml } from "./data/portraitAt
 import { addRelationship, removeRelationship, checkHasRelationship, hasLoverRelationship, getRelationshipTargetName, clearRelationshipsForDepartedVillager, addSpouseRelationships, raiseMutualFriendshipTo } from "./relationships.js";
 import { updateUI } from "./ui.js";  // 実行後にUIを更新する
 import { canExchangeBody, doExchange } from "./exchange.js";
-import { createRandomVisitor, createRandomVisitorOfType, determineSpeechType, EXCLUSIVE_BODY_TRAITS, EXCLUSIVE_MIND_TRAITS } from "./createVillagers.js";
+import { createRandomVisitor, createRandomVisitorOfType, determineSpeechType, isRareVisitorTypeAvailable, EXCLUSIVE_BODY_TRAITS, EXCLUSIVE_MIND_TRAITS } from "./createVillagers.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
@@ -1377,8 +1377,21 @@ function travelerMiracle(v) {
   showMiracleResultModal(v, "旅人の奇跡", message, [newV]);
 }
 
+// 稀人の奇跡が呼ぶ種族。どれも同じくらいの確率で来るよう、種族を名指しで等確率に選ぶ。
+const RARE_GUEST_MIRACLE_TYPES = [
+  "翼人",
+  "アルセイド",
+  "ネレイド",
+  "ドライアド",
+  "アラクニド",
+  "エクイナ",
+  "サテュロス",
+  "メナド"
+];
+
 function rareGuestMiracle(v) {
-  const types = ["レア種族", "エクイナ", "サテュロス", "メナド"];
+  // 呼べない種族（同族制限に掛かるもの）は外したうえで等確率に選ぶ。
+  const types = RARE_GUEST_MIRACLE_TYPES.filter(type => isRareVisitorTypeAvailable(type, v));
   const type = types[Math.floor(Math.random() * types.length)];
   const existingNames = [
     ...v.villagers.map(person => person.name),
