@@ -7,6 +7,17 @@ import {
   getPortraitAssetPathForCharacter
 } from "./portraitPaths.js";
 
+const SPECIAL_PORTRAIT_SHEET = {
+  url: "images/atlas/special-1.webp",
+  cols: 3,
+  rows: 1
+};
+const SPECIAL_PORTRAIT_MAP = {
+  "ALIGNMENT.png": { col: 0, row: 0 },
+  "WAR.png": { col: 1, row: 0 },
+  "WOLF_PUP.png": { col: 2, row: 0 }
+};
+
 
 function getFileName(path) {
   return String(path || "").replace(/\\/g, "/").split("/").pop() || DEFAULT_PORTRAIT_KEY;
@@ -21,6 +32,9 @@ function escapeHtmlAttribute(value) {
 }
 
 function getManifestSprite(key) {
+  const specialTile = SPECIAL_PORTRAIT_MAP[key];
+  if (specialTile) return { key, ...specialTile, ...SPECIAL_PORTRAIT_SHEET };
+
   const tile = PORTRAIT_ATLAS_MAP[key];
   const sheet = tile ? PORTRAIT_ATLAS_SHEETS[tile.sheet] : null;
   if (!tile || !sheet) return null;
