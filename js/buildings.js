@@ -170,9 +170,9 @@ export const BUILDINGS = [
   {
     id: "brewery",
     name: "醸造所",
-    materials: 50,
+    materials: 100,
     funds: 100,
-    tech: 300,
+    tech: 200,
     desc: "豊かな村で解放。酒造施設。「醸造」解放。規模+30",
     isUnlocked: (village) => isScaleAtLeast(village, 180),
     effect: standardBuildingEffect({ scale: 30, flag: "hasBrewery", log: "醸造所建設完了: 「醸造」解放、規模+30" })
@@ -182,7 +182,7 @@ export const BUILDINGS = [
     name: "錬金工房",
     materials: 50,
     funds: 100,
-    tech: 200,
+    tech: 250,
     desc: "豊かな村で解放。錬金施設。「錬金術」解放。規模+30",
     isUnlocked: (village) => isScaleAtLeast(village, 180),
     effect: standardBuildingEffect({ scale: 30, flag: "hasAlchemy", log: "錬金工房建設完了: 「錬金術」解放、規模+30" })
