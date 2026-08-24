@@ -72,7 +72,7 @@ export function getVillageScaleTitle(scale) {
 export function getVillageScaleProgressLabel(scale) {
   const current = Math.floor(normalizeScale(scale));
   const nextStage = VILLAGE_SCALE_STAGES[getVillageScaleStage(scale).index + 1];
-  return nextStage ? `${current}/${nextStage.threshold}` : `${current}`;
+  return nextStage ? `${current}/${nextStage.threshold}` : `${current}/max`;
 }
 
 export function applyVillageScaleArtClass(scale) {
