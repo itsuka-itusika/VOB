@@ -116,6 +116,18 @@ const SUPPLY_STAGE_MULTIPLIER = {
 };
 // 村全体へ効く職。同じ月に重ねても不足分を食い合うだけなので、2人目からは評価を薄める。
 const WHOLE_VILLAGE_JOBS = new Set(["警備", "神官", "シスター", "踊り子", "詩人", "バニー"]);
+// 同じ不足を埋める職は、薄めと枠を共有する。神官とシスターはどちらもメンタルを癒す。
+const WHOLE_VILLAGE_JOB_GROUPS = new Map([
+  ["神官", "メンタル回復"],
+  ["シスター", "メンタル回復"]
+]);
+// 村全体へ効く職に、同じ月へ何人まで就けるか。この人数ごとに1人ぶん増える。
+// 全体系職は村人全員ぶんの不足を足して評価するため、人数が増えるほど過大に見える。
+const WHOLE_VILLAGE_JOB_POPULATION_PER_SLOT = 9;
+
+function getWholeVillageJobGroup(job) {
+  return WHOLE_VILLAGE_JOB_GROUPS.get(job) || job;
+}
 
 function firstAvailable(candidates, table) {
   return candidates.find(item => table.includes(item)) || null;
@@ -180,6 +192,7 @@ function buildVillagePriorityContext(village) {
       materials: getSupplyStage(village.materials, materialMonthlyUnit)
     },
     supportAssignCounts: new Map(),
+    wholeVillageJobLimit: Math.max(1, Math.floor(population / WHOLE_VILLAGE_JOB_POPULATION_PER_SLOT)),
     recoverySeverity,
     avgHp,
     avgMp,
@@ -300,14 +313,18 @@ function scoreJob(person, job, context) {
     return total + (Number(amount) || 0) * getAxisWeight(axis, context);
   }, 0);
   if (!WHOLE_VILLAGE_JOBS.has(job)) return score;
-  const assigned = context?.supportAssignCounts?.get(job) || 0;
+  const group = getWholeVillageJobGroup(job);
+  const assigned = context?.supportAssignCounts?.get(group) || 0;
+  // 枠を使い切った全体系職は、これ以上増やしても戦力にならないので候補から外す。
+  if (assigned >= (context?.wholeVillageJobLimit ?? Number.POSITIVE_INFINITY)) return -Infinity;
   return score / (1 + assigned);
 }
 
 // 同じ月に全体系職へ何人就いたかを記録し、以降の評価を薄める。
 function recordSupportAssignment(context, job) {
   if (!context?.supportAssignCounts || !WHOLE_VILLAGE_JOBS.has(job)) return;
-  context.supportAssignCounts.set(job, (context.supportAssignCounts.get(job) || 0) + 1);
+  const group = getWholeVillageJobGroup(job);
+  context.supportAssignCounts.set(group, (context.supportAssignCounts.get(group) || 0) + 1);
 }
 
 function chooseBestJob(person, context) {
