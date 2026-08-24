@@ -391,7 +391,7 @@ export function unlockAllBuildings(village) {
   return builtCount;
 }
 
-function getBuildingNameById(buildingId) {
+export function getBuildingNameById(buildingId) {
   return BUILDINGS.find(building => building.id === buildingId)?.name || buildingId;
 }
 

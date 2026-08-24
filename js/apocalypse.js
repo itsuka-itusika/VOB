@@ -17,6 +17,7 @@ import {
   getActiveBuildingIds,
   recalculateBuildingDerivedState
 } from "./domain/buildingState.js";
+import { getBuildingNameById } from "./buildings.js";
 import { getRaidModuleById } from "./data/raidData.js";
 import { updateUI } from "./ui.js";
 import { getDivineMightLevel, refreshDivineMightLevelUnlock } from "./divineMight.js";
@@ -238,22 +239,36 @@ function applySecondCalamity(village) {
   });
 }
 
+/** 同じ建築が複数壊れたときは「貯蔵庫2基」とまとめて出す。 */
+function formatDamagedBuildingNames(names) {
+  const counts = new Map();
+  names.forEach(name => counts.set(name, (counts.get(name) || 0) + 1));
+  return [...counts.entries()]
+    .map(([name, count]) => (count > 1 ? `${name}${count}基` : name))
+    .join("・");
+}
+
 function applyThirdCalamity(village) {
   const candidates = getActiveBuildingIds(village).filter(id => id !== GOLDEN_STATUE_ID);
   const targets = chooseRandom(candidates, 2);
-  const damagedCount = targets.reduce((count, buildingId) => {
-    return count + (damageBuilding(village, buildingId) ? 1 : 0);
-  }, 0);
+  const damagedNames = targets.reduce((names, buildingId) => {
+    if (damageBuilding(village, buildingId)) names.push(getBuildingNameById(buildingId));
+    return names;
+  }, []);
+  const damagedCount = damagedNames.length;
+  const damagedLabel = formatDamagedBuildingNames(damagedNames);
   if (damagedCount > 0) {
     recalculateBuildingDerivedState(village);
     (village.villagers || []).forEach(person => refreshJobTable(person, village));
   }
-  recordStage(village, 3, "第三の角笛が吹かれた", `硫黄の火が村へ降り注ぎ、建築物${damagedCount}基が損壊した。`);
+  recordStage(village, 3, "第三の角笛が吹かれた", damagedCount > 0
+    ? `硫黄の火が村へ降り注ぎ、${damagedLabel}が損壊した。`
+    : "硫黄の火が村へ降り注いだが、損壊する有効な建築物はなかった。");
   queueApocalypseModal({
     title: "第三の角笛が吹かれた",
     message: "裂けた空から燃える硫黄が降り注ぎ、村の建物を焼いた。",
     effect: damagedCount > 0
-      ? `建築物${damagedCount}基が損壊しました。建築画面から修繕できます。`
+      ? `${damagedLabel}（${damagedCount}基）が損壊しました。建築画面から修繕できます。`
       : "損壊する有効な建築物はありませんでした。",
     image: stageImage(3)
   });
