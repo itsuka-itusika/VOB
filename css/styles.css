@@ -680,6 +680,26 @@ th, td {
   padding: 4px;
   text-align: center;
 }
+/* 一覧表は紙の上に置いた帳簿。地の指定がない列が下地を透かさないよう白で固める。 */
+#villagersTable,
+#visitorsTable,
+#captivesTable,
+#raidEnemiesTable {
+  background: #fff;
+}
+/* 見出しは、奇跡・秘宝モーダルと同じ軽銀のプレート。上から光が当たる面取りで表す。 */
+#villagersTable th,
+#visitorsTable th,
+#captivesTable th,
+#raidEnemiesTable th {
+  background: linear-gradient(180deg, #f6f8f9 0%, #e7ebef 55%, #d9dfe4 100%);
+  border-color: #f5f7f8 #b7bdc3 #a8aeb4 #eef1f3;
+  color: #2b3036;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -2px 4px rgba(55, 62, 70, 0.10);
+}
 .log-and-dictionary {
   display: flex;
   gap: 20px;
