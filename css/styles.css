@@ -1515,6 +1515,20 @@ section h2 {
   z-index: 999;
   overflow-y: auto;
 }
+/* 建築モーダルだけ、地を漆喰の壁にする。粒は細かいノイズを薄く敷く。 */
+#buildingModal {
+  background-image:
+    url("data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20width='180'%20height='180'><filter%20id='n'><feTurbulence%20type='fractalNoise'%20baseFrequency='0.85'%20numOctaves='3'%20stitchTiles='stitch'/><feColorMatrix%20type='saturate'%20values='0'/></filter><rect%20width='180'%20height='180'%20filter='url(%23n)'%20opacity='0.1'/></svg>"),
+    linear-gradient(180deg, #f7f2e7, #f1eadb);
+  background-size: 180px 180px, auto;
+  border-color: #cfc0a2;
+}
+#buildingModal .modal-header,
+#buildingModal h3 {
+  color: #4a3b22;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
 #buildingContent,
 #secretTreasureContent,
 #historyContent,
