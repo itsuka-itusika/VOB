@@ -2629,18 +2629,57 @@ section h2 {
     0 0 12px rgba(141, 148, 155, 0.5);
 }
 
-.miracle-item.locked {
+/* 未解放 = まだ授かっていない神言。軽銀のプレートではなく、暗い石板に彫った姿で出す */
+.miracle-item.locked,
+.miracle-item.locked:hover {
   cursor: default;
-  background: linear-gradient(165deg, #e8eaec, #dcdfe2);
-  border-color: #eff1f3 #a0a6ad #949aa1 #e6e9eb;
-  opacity: 0.82;
+  /* 石目: 角度と周期の違う細かい縞を薄く重ねて、規則的な縞に見えない粒立ちにする */
+  background:
+    repeating-linear-gradient(27deg, rgba(255, 255, 255, 0.05) 0 1px, rgba(0, 0, 0, 0.05) 1px 5px),
+    repeating-linear-gradient(-14deg, rgba(255, 255, 255, 0.04) 0 1px, rgba(0, 0, 0, 0.04) 1px 9px),
+    linear-gradient(165deg, #6b6660 0%, #59554f 45%, #474441 78%, #55514c 100%);
+  border-color: #8b847c #2f2c29 #262421 #7e7770;
+  /* 角を不揃いにして、切り出した石の縁に見せる */
+  border-radius: 4px 3px 5px 3px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -3px 8px rgba(12, 10, 9, 0.42),
+    0 3px 10px rgba(20, 18, 16, 0.42);
 }
 
-.miracle-item.locked:hover {
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.85),
-    inset 0 -2px 5px rgba(55, 62, 70, 0.16),
-    0 3px 10px rgba(55, 62, 70, 0.20);
+/* 石板の文字は彫って白を差した刻印。上下に暗い縁を落として沈ませる */
+.miracle-item.locked .miracle-header h4 {
+  color: #ece6dc;
+  text-shadow: 0 1px 1px rgba(14, 12, 10, 0.6);
+}
+
+.miracle-item.locked .miracle-desc,
+.miracle-item.locked .miracle-cost {
+  color: #d6cfc5;
+  text-shadow: 0 1px 1px rgba(14, 12, 10, 0.55);
+}
+
+.miracle-item.locked .miracle-reason {
+  color: #e8ab97;
+  text-shadow: 0 1px 1px rgba(14, 12, 10, 0.55);
+}
+
+.miracle-item.locked .miracle-mark.locked {
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(232, 226, 216, 0.45);
+  color: #e0d9cf;
+  text-shadow: 0 1px 1px rgba(14, 12, 10, 0.55);
+}
+
+/* 解放条件の帯は、石板に彫り込んだ溝として沈ませる */
+.miracle-item.locked .miracle-button:disabled {
+  background: linear-gradient(180deg, #3f3c39, #4b4844);
+  border: 1px solid;
+  border-color: #2b2926 #635d57 #6d675f #302d2a;
+  border-radius: 2px;
+  color: #ddd6cc;
+  text-shadow: 0 1px 1px rgba(14, 12, 10, 0.6);
+  box-shadow: inset 0 2px 5px rgba(12, 10, 9, 0.5);
 }
 
 .miracle-header {
