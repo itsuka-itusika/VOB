@@ -715,8 +715,8 @@ function convertObjectToVillager(obj) {
   }
   if (vill.raiderType === "黙示録の騎士・支配") {
     vill.race = "黙示録の騎士";
-    vill.uiSexDisplay = "無性";
-    vill.uiAgeDisplay = "???";
+    vill.uiSexDisplay = "-";
+    vill.uiAgeDisplay = "-";
     vill.bodyAge = 999;
     vill.spiritAge = 999;
     vill.bodyTraits = ["飛行", "光輪", "多翼多眼", "交換無効"];
@@ -727,8 +727,8 @@ function convertObjectToVillager(obj) {
   }
   if (vill.raiderType === "黙示録の騎士・戦争") {
     vill.race = "黙示録の騎士";
-    vill.uiSexDisplay = "無性";
-    vill.uiAgeDisplay = "???";
+    vill.uiSexDisplay = "-";
+    vill.uiAgeDisplay = "-";
     vill.bodyAge = 999;
     vill.spiritAge = 999;
     vill.raidPosition = "middle";
