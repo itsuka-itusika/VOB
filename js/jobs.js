@@ -1067,9 +1067,9 @@ function doMassage(p, v) {
   const mindStat = getMassageMindStat(p, jobName);
   const mc = calcJobMindCost(jobName, p[mindStat], p, v);
   const heal = calculateMassageHeal(p, jobName);
-  const hiddenHappinessGain = jobName === ACTION_MASSAGE_FEMALE
-    ? Math.round(3 * (p.chr / 20) * (p.sexdr / 20) * (p.bodyTraits.includes("繊細な指") ? 1.2 : 1))
-    : 0;
+  // 隠し効果の幸福度。施術者自身が対象になった場合は基礎係数が3ではなく10になる。
+  const getHiddenHappinessGain = (base) =>
+    Math.round(base * (p.chr / 20) * (p.sexdr / 20) * (p.bodyTraits.includes("繊細な指") ? 1.2 : 1));
   let logMsg = `${p.name}${getActionDisplayName(jobName)}:体力-${tc},メンタル-${mc}`;
 
   if (jobName === ACTION_MASSAGE_MALE) {
@@ -1119,7 +1119,7 @@ function doMassage(p, v) {
       target.spiritSex === "男" &&
       target.sexdr >= 18
     ) {
-      target.happiness = clampValue(target.happiness + hiddenHappinessGain, 0, 100);
+      target.happiness = clampValue(target.happiness + getHiddenHappinessGain(target === p ? 10 : 3), 0, 100);
     }
     logMsg += `,${target.name}の体力+${heal}`;
   }
