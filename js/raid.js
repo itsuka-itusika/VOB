@@ -741,7 +741,7 @@ function doOneTrapAction(action, village) {
     addRaidActionLog(result, "【罠作成】狙える敵がいない");
     return result;
   }
-  let dmg = Math.max(0, Math.floor((p.dex*p.int/400)*25 - e.vit));
+  let dmg = Math.max(0, Math.floor((p.dex*p.int/400)*25));
   dmg = applyIncomingDamageModifiers(dmg, e, village);
   const saltPillarShattered = applyRaidDamage(e, dmg);
   recordRaidFriendshipDamage(village, p, dmg);

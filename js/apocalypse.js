@@ -214,12 +214,13 @@ function applyFirstCalamity(village) {
   const targets = getActiveVillagers(village);
   targets.forEach(person => {
     person.mp = clampValue((Number(person.mp) || 0) - 10, 0, 100);
+    person.happiness = clampValue((Number(person.happiness) || 0) - 10, 0, 100);
   });
   recordStage(village, 1, "第一の角笛が吹かれた", "川が血のように染まり、村人たちの心を恐怖が蝕んだ。");
   queueApocalypseModal({
     title: "第一の角笛が吹かれた",
     message: "川が血のように染まった。",
-    effect: `村人${targets.length}人のメンタルが10低下しました。`,
+    effect: `村人${targets.length}人のメンタルと幸福度が10低下しました。`,
     image: stageImage(1)
   });
 }
