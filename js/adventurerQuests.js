@@ -179,7 +179,7 @@ export function openAdventurerQuestModal(village, adventurer, { onAccepted } = {
   modal.innerHTML = `
     <div class="event-modal-body">
       <h3>${escapeHtml(adventurer.name)}へのクエスト依頼</h3>
-      <p>提示された4件は、この訪問中は変わりません。依頼すると冒険者は出発し、6か月後の月初に帰還します。</p>
+      <p>依頼すると冒険者は出発し、6か月後の月初に帰還します。</p>
       <div class="adventurer-quest-list">${offerHtml}</div>
       <div class="event-modal-buttons">
         <button type="button" data-close-adventurer-quest>閉じる</button>
