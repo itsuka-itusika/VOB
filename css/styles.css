@@ -2621,16 +2621,13 @@ body.mobile-mode .random-event-image {
 .built-item.damaged {
   background: #b94a48;
 }
-/* 所持資源は1項目ずつ、カードと同じ木の板に載せる。 */
+/* 所持資源は、カードと同じ木の板を1枚だけ敷いて並べる。 */
 .building-resources {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 20px;
+  padding: 9px 14px;
   margin-bottom: 15px;
-  font-weight: bold;
-}
-.building-resources > div {
-  padding: 6px 13px;
   background-image:
     url("data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20width='220'%20height='220'><filter%20id='w'><feTurbulence%20type='fractalNoise'%20baseFrequency='0.006%200.25'%20numOctaves='3'%20stitchTiles='stitch'/><feColorMatrix%20type='saturate'%20values='0'/></filter><rect%20width='220'%20height='220'%20filter='url(%23w)'%20opacity='0.24'/></svg>"),
     linear-gradient(180deg, #f1e2c4 0%, #e7d4ac 55%, #dec89d 100%);
@@ -2644,6 +2641,7 @@ body.mobile-mode .random-event-image {
     0 2px 5px rgba(70, 50, 22, 0.20);
   color: #3b2a12;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
+  font-weight: bold;
 }
 .building-grid {
   display: grid;
@@ -2660,18 +2658,13 @@ body.mobile-mode .random-event-image {
   margin-left: 8px;
 }
 
-/* 所持資源は1項目ずつ、カードと同じ軽銀のプレートに載せる。 */
-.miracle-resources,
-.secret-treasure-resources {
+/* 所持資源は、カードと同じ軽銀のプレートを1枚だけ敷いて並べる。 */
+.miracle-resources {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 20px;
+  padding: 9px 14px;
   margin-bottom: 15px;
-  font-weight: bold;
-}
-.miracle-resources > div,
-.secret-treasure-resources > div {
-  padding: 6px 13px;
   background: linear-gradient(165deg, #eef1f3 0%, #dfe4e8 48%, #d4dade 74%, #e8ebee 100%);
   border: 2px solid;
   border-color: #fafbfc #8d949b #7f868d #edf0f2;
@@ -2682,6 +2675,7 @@ body.mobile-mode .random-event-image {
     0 2px 5px rgba(55, 62, 70, 0.18);
   color: #2b3036;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+  font-weight: bold;
 }
 
 .miracle-grid {
@@ -4419,16 +4413,11 @@ body.mobile-mode .pan-flute-arrow {
   min-height: 16px;
 }
 body.mobile-mode .building-resources,
-body.mobile-mode .miracle-resources,
-body.mobile-mode .secret-treasure-resources {
-  gap: 6px;
+body.mobile-mode .miracle-resources {
+  gap: 8px;
+  padding: 6px 9px;
   margin-bottom: 8px;
   font-size: 0.78rem;
-}
-body.mobile-mode .building-resources > div,
-body.mobile-mode .miracle-resources > div,
-body.mobile-mode .secret-treasure-resources > div {
-  padding: 4px 9px;
 }
 body.mobile-mode .building-grid {
   grid-template-columns: repeat(auto-fill, minmax(min(210px, 100%), 1fr));
