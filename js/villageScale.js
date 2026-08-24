@@ -68,6 +68,13 @@ export function getVillageScaleTitle(scale) {
   return getVillageScaleStage(scale).title;
 }
 
+/** 規模称号の後ろに出す「現在の規模/次の称号に届く規模」。最上位では現在値だけを出す。 */
+export function getVillageScaleProgressLabel(scale) {
+  const current = Math.floor(normalizeScale(scale));
+  const nextStage = VILLAGE_SCALE_STAGES[getVillageScaleStage(scale).index + 1];
+  return nextStage ? `${current}/${nextStage.threshold}` : `${current}`;
+}
+
 export function applyVillageScaleArtClass(scale) {
   if (typeof document === "undefined" || !document.body) return;
   const stage = getVillageScaleStage(scale);
