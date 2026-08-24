@@ -528,25 +528,35 @@ button {
 .village-role-select {
   max-width: 66px;
 }
+/* 錠前 = 打ち出した真鍮の板。面取りは左上から光が当たる4辺別色で表す。 */
 .assignment-lock-toggle {
   flex: 0 0 auto;
   width: 28px;
   height: 26px;
   margin: 0;
   padding: 0;
-  border: 1px solid #b8a36d;
-  border-radius: 4px;
-  background: #fffaf0;
-  color: #5c4a19;
+  border: 1px solid;
+  border-color: #fdf5d8 #9a7f38 #8b7230 #f2e5ba;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #f6e8bd 0%, #e2caa0 55%, #d3b77e 100%);
+  color: #4a3a10;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 252, 235, 0.9),
+    inset 0 -2px 4px rgba(96, 74, 22, 0.22),
+    0 1px 2px rgba(70, 52, 14, 0.24);
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
+/* 掛けた錠は、押し込まれて陰った真鍮にする */
 .assignment-lock-toggle.is-locked {
-  background: #5b5143;
-  border-color: #5b5143;
-  color: #fff;
+  border-color: #7a6229 #d6bd85 #decba0 #806829;
+  background: linear-gradient(180deg, #8a7031 0%, #a1874a 100%);
+  color: #fbf3d6;
+  box-shadow:
+    inset 0 2px 4px rgba(48, 36, 8, 0.45),
+    inset 0 -1px 0 rgba(255, 246, 214, 0.35);
 }
 .assignment-lock-icon {
   position: relative;
@@ -1986,19 +1996,20 @@ section h2 {
   cursor: pointer;
 }
 .secret-treasure-actions button:not(:disabled) {
-  background: linear-gradient(180deg, #f6f8f9, #d9dee2);
+  background: linear-gradient(180deg, #e9eef1, #c2c9cf);
   border: 1px solid;
-  border-color: #ffffff #7f868d #7f868d #f0f2f4;
-  color: #2b3036;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+  border-color: #ffffff #6f767d #6f767d #dee3e7;
+  color: #131a1f;
+  font-weight: 600;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 .secret-treasure-actions button:not(:disabled):hover {
-  background: linear-gradient(180deg, #eaeef0, #cbd1d6);
+  background: linear-gradient(180deg, #dde3e7, #b2bac1);
 }
 .secret-treasure-actions button:disabled {
-  background: #dfe2e5;
-  border: 1px solid #c3c8cd;
-  color: #868d94;
+  background: #e4e7ea;
+  border: 1px solid #a2a9b0;
+  color: #4c545b;
   cursor: not-allowed;
 }
 
@@ -2445,15 +2456,28 @@ body.mobile-mode .random-event-image {
     grid-column: 2;
   }
 }
+/* カード = 削り出した木の板。木目は SVG のノイズを横へ引き伸ばして出す。 */
 .building-item {
-  border: 1px solid #ddd;
-  padding: 15px;
-  background: #f9f9f9;
-  border-radius: 4px;
+  background-image:
+    url("data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20width='220'%20height='220'><filter%20id='w'><feTurbulence%20type='fractalNoise'%20baseFrequency='0.006%200.25'%20numOctaves='3'%20stitchTiles='stitch'/><feColorMatrix%20type='saturate'%20values='0'/></filter><rect%20width='220'%20height='220'%20filter='url(%23w)'%20opacity='0.24'/></svg>"),
+    linear-gradient(180deg, #f1e2c4 0%, #e7d4ac 55%, #dec89d 100%);
+  background-size: 220px 220px, auto;
+  border: 3px solid;
+  /* 面取りは左上から光が当たる4辺別色で表す */
+  border-color: #f8edd9 #a5834f #957444 #f0e2c7;
+  padding: 13px;
+  border-radius: 3px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -2px 6px rgba(92, 66, 28, 0.20),
+    0 3px 9px rgba(70, 50, 22, 0.22);
+  color: #4e3a20;
   transition: all 0.2s;
 }
 .building-item:hover {
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  background-image:
+    url("data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20width='220'%20height='220'><filter%20id='w'><feTurbulence%20type='fractalNoise'%20baseFrequency='0.006%200.25'%20numOctaves='3'%20stitchTiles='stitch'/><feColorMatrix%20type='saturate'%20values='0'/></filter><rect%20width='220'%20height='220'%20filter='url(%23w)'%20opacity='0.24'/></svg>"),
+    linear-gradient(180deg, #f6e9d2 0%, #eddcb8 55%, #e4d0a8 100%);
 }
 .building-header {
   display: flex;
@@ -2465,7 +2489,9 @@ body.mobile-mode .random-event-image {
 }
 .building-header h4 {
   margin: 0;
-  color: #333;
+  color: #3b2a12;
+  /* 刻印: 文字の下側に光の縁 */
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
   min-width: 0;
 }
 .built-mark {
@@ -2490,7 +2516,8 @@ body.mobile-mode .random-event-image {
   font-size: 0.8em;
 }
 .building-desc {
-  color: #666;
+  color: #55411f;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
   margin-bottom: 10px;
   min-height: 2.4em;
 }
@@ -2499,18 +2526,20 @@ body.mobile-mode .random-event-image {
   flex-wrap: wrap;
   gap: 10px;
   font-size: 0.9em;
-  color: #555;
+  color: #55411f;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
   margin-bottom: 10px;
 }
 .building-status,
 .building-repair-cost {
   font-size: 0.9em;
-  color: #555;
+  color: #55411f;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
   margin-bottom: 8px;
 }
 .building-cost-original {
   text-decoration: line-through;
-  color: #777;
+  color: #7d6642;
 }
 .building-cost-arrow {
   margin: 0 4px;
@@ -2520,7 +2549,8 @@ body.mobile-mode .random-event-image {
   color: #8a4b00;
 }
 .building-reason {
-  color: #f44336;
+  color: #a02a1d;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
   font-size: 0.9em;
   margin-bottom: 10px;
 }
@@ -2890,21 +2920,23 @@ body.mobile-mode .random-event-image {
 }
 
 .miracle-button:not(:disabled) {
-  background: linear-gradient(180deg, #f6f8f9, #d9dee2);
+  background: linear-gradient(180deg, #e9eef1, #c2c9cf);
   border: 1px solid;
-  border-color: #ffffff #7f868d #7f868d #f0f2f4;
-  color: #2b3036;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+  border-color: #ffffff #6f767d #6f767d #dee3e7;
+  color: #131a1f;
+  font-weight: 600;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 .miracle-button:not(:disabled):hover {
-  background: linear-gradient(180deg, #eaeef0, #cbd1d6);
+  background: linear-gradient(180deg, #dde3e7, #b2bac1);
 }
 
+/* 押せないボタンにこそ解放条件が入る。読める濃さを確保する。 */
 .miracle-button:disabled {
-  background: #dfe2e5;
-  border: 1px solid #c3c8cd;
-  color: #868d94;
+  background: #e4e7ea;
+  border: 1px solid #a2a9b0;
+  color: #4c545b;
   cursor: not-allowed;
 }
 
