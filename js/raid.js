@@ -62,7 +62,7 @@ const APOCALYPSE_GRAND_CRUSADE_ID = "apocalypse-grand-crusade";
 const APOCALYPSE_UPPER_WINGED_ID = "apocalypse-upper-winged";
 const APOCALYPSE_WAR_RAIDER_TYPE = "黙示録の騎士・戦争";
 const APOCALYPSE_CONQUEST_RAIDER_TYPE = "黙示録の騎士・支配";
-const WAR_LIGHT_PILLAR_TURN = 7;
+const WAR_LIGHT_PILLAR_TURN = 6;
 const WAR_LIGHT_PILLAR_DAMAGE = 666;
 // 《支配》の裁きの光。ターンごとに狙う基準と宣告が変わる。
 const CONQUEST_JUDGMENT_LIGHT_RULES = new Map([
@@ -741,7 +741,7 @@ function doOneTrapAction(action, village) {
     addRaidActionLog(result, "【罠作成】狙える敵がいない");
     return result;
   }
-  let dmg = Math.max(0, Math.floor((p.dex*p.int/400)*40 - e.vit));
+  let dmg = Math.max(0, Math.floor((p.dex*p.int/400)*25 - e.vit));
   dmg = applyIncomingDamageModifiers(dmg, e, village);
   const saltPillarShattered = applyRaidDamage(e, dmg);
   recordRaidFriendshipDamage(village, p, dmg);
@@ -821,7 +821,7 @@ function createCombatActions(village) {
   });
 }
 
-/** 第六の災厄・7ターン目の《戦争》専用行動 */
+/** 第六の災厄・6ターン目の《戦争》専用行動 */
 function doWarLightPillarAction(action, village) {
   const actor = action.actor;
   const result = createRaidActionResult(actor);

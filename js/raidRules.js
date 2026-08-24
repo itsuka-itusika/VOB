@@ -185,7 +185,7 @@ export function estimateRaidActionDamage(person, action, village = null) {
   const averageVitality = getAverageEnemyVitality(village);
 
   if (action === ACTION_TRAP) {
-    return Math.max(0, Math.floor((stat("dex") * stat("int") / 400) * 40 - averageVitality));
+    return Math.max(0, Math.floor((stat("dex") * stat("int") / 400) * 25 - averageVitality));
   }
 
   let base = 0;

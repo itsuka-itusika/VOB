@@ -1649,7 +1649,7 @@ export const RAID_MODULES = [
       },
       { raiderType: "黙示録の騎士・戦争", minCount: 1, maxCount: 1 }
     ],
-    defense: { surviveTurns: 7 },
+    defense: { surviveTurns: 6 },
     failurePenalty: {
       foodRate: 0.5,
       materialsRate: 0.5,
