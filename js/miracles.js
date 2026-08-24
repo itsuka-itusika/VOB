@@ -336,11 +336,12 @@ function getMiracleTargetDetails(person, detailKind, { forPreview = false } = {}
     const mindOrder = detailKind === "nectar" ? NECTAR_MIND_TRAITS : SERPENT_STAFF_MIND_TRAITS;
     const bodyTraits = pickTraits(person, "bodyTraits", bodyOrder);
     const mindTraits = pickTraits(person, "mindTraits", mindOrder);
+    // 癒し・酒杯と同じく、該当する特性がない枠は出さない。
     return [
       `体力${Math.floor(Number(person.hp) || 0)}`,
       `ﾒﾝﾀﾙ${Math.floor(Number(person.mp) || 0)}`,
-      `（${bodyTraits.length > 0 ? bodyTraits.join("・") : "-"}）`,
-      `（${mindTraits.length > 0 ? mindTraits.join("・") : "-"}）`
+      bodyTraits.join("・"),
+      mindTraits.join("・")
     ];
   }
   if (detailKind === "exchange") {
