@@ -2564,46 +2564,51 @@ body.mobile-mode .random-event-image {
   line-height: 1.4;
   margin-bottom: 10px;
 }
+/* ボタン = 木の板に打った軽銀の金具。奇跡・秘宝の行使ボタンと揃える。 */
 .building-button {
   width: 100%;
   padding: 8px;
-  border: none;
-  border-radius: 4px;
+  border-radius: 2px;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+  letter-spacing: 0.12em;
   cursor: pointer;
   transition: all 0.2s;
 }
 .building-button:not(:disabled) {
-  background: #2196F3;
-  color: white;
+  background: linear-gradient(180deg, #e9eef1, #c2c9cf);
+  border: 1px solid;
+  border-color: #ffffff #6f767d #6f767d #dee3e7;
+  color: #131a1f;
+  font-weight: 600;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 .building-button:not(:disabled):hover {
-  background: #1976D2;
+  background: linear-gradient(180deg, #dde3e7, #b2bac1);
 }
 .building-button:disabled {
-  background: #ddd;
+  background: #e4e7ea;
+  border: 1px solid #a2a9b0;
+  color: #4c545b;
   cursor: not-allowed;
 }
-.building-button.built {
-  background: #4CAF50;
-  color: white;
+/* 建設済は押せない平板。沈めて、済んだことだけを示す。 */
+.building-button.built:disabled {
+  background: linear-gradient(180deg, #d2d8dc, #e7eaed);
+  border-color: #9aa1a8;
+  color: #2b3036;
+  box-shadow: inset 0 2px 4px rgba(55, 62, 70, 0.22);
 }
 .building-button.repair {
   margin-top: 8px;
 }
-.building-button.repair:not(:disabled) {
-  background: #9c7a39;
-}
-.building-button.repair:not(:disabled):hover {
-  background: #7a5f2d;
-}
 .building-button.destroy {
   margin-top: 8px;
 }
+/* 破壊は取り返しがつかないので、金具は同じまま文字だけ赤で立てる。 */
 .building-button.destroy:not(:disabled) {
-  background: #c62828;
-}
-.building-button.destroy:not(:disabled):hover {
-  background: #9e1f1f;
+  color: #a3221b;
+  font-weight: 700;
+  letter-spacing: 0.16em;
 }
 .built-list {
   display: flex;
