@@ -52,6 +52,10 @@ const RECRUITMENT_COEFFICIENTS = {
   "棄民": 0.9     // 最も勧誘しやすい（村を追われた人なので）
 };
 
+// サテュロスとメナドは吟遊詩人や巡礼者として名乗るが、名乗る役職で誘いやすさは変わらない。
+const GOAT_PAIR_RACES = new Set(["サテュロス", "メナド"]);
+const GOAT_PAIR_RECRUITMENT_COEFFICIENT = 0.6;
+
 const MERCHANT_TRADE = {
   food: { label: "食料", stockKey: "food", unit: 10, price: 8, initialStock: 100 },
   materials: { label: "資材", stockKey: "materials", unit: 10, price: 12, initialStock: 80 }
@@ -404,6 +408,7 @@ function getVisitorType(visitor) {
  * 訪問者の勧誘係数を取得する関数
  */
 function getRecruitmentCoefficient(visitor) {
+  if (GOAT_PAIR_RACES.has(visitor?.race)) return GOAT_PAIR_RECRUITMENT_COEFFICIENT;
   const visitorType = getVisitorType(visitor);
   if (visitorType && RECRUITMENT_COEFFICIENTS[visitorType]) {
     return RECRUITMENT_COEFFICIENTS[visitorType];
