@@ -536,9 +536,17 @@ function getRaidAssignmentProfile(person, village) {
   };
 }
 
+// 籠城は自分から攻撃せず、殴られたときの反撃だけで敵を削る。
+// 反撃は威力半分で、狙われた回にしか出ないため、想定ターンぶんをさらに割り引く。
+const RAID_FORTIFY_FIREPOWER_RATE = 0.25;
+
 /** 想定ターン数ぶんの火力へ均す。罠は1度きりなので、そのまま数える。 */
 function toRaidFirepower(action, damage) {
-  return action === ACTION_TRAP ? damage : damage * RAID_WIN_ESTIMATE_TURNS;
+  if (action === ACTION_TRAP) return damage;
+  if (action === ACTION_FORTIFY) {
+    return damage * RAID_WIN_ESTIMATE_TURNS * RAID_FORTIFY_FIREPOWER_RATE;
+  }
+  return damage * RAID_WIN_ESTIMATE_TURNS;
 }
 
 /** 罠の合計と、戦闘参加者が想定ターン数で出す火力の合計。 */
