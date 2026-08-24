@@ -72,11 +72,10 @@ const RAID_JOIN_HP_ADVANTAGE = 65;
 // この種族が混じる襲撃は一撃が重く、耐えられる者がほとんど出ないため常に緩い基準を使う。
 const RAID_HEAVY_HITTER_RACES = new Set(["キュクロプス", "スフィンクス"]);
 
-// 食料の備蓄が何か月ぶんあれば十分とみなすか。
-const FOOD_SUFFICIENT_MONTHS = 3;
-// 資材が余っているかを測るときに見込む、建築へ回す分。
-// 月々の消費だけで測ると、建築の元手まで余剰とみなしてしまう。
-const BUILDING_MATERIAL_RESERVE = 100;
+// 食料・資材の備蓄が何か月ぶんあれば「当面は足りている」とみなすか。
+const SUPPLY_SUFFICIENT_MONTHS = 3;
+// 資材は消費のない村があるため、1か月ぶんを人口から見積もる。
+const MATERIAL_MONTHLY_PER_PERSON = 4;
 
 const JOB_NONE = ACTION_NONE;
 const JOB_REST = ACTION_REST;
@@ -91,33 +90,30 @@ const SELF_RECOVERY_ACTION_SET = new Set([
 
 // 職の評価は jobMath.js の期待成果をそのまま使う。ここに計算式は持たない。
 // 産出する資源軸ごとの基本重みと、村が困っているときの効き幅だけを定める。
-// 基礎重みは「重み×その職の平均産出」が次の順になるよう決める。
-//   食料・資材＝資金・技術 ≧ 治安 ≧ 他者回復 ≧ 幸福
-// 産出の桁が軸ごとに違うため、重み単体の大小は順位と一致しない。
-// （警備は8前後、食料・資材・資金・技術の各職は18〜26前後）
+// 食料・資材・資金・技術は「重み×その職の平均産出」が横並びになる値にする。
+// 資金・技術は食料・資材より一段控えるため 0.9 とする。
 const AXIS_BASE_WEIGHTS = {
   food: 1,
-  materials: 1.05,
+  materials: 1,
   recovery: 0.67,
-  funds: 0.95,
+  funds: 0.9,
   mana: 0.3,
   security: 2,
-  tech: 1.1,
+  tech: 0.9,
   happiness: 0.25
 };
+// 回復・治安・幸福は不足の度合いが連続で効くため、これまでどおり困窮度で押し上げる。
 const AXIS_URGENCY = {
-  food: 3,
-  materials: 2,
   recovery: 2.5,
-  funds: 1.5,
   security: 2.5,
-  happiness: 3,
-  tech: 1.2
+  happiness: 3
 };
-// 貯め込んでも自然には価値が下がらない軸を、基準量を超えた分だけ減衰させる。
-// 回復・幸福・治安は産出側が不足分で頭打ちになるため、ここでは扱わない。
-const AXIS_SURPLUS_DAMPING = 0.6;
-const AXIS_SURPLUS_FLOOR = 0.25;
+// 食料・資材は3段階だけで見る。当面足りているなら押し上げず、得意な者が就く。
+const SUPPLY_STAGE_MULTIPLIER = {
+  scarce: 4,
+  low: 2,
+  enough: 1
+};
 // 村全体へ効く職。同じ月に重ねても不足分を食い合うだけなので、2人目からは評価を薄める。
 const WHOLE_VILLAGE_JOBS = new Set(["警備", "神官", "シスター", "踊り子", "詩人", "バニー"]);
 
@@ -143,17 +139,12 @@ function normalizeSeverity(value) {
   return Math.max(0, Math.min(1.35, value));
 }
 
-// 備蓄が基準量を超えている度合い。1未満なら余剰なしとして1を返す。
-function getSurplusRatio(amount, baseline) {
-  if (!(baseline > 0)) return 1;
-  return Math.max(1, (Number(amount) || 0) / baseline);
-}
-
-// 余っている軸の重みを緩やかに落とす。偏って溜まり続ける技術や資金に効く。
-function getSurplusDamping(axis, context) {
-  const ratio = context?.surplusByAxis?.[axis];
-  if (!ratio || ratio <= 1) return 1;
-  return Math.max(AXIS_SURPLUS_FLOOR, 1 / (1 + (ratio - 1) * AXIS_SURPLUS_DAMPING));
+// 備蓄が何か月ぶんあるかで、すごく少ない/やや不足気味/当面は足りている、の3段階に分ける。
+function getSupplyStage(amount, monthlyUnit) {
+  const months = (Number(amount) || 0) / Math.max(1, monthlyUnit);
+  if (months < 1) return "scarce";
+  if (months < SUPPLY_SUFFICIENT_MONTHS) return "low";
+  return "enough";
 }
 
 function buildVillagePriorityContext(village) {
@@ -166,51 +157,30 @@ function buildVillagePriorityContext(village) {
   const avgRecovery = avgHp * 0.55 + avgMp * 0.45;
   const lowConditionCount = villagers.filter(person => (Number(person.hp) || 0) <= 55 || (Number(person.mp) || 0) <= 55).length;
   const lowConditionRatio = lowConditionCount / population;
-  const foodProjected = (Number(village.food) || 0) - monthlyFoodCost;
-  // 備蓄3か月ぶんを「十分」とみなす。村の安定条件と同じ基準に揃える。
-  const foodBaseline = Math.max(20, monthlyFoodCost * FOOD_SUFFICIENT_MONTHS);
-  const foodSeverity = foodProjected < 0
-    ? normalizeSeverity(1 + Math.abs(foodProjected) / Math.max(20, monthlyFoodCost))
-    : normalizeSeverity((foodBaseline - (Number(village.food) || 0)) / Math.max(20, monthlyFoodCost * 2));
   const recoverySeverity = normalizeSeverity(
     Math.max(0, (62 - avgRecovery) / 18) + Math.max(0, lowConditionRatio - 0.25)
   );
-  const materialBaseline = Math.max(20, monthlyMaterialCost + population * 4);
-  const materialSurplusBaseline = Math.max(materialBaseline, BUILDING_MATERIAL_RESERVE + population * 8);
-  const materialSeverity = normalizeSeverity((materialBaseline - (Number(village.materials) || 0)) / materialBaseline);
-  const fundsBaseline = Math.max(40, population * 12 + (Number(village.building) || 0) * 0.5);
-  const fundsSeverity = normalizeSeverity((fundsBaseline - (Number(village.funds) || 0)) / fundsBaseline);
   const securityValue = Number(village.security) || 0;
   const securitySeverity = normalizeSeverity(
     (70 - securityValue) / 70 + (village.villageTraits.includes("荒廃") ? 0.35 : 0)
   );
   const avgHappiness = villagers.reduce((sum, person) => sum + (Number(person.happiness) || 0), 0) / population;
   const happinessSeverity = normalizeSeverity((65 - avgHappiness) / 45);
-  // 櫓(技術50)や環濠(技術100)まで届く量を基準にする。
-  const techBaseline = Math.max(60, population * 8);
-  const techSeverity = normalizeSeverity((techBaseline - (Number(village.tech) || 0)) / techBaseline);
+  // 資材を消費しない村でも段階を測れるよう、1か月ぶんに人口ぶんの必要量を足す。
+  const materialMonthlyUnit = Math.max(20, monthlyMaterialCost + population * MATERIAL_MONTHLY_PER_PERSON);
 
   return {
     severityByAxis: {
-      food: foodSeverity,
-      materials: materialSeverity,
       recovery: recoverySeverity,
-      funds: fundsSeverity,
       security: securitySeverity,
-      happiness: happinessSeverity,
-      tech: techSeverity
+      happiness: happinessSeverity
     },
-    surplusByAxis: {
-      food: getSurplusRatio(village.food, foodBaseline),
-      materials: getSurplusRatio(village.materials, materialSurplusBaseline),
-      funds: getSurplusRatio(village.funds, fundsBaseline),
-      tech: getSurplusRatio(village.tech, techBaseline)
+    supplyStageByAxis: {
+      food: getSupplyStage(village.food, Math.max(20, monthlyFoodCost)),
+      materials: getSupplyStage(village.materials, materialMonthlyUnit)
     },
     supportAssignCounts: new Map(),
-    foodSeverity,
     recoverySeverity,
-    materialSeverity,
-    fundsSeverity,
     avgHp,
     avgMp,
     avgRecovery,
@@ -312,10 +282,14 @@ function getExpectedYield(person, job, village) {
 /** 資源軸ごとの重み。村が困っている軸ほど大きくなる。 */
 function getAxisWeight(axis, context) {
   const base = AXIS_BASE_WEIGHTS[axis] || 0;
+  if (!context) return base;
+
+  const stage = context.supplyStageByAxis?.[axis];
+  if (stage) return base * SUPPLY_STAGE_MULTIPLIER[stage];
+
   const urgency = AXIS_URGENCY[axis];
-  if (!urgency || !context) return base;
-  const severity = context.severityByAxis[axis] || 0;
-  return base * (1 + severity * urgency) * getSurplusDamping(axis, context);
+  if (!urgency) return base;
+  return base * (1 + (context.severityByAxis[axis] || 0) * urgency);
 }
 
 function scoreJob(person, job, context) {
