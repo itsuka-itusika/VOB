@@ -125,8 +125,19 @@ const WHOLE_VILLAGE_JOB_GROUPS = new Map([
 // 全体系職は村人全員ぶんの不足を足して評価するため、人数が増えるほど過大に見える。
 const WHOLE_VILLAGE_JOB_POPULATION_PER_SLOT = 9;
 
+// 神官・シスターは、村の心が弱っているか、本人の適性が高いときだけ自動で選ぶ。
+// 適性は、産出の元になる魅力×倫理の積で見る。
+const MIND_HEAL_JOBS = new Set(["神官", "シスター"]);
+const MIND_HEAL_VILLAGE_MP_LIMIT = 50;
+const MIND_HEAL_APTITUDE_LIMIT = 450;
+
 function getWholeVillageJobGroup(job) {
   return WHOLE_VILLAGE_JOB_GROUPS.get(job) || job;
+}
+
+function canAutoAssignMindHealJob(person, context) {
+  if ((Number(context?.avgMp) || 0) <= MIND_HEAL_VILLAGE_MP_LIMIT) return true;
+  return (Number(person?.chr) || 0) * (Number(person?.eth) || 0) >= MIND_HEAL_APTITUDE_LIMIT;
 }
 
 function firstAvailable(candidates, table) {
@@ -312,6 +323,7 @@ function scoreJob(person, job, context) {
   const score = Object.entries(yields).reduce((total, [axis, amount]) => {
     return total + (Number(amount) || 0) * getAxisWeight(axis, context);
   }, 0);
+  if (MIND_HEAL_JOBS.has(job) && !canAutoAssignMindHealJob(person, context)) return -Infinity;
   if (!WHOLE_VILLAGE_JOBS.has(job)) return score;
   const group = getWholeVillageJobGroup(job);
   const assigned = context?.supportAssignCounts?.get(group) || 0;
