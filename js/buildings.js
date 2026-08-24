@@ -202,7 +202,7 @@ export const BUILDINGS = [
     name: "水車小屋",
     materials: 50,
     funds: 0,
-    tech: 100,
+    tech: 50,
     desc: "水力施設。毎月食料+10。規模+20",
     effect: standardBuildingEffect({ scale: 20, flag: "hasWatermill", log: "水車小屋建設完了: 毎月食料+10、規模+20" })
   },
