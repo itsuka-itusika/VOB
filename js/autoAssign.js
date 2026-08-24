@@ -507,20 +507,24 @@ function getRaidAssignmentProfile(person, village) {
   };
 }
 
+/** 想定ターン数ぶんの火力へ均す。罠は1度きりなので、そのまま数える。 */
+function toRaidFirepower(action, damage) {
+  return action === ACTION_TRAP ? damage : damage * RAID_WIN_ESTIMATE_TURNS;
+}
+
 /** 罠の合計と、戦闘参加者が想定ターン数で出す火力の合計。 */
-function estimateVillageFirepower(village, profiles, assignments) {
-  let total = 0;
+function estimateVillageFirepower(village, profiles, assignments, reservedFirepower = 0) {
+  let total = reservedFirepower;
   profiles.forEach(profile => {
     const action = assignments.get(profile.person)?.action;
     if (!isRaidAction(action)) return;
-    const damage = profile.damage[action] || 0;
-    total += action === ACTION_TRAP ? damage : damage * RAID_WIN_ESTIMATE_TURNS;
+    total += toRaidFirepower(action, profile.damage[action] || 0);
   });
   return total;
 }
 
-function hasWinningChance(village, profiles, assignments) {
-  return estimateVillageFirepower(village, profiles, assignments) >= getEnemyTotalHp(village);
+function hasWinningChance(village, profiles, assignments, reservedFirepower = 0) {
+  return estimateVillageFirepower(village, profiles, assignments, reservedFirepower) >= getEnemyTotalHp(village);
 }
 
 const RAID_ACTION_SLOTS = {
@@ -534,15 +538,36 @@ const RAID_ACTION_SLOTS = {
 const RAID_ACTION_TIE_ORDER = [ACTION_SHOOT, ACTION_CANNON, ACTION_TRAP, ACTION_DEFEND, ACTION_FORTIFY];
 
 /**
+ * 割り振り対象外の村人が、すでに占めている枠と出している火力。
+ * 行動固定中の村人と、手で火砲に就けた村人は動かせないため、その枠を空きとして数えない。
+ */
+function getReservedRaidLines(village, targets) {
+  const villagers = Array.isArray(village?.villagers) ? village.villagers : [];
+  const targetSet = new Set(targets);
+  const used = { front: 0, middle: 0, trap: 0 };
+  let firepower = 0;
+
+  villagers.forEach(person => {
+    if (targetSet.has(person)) return;
+    const slot = RAID_ACTION_SLOTS[person.action];
+    if (!slot) return;
+    used[slot] += 1;
+    firepower += toRaidFirepower(person.action, estimateRaidActionDamage(person, person.action, village));
+  });
+
+  return { used, firepower };
+}
+
+/**
  * 体力条件を満たす村人を、本人が最も戦果を出せる役へ就ける。
  * 見込みダメージの高い組から順に枠を埋めるため、役の優先順ではなく本人の得意で決まる。
  * 枠に入れなかった者は通常職へ残す。
  */
-function fillRaidRoles(village, profiles, assignments) {
+function fillRaidRoles(village, profiles, assignments, reservedSlots) {
   const budget = {
-    front: getRaidFrontlinerSlotCount(village),
-    middle: getRaidMiddleSlotCount(village),
-    trap: getRaidTrapMakerSlotCount(village)
+    front: Math.max(0, getRaidFrontlinerSlotCount(village) - reservedSlots.front),
+    middle: Math.max(0, getRaidMiddleSlotCount(village) - reservedSlots.middle),
+    trap: Math.max(0, getRaidTrapMakerSlotCount(village) - reservedSlots.trap)
   };
   const hpThreshold = getRaidJoinHpThreshold(village, profiles);
   const assigned = new Set();
@@ -590,7 +615,7 @@ function fillRaidRoles(village, profiles, assignments) {
   candidates.forEach(place);
 
   applyFortifyPreference(village, assignments, frontPicked);
-  return assigned;
+  return { assigned, budget };
 }
 
 /**
@@ -616,10 +641,11 @@ function buildRaidAssignments(village, targets) {
   const profiles = targets.map(person => getRaidAssignmentProfile(person, village));
   const assignments = new Map();
   profiles.forEach(profile => assignments.set(profile.person, profile.fallback));
+  const reserved = getReservedRaidLines(village, targets);
 
   // まず安全に戦える者だけで組む。
-  const assigned = fillRaidRoles(village, profiles, assignments);
-  if (hasWinningChance(village, profiles, assignments)) {
+  const { assigned, budget } = fillRaidRoles(village, profiles, assignments, reserved.used);
+  if (hasWinningChance(village, profiles, assignments, reserved.firepower)) {
     return { assignments, hasChance: true };
   }
 
@@ -631,6 +657,8 @@ function buildRaidAssignments(village, targets) {
   const added = [];
 
   for (const profile of reserves) {
+    // 枠を超えて就けても戦列には並べないため、前衛が埋まった時点で増員をやめる。
+    if (budget.front <= 0) break;
     // 被弾の小さい籠城を優先し、就けなければ迎撃で加わる。
     const action = [ACTION_FORTIFY, ACTION_DEFEND].find(candidate =>
       profile.allowed[candidate] &&
@@ -639,8 +667,9 @@ function buildRaidAssignments(village, targets) {
     if (!action) continue;
 
     assignments.set(profile.person, { preferredAction: profile.fallback.preferredAction, action });
+    budget.front -= 1;
     added.push(profile);
-    if (hasWinningChance(village, profiles, assignments)) {
+    if (hasWinningChance(village, profiles, assignments, reserved.firepower)) {
       return { assignments, hasChance: true };
     }
   }
