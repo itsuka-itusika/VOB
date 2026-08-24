@@ -73,6 +73,11 @@ const TITLE_DEFINITIONS = Object.freeze({
     id: "apocalypseCleared",
     name: "七災を越えし者",
     description: "村とともに七つの災厄を退け、天の干渉を断念させた。"
+  },
+  soloDefender: {
+    id: "soloDefender",
+    name: "一騎当千",
+    description: "ただ一人の前衛として迎撃に立ち、襲撃者を残らず討ち果たした。"
   }
 });
 

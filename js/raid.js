@@ -45,6 +45,7 @@ import { updateUI } from "./ui.js";
 import { applyRaidFriendshipResults, recordRaidFriendshipDamage, startRaidFriendshipTracking } from "./relationships.js";
 import { handleApocalypseRaidResult } from "./apocalypse.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
+import { grantTitle } from "./titles.js";
 
 const RAID_CLOSE_DELAY_MS = 700;
 const RAID_ACTION_SETTLE_DELAY_MS = 780;
@@ -1161,6 +1162,19 @@ function finalizeRaidPartSuccess(village) {
   endRaidProcess(true, true, village, { resultReason: "敵撤退" });
 }
 
+/**
+ * ただ一人の前衛が迎撃で敵を全滅させたとき、その村人へ「一騎当千」を贈る。
+ * 前衛の行動が確定している、襲撃者を片付ける前に呼ぶ。
+ */
+function grantSoloDefenderTitle(village) {
+  const frontliners = getActiveRaidFrontliners(village);
+  if (frontliners.length !== 1) return;
+  const hero = frontliners[0];
+  if (hero.action !== ACTION_DEFEND) return;
+  if (!grantTitle(hero, "soloDefender")) return;
+  village.log(`【称号】${hero.name}は単身で迎え撃ち、「一騎当千」を得た`);
+}
+
 /** 襲撃終了処理 */
 function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
   if (village.isRaidFinalizing || village.isRaidProcessDone) return;
@@ -1193,6 +1207,7 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
     const resultInfo = collectRaidResultInfo(village, isSuccess, isPartSuccess, options.resultReason);
     if (isSuccess && !isPartSuccess) {
       resultInfo.capturedName = tryCaptureRaidPrisoner(village)?.name || "";
+      grantSoloDefenderTitle(village);
     }
     village.raidEnemies=[];
     clearDefeatedRaidEnemies(village);
