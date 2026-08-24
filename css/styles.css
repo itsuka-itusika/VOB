@@ -2644,57 +2644,57 @@ body.mobile-mode .random-event-image {
     0 0 12px rgba(141, 148, 155, 0.5);
 }
 
-/* 未解放 = まだ授かっていない神言。軽銀のプレートではなく、暗い石板に彫った姿で出す */
+/* 未解放 = まだ授かっていない神言。軽銀のプレートではなく、灰色の石板に彫った姿で出す */
 .miracle-item.locked,
 .miracle-item.locked:hover {
   cursor: default;
-  /* 石目: 角度と周期の違う細かい縞を薄く重ねて、規則的な縞に見えない粒立ちにする */
-  background:
-    repeating-linear-gradient(27deg, rgba(255, 255, 255, 0.05) 0 1px, rgba(0, 0, 0, 0.05) 1px 5px),
-    repeating-linear-gradient(-14deg, rgba(255, 255, 255, 0.04) 0 1px, rgba(0, 0, 0, 0.04) 1px 9px),
-    linear-gradient(165deg, #6b6660 0%, #59554f 45%, #474441 78%, #55514c 100%);
-  border-color: #8b847c #2f2c29 #262421 #7e7770;
+  /* 石目は SVG のフラクタルノイズを敷いて出す。CSSの縞や斑点では布や水玉に見えてしまう。 */
+  background-image:
+    url("data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20width='140'%20height='140'><filter%20id='n'><feTurbulence%20type='fractalNoise'%20baseFrequency='0.9'%20numOctaves='4'%20stitchTiles='stitch'/><feColorMatrix%20type='saturate'%20values='0'/></filter><rect%20width='140'%20height='140'%20filter='url(%23n)'%20opacity='0.3'/></svg>"),
+    linear-gradient(165deg, #c8c6c2 0%, #b5b3af 45%, #a2a09c 78%, #b1afaa 100%);
+  background-size: 140px 140px, auto;
+  border-color: #e0ddd8 #85837f #777571 #d5d2cd;
   /* 角を不揃いにして、切り出した石の縁に見せる */
   border-radius: 4px 3px 5px 3px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.16),
-    inset 0 -3px 8px rgba(12, 10, 9, 0.42),
-    0 3px 10px rgba(20, 18, 16, 0.42);
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -3px 8px rgba(40, 37, 33, 0.26),
+    0 3px 10px rgba(45, 42, 38, 0.30);
 }
 
-/* 石板の文字は彫って白を差した刻印。上下に暗い縁を落として沈ませる */
+/* 石板の文字は刻んだ彫り。下側だけに光の縁を置く */
 .miracle-item.locked .miracle-header h4 {
-  color: #ece6dc;
-  text-shadow: 0 1px 1px rgba(14, 12, 10, 0.6);
+  color: #2a2926;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 .miracle-item.locked .miracle-desc,
 .miracle-item.locked .miracle-cost {
-  color: #d6cfc5;
-  text-shadow: 0 1px 1px rgba(14, 12, 10, 0.55);
+  color: #383734;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 .miracle-item.locked .miracle-reason {
-  color: #e8ab97;
-  text-shadow: 0 1px 1px rgba(14, 12, 10, 0.55);
+  color: #75201a;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 .miracle-item.locked .miracle-mark.locked {
-  background: rgba(255, 255, 255, 0.10);
-  border-color: rgba(232, 226, 216, 0.45);
-  color: #e0d9cf;
-  text-shadow: 0 1px 1px rgba(14, 12, 10, 0.55);
+  background: rgba(40, 38, 35, 0.12);
+  border-color: rgba(40, 38, 35, 0.38);
+  color: #31302d;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 /* 解放条件の帯は、石板に彫り込んだ溝として沈ませる */
 .miracle-item.locked .miracle-button:disabled {
-  background: linear-gradient(180deg, #3f3c39, #4b4844);
+  background: linear-gradient(180deg, #a4a29e, #b5b3af);
   border: 1px solid;
-  border-color: #2b2926 #635d57 #6d675f #302d2a;
+  border-color: #83817d #d2cfca #dbd8d3 #8c8a86;
   border-radius: 2px;
-  color: #ddd6cc;
-  text-shadow: 0 1px 1px rgba(14, 12, 10, 0.6);
-  box-shadow: inset 0 2px 5px rgba(12, 10, 9, 0.5);
+  color: #2c2b28;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+  box-shadow: inset 0 2px 5px rgba(40, 37, 33, 0.34);
 }
 
 .miracle-header {
