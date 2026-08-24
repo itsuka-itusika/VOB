@@ -802,7 +802,12 @@ function renderSecretTreasureModal(village) {
     return;
   }
 
-  content.innerHTML = '<div class="secret-treasure-grid"></div>';
+  content.innerHTML = `
+    <div class="secret-treasure-resources">
+      <div>資金: ${village.funds}</div>
+      <div>所持秘宝: ${secretTreasures.length}</div>
+    </div>
+    <div class="secret-treasure-grid"></div>`;
   const grid = content.querySelector(".secret-treasure-grid");
   groupSecretTreasures(secretTreasures).forEach(group => {
     grid.appendChild(createSecretTreasureItem(group, village));
