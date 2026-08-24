@@ -4,8 +4,8 @@ const DEFAULT_LINE = "なにかが起きたようだ。";
 const eventQueue = [];
 let isShowing = false;
 
-export function showRandomEventModal({ title, message, participants = [], actions = [], closeOnOverlay = true }) {
-  eventQueue.push({ title, message, participants, actions, closeOnOverlay });
+export function showRandomEventModal({ title, message, image = "", participants = [], actions = [], closeOnOverlay = true }) {
+  eventQueue.push({ title, message, image, participants, actions, closeOnOverlay });
   if (isShowing) return;
   showNextRandomEventModal();
 }
@@ -17,7 +17,7 @@ function showNextRandomEventModal() {
     return;
   }
   isShowing = true;
-  const { title, message, participants = [], actions = [], closeOnOverlay = true } = event;
+  const { title, message, image, participants = [], actions = [], closeOnOverlay = true } = event;
 
   const overlay = document.createElement("div");
   overlay.id = "randomEventOverlay";
@@ -56,6 +56,13 @@ function showNextRandomEventModal() {
   body.style.whiteSpace = "pre-line";
 
   modal.appendChild(heading);
+  if (image) {
+    const eventImage = document.createElement("img");
+    eventImage.className = "event-modal-image random-event-image";
+    eventImage.src = image;
+    eventImage.alt = title || "イベント画像";
+    modal.appendChild(eventImage);
+  }
   modal.appendChild(body);
 
   const shownParticipants = participants.filter(p => p && p.character).slice(0, 4);

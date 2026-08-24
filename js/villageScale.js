@@ -33,7 +33,7 @@ export const VILLAGE_SCALE_STAGES = [
     threshold: 250,
     title: "繁栄した郷村",
     description: "近隣の中でも存在感を持ち、領主や教会の帳簿にも載りうる村です。",
-    effects: ["魔導工廠、牢獄が建設可能", "櫓の設置数上限3"]
+    effects: ["魔導工廠、牢獄、救貧院が建設可能", "櫓の設置数上限3"]
   },
   {
     threshold: 350,

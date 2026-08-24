@@ -30,6 +30,8 @@ export class Village {
     this.apocalypseCleared = false;
     this.apocalypseLocustMonths = null;
     this.cleanlinessMonths = null;
+    this.bacchusProtectionMonths = 0;
+    this.lastEarnestPrayerMonth = null;
 
     this.villagers = [];
     this.pendingGoldenRainPregnancies = [];

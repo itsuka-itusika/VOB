@@ -182,6 +182,16 @@ export const VISITOR_TYPES = [
     status: "normal",
   },
   {
+    type: "移民",
+    weight: 0,
+    ageRange: { min: 16, max: 40 },
+    params: {
+      job: "移民",
+      action: "訪問"
+    },
+    status: "normal"
+  },
+  {
     type: "冒険者",
     weight: 10,
     ageRange: { min: 18, max: 35 },

@@ -256,6 +256,10 @@ function getMiracleTargetCount(mid) {
 // 癒し・酒杯が取り除くデバフ特性。選択リストの表示と効果処理で同じ並びを使う。
 const HEAL_MIRACLE_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "疫病", "産褥", "凍え"];
 const GOBLET_MIRACLE_MIND_TRAITS = ["心労", "抑鬱", DISAPPOINTMENT_TRAIT, DESPAIR_TRAIT];
+const NECTAR_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "疫病"];
+const NECTAR_MIND_TRAITS = ["心労", "抑鬱"];
+const SERPENT_STAFF_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "疫病", "産褥", "凍え", "危篤"];
+const SERPENT_STAFF_MIND_TRAITS = ["心労", "抑鬱", DISAPPOINTMENT_TRAIT, DESPAIR_TRAIT];
 
 const MIRACLE_CONDITION_SORTS = {
   body: { traits: HEAL_MIRACLE_BODY_TRAITS, traitKey: "bodyTraits", statKey: "hp", statLabel: "体力" },
@@ -310,6 +314,18 @@ function pickTraits(person, traitKey, order) {
 
 /** 奇跡ごとに、選択の判断へ要る分だけを名前の後ろへ並べる。 */
 function getMiracleTargetDetails(person, detailKind, { forPreview = false } = {}) {
+  if (detailKind === "nectar" || detailKind === "serpentStaff") {
+    const bodyOrder = detailKind === "nectar" ? NECTAR_BODY_TRAITS : SERPENT_STAFF_BODY_TRAITS;
+    const mindOrder = detailKind === "nectar" ? NECTAR_MIND_TRAITS : SERPENT_STAFF_MIND_TRAITS;
+    const bodyTraits = pickTraits(person, "bodyTraits", bodyOrder);
+    const mindTraits = pickTraits(person, "mindTraits", mindOrder);
+    return [
+      `体力${Math.floor(Number(person.hp) || 0)}`,
+      `ﾒﾝﾀﾙ${Math.floor(Number(person.mp) || 0)}`,
+      `（${bodyTraits.length > 0 ? bodyTraits.join("・") : "-"}）`,
+      `（${mindTraits.length > 0 ? mindTraits.join("・") : "-"}）`
+    ];
+  }
   if (detailKind === "exchange") {
     return [
       `体力${Math.floor(Number(person.hp) || 0)}`,
@@ -334,10 +350,15 @@ function getMiracleTargetDetails(person, detailKind, { forPreview = false } = {}
 }
 
 function getMiracleTargetParts(person, detailKind, options = {}) {
-  return [
-    person.race || "-",
+  const identityParts = [
     person.uiSexDisplay || person.bodySex || person.sex || "-",
-    `${person.bodyAge ?? person.age ?? "-"}歳`,
+    `${person.bodyAge ?? person.age ?? "-"}歳`
+  ];
+  if (detailKind !== "nectar" && detailKind !== "serpentStaff") {
+    identityParts.unshift(person.race || "-");
+  }
+  return [
+    ...identityParts,
     ...getMiracleTargetDetails(person, detailKind, options)
   ].filter(Boolean);
 }

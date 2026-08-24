@@ -364,6 +364,7 @@ export const SECRET_TREASURES = [
     desc: "人型種族・身体性別が女・肉体年齢16歳以上の村人1名に使用可能。種族による年齢上限の違いはない。翌月、遺伝父不明の神秘的な妊娠が訪れる。",
     sellPrice: SECRET_TREASURE_SELL_PRICES[ANNUNCIATION_PAINTING_SECRET_TREASURE_ID],
     target: "villager",
+    targetDetailKind: "exchange",
     targetFilter: canUseAnnunciationPaintingOn,
     targetBlockedReason: "人型種族・身体性別が女・肉体年齢16歳以上で、妊娠・産褥中でも妊娠予約中でもない村人が必要です",
     use: (village, target) => applyAnnunciationPainting(village, target)
@@ -427,6 +428,7 @@ export const SECRET_TREASURES = [
     desc: "指定した村人1名の体力とメンタルを40回復し、負傷・重体・疲労・過労・疫病・心労・抑鬱を解除する。",
     sellPrice: SECRET_TREASURE_SELL_PRICES.nectar,
     target: "villager",
+    targetDetailKind: "nectar",
     use: (village, target) => {
       target.hp = clampValue((Number(target.hp) || 0) + 40, 0, 100);
       target.mp = clampValue((Number(target.mp) || 0) + 40, 0, 100);
@@ -457,6 +459,7 @@ export const SECRET_TREASURES = [
     desc: "指定した村人1名の負傷・重体・産褥・疫病・危篤・失望・絶望などの状態異常を解除し、体力・メンタルが33以下なら34まで回復する。",
     sellPrice: SECRET_TREASURE_SELL_PRICES.serpent_staff,
     target: "villager",
+    targetDetailKind: "serpentStaff",
     use: (village, target) => {
       const recovered = restoreBadStatus(target, village, {
         includeMindTraits: ["心労", "抑鬱", DISAPPOINTMENT_TRAIT, DESPAIR_TRAIT]

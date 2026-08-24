@@ -2012,6 +2012,21 @@ section h2 {
   background: #221b14;
 }
 
+.random-event-image {
+  margin: 0 0 12px;
+  border: 1px solid #7a5c32;
+  box-sizing: border-box;
+}
+
+#randomEventModal button {
+  min-height: 36px;
+}
+
+body.mobile-mode .random-event-image {
+  height: min(32vh, 132px);
+  aspect-ratio: auto;
+}
+
 .event-modal-body {
   padding: 16px;
 }

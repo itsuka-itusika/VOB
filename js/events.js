@@ -61,6 +61,9 @@ import {
   processCaptiveReleaseDeadlines
 } from "./captives.js";
 import { processAdventurerQuestReturns, showAdventurerQuestResultModals } from "./adventurerQuests.js";
+import { getDespairDepartureLine } from "./data/dialogue/despairDepartureLines.js";
+import { advanceBacchusProtectionMonth, tryTriggerEarnestPrayer } from "./earnestPrayer.js";
+import { showRandomEventModal } from "./randomEventModal.js";
 
 const OPENING_RAID_GRACE_YEAR = 1195;
 const OPENING_RAID_GRACE_LAST_MONTH = 6;
@@ -387,6 +390,7 @@ function restoreRecoveredForcedActions(village) {
 
 export function runMonthStartPhase(village) {
   const simulationOptions = getBalanceSimulationOptions(village);
+  advanceBacchusProtectionMonth(village);
   advanceSaltPillarMonths(village);
   advanceApocalypseLocustMonths(village);
   const monthStartSeason = [3,6,9,12].includes(village.month)
@@ -394,6 +398,7 @@ export function runMonthStartPhase(village) {
     : "";
   doMonthStartProcess(village, simulationOptions);
   if (village.gameOver) return;
+  tryTriggerEarnestPrayer(village);
   if (monthStartSeason) {
     showSeasonChangeDialog(monthStartSeason);
     village.log(`${monthStartSeason}が訪れた`);
@@ -495,6 +500,13 @@ function applyFountainMonthlyHappiness(village) {
 }
 
 function leaveVillageByDespair(village, person) {
+  if (typeof document !== "undefined") {
+    showRandomEventModal({
+      title: "絶望の離村",
+      message: `${person.name}は絶望のまま村を去ろうとしている。`,
+      participants: [{ character: person, line: getDespairDepartureLine(person) }]
+    });
+  }
   recordVillagerLeaveHistory(village, person, { source: "絶望" });
   village.log(`${person.name}は絶望のまま村を去りました`);
   const index = village.villagers.indexOf(person);
@@ -899,6 +911,17 @@ export function doMonthStartProcess(v, simulationOptions = {}) {
         const arrivalLine = getVisitorArrivalLine(visitor);
         if (arrivalLine) v.log(`${visitor.name}「${arrivalLine}」`);
       }
+    }
+    if (hasActiveBuildingFlag(v, "hasPoorhouse", "poorhouse") && Math.random() < 0.5) {
+      const visitorType = Math.random() < 0.8 ? "移民" : "棄民";
+      const visitor = createRandomVisitor([
+        ...v.villagers.map(person => person.name),
+        ...v.visitors.map(person => person.name)
+      ], visitorType, v);
+      v.visitors.push(visitor);
+      v.log(`救貧院の訪問者 ${visitor.name} が村を訪れました`);
+      const arrivalLine = getVisitorArrivalLine(visitor);
+      if (arrivalLine) v.log(`${visitor.name}「${arrivalLine}」`);
     }
   }
 

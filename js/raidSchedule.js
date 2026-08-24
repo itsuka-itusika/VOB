@@ -16,6 +16,7 @@ const RAID_PROPHECY_TRAIT = "太陽の巫女";
 const RAID_RUINED_TRAIT = "荒廃";
 const RAID_FORTUNE_HOBBY = "占い";
 const RAID_STARGAZING_HOBBY = "天体観測";
+const RAID_PROTECTION_TRAIT = "加護";
 
 function normalizeNonNegativeInteger(value, fallback = 0) {
   const number = Number(value);
@@ -174,6 +175,11 @@ function reserveNextRaid(village) {
 export function processRaidScheduleAtMonthStart(village, options = {}) {
   normalizeRaidScheduleState(village);
   village.monthsSinceRaid += 1;
+
+  if (village?.villageTraits?.includes(RAID_PROTECTION_TRAIT)) {
+    village.pendingRaid = null;
+    return;
+  }
 
   if (advancePendingRaid(village)) return;
   if (isRaidActive(village)) return;

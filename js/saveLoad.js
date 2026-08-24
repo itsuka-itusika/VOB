@@ -229,6 +229,10 @@ function convertVillageToObject(village) {
     cleanlinessMonths: village.cleanlinessMonths == null
       ? null
       : Math.max(0, Math.floor(normalizeFiniteNumber(village.cleanlinessMonths, 0))),
+    bacchusProtectionMonths: Math.max(0, Math.floor(normalizeFiniteNumber(village.bacchusProtectionMonths, 0))),
+    lastEarnestPrayerMonth: village.lastEarnestPrayerMonth == null
+      ? null
+      : Math.floor(normalizeFiniteNumber(village.lastEarnestPrayerMonth, 0)),
     lastHeadmanElectionYear: village.lastHeadmanElectionYear != null && Number.isFinite(Number(village.lastHeadmanElectionYear))
       ? Number(village.lastHeadmanElectionYear)
       : null,
@@ -481,6 +485,15 @@ function convertObjectToVillage(dataObj) {
   v.cleanlinessMonths = hasCleanlinessTrait
     ? Math.max(0, Math.min(2, Math.floor(normalizeFiniteNumber(dataObj.cleanlinessMonths, 0))))
     : null;
+  v.bacchusProtectionMonths = v.villageTraits.includes("加護")
+    ? Math.max(0, Math.floor(normalizeFiniteNumber(dataObj.bacchusProtectionMonths, 0)))
+    : 0;
+  if (v.bacchusProtectionMonths <= 0) {
+    v.villageTraits = v.villageTraits.filter(trait => trait !== "加護");
+  }
+  v.lastEarnestPrayerMonth = dataObj.lastEarnestPrayerMonth == null
+    ? null
+    : Math.floor(normalizeFiniteNumber(dataObj.lastEarnestPrayerMonth, 0));
   if (v.apocalypseStarted && !v.villageTraits.includes("黙示録")) {
     v.villageTraits.push("黙示録");
   }

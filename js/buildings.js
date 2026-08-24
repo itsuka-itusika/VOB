@@ -329,6 +329,16 @@ export const BUILDINGS = [
     effect: standardBuildingEffect({ scale: 20, flag: "hasPrison", log: "牢獄建設完了: 捕虜を最大3名まで収容可能、規模+20" })
   },
   {
+    id: "poorhouse",
+    name: "救貧院",
+    materials: 50,
+    funds: 200,
+    tech: 0,
+    desc: "繁栄した郷村で解放。毎月、棄民20%・移民80%の専用訪問者判定枠を1つ追加する。規模+30",
+    isUnlocked: (village) => isScaleAtLeast(village, 250),
+    effect: standardBuildingEffect({ scale: 30, flag: "hasPoorhouse", log: "救貧院建設完了: 棄民20%・移民80%の専用訪問者判定枠+1、規模+30" })
+  },
+  {
     id: BACCHUS_GOLDEN_STATUE_BUILDING_ID,
     name: "バッカスの黄金像",
     materials: 300,
