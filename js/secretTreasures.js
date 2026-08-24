@@ -2,7 +2,15 @@ import { canExchangeBody, doExchange } from "./exchange.js";
 import { createRandomVisitorOfType } from "./createVillagers.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { recordDryadFruitHistory, recordMarriageHistory } from "./history.js";
-import { openExchangeModal, openPanFluteExchangeModal, showMarriageMiracleModal, showMiracleResultModal } from "./miracles.js";
+import {
+  formatMiracleStyleOptionLabel,
+  openExchangeModal,
+  openPanFluteExchangeModal,
+  renderMiracleStylePreview,
+  showMarriageMiracleModal,
+  showMiracleResultModal,
+  sortMiracleStyleTargets
+} from "./miracles.js";
 import { avoidCurrentRaidWithMessengerPass, canAvoidCurrentRaidWithMessengerPass, isMessengerPassBlockedByApocalypse, startRaidEvent } from "./raidStart.js";
 import { addRelationship, removeRelationship, addSpouseRelationships, raiseMutualFriendshipTo } from "./relationships.js";
 import {
@@ -406,6 +414,7 @@ export const SECRET_TREASURES = [
     desc: "指定した村人1名の体力を100にし、負傷・重体・産褥などの状態異常を解除して行動可能にする。危篤は解除できない。",
     sellPrice: SECRET_TREASURE_SELL_PRICES.ambrosia,
     target: "villager",
+    targetDetailKind: "body",
     use: (village, target) => {
       const recovered = restoreBadStatus(target, village, { fullHp: true, excludeTraits: ["危篤"] });
       village.log(`【秘宝】アンブロシアを${target.name}に使いました。体力100${recovered.length ? `、${recovered.join("・")}を解除` : ""}`);
@@ -488,6 +497,7 @@ export const SECRET_TREASURES = [
     desc: "塩の柱状態を含む指定した村人1名をドライアドの身体にする。",
     sellPrice: SECRET_TREASURE_SELL_PRICES[DRYAD_FRUIT_SECRET_TREASURE_ID],
     target: "villager",
+    targetDetailKind: "exchange",
     includeSaltPillar: true,
     use: (village, target) => applyDryadFruit(village, target)
   },
@@ -516,6 +526,7 @@ export const SECRET_TREASURES = [
     desc: "交換の奇跡・強と同じ効果。塩の柱状態を含む村人・捕虜・訪問者・襲撃者から2名を選び、肉体を交換する。",
     sellPrice: SECRET_TREASURE_SELL_PRICES[PINECONE_STAFF_SECRET_TREASURE_ID],
     target: "exchangePair",
+    targetDetailKind: "exchange",
     canUse: (village) => getBodyExchangeCandidates(village).length >= 2,
     blockedReason: "村人・捕虜・訪問者・襲撃者の合計が2名以上必要です",
     use: (village, pair) => applyPineconeStaff(village, pair)
@@ -523,7 +534,7 @@ export const SECRET_TREASURES = [
   {
     id: "pan_flute",
     name: "牧神の管笛",
-    desc: "塩の柱状態を含む村人・捕虜・訪問者・襲撃者から6名を選び、3組の肉体を入れ替える。",
+    desc: "塩の柱状態を含む村人・捕虜・訪問者・襲撃者から、笛の音がおのずと6名を選び、3組の肉体を入れ替える。対象は選べない。",
     sellPrice: SECRET_TREASURE_SELL_PRICES.pan_flute,
     canUse: (village) => getPanFluteCandidates(village).length > 5,
     blockedReason: "村人・捕虜・訪問者・襲撃者の合計が6名以上必要です",
@@ -638,9 +649,21 @@ function getTargetOptionLabel(person, village) {
 
 function renderTargetSelect(village, definition, container) {
   container.querySelectorAll(".secret-treasure-target-label").forEach(element => element.remove());
+  container.querySelectorAll(".secret-treasure-target-preview").forEach(element => element.remove());
   if (!definition?.target) return;
 
+  const detailKind = definition.targetDetailKind || "";
   const candidates = getTargetCandidates(village, definition);
+  // 表示順は奇跡と同じ状態ソート。値は元のcandidates添字のまま保ち、使用処理と互換にする。
+  const displayList = sortMiracleStyleTargets(candidates, detailKind)
+    .map(person => ({ person, index: candidates.indexOf(person) }));
+  const optionLabel = (person) => {
+    if (detailKind) return formatMiracleStyleOptionLabel(person, detailKind);
+    if (definition.target === "exchangePair") return getTargetOptionLabel(person, village);
+    return `${person.name}（肉体${person.bodyAge}歳 / 精神${person.spiritAge}歳）`;
+  };
+
+  const selects = [];
   if (definition.target === "exchangePair") {
     ["A", "B"].forEach(suffix => {
       const label = document.createElement("label");
@@ -651,28 +674,46 @@ function renderTargetSelect(village, definition, container) {
       emptyOption.value = "";
       emptyOption.textContent = "(選択)";
       select.appendChild(emptyOption);
-      candidates.forEach((person, index) => {
+      displayList.forEach(({ person, index }) => {
         const option = document.createElement("option");
         option.value = String(index);
-        option.textContent = getTargetOptionLabel(person, village);
+        option.textContent = optionLabel(person);
         select.appendChild(option);
       });
       container.appendChild(label);
+      selects.push(select);
     });
-    return;
+  } else {
+    const label = document.createElement("label");
+    label.className = "secret-treasure-target-label";
+    label.innerHTML = `<span>対象を選択:</span><select id="secretTreasureTargetSelect"></select>`;
+    const select = label.querySelector("select");
+    displayList.forEach(({ person, index }) => {
+      const option = document.createElement("option");
+      option.value = String(index);
+      option.textContent = optionLabel(person);
+      select.appendChild(option);
+    });
+    container.appendChild(label);
+    selects.push(select);
   }
 
-  const label = document.createElement("label");
-  label.className = "secret-treasure-target-label";
-  label.innerHTML = `<span>対象を選択:</span><select id="secretTreasureTargetSelect"></select>`;
-  const select = label.querySelector("select");
-  candidates.forEach((person, index) => {
-    const option = document.createElement("option");
-    option.value = String(index);
-    option.textContent = `${person.name}（肉体${person.bodyAge}歳 / 精神${person.spiritAge}歳）`;
-    select.appendChild(option);
-  });
-  container.appendChild(label);
+  if (!detailKind) return;
+
+  // 奇跡と同じ選択後プレビュー。未選択の枠は null で渡す。
+  const preview = document.createElement("div");
+  preview.className = "miracle-preview secret-treasure-target-preview";
+  container.appendChild(preview);
+  const updatePreview = () => {
+    const people = selects.map(select => {
+      if (select.value === "") return null;
+      return candidates[Number(select.value)] || null;
+    });
+    if (people.length === 2 && people[0] && people[0] === people[1]) people[1] = null;
+    renderMiracleStylePreview(preview, people, detailKind);
+  };
+  selects.forEach(select => select.addEventListener("change", updatePreview));
+  updatePreview();
 }
 
 // カード一覧で対象選択中の秘宝。定義idまたはラベルをキーにする。

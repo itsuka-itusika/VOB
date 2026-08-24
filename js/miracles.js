@@ -480,6 +480,48 @@ function updateMiracleActionButton(mid, button, village, costInfo, preview) {
   updateMiraclePreview(mid, village, preview);
 }
 
+/*
+ * 以下は奇跡以外のUI(秘宝など)から、奇跡と同じ対象選択の表示部品を使うための入口。
+ * detailKind は MIRACLE_TARGET_DETAIL_KINDS と同じ語("exchange"、"body"など)を渡す。
+ */
+
+export function formatMiracleStyleOptionLabel(person, detailKind) {
+  return formatMiracleOptionLabel(person, detailKind);
+}
+
+/** 状態ソートを持つ種別("body"、"mind")なら重い順に並べ替える。 */
+export function sortMiracleStyleTargets(people, detailKind) {
+  const sort = MIRACLE_CONDITION_SORTS[detailKind];
+  return sort ? sortByMiracleCondition(people, sort) : [...people];
+}
+
+/** people は選択枠ぶんの配列。未選択の枠は null を渡す。 */
+export function renderMiracleStylePreview(preview, people, detailKind) {
+  if (!preview) return;
+  const selected = people.filter(Boolean);
+  if (people.length >= 2 && selected.length < people.length) {
+    preview.textContent = "2人を選ぶと、対象の情報を表示します。";
+    return;
+  }
+  if (selected.length === 0) {
+    preview.textContent = "対象を選択してください。";
+    return;
+  }
+  const rows = [];
+  if (detailKind === "exchange" && selected.length >= 2) {
+    const description = document.createElement("div");
+    description.className = "miracle-preview-description";
+    description.textContent = "種族・性別・年齢・体力・身体能力・身体特性が入れ替わります。";
+    rows.push(description);
+  }
+  selected.forEach(person => {
+    rows.push(detailKind === "exchange"
+      ? createMiracleFullPreviewPerson(person, MIRACLE_PREVIEW_LAYERS.body)
+      : createMiracleTargetPreviewPerson(person, detailKind));
+  });
+  preview.replaceChildren(...rows);
+}
+
 function createMiracleTargetControls(miracle, village, button, costInfo) {
   if (miracle.id === "18") {
     const controls = document.createElement("div");

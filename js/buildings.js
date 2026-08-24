@@ -142,11 +142,11 @@ export const BUILDINGS = [
     materials: 50,
     funds: 50,
     tech: 0,
-    desc: "信仰施設。役職「司祭」、女性限定行動「巫女」、村人の願望を解放。規模+30",
+    desc: "信仰施設。役職「司祭」、女性限定行動「巫女」、村人の願望を解放。規模+20",
     effect: standardBuildingEffect({
-      scale: 30,
+      scale: 20,
       flag: "hasChurch",
-      log: "礼拝堂建設完了: 役職「司祭」、女性限定行動「巫女」、村人の願望を解放、規模+30"
+      log: "礼拝堂建設完了: 役職「司祭」、女性限定行動「巫女」、村人の願望を解放、規模+20"
     })
   },
   {
