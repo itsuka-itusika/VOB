@@ -336,11 +336,18 @@ function normalizeFriendshipValue(value, fallback = 0) {
   return clampValue(Math.round(safe), FRIENDSHIP_MIN, FRIENDSHIP_MAX);
 }
 
-function hasStoredFriendshipValue(person, targetName) {
-  if (!person || !targetName) return false;
+// 好感度マップは人物IDをキーに持つ。同名の別人による混線を防ぐ。
+function toFriendshipKey(id) {
+  const number = Math.floor(Number(id));
+  return Number.isFinite(number) && number > 0 ? String(number) : "";
+}
+
+function hasStoredFriendshipValue(person, targetId) {
+  const key = toFriendshipKey(targetId);
+  if (!person || !key) return false;
   const map = ensureFriendshipMap(person);
-  return Object.prototype.hasOwnProperty.call(map, targetName) &&
-    Number.isFinite(Number(map[targetName]));
+  return Object.prototype.hasOwnProperty.call(map, key) &&
+    Number.isFinite(Number(map[key]));
 }
 
 function ensureFriendshipMap(person) {
@@ -348,14 +355,14 @@ function ensureFriendshipMap(person) {
   if (!person.friendships || typeof person.friendships !== "object" || Array.isArray(person.friendships)) {
     person.friendships = {};
   }
-  Object.entries(person.friendships).forEach(([name, value]) => {
-    const key = String(name || "").trim();
-    if (!key || key === person.name) {
-      delete person.friendships[name];
+  Object.entries(person.friendships).forEach(([rawKey, value]) => {
+    const key = toFriendshipKey(rawKey);
+    if (!key || key === toFriendshipKey(person.id)) {
+      delete person.friendships[rawKey];
       return;
     }
-    if (key !== name) {
-      delete person.friendships[name];
+    if (key !== rawKey) {
+      delete person.friendships[rawKey];
     }
     person.friendships[key] = normalizeFriendshipValue(value);
   });
@@ -365,8 +372,8 @@ function ensureFriendshipMap(person) {
 function normalizeCounterMap(value) {
   const result = {};
   if (!value || typeof value !== "object" || Array.isArray(value)) return result;
-  Object.entries(value).forEach(([name, count]) => {
-    const key = String(name || "").trim();
+  Object.entries(value).forEach(([rawKey, count]) => {
+    const key = toFriendshipKey(rawKey);
     const number = Math.max(0, Math.floor(Number(count) || 0));
     if (key && number > 0) result[key] = number;
   });
@@ -401,14 +408,16 @@ function formatFriendshipScore(score) {
 }
 
 export function getFriendshipScore(a, b, fallback = 0) {
-  if (!a || !b || a === b || !a.name || !b.name) return 0;
+  const keyB = toFriendshipKey(b?.id);
+  const keyA = toFriendshipKey(a?.id);
+  if (!a || !b || a === b || !keyA || !keyB) return 0;
   const mapA = ensureFriendshipMap(a);
-  const valueA = mapA[b.name];
+  const valueA = mapA[keyB];
   if (Number.isFinite(Number(valueA))) {
     return normalizeFriendshipValue(valueA, fallback);
   }
   const mapB = ensureFriendshipMap(b);
-  const valueB = mapB[a.name];
+  const valueB = mapB[keyA];
   return normalizeFriendshipValue(Number.isFinite(Number(valueB)) ? valueB : fallback, fallback);
 }
 
@@ -421,9 +430,10 @@ export function getPairFriendshipMaximum(a, b, fallback = 0) {
 }
 
 export function setFriendshipScore(a, b, value) {
-  if (!a || !b || a === b || !a.name || !b.name) return 0;
+  const key = toFriendshipKey(b?.id);
+  if (!a || !b || a === b || !toFriendshipKey(a?.id) || !key) return 0;
   const next = normalizeFriendshipValue(value);
-  ensureFriendshipMap(a)[b.name] = next;
+  ensureFriendshipMap(a)[key] = next;
   return next;
 }
 
@@ -433,7 +443,7 @@ export function adjustFriendshipScore(a, b, delta) {
 }
 
 export function setMutualFriendship(a, b, value) {
-  if (!a || !b || a === b || !a.name || !b.name) return 0;
+  if (!a || !b || a === b || !toFriendshipKey(a?.id) || !toFriendshipKey(b?.id)) return 0;
   const next = normalizeFriendshipValue(value);
   setFriendshipScore(a, b, next);
   setFriendshipScore(b, a, next);
@@ -470,8 +480,8 @@ export function ensureVillageFriendships(village, fallback = 0) {
   if (!village || !Array.isArray(village.villagers)) return;
   village.villagers.forEach(normalizeFriendshipState);
   forEachVillagerPair(village, (a, b) => {
-    const aHas = hasStoredFriendshipValue(a, b.name);
-    const bHas = hasStoredFriendshipValue(b, a.name);
+    const aHas = hasStoredFriendshipValue(a, b.id);
+    const bHas = hasStoredFriendshipValue(b, a.id);
     if (!aHas && !bHas) {
       setMutualFriendship(a, b, fallback);
     } else if (!aHas) {
@@ -509,10 +519,13 @@ export function initializeNewVillagerFriendships(village, newcomer, actor, optio
 function incrementMutualPairCounter(a, b, key) {
   const statsA = ensureFriendshipStats(a);
   const statsB = ensureFriendshipStats(b);
-  const current = Math.max(Number(statsA[key]?.[b.name]) || 0, Number(statsB[key]?.[a.name]) || 0);
+  const keyA = toFriendshipKey(a?.id);
+  const keyB = toFriendshipKey(b?.id);
+  if (!keyA || !keyB) return 0;
+  const current = Math.max(Number(statsA[key]?.[keyB]) || 0, Number(statsB[key]?.[keyA]) || 0);
   const next = current + 1;
-  statsA[key][b.name] = next;
-  statsB[key][a.name] = next;
+  statsA[key][keyB] = next;
+  statsB[key][keyA] = next;
   return next;
 }
 
@@ -647,31 +660,32 @@ export function startRaidFriendshipTracking(village, options = {}) {
   if (!village) return;
   const participants = Array.isArray(options.participants) ? options.participants : [];
   const frontliners = Array.isArray(options.frontliners) ? options.frontliners : [];
-  village.raidFriendshipParticipants = [...new Set(participants.map(person => person?.name).filter(Boolean))];
-  village.raidFriendshipFrontliners = [...new Set(frontliners.map(person => person?.name).filter(Boolean))];
+  village.raidFriendshipParticipants = [...new Set(participants.map(person => person?.id).filter(Boolean))];
+  village.raidFriendshipFrontliners = [...new Set(frontliners.map(person => person?.id).filter(Boolean))];
   village.raidFriendshipDamage = {};
 }
 
 export function recordRaidFriendshipDamage(village, actor, damage) {
-  if (!village || !actor || !actor.name || !Array.isArray(village.villagers) || !village.villagers.includes(actor)) return;
+  const key = toFriendshipKey(actor?.id);
+  if (!village || !actor || !key || !Array.isArray(village.villagers) || !village.villagers.includes(actor)) return;
   const amount = Math.max(0, Math.floor(Number(damage) || 0));
   if (amount <= 0) return;
   if (!village.raidFriendshipDamage || typeof village.raidFriendshipDamage !== "object") {
     village.raidFriendshipDamage = {};
   }
-  village.raidFriendshipDamage[actor.name] = (Number(village.raidFriendshipDamage[actor.name]) || 0) + amount;
+  village.raidFriendshipDamage[key] = (Number(village.raidFriendshipDamage[key]) || 0) + amount;
 }
 
 export function applyRaidFriendshipResults(village) {
   if (!village || !Array.isArray(village.villagers)) return;
-  const nameToVillager = new Map(village.villagers.map(person => [person.name, person]));
-  const participantNames = Array.isArray(village.raidFriendshipParticipants)
+  const villagerById = new Map(village.villagers.map(person => [toFriendshipKey(person.id), person]));
+  const participantIds = Array.isArray(village.raidFriendshipParticipants)
     ? village.raidFriendshipParticipants
     : village.villagers
       .filter(person => ["迎撃", "籠城", "射撃", "火砲", "罠作成"].includes(person.action))
-      .map(person => person.name);
-  const participants = [...new Set(participantNames)]
-    .map(name => nameToVillager.get(name))
+      .map(person => person.id);
+  const participants = [...new Set(participantIds)]
+    .map(id => villagerById.get(toFriendshipKey(id)))
     .filter(Boolean);
 
   participants.forEach((a, index) => {
@@ -680,13 +694,13 @@ export function applyRaidFriendshipResults(village) {
     });
   });
 
-  const frontlinerNames = Array.isArray(village.raidFriendshipFrontliners)
+  const frontlinerIds = Array.isArray(village.raidFriendshipFrontliners)
     ? village.raidFriendshipFrontliners
     : village.villagers
       .filter(person => ["迎撃", "籠城"].includes(person.action))
-      .map(person => person.name);
-  const frontliners = [...new Set(frontlinerNames)]
-    .map(name => nameToVillager.get(name))
+      .map(person => person.id);
+  const frontliners = [...new Set(frontlinerIds)]
+    .map(id => villagerById.get(toFriendshipKey(id)))
     .filter(Boolean);
   frontliners.forEach((a, index) => {
     frontliners.slice(index + 1).forEach(b => {
@@ -699,10 +713,10 @@ export function applyRaidFriendshipResults(village) {
   });
 
   const damageEntries = Object.entries(village.raidFriendshipDamage || {})
-    .map(([name, damage]) => ({ name, damage: Number(damage) || 0 }))
-    .filter(entry => entry.damage > 0 && nameToVillager.has(entry.name))
+    .map(([key, damage]) => ({ key, damage: Number(damage) || 0 }))
+    .filter(entry => entry.damage > 0 && villagerById.has(entry.key))
     .sort((a, b) => b.damage - a.damage);
-  const distinguished = damageEntries[0] ? nameToVillager.get(damageEntries[0].name) : null;
+  const distinguished = damageEntries[0] ? villagerById.get(damageEntries[0].key) : null;
   if (distinguished) {
     // 殊勲は他者からの評価なので、好感度は他の参加者から殊勲者への一方向で上げる。
     participants.forEach(person => {
@@ -1075,10 +1089,12 @@ function collectRelationshipLabels(village, person, other) {
 }
 
 function collectExchangeLabels(person, other) {
-  if (person.bodyOwner === other.name && other.bodyOwner === person.name) return ["入れ替わり関係"];
+  const personHasOthersBody = person.bodyOwnerId != null && person.bodyOwnerId === other.id;
+  const otherHasPersonsBody = other.bodyOwnerId != null && other.bodyOwnerId === person.id;
+  if (personHasOthersBody && otherHasPersonsBody) return ["入れ替わり関係"];
   const labels = [];
-  if (person.bodyOwner === other.name) labels.push("体の本来の持ち主");
-  if (other.bodyOwner === person.name) labels.push("かつての身体");
+  if (personHasOthersBody) labels.push("体の本来の持ち主");
+  if (otherHasPersonsBody) labels.push("かつての身体");
   return [...new Set(labels)];
 }
 
@@ -1228,11 +1244,12 @@ export function clearRelationshipsForDepartedVillager(village, departed) {
     if (person === departed || !Array.isArray(person.relationships)) return;
 
     let removedSpouse = false;
+    const departedKey = toFriendshipKey(departed.id);
     const friendships = ensureFriendshipMap(person);
-    delete friendships[departedName];
+    delete friendships[departedKey];
     const stats = ensureFriendshipStats(person);
-    delete stats.workTogether[departedName];
-    delete stats.frontRaidTogether[departedName];
+    delete stats.workTogether[departedKey];
+    delete stats.frontRaidTogether[departedKey];
     normalizeRelationships(person);
     person.relationships = person.relationships.filter(rel => {
       if (rel === "既婚") return true;

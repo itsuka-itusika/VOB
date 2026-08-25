@@ -1353,13 +1353,13 @@ function collectRaidResultInfo(village, isSuccess, isPartSuccess, resultReason =
   ])];
   const survivingCount = enemies.filter(enemy => Number(enemy.hp) > 0).length;
 
-  const participantNames = Array.isArray(village.raidFriendshipParticipants)
+  const participantIds = Array.isArray(village.raidFriendshipParticipants)
     ? village.raidFriendshipParticipants
     : [];
-  const fallenNames = participantNames.filter(name => {
-    const person = village.villagers.find(v => v.name === name);
-    return person && Number(person.hp) <= 0;
-  });
+  const fallenNames = participantIds
+    .map(id => village.villagers.find(v => v.id === Number(id)))
+    .filter(person => person && Number(person.hp) <= 0)
+    .map(person => person.name);
 
   let mvp = null;
   if (isSuccess) {
@@ -1367,15 +1367,15 @@ function collectRaidResultInfo(village, isSuccess, isPartSuccess, resultReason =
       .filter(([, damage]) => Number(damage) > 0);
     if (damageEntries.length > 0) {
       const topDamage = Math.max(...damageEntries.map(([, damage]) => Number(damage)));
-      const topNames = damageEntries
+      const topIds = damageEntries
         .filter(([, damage]) => Number(damage) === topDamage)
-        .map(([name]) => name);
+        .map(([id]) => id);
       mvp = {
         damage: topDamage,
-        people: topNames.map(name => {
-          const person = village.villagers.find(v => v.name === name);
+        people: topIds.map(id => {
+          const person = village.villagers.find(v => v.id === Number(id));
           return {
-            name,
+            name: person ? person.name : "",
             portrait: person ? {
               name: person.name,
               portraitFile: person.portraitFile,
