@@ -11,7 +11,7 @@ export const EVENT_KIND_TITLES = {
 };
 
 export const EVENT_POOLS = {
-  good: ["wolfChild", "cat", "gold", "strangeRain", "fireworks", "hotSpring", "bathPerk", "hobbyFriends", "thaw", "menFriendship", "lover", "pickup", "yuri", "tattoo", "fashion", "muscle", "selfPleasure"],
+  good: ["wolfChild", "cat", "gold", "strangeRain", "fireworks", "hotSpring", "bathPerk", "hobbyFriends", "thaw", "menFriendship", "lover", "hitItOff", "pickup", "yuri", "tattoo", "fashion", "muscle", "selfPleasure"],
   bad: ["storm", "downpour", "heat", "fire", "thief", "rats", "lightning1", "lightning2", "snow", "fight", "loverArgument", "argument", "drunk", "epidemic"]
 };
 
@@ -37,6 +37,7 @@ export const EVENT_SUBJECTS = {
   thaw: "雪解け",
   menFriendship: "男同士の友情",
   lover: "恋の気配",
+  hitItOff: "意気投合",
   pickup: "ナンパ",
   yuri: "百合の恋",
   tattoo: "刺青",

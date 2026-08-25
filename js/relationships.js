@@ -48,6 +48,8 @@ export function doLoverCheck(village, options = {}) {
     && !hasMindTrait(x, "神聖")
     && !hasMindTrait(x, "野生")
   );
+  // 相手候補が1人もいない者を除いてからAを抽選する。候補なしの空振りを防ぐ。
+  candidatesA = candidatesA.filter(x => village.villagers.some(b => isLoverCandidate(x, b)));
   if (candidatesA.length===0) {
     village.log("恋人判定:対象者なし");
     return false;
@@ -55,11 +57,6 @@ export function doLoverCheck(village, options = {}) {
 
   let a = randChoice(candidatesA);
   let candidatesB = village.villagers.filter(b=>isLoverCandidate(a, b));
-  if (candidatesB.length===0) {
-    village.log(`恋人判定:${a.name}の相手候補なし`);
-    return false;
-  }
-
   let b = randChoice(candidatesB);
   let sc = getLoverSuccessRate(a, b);
   if (Math.random()<=sc) {
@@ -818,6 +815,111 @@ function getMarriageLine(person, partner) {
     "クールＭ": [`${partner.name}との婚姻を受け止めた。責任を果たす。`, "夫婦として、現実的に支え合おう。"],
     "クールＦ": [`${partner.name}と夫婦ね。落ち着いて歩みましょう。`, "今日から家族。大切にするわ。"],
     "老人": [`${partner.name}と夫婦になるとはのう。残りの日々、大事に歩もう。`, "新しい家族を得たのじゃな。わしも心を尽くそう。"]
+  };
+  return randChoice(lines[type] || lines[person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
+}
+
+// ---- 意気投合・恋人/親友の自然発生 ----------------------------------
+
+// まだ結ばれていない相手か。恋人・夫婦・親子・兄弟・親友は対象外。
+const BONDING_BLOCKING_RELATION_PREFIXES = new Set([
+  ...LOVER_RELATION_PREFIXES,
+  ...SPOUSE_RELATION_PREFIXES,
+  ...PARENT_CHILD_RELATION_PREFIXES,
+  "親友"
+]);
+
+function isBondingPartnerCandidate(a, b, friendshipThreshold) {
+  if (!a || !b || a === b) return false;
+  if (isSaltPillar(a) || isSaltPillar(b)) return false;
+  if (hasRelationshipTo(a, b.name, BONDING_BLOCKING_RELATION_PREFIXES) ||
+      hasRelationshipTo(b, a.name, BONDING_BLOCKING_RELATION_PREFIXES)) return false;
+  if (areSiblings(a, b)) return false;
+  return getPairFriendshipMinimum(a, b) >= friendshipThreshold;
+}
+
+// 恋人になれる組み合わせか。なれなければ親友になる。
+function canBecomeLoversByBonding(a, b) {
+  return !!a.spiritSex && !!b.bodySex && a.spiritSex !== b.bodySex
+    && isSingle(a) && isSingle(b)
+    && !hasBodyTrait(b, "四足歩行")
+    && b.bodyAge >= 16;
+}
+
+function pickBondingPair(village, friendshipThreshold) {
+  const villagers = Array.isArray(village?.villagers) ? village.villagers : [];
+  const withCandidates = villagers.filter(a =>
+    villagers.some(b => isBondingPartnerCandidate(a, b, friendshipThreshold)));
+  if (withCandidates.length === 0) return null;
+  const a = randChoice(withCandidates);
+  const b = randChoice(villagers.filter(x => isBondingPartnerCandidate(a, x, friendshipThreshold)));
+  return { a, b };
+}
+
+function formBond(village, a, b, { source, happinessGain = 0, friendshipGain = 0 }) {
+  if (canBecomeLoversByBonding(a, b)) {
+    addRelationship(a, `恋人:${b.name}`);
+    addRelationship(b, `恋人:${a.name}`);
+    if (happinessGain) {
+      a.happiness = clampValue(a.happiness + happinessGain, 0, 100);
+      b.happiness = clampValue(b.happiness + happinessGain, 0, 100);
+    }
+    if (friendshipGain) adjustMutualFriendship(a, b, friendshipGain);
+    recordLoverHistory(village, a, b, { source });
+    village.log(`【${source}】${a.name}と${b.name}が恋人になりました`);
+    showRelationshipModal("恋人成立", `${a.name}と${b.name}が恋人になりました。`, [
+      [a, getLoverLine(a, b)],
+      [b, getLoverLine(b, a)]
+    ]);
+    return "lover";
+  }
+
+  addRelationship(a, `親友:${b.name}`);
+  addRelationship(b, `親友:${a.name}`);
+  if (friendshipGain) adjustMutualFriendship(a, b, friendshipGain);
+  recordSocialRelationHistory(village, a, b, "親友", { source });
+  village.log(`【${source}】${a.name}と${b.name}が親友になりました`);
+  showRelationshipModal("親友成立", `${a.name}と${b.name}が親友になりました。`, [
+    [a, getBestFriendLine(a, b)],
+    [b, getBestFriendLine(b, a)]
+  ]);
+  return "friend";
+}
+
+/** ランダムイベント「意気投合」。好感度30以上の組から恋人か親友が生まれる。 */
+export function doHitItOffEvent(village) {
+  const pair = pickBondingPair(village, 30);
+  if (!pair) return false;
+  formBond(village, pair.a, pair.b, { source: "意気投合", happinessGain: 20, friendshipGain: 20 });
+  return true;
+}
+
+/** 月次の自然判定。好感度45以上の組があれば50%で、恋人か親友が生まれる。 */
+export function doNaturalBondingCheck(village) {
+  const pair = pickBondingPair(village, 45);
+  if (!pair) return false;
+  if (Math.random() >= 0.5) return false;
+  formBond(village, pair.a, pair.b, { source: "自然な縁", happinessGain: 20, friendshipGain: 0 });
+  return true;
+}
+
+function getBestFriendLine(person, partner) {
+  const childLine = getChildlikeRelationshipLine(person);
+  if (childLine) return childLine;
+  const type = getSpeechType(person);
+  const lines = {
+    "普通Ｍ": [`${partner.name}とは話が合うんだ。親友ってやつだな。`, "気の合う友ができた。悪くないな。"],
+    "普通Ｆ": [`${partner.name}さんとは何でも話せるんです。親友ですね。`, "大切な友達ができました。"],
+    "強気Ｍ": [`${partner.name}とは背中を預けられる仲だ。`, "親友か。面白いやつだからな。"],
+    "強気Ｆ": [`${partner.name}とは気が合うのよ。親友ってことでいいわ。`, "私の親友なんだから、胸を張りなさい。"],
+    "内気": [`${partner.name}さんが親友……嬉しい、です。`, "私なんかと仲良くしてくれて……ありがたいです。"],
+    "陰気": [`……${partner.name}とは妙に話が合う。`, "親友、か。悪い響きじゃない。"],
+    "お調子者": [`${partner.name}とは大親友っすよ！`, "気が合うんすよね～、うれしいっす！"],
+    "快活": [`${partner.name}とは大の仲良しだよ！`, "親友ができたよ！最高！"],
+    "お嬢様": [`${partner.name}様とは心が通じ合いますの。親友ですわ。`, "良き友を得ましたわ。"],
+    "クールＭ": [`${partner.name}とは互いに信を置ける。親友だ。`, "馬が合う。それだけのことだが、貴重だ。"],
+    "クールＦ": [`${partner.name}とは気が合うわ。親友と呼んでいいでしょう。`, "信じられる友がいるのは、良いものね。"],
+    "老人": [`${partner.name}とは良い茶飲み友達じゃ。`, "この歳で親友ができるとはのう。"]
   };
   return randChoice(lines[type] || lines[person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
 }

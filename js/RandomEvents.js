@@ -1,7 +1,7 @@
 // RandomEvents.js
 
 import { randInt, clampValue, round3 } from "./util.js";
-import { adjustMutualFriendship, areSiblings, doLoverCheck, addRelationship as addCategorizedRelationship, getFriendshipScore, getPairFriendshipMaximum, getPairFriendshipMinimum, isSingle, normalizeRelationship, parseRelationship, setFriendshipScore } from "./relationships.js";
+import { adjustMutualFriendship, areSiblings, doHitItOffEvent, doLoverCheck, addRelationship as addCategorizedRelationship, getFriendshipScore, getPairFriendshipMaximum, getPairFriendshipMinimum, isSingle, normalizeRelationship, parseRelationship, setFriendshipScore } from "./relationships.js";
 import { canExchangeBody, doExchange } from "./exchange.js";
 import { showRandomEventModal } from "./randomEventModal.js";
 import { HobbyEffects } from "./HobbyEffects.js";
@@ -196,7 +196,7 @@ export class RandomEvents {
 
   static shouldSuppressRandomEventAnnouncement(eventKey) {
     // doLoverCheck 側で恋人成立専用モーダルを出すため、汎用ランダムイベントモーダルは重ねない。
-    return eventKey === "lover" || eventKey === "wolfChild";
+    return eventKey === "lover" || eventKey === "hitItOff" || eventKey === "wolfChild";
   }
 
   static chooseEventKind({ chanceMultiplier = 1 } = {}) {
@@ -550,6 +550,12 @@ export class RandomEvents {
       }
       case "lover": {
         if (!doLoverCheck(v, { source: "ランダムイベント" })) {
+          return null;
+        }
+        break;
+      }
+      case "hitItOff": {
+        if (!doHitItOffEvent(v)) {
           return null;
         }
         break;

@@ -1,7 +1,7 @@
 // events.js
 
 import { randInt, clampValue, round3, getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "./util.js";
-import { doLoverCheck, doMarriageCheck, clearRelationshipsForDepartedVillager, processMonthlyFriendship } from "./relationships.js";
+import { doLoverCheck, doMarriageCheck, doNaturalBondingCheck, clearRelationshipsForDepartedVillager, processMonthlyFriendship } from "./relationships.js";
 import { createRandomVillager, createRandomVisitor } from "./createVillagers.js";
 import { processRaidScheduleAtMonthStart } from "./raidSchedule.js";
 import { RandomEvents } from "./RandomEvents.js";
@@ -602,6 +602,7 @@ export function endOfMonthProcess(v) {
 
   applySecurityBaselineDecay(v);
   processMonthlyFriendship(v);
+  doNaturalBondingCheck(v);
 
   let removeList=["豊穣","訪問者","襲撃者","ミダス"];
   // "襲撃中" はここでは消さない(raid.js 内で完了時に消す)
