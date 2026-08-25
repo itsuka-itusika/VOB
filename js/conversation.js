@@ -12,7 +12,7 @@ import { openPersonalHistoryModal, recordVillagerJoinHistory } from "./history.j
 import { getVisitorLineKey, MERCHANT_SECRET_TREASURE_LINES, VISITOR_JOIN_LINES } from "./data/dialogue/visitorLines.js";
 import { getCaptiveConversationLines, getCaptiveGroupKey } from "./data/dialogue/captiveLines.js";
 import { incrementTitleCounter, TITLE_COUNTER_KEYS } from "./titles.js";
-import { initializeNewVillagerFriendships } from "./relationships.js";
+import { initializeNewVillagerFriendships, openFriendshipDetailModal } from "./relationships.js";
 import { isAtPopulationLimit } from "./domain/speciesTraits.js";
 import {
   CAPTIVE_FAILED_TRAIT,
@@ -86,8 +86,8 @@ function openCharacterLineModal(person, { scene, key = "" }) {
   const portrait = document.getElementById("conversationPortrait");
   const text = document.getElementById("conversationText");
   const actionButtons = document.getElementById("actionButtons");
-  const historyLink = document.getElementById("conversationHistoryLink");
-  if (!overlay || !modal || !portrait || !text || !actionButtons || !historyLink) return;
+  const profileButtons = document.getElementById("conversationProfileButtons");
+  if (!overlay || !modal || !portrait || !text || !actionButtons || !profileButtons) return;
 
   portrait.setAttribute("aria-label", person.name || "肖像");
   applyPortraitToElement(portrait, person);
@@ -102,8 +102,7 @@ function openCharacterLineModal(person, { scene, key = "" }) {
     `;
   }
 
-  historyLink.hidden = true;
-  historyLink.onclick = null;
+  profileButtons.hidden = true;
 
   text.innerHTML = `<p><strong></strong> ${line}</p>`;
   actionButtons.innerHTML = "";
@@ -181,9 +180,9 @@ export function openConversationModal(character) {
   const portrait = document.getElementById("conversationPortrait");
   const text = document.getElementById("conversationText");
   const actionButtons = document.getElementById("actionButtons");
-  const historyLink = document.getElementById("conversationHistoryLink");
+  const profileButtons = document.getElementById("conversationProfileButtons");
 
-  if (!overlay || !modal || !portrait || !text || !actionButtons || !historyLink) return;
+  if (!overlay || !modal || !portrait || !text || !actionButtons || !profileButtons) return;
 
   portrait.setAttribute("aria-label", character.name || "肖像");
   applyPortraitToElement(portrait, character);
@@ -202,15 +201,27 @@ export function openConversationModal(character) {
   }
 
   const isVillageMember = theVillage.villagers.includes(character);
-  historyLink.hidden = !isVillageMember;
-  historyLink.title = isVillageMember ? `${character.name}の記録を見る` : "";
-  historyLink.onclick = isVillageMember
-    ? event => {
-        event.preventDefault();
-        closeConversationModal();
-        openPersonalHistoryModal(theVillage, character);
-      }
-    : null;
+  profileButtons.hidden = !isVillageMember;
+  const historyButton = document.getElementById("conversationHistoryButton");
+  const friendshipButton = document.getElementById("conversationFriendshipButton");
+  if (historyButton) {
+    historyButton.title = isVillageMember ? `${character.name}の記録を見る` : "";
+    historyButton.onclick = isVillageMember
+      ? () => {
+          closeConversationModal();
+          openPersonalHistoryModal(theVillage, character);
+        }
+      : null;
+  }
+  if (friendshipButton) {
+    friendshipButton.title = isVillageMember ? `${character.name}の人間関係を見る` : "";
+    friendshipButton.onclick = isVillageMember
+      ? () => {
+          closeConversationModal();
+          openFriendshipDetailModal(theVillage, character);
+        }
+      : null;
+  }
   if (isVillageMember) {
     refreshJobTable(character, theVillage);
   }

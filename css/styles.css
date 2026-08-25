@@ -3105,22 +3105,23 @@ section h2 {
   width: 200px;
 }
 
-.conversation-history-link {
-  display: inline-block;
-  margin-top: 6px;
-  color: #6b4f2a;
-  font-size: 0.85rem;
-  text-decoration: underline;
-  cursor: pointer;
+.conversation-profile-buttons {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  width: 200px;
 }
 
-.conversation-history-link:hover,
-.conversation-history-link:focus {
-  color: #3d2b13;
+.conversation-profile-buttons button {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  padding: 5px 0;
+  font-size: 0.85rem;
 }
 
 /* display 指定が hidden 属性の既定値に勝つため、非表示を明示する。 */
-.conversation-history-link[hidden] {
+.conversation-profile-buttons[hidden] {
   display: none;
 }
 
