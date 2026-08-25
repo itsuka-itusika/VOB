@@ -7,6 +7,7 @@ import { addStoredResource } from "./domain/resourceLimits.js";
 import { getPermanentStat } from "./domain/statLayers.js";
 import { ACTION_CANNON, ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT, ACTION_TRAP, RAID_ACTIONS, canPerformRaidAction, getRaidSlotLimitMessage } from "./raidRules.js";
 import { getConversationLine, getDialogueLine } from "./dialogue/dialogueEngine.js";
+import { completeTutorialTask, ensureTutorialState } from "./tutorial.js";
 import { openPersonalHistoryModal, recordVillagerJoinHistory } from "./history.js";
 import { getVisitorLineKey, MERCHANT_SECRET_TREASURE_LINES, VISITOR_JOIN_LINES } from "./data/dialogue/visitorLines.js";
 import { getCaptiveConversationLines, getCaptiveGroupKey } from "./data/dialogue/captiveLines.js";
@@ -128,8 +129,18 @@ function createConversationStatusHtml(character) {
       return `<p><strong></strong> ${randFrom(MERCHANT_SECRET_TREASURE_LINES)}</p>`;
     }
   }
+  if (isTutorialObserveTarget(character)) {
+    const line = getDialogueLine({ character, scene: "tutorial", key: "observe" });
+    if (line) return `<p><strong></strong> ${line}</p>`;
+  }
   const line = getConversationLine({ character, village: theVillage });
   return `<p><strong></strong> ${line || "..."}</p>`;
+}
+
+// チュートリアル「村人の観察」が未達成の間だけ、見守りに気づく特殊な一言を返す。
+function isTutorialObserveTarget(character) {
+  if (!theVillage.villagers.includes(character)) return false;
+  return !ensureTutorialState(theVillage).completed.observe_villagers;
 }
 
 function refreshConversationText(character) {
@@ -217,6 +228,11 @@ export function openConversationModal(character) {
 
   // 会話テキストを設定
   refreshConversationText(character);
+
+  // 村人の様子を見た時点で、チュートリアル「村人の観察」を達成にする。
+  if (isVillageMember && completeTutorialTask(theVillage, "observe_villagers")) {
+    updateUI(theVillage);
+  }
 
   // ボタンの表示制御
   actionButtons.innerHTML = "";

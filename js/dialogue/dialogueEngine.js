@@ -17,6 +17,7 @@ import { REPRODUCTION_LINES } from "../data/dialogue/reproductionLines.js";
 import { EXCHANGE_SITUATION_LINES } from "../data/dialogue/exchangeSituationLines.js";
 import { SECRET_TREASURE_LINES } from "../data/dialogue/secretTreasureLines.js";
 import { MIRACLE_RESULT_LINES } from "../data/dialogue/miracleLines.js";
+import { TUTORIAL_LINES } from "../data/dialogue/tutorialLines.js";
 import {
   getVisitorLineKey,
   VISITOR_APOCALYPSE_GENERIC_LINES,
@@ -266,6 +267,8 @@ export function getDialogueLines({ character, scene, key, context = {} }) {
       return selectToneLines(SECRET_TREASURE_LINES[key], character, context);
     case "miracle":
       return selectToneLines(MIRACLE_RESULT_LINES[key], character, context);
+    case "tutorial":
+      return selectToneLines(TUTORIAL_LINES[key], character, context);
     case "captiveJoin":
       return asLineArray(CAPTIVE_JOIN_LINES[key] || CAPTIVE_JOIN_LINES.default, context);
     case "captiveRelease":

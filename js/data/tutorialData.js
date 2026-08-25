@@ -35,6 +35,15 @@ export const TUTORIAL_TASKS = [
     reward: { resource: "funds", amount: 50 }
   },
   {
+    id: "observe_villagers",
+    title: "村人の観察",
+    warningText: "チュートリアル: 村人の観察∶村人一覧の顔や名前を選択し、村人の様子を見ましょう",
+    conditionText: "村人一覧の顔写真や名前を選択し、村人の様子を見る",
+    descriptionText: "信じる民あっての神様だからな。時々そうして村人たちの様子を見てやることだ。",
+    rewardText: "魔素+20、神威+2",
+    reward: { resource: "mana", amount: 20, divine: 2 }
+  },
+  {
     id: "use_miracle",
     title: "奇跡の行使",
     warningText: "チュートリアル: 奇跡の行使∶奇跡コマンドから奇跡を使いましょう",

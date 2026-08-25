@@ -1,4 +1,5 @@
 import { addStoredResource } from "./domain/resourceLimits.js";
+import { addDivineMight } from "./divineMight.js";
 import { TUTORIAL_ALL_COMPLETE_REWARD, TUTORIAL_TASKS } from "./data/tutorialData.js";
 import { clampValue } from "./util.js";
 
@@ -85,6 +86,9 @@ export function getTutorialWarnings(village) {
 
 function applyTutorialReward(village, task) {
   const reward = task.reward || {};
+  if (reward.divine) {
+    addDivineMight(village, reward.divine);
+  }
   if (reward.resource === "food" || reward.resource === "materials") {
     addStoredResource(village, reward.resource, reward.amount);
     return;
