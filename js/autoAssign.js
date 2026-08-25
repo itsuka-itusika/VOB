@@ -3,116 +3,95 @@ import {
   ACTION_NONE,
   ACTION_REST,
   ACTION_LEISURE,
+  ACTION_MASSAGE_FEMALE,
+  ACTION_MASSAGE_MALE,
+  ACTION_SALT_PILLAR,
   isTemporaryAction,
   refreshJobTable,
   setPreferredAction
 } from "./domain/jobTables.js";
 import { getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "./util.js";
 import {
+  calculateAlchemyYield,
+  calculateApprenticeYield,
+  calculateBrewingYield,
+  calculateBunnySupport,
+  calculateCopyBookYield,
+  calculateDancerHappiness,
+  calculateFarmYield,
+  calculateFishYield,
+  calculateGatherYield,
+  calculateGuardYield,
+  calculateHandiworkYield,
+  calculateHuntYield,
+  calculateLumberYield,
+  calculateMassageHeal,
+  calculateMikoMana,
+  calculateNurseHeal,
+  calculatePoetHappiness,
+  calculatePriestMindHeal,
+  calculateResearchAssistantYield,
+  calculateResearchYield,
+  calculateTradingYield,
+  calculateWeavingYield
+} from "./domain/jobMath.js";
+import {
+  ACTION_CANNON,
   ACTION_DEFEND,
   ACTION_FORTIFY,
   ACTION_SHOOT,
   ACTION_TRAP,
+  RAID_ACTIONS,
+  canCannonInRaid,
+  estimateRaidActionDamage,
+  getAverageEnemyAttack,
+  getEnemyTotalHp,
+  getRaidIncomingDamageMultiplier,
   canFortifyInRaid,
   canDefendInRaid,
   canMakeTrapInRaid,
-  canPerformRaidAction,
   canShootInRaid,
+  getRaidFrontlinerSlotCount,
+  getRaidReadiness,
+  getRaidMiddleSlotCount,
+  getRaidTrapMakerSlotCount,
   isRaidAction,
   isRaidActive
 } from "./raidRules.js";
+import { getCaptives } from "./captives.js";
+
+// 安全に戦列へ加える目安のターン数と、勝ち目を測るときの想定戦闘ターン数。
+const RAID_SAFE_SURVIVAL_TURNS = 2;
+const RAID_WIN_ESTIMATE_TURNS = 3;
 
 const JOB_NONE = ACTION_NONE;
 const JOB_REST = ACTION_REST;
 const JOB_LEISURE = ACTION_LEISURE;
 const JOB_HEAL = "\u7642\u990a";
 const JOB_LAST_MOMENTS = "\u81e8\u7d42";
-const TRAIT_PACIFIST = "\u975e\u6226\u4e3b\u7fa9";
-const JOB_FOOD_SET = new Set([
-  "\u8fb2\u4f5c\u696d",
-  "\u72e9\u731f",
-  "\u6f01",
-  "\u63a1\u96c6",
-  "\u91b8\u9020"
-]);
-const JOB_FOOD_PRIORITY = {
-  "\u8fb2\u4f5c\u696d": 1.15,
-  "\u63a1\u96c6": 1.05,
-  "\u91b8\u9020": 1.0,
-  "\u72e9\u731f": 0.82,
-  "\u6f01": 0.8
-};
-const JOB_MATERIAL_SET = new Set([
-  "\u4f10\u63a1",
-  "\u63a1\u96c6"
-]);
-const JOB_FUNDS_SET = new Set([
-  "\u5185\u8077",
-  "\u884c\u5546",
-  "\u4e01\u7a1a",
-  "\u932c\u91d1\u8853",
-  "\u5199\u672c",
-  "\u6a5f\u7e54\u308a"
-]);
-const JOB_RECOVERY_SET = new Set([
-  "\u770b\u8b77",
-  "\u3042\u3093\u307e"
-]);
-const RECOVERY_ASSIGNMENT_SET = new Set([
+const SELF_RECOVERY_ACTION_SET = new Set([
   "\u7642\u990a",
   "\u4f11\u990a",
-  "\u4f59\u6687",
-  "\u770b\u8b77",
-  "\u3042\u3093\u307e"
+  "\u4f59\u6687"
 ]);
 
-const JOB_WEIGHTS = {
-  "\u8fb2\u4f5c\u696d": { vit: 2, ind: 2 },
-  "\u4f10\u63a1": { str: 2, ind: 2 },
-  "\u72e9\u731f": { str: 2, cou: 2 },
-  "\u6f01": { vit: 2, cou: 2 },
-  "\u63a1\u96c6": { dex: 2, int: 2 },
-  "\u5185\u8077": { dex: 2, ind: 2 },
-  "\u7814\u7a76": { int: 2, mag: 2 },
-  "\u7814\u7a76\u52a9\u624b": { int: 2, mag: 2 },
-  "\u8b66\u5099": { str: 2, eth: 2 },
-  "\u770b\u8b77": { mag: 2, eth: 2 },
-  "\u8e0a\u308a\u5b50": { chr: 2, sexdr: 2 },
-  "\u8a69\u4eba": { chr: 4 },
-  "\u30b7\u30b9\u30bf\u30fc": { chr: 2, eth: 2 },
-  "\u795e\u5b98": { chr: 2, eth: 2 },
-  "\u884c\u5546": { chr: 2, int: 2 },
-  "\u4e01\u7a1a": { chr: 2, int: 2 },
-  "\u3042\u3093\u307e": { str: 1, dex: 1, chr: 1, sexdr: 1 },
-  "\u5deb\u5973": { chr: 1.5, mag: 1.5, sexdr: 1.5 },
-  "\u30d0\u30cb\u30fc": { chr: 2, sexdr: 2 },
-  "\u932c\u91d1\u8853": { int: 2, mag: 2 },
-  "\u5199\u672c": { vit: 2, int: 2 },
-  "\u6a5f\u7e54\u308a": { dex: 2, ind: 2 },
-  "\u91b8\u9020": { mag: 2, vit: 2, ind: 2 }
+// 職の評価は jobMath.js の期待成果をそのまま使う。ここに計算式は持たない。
+// 産出する資源軸ごとの基本重みと、村が困っているときの効き幅だけを定める。
+const AXIS_BASE_WEIGHTS = {
+  food: 1,
+  materials: 0.9,
+  recovery: 0.8,
+  funds: 0.35,
+  mana: 0.3,
+  security: 0.3,
+  tech: 0.25,
+  happiness: 0.25
 };
-
-const JOB_BASE_SCORES = {
-  "\u8fb2\u4f5c\u696d": 20,
-  "\u4f10\u63a1": 20,
-  "\u72e9\u731f": 14,
-  "\u6f01": 14,
-  "\u63a1\u96c6": 14,
-  "\u5185\u8077": 8,
-  "\u7814\u7a76": -8,
-  "\u7814\u7a76\u52a9\u624b": -8,
-  "\u884c\u5546": 8,
-  "\u4e01\u7a1a": 8,
-  "\u932c\u91d1\u8853": 0,
-  "\u5199\u672c": 8,
-  "\u6a5f\u7e54\u308a": 8,
-  "\u91b8\u9020": 14,
-  "\u8b66\u5099": -8,
-  "\u770b\u8b77": 8,
-  "\u8e0a\u308a\u5b50": -8,
-  "\u30b7\u30b9\u30bf\u30fc": -8,
-  "\u3042\u3093\u307e": 8,
-  "\u30d0\u30cb\u30fc": 8
+const AXIS_URGENCY = {
+  food: 3,
+  materials: 2,
+  recovery: 2.5,
+  funds: 1.5
 };
 
 function firstAvailable(candidates, table) {
@@ -120,16 +99,16 @@ function firstAvailable(candidates, table) {
 }
 
 function estimateMonthlyFoodCost(village) {
-  const villagers = Array.isArray(village.villagers) ? village.villagers : [];
-  return villagers.reduce((sum, person) => {
+  const people = (Array.isArray(village.villagers) ? village.villagers : []).concat(getCaptives(village));
+  return people.reduce((sum, person) => {
     return sum + getVillagerFoodConsumption(person);
   }, 0);
 }
 
 function estimateMonthlyMaterialCost(village) {
-  const villagers = Array.isArray(village.villagers) ? village.villagers : [];
+  const people = (Array.isArray(village.villagers) ? village.villagers : []).concat(getCaptives(village));
   return village.villageTraits.includes("\u51ac")
-    ? villagers.reduce((sum, person) => sum + getVillagerWinterMaterialConsumption(person), 0)
+    ? people.reduce((sum, person) => sum + getVillagerWinterMaterialConsumption(person), 0)
     : 0;
 }
 
@@ -160,6 +139,12 @@ function buildVillagePriorityContext(village) {
   const fundsSeverity = normalizeSeverity((fundsBaseline - (Number(village.funds) || 0)) / fundsBaseline);
 
   return {
+    severityByAxis: {
+      food: foodSeverity,
+      materials: materialSeverity,
+      recovery: recoverySeverity,
+      funds: fundsSeverity
+    },
     foodSeverity,
     recoverySeverity,
     materialSeverity,
@@ -173,98 +158,78 @@ function buildVillagePriorityContext(village) {
   };
 }
 
-function getPriorityBonus(job, context) {
-  let bonus = 0;
-
-  if (JOB_FOOD_SET.has(job)) {
-    bonus += context.foodSeverity * 120 * (JOB_FOOD_PRIORITY[job] || 1);
-  }
-  if (JOB_RECOVERY_SET.has(job)) {
-    bonus += context.recoverySeverity * 85;
-  }
-  if (JOB_MATERIAL_SET.has(job)) {
-    bonus += context.materialSeverity * 55;
-  }
-  if (JOB_FUNDS_SET.has(job)) {
-    bonus -= 24;
-    bonus += Math.max(0, context.fundsSeverity - 1.05) * 45;
-    if (context.foodSeverity > 0.35 || context.materialSeverity > 0.35 || context.recoverySeverity > 0.35) {
-      bonus -= 18;
+/**
+ * その職が1か月で生む期待成果を、資源軸ごとに返す。
+ * 計算は jobMath.js の実処理と同じ関数へ委ね、ここでは軸へ振り分けるだけにする。
+ * 対象外の行動（遊び、休養など）は null を返し、評価から外す。
+ */
+function getExpectedYield(person, job, village) {
+  switch (job) {
+    case "農作業": return { food: calculateFarmYield(person, village) };
+    case "狩猟": return { food: calculateHuntYield(person, village) };
+    case "漁": return { food: calculateFishYield(person, village) };
+    case "伐採": return { materials: calculateLumberYield(person, village) };
+    case "採集": {
+      const yields = calculateGatherYield(person, village);
+      return { food: yields.food, materials: yields.materials };
     }
+    case "醸造": {
+      const yields = calculateBrewingYield(person, village);
+      return { food: yields.food, mana: yields.mana };
+    }
+    case "内職": return { funds: calculateHandiworkYield(person, village) };
+    case "行商": return { funds: calculateTradingYield(person) };
+    case "丁稚": return { funds: calculateApprenticeYield(person) };
+    case "機織り": return { funds: calculateWeavingYield(person) };
+    case "写本": {
+      const amount = calculateCopyBookYield(person);
+      return { funds: amount, tech: amount };
+    }
+    case "錬金術": {
+      const yields = calculateAlchemyYield(person);
+      return { funds: yields.funds, mana: yields.mana };
+    }
+    case "研究": return { tech: calculateResearchYield(person, village) };
+    case "研究助手": return { tech: calculateResearchAssistantYield(person, village) };
+    case "警備": return { security: calculateGuardYield(person) };
+    case "看護": return { recovery: calculateNurseHeal(person, village) };
+    case "あんま":
+    case ACTION_MASSAGE_MALE:
+    case ACTION_MASSAGE_FEMALE:
+      return { recovery: calculateMassageHeal(person, job) };
+    case "神官":
+    case "シスター":
+      return { recovery: calculatePriestMindHeal(person, village) };
+    case "踊り子": return { happiness: calculateDancerHappiness(person, village) };
+    case "詩人": return { happiness: calculatePoetHappiness(person, village) };
+    case "バニー": return { happiness: calculateBunnySupport(person) };
+    case "巫女": return { mana: calculateMikoMana(person) };
+    default: return null;
   }
-
-  return bonus;
 }
 
-function hasTrait(person, trait) {
-  return (Array.isArray(person.bodyTraits) && person.bodyTraits.includes(trait))
-    || (Array.isArray(person.mindTraits) && person.mindTraits.includes(trait));
-}
-
-function getJobTraitMultiplier(person, job, village) {
-  let mul = 1;
-  const villageTraits = Array.isArray(village?.villageTraits) ? village.villageTraits : [];
-  if (villageTraits.includes("豊穣") && ["農作業", "伐採", "狩猟", "漁", "採集", "醸造"].includes(job)) mul *= 2;
-  if (villageTraits.includes("秋") && ["農作業", "採集", "醸造"].includes(job)) mul *= 1.5;
-  if (villageTraits.includes("夏") && job === "漁") mul *= 1.2;
-  if (villageTraits.includes("冬") && job === "農作業") mul *= 0.5;
-  if (villageTraits.includes("冬") && job === "狩猟") mul *= 1.2;
-  if (villageTraits.includes("冷夏") && ["農作業", "伐採"].includes(job)) mul *= 0.5;
-
-  if (hasTrait(person, "緑の指") && ["農作業", "伐採", "採集", "醸造"].includes(job)) mul *= 1.2;
-  if (hasTrait(person, "大地の巫女") && ["農作業", "醸造"].includes(job)) mul *= 1.5;
-  if (hasTrait(person, "大地の加護") && ["農作業", "醸造"].includes(job)) mul *= 1.2;
-  if (hasTrait(person, "熟練農夫") && job === "農作業") mul *= 1.3;
-  if (hasTrait(person, "達人農夫") && job === "農作業") mul *= 1.5;
-  if (hasTrait(person, "熟練木樵") && job === "伐採") mul *= 1.3;
-  if (hasTrait(person, "達人木樵") && job === "伐採") mul *= 1.5;
-  if (hasTrait(person, "熟練狩人") && job === "狩猟") mul *= 1.3;
-  if (hasTrait(person, "達人狩人") && job === "狩猟") mul *= 1.5;
-  if (hasTrait(person, "熟練漁師") && job === "漁") mul *= 1.3;
-  if (hasTrait(person, "達人漁師") && job === "漁") mul *= 1.5;
-  if (hasTrait(person, "飛行") && ["狩猟", "採集"].includes(job)) mul *= 1.2;
-  if (hasTrait(person, "月の巫女") && job === "狩猟") mul *= 1.5;
-  if (hasTrait(person, "月の加護") && job === "狩猟") mul *= 1.2;
-  if (hasTrait(person, "夜目") && ["警備", "狩猟"].includes(job)) mul *= 1.2;
-  if (hasTrait(person, "水中呼吸") && job === "漁") mul *= 2;
-  if (hasTrait(person, "森の知恵") && job === "採集") mul *= 1.2;
-  if (hasTrait(person, "海の知恵") && job === "漁") mul *= 1.2;
-  if ((person.hobby === "ハンティング" || person.hobby === "狩猟") && job === "狩猟") mul *= 1.1;
-  if (hasTrait(person, "思春期") && ["農作業", "伐採", "狩猟", "漁", "採集", "内職", "丁稚", "研究助手"].includes(job)) mul *= 0.8;
-  return mul;
-}
-
-function getJobWeights(person, job) {
-  if (job === "\u3042\u3093\u307e") {
-    if (person.bodySex === "\u7537") return { str: 2, int: 2 };
-    if (person.bodySex === "\u5973") return { chr: 2, sexdr: 2 };
-  }
-  return JOB_WEIGHTS[job];
+/** 資源軸ごとの重み。村が困っている軸ほど大きくなる。 */
+function getAxisWeight(axis, context) {
+  const base = AXIS_BASE_WEIGHTS[axis] || 0;
+  const urgency = AXIS_URGENCY[axis];
+  if (!urgency || !context) return base;
+  const severity = context.severityByAxis[axis] || 0;
+  return base * (1 + severity * urgency);
 }
 
 function scoreJob(person, job, context) {
-  const weights = getJobWeights(person, job);
-  if (!weights) return -Infinity;
+  const yields = getExpectedYield(person, job, context?.village);
+  if (!yields) return -Infinity;
 
-  const baseScore = JOB_BASE_SCORES[job] || 0;
-  const priorityBonus = context ? getPriorityBonus(job, context) : 0;
-
-  const rawScore = Object.entries(weights).reduce((score, [stat, weight]) => {
-    return score + (Number(person[stat]) || 0) * weight;
-  }, baseScore + priorityBonus);
-  return rawScore * getJobTraitMultiplier(person, job, context?.village);
-}
-
-function hasLowRecoveryNeed(person) {
-  return (Number(person.hp) || 0) <= 33 || (Number(person.mp) || 0) <= 33;
+  return Object.entries(yields).reduce((score, [axis, amount]) => {
+    return score + (Number(amount) || 0) * getAxisWeight(axis, context);
+  }, 0);
 }
 
 function chooseBestJob(person, context) {
   const preferredTable = Array.isArray(person.jobTable) ? person.jobTable : [];
   const candidateJobs = preferredTable.filter(job => job !== JOB_NONE);
-  const workCandidates = hasLowRecoveryNeed(person)
-    ? candidateJobs
-    : candidateJobs.filter(job => !RECOVERY_ASSIGNMENT_SET.has(job));
+  const workCandidates = candidateJobs.filter(job => !SELF_RECOVERY_ACTION_SET.has(job));
   const candidates = workCandidates.length > 0 ? workCandidates : candidateJobs;
   let bestJob = candidates[0] || JOB_NONE;
   let bestScore = -Infinity;
@@ -283,7 +248,7 @@ function chooseBestJob(person, context) {
 function chooseWorkAction(person, actionTable, preferredAction) {
   if (actionTable.includes(preferredAction)) return preferredAction;
 
-  const nonRecoveryAction = actionTable.find(action => action !== JOB_NONE && !RECOVERY_ASSIGNMENT_SET.has(action));
+  const nonRecoveryAction = actionTable.find(action => action !== JOB_NONE && !SELF_RECOVERY_ACTION_SET.has(action));
   return nonRecoveryAction || actionTable[0] || preferredAction || JOB_NONE;
 }
 
@@ -307,7 +272,7 @@ function chooseAssignment(person, village, context) {
   const currentPreferred = person.preferredAction ||
     (preferredTable.includes(person.job) ? person.job : JOB_NONE);
 
-  if (actionTable.length === 1 && [ACTION_CRADLE, JOB_HEAL, JOB_LAST_MOMENTS].includes(actionTable[0])) {
+  if (actionTable.length === 1 && [ACTION_CRADLE, JOB_HEAL, JOB_LAST_MOMENTS, ACTION_SALT_PILLAR].includes(actionTable[0])) {
     return {
       preferredAction: actionTable[0] === ACTION_CRADLE ? ACTION_CRADLE : currentPreferred,
       action: actionTable[0]
@@ -339,14 +304,13 @@ function chooseAssignment(person, village, context) {
   };
 }
 
-function getHealthFactor(person) {
-  const hp = Number(person.hp) || 0;
-  const mp = Number(person.mp) || 0;
-  return Math.max(0, Math.min(1.2, ((hp * 0.75) + (mp * 0.25)) / 100));
-}
-
 function canUseAction(person, action) {
   return Array.isArray(person.actionTable) && person.actionTable.includes(action);
+}
+
+/** 手で火砲に就けた村人か。火砲は自動では選ばないため、割り振りの対象外にする。 */
+function isManualCannoneer(person, village) {
+  return person?.action === ACTION_CANNON && canCannonInRaid(person, village);
 }
 
 function chooseRaidFallbackAction(person, currentPreferred, currentAction) {
@@ -364,91 +328,32 @@ function chooseRaidFallbackAction(person, currentPreferred, currentAction) {
     JOB_NONE;
 }
 
-function getExpectedDefenderDamage(person) {
-  const mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
-  if (mindTraits.includes(TRAIT_PACIFIST)) return 0;
-
-  const physical = ((Number(person.str) || 0) * (Number(person.cou) || 0) / 400) * 50;
-  const magical = ((Number(person.mag) || 0) * (Number(person.cou) || 0) / 400) * 25;
-  let traitMultiplier = 1;
-  if (mindTraits.includes("歴戦")) traitMultiplier *= 1.2;
-  return Math.max(physical, magical) * traitMultiplier;
+/**
+ * 迎撃の想定ダメージ。tools/balance の測定からも参照する。
+ * useBaseStats は、一時的な増減を除いた素の能力で比べたいときに使う。
+ */
+export function getExpectedDefenderDamage(person, { useBaseStats = false } = {}) {
+  const source = useBaseStats && person?.baseStats
+    ? { ...person, ...person.baseStats }
+    : person;
+  return estimateRaidActionDamage(source, ACTION_DEFEND, null);
 }
 
-function getExpectedTrapDamage(person) {
-  return ((Number(person.dex) || 0) * (Number(person.int) || 0) / 400) * 30;
+/** その行動で何ターン耐えられるかの目安。被弾しない罠は常に安全とみなす。 */
+function getSurvivableTurns(person, action, village) {
+  const incoming = getAverageEnemyAttack(village) * getRaidIncomingDamageMultiplier(action, village);
+  if (incoming <= 0) return Number.POSITIVE_INFINITY;
+  return (Number(person.hp) || 0) / incoming;
 }
 
-function getExpectedShootDamage(person, village) {
-  const enemies = Array.isArray(village?.raidEnemies)
-    ? village.raidEnemies.filter(enemy => (Number(enemy.hp) || 0) > 0)
-    : [];
-  const avgEnemyVit = enemies.length > 0
-    ? enemies.reduce((sum, enemy) => sum + (Number(enemy.vit) || 0), 0) / enemies.length
-    : 0;
-  const damage = ((Number(person.dex) || 0) * (Number(person.cou) || 0) / 400) * 40 - avgEnemyVit * 1.5;
-  return Math.max(0, damage);
+/** 安全に就ける行動か。想定ターン数ぶん耐えられることを求める。 */
+function canJoinSafely(person, action, village) {
+  return getSurvivableTurns(person, action, village) >= RAID_SAFE_SURVIVAL_TURNS;
 }
 
-function isSafeDefender(person) {
-  return (Number(person.hp) || 0) >= 55 && (Number(person.mp) || 0) >= 20;
-}
-
-function isSafeFortifier(person) {
-  return (Number(person.hp) || 0) >= 50 && (Number(person.mp) || 0) >= 15;
-}
-
-function isSafeShooter(person) {
-  return (Number(person.hp) || 0) >= 35 && (Number(person.mp) || 0) >= 10;
-}
-
-function isSafeTrapMaker(person) {
-  return (Number(person.hp) || 0) >= 35 && (Number(person.mp) || 0) >= 10;
-}
-
-function getDefenderScore(person) {
-  const attack = getExpectedDefenderDamage(person);
-  if (attack <= 0) return -Infinity;
-
-  return (
-    attack * 2.2
-    + (Number(person.vit) || 0) * 1.4
-    + (Number(person.cou) || 0) * 1.8
-    + (Number(person.hp) || 0) * 0.45
-  ) * getHealthFactor(person);
-}
-
-function getTrapScore(person) {
-  const damage = getExpectedTrapDamage(person);
-  return (
-    damage * 4
-    + (Number(person.dex) || 0) * 2.65
-    + (Number(person.int) || 0) * 2.45
-    + (Number(person.ind) || 0) * 1.0
-    + (Number(person.cou) || 0) * 0.4
-    + (Number(person.mp) || 0) * 0.1
-  );
-}
-
-function getShooterScore(person, village) {
-  const damage = getExpectedShootDamage(person, village);
-  if (damage <= 0) return -Infinity;
-
-  return (
-    damage * 3.2
-    + (Number(person.dex) || 0) * 2.0
-    + (Number(person.cou) || 0) * 1.7
-    + (Number(person.hp) || 0) * 0.25
-  ) * getHealthFactor(person);
-}
-
-function getFortifierScore(person) {
-  return (
-    (Number(person.vit) || 0) * 2.4
-    + (Number(person.hp) || 0) * 0.8
-    + (Number(person.cou) || 0) * 1.2
-    + (Number(person.str) || 0) * 0.6
-  ) * getHealthFactor(person);
+/** 一撃で倒れないか。これを割る者は、勝ち目がどうあれ戦列に加えない。 */
+function canJoinAtAll(person, action, village) {
+  return getSurvivableTurns(person, action, village) > 1;
 }
 
 function getRaidAssignmentProfile(person, village) {
@@ -459,120 +364,143 @@ function getRaidAssignmentProfile(person, village) {
   const keptPreferred = Array.isArray(person.jobTable) && person.jobTable.includes(currentPreferred)
     ? currentPreferred
     : (person.preferredAction || JOB_NONE);
-  const fallbackAction = chooseRaidFallbackAction(person, keptPreferred, currentAction);
-  const canDefendByRule = canDefendInRaid(person);
-  const canTrapByRule = canMakeTrapInRaid(person);
-  const canShootByRule = canShootInRaid(person, village);
-  const canFortifyByRule = canFortifyInRaid(person, village);
 
-  const defenderDamage = getExpectedDefenderDamage(person);
-  const trapDamage = getExpectedTrapDamage(person);
-  const shootDamage = getExpectedShootDamage(person, village);
-  const canDefend = canDefendByRule && canUseAction(person, ACTION_DEFEND) && isSafeDefender(person) && defenderDamage >= 8;
-  const canTrap = canTrapByRule && canUseAction(person, ACTION_TRAP) && isSafeTrapMaker(person) && trapDamage >= 6;
-  const canShoot = canShootByRule && canUseAction(person, ACTION_SHOOT) && isSafeShooter(person) && shootDamage >= 5;
-  const canFortify = canFortifyByRule && canUseAction(person, ACTION_FORTIFY) && isSafeFortifier(person);
+  const allowed = {
+    [ACTION_DEFEND]: canDefendInRaid(person) && canUseAction(person, ACTION_DEFEND),
+    [ACTION_FORTIFY]: canFortifyInRaid(person, village) && canUseAction(person, ACTION_FORTIFY),
+    [ACTION_SHOOT]: canShootInRaid(person, village) && canUseAction(person, ACTION_SHOOT),
+    [ACTION_CANNON]: canCannonInRaid(person, village) && canUseAction(person, ACTION_CANNON),
+    [ACTION_TRAP]: canMakeTrapInRaid(person) && canUseAction(person, ACTION_TRAP)
+  };
+  const damage = {};
+  RAID_ACTIONS.forEach(action => {
+    damage[action] = allowed[action] ? estimateRaidActionDamage(person, action, village) : 0;
+  });
 
   return {
     person,
-    fallback: { preferredAction: keptPreferred, action: fallbackAction },
-    forcedNormal: !canDefendByRule && !canTrapByRule && !canShootByRule && !canFortifyByRule,
-    canDefend,
-    canTrap,
-    canShoot,
-    canFortify,
-    defenderScore: canDefend ? getDefenderScore(person) : -Infinity,
-    trapScore: canTrap ? getTrapScore(person) : -Infinity,
-    shooterScore: canShoot ? getShooterScore(person, village) : -Infinity,
-    fortifierScore: canFortify ? getFortifierScore(person) : -Infinity,
-    defenderDamage: canDefend ? defenderDamage : 0,
-    trapDamage: canTrap ? trapDamage : 0,
-    shootDamage: canShoot ? shootDamage : 0
+    fallback: {
+      preferredAction: keptPreferred,
+      action: chooseRaidFallbackAction(person, keptPreferred, currentAction)
+    },
+    allowed,
+    damage
   };
 }
 
-function getMinimumFrontliners(village, profiles) {
+/** 罠の合計と、戦闘参加者が想定ターン数で出す火力の合計。 */
+function estimateVillageFirepower(village, profiles, assignments) {
+  let total = 0;
+  profiles.forEach(profile => {
+    const action = assignments.get(profile.person)?.action;
+    if (!isRaidAction(action)) return;
+    const damage = profile.damage[action] || 0;
+    total += action === ACTION_TRAP ? damage : damage * RAID_WIN_ESTIMATE_TURNS;
+  });
+  return total;
+}
+
+function hasWinningChance(village, profiles, assignments) {
+  return estimateVillageFirepower(village, profiles, assignments) >= getEnemyTotalHp(village);
+}
+
+/**
+ * 適性の高い者から枠へ埋める。
+ * 前衛 → 罠 → 中衛 → 籠城 の順に流し、枠に入れなかった者は通常職へ残す。
+ */
+function fillRaidRoles(village, profiles, assignments) {
   const enemyCount = Array.isArray(village.raidEnemies) ? village.raidEnemies.length : 0;
-  const activeProfiles = profiles.filter(profile => !profile.forcedNormal && (profile.canDefend || profile.canFortify || profile.canShoot || profile.canTrap));
-  const frontOptions = activeProfiles.filter(profile =>
-    (profile.canDefend && Number.isFinite(profile.defenderScore)) ||
-    (profile.canFortify && Number.isFinite(profile.fortifierScore))
-  );
+  const budget = {
+    front: getRaidFrontlinerSlotCount(village),
+    middle: getRaidMiddleSlotCount(village),
+    trap: getRaidTrapMakerSlotCount(village)
+  };
+  const frontTarget = Math.min(budget.front, Math.max(1, Math.ceil(enemyCount / 2)));
+  const assigned = new Set();
 
-  if (frontOptions.length === 0 || activeProfiles.length === 0) {
-    return 0;
-  }
+  const eligible = (profile, action) => {
+    if (assigned.has(profile.person)) return false;
+    if (!profile.allowed[action]) return false;
+    if (action !== ACTION_TRAP && profile.damage[action] <= 0) return false;
+    return canJoinSafely(profile.person, action, village);
+  };
 
-  return Math.min(
-    frontOptions.length,
-    Math.max(1, Math.ceil(Math.min(enemyCount || 1, activeProfiles.length) / 2))
-  );
+  const take = (action, limit, resolveAction = () => action) => {
+    if (limit <= 0) return 0;
+    const picked = profiles
+      .filter(profile => eligible(profile, action))
+      .sort((a, b) => b.damage[action] - a.damage[action])
+      .slice(0, limit);
+    picked.forEach(profile => {
+      assignments.set(profile.person, {
+        preferredAction: profile.fallback.preferredAction,
+        action: resolveAction(profile)
+      });
+      assigned.add(profile.person);
+    });
+    return picked.length;
+  };
+
+  budget.front -= take(ACTION_DEFEND, frontTarget);
+  budget.trap -= take(ACTION_TRAP, budget.trap);
+  // 中衛は射撃と火砲で枠を分け合う。本人がより多く出せる方に就ける。
+  budget.middle -= take(ACTION_SHOOT, budget.middle, profile =>
+    profile.allowed[ACTION_CANNON] && profile.damage[ACTION_CANNON] > profile.damage[ACTION_SHOOT]
+      ? ACTION_CANNON
+      : ACTION_SHOOT);
+  budget.middle -= take(ACTION_CANNON, budget.middle);
+  budget.front -= take(ACTION_FORTIFY, budget.front);
+  return assigned;
 }
 
 function buildRaidAssignments(village, targets) {
-  const assignments = new Map();
   const profiles = targets.map(person => getRaidAssignmentProfile(person, village));
-  const minimumFrontliners = getMinimumFrontliners(village, profiles);
-  const frontlinerSlots = new Set(
-    profiles
-      .filter(profile => !profile.forcedNormal && (
-        (profile.canDefend && Number.isFinite(profile.defenderScore)) ||
-        (profile.canFortify && Number.isFinite(profile.fortifierScore))
-      ))
-      .sort((a, b) => Math.max(b.defenderScore, b.fortifierScore) - Math.max(a.defenderScore, a.fortifierScore))
-      .slice(0, minimumFrontliners)
-      .map(profile => profile.person)
-  );
+  const assignments = new Map();
+  profiles.forEach(profile => assignments.set(profile.person, profile.fallback));
 
-  profiles.forEach(profile => {
-    if (profile.forcedNormal || (!profile.canDefend && !profile.canFortify && !profile.canShoot && !profile.canTrap)) {
-      assignments.set(profile.person, profile.fallback);
-      return;
+  // まず安全に戦える者だけで組む。
+  const assigned = fillRaidRoles(village, profiles, assignments);
+  if (hasWinningChance(village, profiles, assignments)) {
+    return { assignments, hasChance: true };
+  }
+
+  // 勝ち目が立たないときだけ、危険を承知で1人ずつ足す。立った時点で打ち切る。
+  const reserves = profiles
+    .filter(profile => !assigned.has(profile.person))
+    .sort((a, b) => Math.max(...RAID_ACTIONS.map(action => b.damage[action])) -
+      Math.max(...RAID_ACTIONS.map(action => a.damage[action])));
+  const added = [];
+
+  for (const profile of reserves) {
+    // 被弾の小さい籠城を優先し、就けなければ迎撃で加わる。
+    const action = [ACTION_FORTIFY, ACTION_DEFEND].find(candidate =>
+      profile.allowed[candidate] &&
+      profile.damage[candidate] > 0 &&
+      canJoinAtAll(profile.person, candidate, village));
+    if (!action) continue;
+
+    assignments.set(profile.person, { preferredAction: profile.fallback.preferredAction, action });
+    added.push(profile);
+    if (hasWinningChance(village, profiles, assignments)) {
+      return { assignments, hasChance: true };
     }
+  }
 
-    if (frontlinerSlots.has(profile.person)) {
-      const action = profile.canDefend && profile.defenderScore >= profile.fortifierScore * 0.8
-        ? ACTION_DEFEND
-        : (profile.canFortify ? ACTION_FORTIFY : ACTION_DEFEND);
-      assignments.set(profile.person, { preferredAction: profile.fallback.preferredAction, action });
-      return;
-    }
-
-    if (profile.canShoot && profile.shooterScore >= Math.max(profile.trapScore, profile.defenderScore) * 0.9) {
-      assignments.set(profile.person, { preferredAction: profile.fallback.preferredAction, action: ACTION_SHOOT });
-      return;
-    }
-
-    if (profile.canTrap && (!profile.canDefend || profile.trapDamage >= profile.defenderDamage * 0.82)) {
-      assignments.set(profile.person, { preferredAction: profile.fallback.preferredAction, action: ACTION_TRAP });
-      return;
-    }
-
-    if (profile.canShoot) {
-      assignments.set(profile.person, { preferredAction: profile.fallback.preferredAction, action: ACTION_SHOOT });
-      return;
-    }
-
-    if (profile.canDefend) {
-      assignments.set(profile.person, { preferredAction: profile.fallback.preferredAction, action: ACTION_DEFEND });
-      return;
-    }
-
-    if (profile.canFortify) {
-      assignments.set(profile.person, { preferredAction: profile.fallback.preferredAction, action: ACTION_FORTIFY });
-      return;
-    }
-
-    assignments.set(profile.person, profile.fallback);
-  });
-
-  return assignments;
+  // 総力でも勝てないなら、危険な増員は損なので取り消す。
+  added.forEach(profile => assignments.set(profile.person, profile.fallback));
+  return { assignments, hasChance: false };
 }
+
 
 export function autoAssignJobs(village) {
   let changed = 0;
   const priorityContext = buildVillagePriorityContext(village);
-  const targets = village.villagers.filter(person => !person.assignmentLocked);
+  // 襲撃中は、防衛に就いている村人の配置を通常職で上書きしない。
+  const raidActive = isRaidActive(village);
+  const targets = village.villagers.filter(person => {
+    if (person.assignmentLocked) return false;
+    return !(raidActive && isRaidAction(person.action));
+  });
 
   targets.forEach(person => {
     const next = chooseAssignment(person, village, priorityContext);
@@ -587,7 +515,7 @@ export function autoAssignJobs(village) {
   });
 
   const lockedCount = village.villagers.filter(person => person.assignmentLocked).length;
-  village.log(`自動割り振り: ${changed}人の行動を更新しました。固定${lockedCount}人は除外 (食料${priorityContext.foodSeverity.toFixed(2)}, 回復${priorityContext.recoverySeverity.toFixed(2)}, 資材${priorityContext.materialSeverity.toFixed(2)}, 資金${priorityContext.fundsSeverity.toFixed(2)})`);
+  village.log(`自動割り振り: ${changed}人の行動を更新しました。固定${lockedCount}人は除外`);
 }
 
 export function autoAssignRaidActions(village) {
@@ -597,18 +525,15 @@ export function autoAssignRaidActions(village) {
   }
 
   let changed = 0;
-  let defenders = 0;
-  let fortifiers = 0;
-  let shooters = 0;
-  let trapMakers = 0;
-  let nonParticipants = 0;
-  const targets = Array.isArray(village.villagers) ? village.villagers : [];
-  const raidAssignments = buildRaidAssignments(village, targets);
+  const allVillagers = Array.isArray(village.villagers) ? village.villagers : [];
+  // 固定中の村人と、手で火砲に就けた村人はそのままにする。
+  const targets = allVillagers.filter(person => !person.assignmentLocked && !isManualCannoneer(person, village));
+  const { assignments, hasChance } = buildRaidAssignments(village, targets);
 
   targets.forEach(person => {
     const currentPreferred = person.preferredAction || person.job || JOB_NONE;
     const currentAction = person.action;
-    const next = raidAssignments.get(person);
+    const next = assignments.get(person);
     if (!next) return;
 
     if (currentAction !== next.action || currentPreferred !== next.preferredAction) {
@@ -616,13 +541,17 @@ export function autoAssignRaidActions(village) {
     }
     setPreferredAction(person, next.preferredAction);
     person.action = next.action;
-
-    if (person.action === ACTION_DEFEND && canPerformRaidAction(person, ACTION_DEFEND, village)) defenders++;
-    else if (person.action === ACTION_FORTIFY && canPerformRaidAction(person, ACTION_FORTIFY, village)) fortifiers++;
-    else if (person.action === ACTION_SHOOT && canPerformRaidAction(person, ACTION_SHOOT, village)) shooters++;
-    else if (person.action === ACTION_TRAP && canPerformRaidAction(person, ACTION_TRAP, village)) trapMakers++;
-    else nonParticipants++;
   });
 
-  village.log(`防衛割り振り: ${changed}人を更新しました。迎撃${defenders}人、籠城${fortifiers}人、射撃${shooters}人、罠作成${trapMakers}人、不参加${nonParticipants}人`);
+  const readiness = getRaidReadiness(village);
+  const parts = [
+    `迎撃${readiness.defenders.length}人`,
+    `籠城${readiness.fortifiers.length}人`,
+    `射撃${readiness.shooters.length}人`,
+    `火砲${readiness.cannoneers.length}人`,
+    `罠作成${readiness.trapMakers.length}人`,
+    `不参加${Math.max(0, allVillagers.length - readiness.participantCount)}人`
+  ];
+  const note = hasChance ? "" : "（勝ち目薄。撤退も一考）";
+  village.log(`防衛割り振り: ${changed}人を更新しました。${parts.join("、")}${note}`);
 }

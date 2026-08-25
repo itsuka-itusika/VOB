@@ -1,4 +1,5 @@
 import { clampValue } from "../util.js";
+import { countActiveBuildings, countBuiltBuildings, hasActiveBuilding } from "./buildingState.js";
 
 export const BASE_STORAGE_LIMIT = 400;
 export const BARN_STORAGE_BONUS = 600;
@@ -11,21 +12,18 @@ const RESOURCE_LABELS = {
   materials: "資材"
 };
 
-function countBuilding(village, buildingId) {
-  if (!Array.isArray(village?.buildings)) return 0;
-  return village.buildings.filter(id => id === buildingId).length;
-}
-
 export function hasBarnStorage(village) {
+  if (countBuiltBuildings(village, "barn") > 0) {
+    return hasActiveBuilding(village, "barn");
+  }
   return !!(
-    countBuilding(village, "barn") > 0 ||
     village?.buildingFlags?.hasBarn ||
     village?.buildingFlags?.canBuildStorehouse
   );
 }
 
 export function hasStorehouseStorage(village) {
-  return countBuilding(village, "storehouse") > 0;
+  return countActiveBuildings(village, "storehouse") > 0;
 }
 
 export function getResourceStorageWarningRatio(village) {
@@ -36,7 +34,7 @@ export function getResourceStorageWarningRatio(village) {
 
 export function getResourceStorageLimit(village) {
   const barnBonus = hasBarnStorage(village) ? BARN_STORAGE_BONUS : 0;
-  const storehouseCount = Math.min(countBuilding(village, "storehouse"), MAX_STOREHOUSES);
+  const storehouseCount = Math.min(countActiveBuildings(village, "storehouse"), MAX_STOREHOUSES);
   return BASE_STORAGE_LIMIT + barnBonus + storehouseCount * STOREHOUSE_STORAGE_BONUS;
 }
 

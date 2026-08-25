@@ -25,25 +25,69 @@ import {
   calculateWeavingYield,
   estimateBodyCost,
   estimateMindCost,
+  getMassageMindStat,
   getJobCostType,
+  getRestRecoveryMultiplier,
 } from "./domain/jobMath.js";
 import {
   ACTION_CRADLE,
   ACTION_HEAL,
   ACTION_LAST_MOMENTS,
+  ACTION_MASSAGE_FEMALE,
+  ACTION_MASSAGE_MALE,
   ACTION_NONE,
+  ACTION_SALT_PILLAR,
+  getActionDisplayName,
   isPreferredActionCandidate,
+  normalizeActionForPerson,
   setPreferredAction,
   refreshJobTable
 } from "./domain/jobTables.js";
 import { getResourceStorageStatus, getResourceStorageWarningRatio } from "./domain/resourceLimits.js";
+import { hasActiveBuildingFlag } from "./domain/buildingState.js";
+import { getWinterMaterialRequirement } from "./domain/winterMaterials.js";
+import { getPopulationCount } from "./domain/speciesTraits.js";
 import { isUnassignedActionVillager } from "./domain/rules.js";
 import { showDictionaryEntry } from "./dictionary.js";
 import { combinedDictionaryData } from "./data/dictionaryData.js";
-import { getPortraitPath, getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "./util.js";
+import { getPortraitPath, getVillagerFoodConsumption } from "./util.js";
 import { openPersonalHistoryModal } from "./history.js";
-import { formatRelationshipsForDisplay, normalizeRelationship } from "./relationships.js";
+import { formatRelationshipsForDisplay, hasHobbyMateRelationship } from "./relationships.js";
+import { getCaptives } from "./captives.js";
+import { getTutorialWarnings } from "./tutorial.js";
 import { applyVillageScaleArtClass, getVillageScaleTitle } from "./villageScale.js";
+import { getDivineMightStatus } from "./divineMight.js";
+import {
+  RAID_ACTIONS,
+  RAID_CANNON_INCOMING_DAMAGE_MULTIPLIER,
+  RAID_MIDDLE_INCOMING_DAMAGE_MULTIPLIER,
+  ACTION_CANNON,
+  ACTION_DEFEND,
+  ACTION_FORTIFY,
+  ACTION_SHOOT,
+  ACTION_TRAP,
+  estimateRaidActionDamage,
+  getFortifyDamageMultiplier,
+  getRaidSlotLimitMessage,
+  isRaidActionSlotAvailable
+} from "./raidRules.js";
+import { getBuildingRequestWarnings } from "./buildingRequests.js";
+import { checkWishCompletion, getWishWarnings } from "./wishes.js";
+import { hasDespairState, hasDisappointmentState } from "./domain/despair.js";
+import { syncEffectiveStats } from "./domain/statLayers.js";
+import { getActiveVillagers, isApocalypseActive, isSaltPillar } from "./domain/apocalypseRules.js";
+import {
+  VILLAGE_ROLE_DOCTOR,
+  VILLAGE_ROLE_HEADMAN,
+  VILLAGE_ROLE_LIBRARIAN,
+  VILLAGE_ROLE_NONE,
+  VILLAGE_ROLE_PRIEST,
+  assignVillageRole,
+  canAssignVillageRole,
+  getUnlockedVillageRoles,
+  isAdultMindForVillageRole,
+  normalizeVillageRoleForPerson
+} from "./domain/villageRoles.js";
 
 
 function openConversationFor(person) {
@@ -128,41 +172,55 @@ function setDictionaryTerms(cell, terms, options = {}) {
 }
 
 function getMonthlyFoodCost(village) {
-  return village.villagers.reduce((sum, person) => {
+  const people = (village.villagers || []).concat(getCaptives(village));
+  return people.reduce((sum, person) => {
     return sum + getVillagerFoodConsumption(person);
   }, 0);
 }
 
-function getWinterMonthsToPrepare(month) {
-  if ([12, 1, 2].includes(month)) {
-    if (month === 12) return 3;
-    if (month === 1) return 2;
-    return 1;
-  }
-  return 3;
+function formatWarningNames(people) {
+  const names = people.slice(0, 4).map(person => person.name).join("、");
+  return people.length > 4 ? `${names}ほか${people.length - 4}人` : names;
 }
 
 function buildWarningMessages(village) {
   const warnings = [];
   const villagers = Array.isArray(village.villagers) ? village.villagers : [];
+  const activeVillagers = getActiveVillagers(village);
   const foodStorage = getResourceStorageStatus(village, "food");
   const materialStorage = getResourceStorageStatus(village, "materials");
   const storageWarningRatio = getResourceStorageWarningRatio(village);
   const foodCost = getMonthlyFoodCost(village);
   const monthsOfFood = foodCost > 0 ? village.food / foodCost : Infinity;
-  const winterNeed = villagers.reduce((sum, person) => sum + getVillagerWinterMaterialConsumption(person), 0) * getWinterMonthsToPrepare(village.month);
-  const lowHpCount = villagers.filter(person => Number(person.hp) <= 33).length;
-  const lowMpCount = villagers.filter(person => Number(person.mp) <= 33).length;
-  const noActionCount = villagers.filter(isUnassignedActionVillager).length;
-  const assemblyHallBuilt = !!(
-    village.buildingFlags?.hasAssemblyHall ||
-    (Array.isArray(village.buildings) && village.buildings.includes("assemblyHall"))
+  const winterNeed = getWinterMaterialRequirement(village);
+  const lowHpCount = activeVillagers.filter(person => Number(person.hp) <= 33).length;
+  const lowMpCount = activeVillagers.filter(person => Number(person.mp) <= 33).length;
+  const despairingVillagers = activeVillagers.filter(hasDespairState);
+  const disappointedVillagers = activeVillagers.filter(person =>
+    hasDisappointmentState(person) && !hasDespairState(person) && (Number(person.happiness) || 0) <= 0
   );
+  const epidemicVillagers = villagers.filter(person => {
+    return Array.isArray(person.bodyTraits) && person.bodyTraits.includes("疫病");
+  });
+  const noActionCount = activeVillagers.filter(isUnassignedActionVillager).length;
+  const assemblyHallBuilt = hasActiveBuildingFlag(village, "hasAssemblyHall", "assemblyHall");
+
+  if (isApocalypseActive(village)) {
+    const apocalypseStage = Math.min(7, Math.max(1, Math.trunc(Number(village.apocalypseStage) || 0)));
+    warnings.push({
+      level: "danger",
+      text: `黙示録【第${apocalypseStage}の災厄】<br>「建築」から黄金像を破壊すれば黙示録は中断されます。`
+    });
+  }
 
   if (foodCost > 0 && monthsOfFood <= 3) {
+    const foodMonthsText = Math.max(0, monthsOfFood).toFixed(1);
+    const isFoodCritical = monthsOfFood <= 1;
     warnings.push({
-      level: monthsOfFood <= 1 ? "danger" : "warning",
-      text: `食料が尽きそうです。このペースでは約${Math.max(0, monthsOfFood).toFixed(1)}か月で枯渇する可能性があります。`
+      level: isFoodCritical ? "danger" : "warning",
+      text: isFoodCritical
+        ? `食料が尽きかけています。残り約${foodMonthsText}か月分です。`
+        : `食料の備蓄が薄めです（約${foodMonthsText}か月分）。`
     });
   }
 
@@ -209,7 +267,7 @@ function buildWarningMessages(village) {
     });
   }
 
-  if (villagers.length >= village.popLimit) {
+  if (getPopulationCount(villagers) >= village.popLimit) {
     warnings.push({
       level: "warning",
       text: "人口が上限に達しています。新規加入には家屋が必要です。"
@@ -223,6 +281,27 @@ function buildWarningMessages(village) {
     });
   }
 
+  if (epidemicVillagers.length > 0) {
+    warnings.push({
+      level: "danger",
+      text: "疫病の村人がいます。治療しない場合<br>翌月感染が広がる可能性があります。"
+    });
+  }
+
+  if (despairingVillagers.length > 0) {
+    warnings.push({
+      level: "danger",
+      text: `${formatWarningNames(despairingVillagers)}が絶望しています。酒杯・宴会・狂宴・蛇の巻き付いた杖で解除しないまま次の月を迎えると村を去ります。`
+    });
+  }
+
+  if (disappointedVillagers.length > 0) {
+    warnings.push({
+      level: "warning",
+      text: `${formatWarningNames(disappointedVillagers)}が失望しています。幸福度を回復しないまま次の月を迎えると絶望します。`
+    });
+  }
+
   if (noActionCount > 0) {
     warnings.push({
       level: "warning",
@@ -230,10 +309,10 @@ function buildWarningMessages(village) {
     });
   }
 
-  if ((Number(village.building) || 0) >= 120 && !assemblyHallBuilt) {
+  if ((Number(village.building) || 0) >= 70 && !assemblyHallBuilt) {
     warnings.push({
       level: "warning",
-      text: "旅人が足を止める規模になりました。村の声を一つに束ねる集会所を建てれば、里長を選べるようになります。"
+      text: "辺境の村として認められる規模になりました。村の声を一つに束ねる集会所を建てれば、里長を選べるようになります。"
     });
   }
 
@@ -251,6 +330,10 @@ function buildWarningMessages(village) {
       text: "襲撃中です。前衛・中衛・後衛の行動割り振りを確認してください。"
     });
   }
+
+  warnings.push(...getBuildingRequestWarnings(village));
+  warnings.push(...getWishWarnings(village));
+  warnings.push(...getTutorialWarnings(village));
 
   return warnings;
 }
@@ -275,16 +358,16 @@ function hasTrait(person, trait) {
 }
 
 const STAT_CELL_INDEXES = {
-  str: 12,
-  vit: 13,
-  dex: 14,
-  mag: 15,
-  chr: 16,
-  int: 18,
-  ind: 19,
-  eth: 20,
-  cou: 21,
-  sexdr: 22
+  str: 13,
+  vit: 14,
+  dex: 15,
+  mag: 16,
+  chr: 17,
+  int: 19,
+  ind: 20,
+  eth: 21,
+  cou: 22,
+  sexdr: 23
 };
 
 function getDebuffedStats(person) {
@@ -295,6 +378,7 @@ function getDebuffedStats(person) {
   if (hasTrait(person, "凍え")) add("str", "vit", "dex");
   if (hasTrait(person, "疲労")) add("str", "vit", "dex");
   if (hasTrait(person, "過労")) add("str", "vit", "dex");
+  if (hasTrait(person, "幼狼")) add("str", "vit", "dex", "mag", "chr");
   if (hasTrait(person, "臨月")) add("str", "vit");
   if (hasTrait(person, "産褥")) add("str", "vit");
   if (hasTrait(person, "心労")) add("int", "ind", "eth", "cou", "sexdr");
@@ -334,20 +418,6 @@ function jobBodyCost(job, person, village) {
 
 function jobMindCost(job, stat, person, village) {
   return mindCost(getJobCostType(job).mind, stat, person, village);
-}
-
-function ageRestMultiplier(person) {
-  if (hasTrait(person, "老人")) return 0.7;
-  if (hasTrait(person, "中年")) return 0.9;
-  return 1;
-}
-
-function hasCurrentHobbyMate(person) {
-  if (!person.hobby || !Array.isArray(person.relationships)) return false;
-  return person.relationships.some(rel => {
-    const normalized = normalizeRelationship(rel);
-    return normalized.includes(`${person.hobby}仲間：`);
-  });
 }
 
 function formatEstimate(parts) {
@@ -409,38 +479,6 @@ function getRandomTradingRewardPart(person, calculateYield = calculateTradingYie
   return formatRandomHarvestReward("資金", calculateYield(person, 30), calculateYield(person, 70), calculateYield(person, 0));
 }
 
-function estimateDefendDamage(person, village) {
-  if (hasTrait(person, "非戦主義")) return 0;
-
-  const enemies = Array.isArray(village.raidEnemies)
-    ? village.raidEnemies.filter(enemy => Number(enemy.hp) > 0)
-    : [];
-  const avgEnemyVit = enemies.length > 0
-    ? enemies.reduce((sum, enemy) => sum + (Number(enemy.vit) || 0), 0) / enemies.length
-    : 0;
-  const physical = Math.max(0, Math.floor((((Number(person.str) || 0) * (Number(person.cou) || 0)) / 400) * 50 - avgEnemyVit));
-  const magical = Math.max(0, Math.floor((((Number(person.mag) || 0) * (Number(person.cou) || 0)) / 400) * 25));
-  let damage = Math.max(physical, magical);
-  if (hasTrait(person, "歴戦")) {
-    damage = Math.floor(damage * 1.2);
-  }
-  return damage;
-}
-
-function estimateTrapDamage(person) {
-  return Math.floor(((Number(person.dex) || 0) * (Number(person.int) || 0) / 400) * 30);
-}
-
-function estimateShootDamage(person, village) {
-  const enemies = Array.isArray(village.raidEnemies)
-    ? village.raidEnemies.filter(enemy => Number(enemy.hp) > 0)
-    : [];
-  const avgEnemyVit = enemies.length > 0
-    ? enemies.reduce((sum, enemy) => sum + (Number(enemy.vit) || 0), 0) / enemies.length
-    : 0;
-  return Math.max(0, Math.floor((((Number(person.dex) || 0) * (Number(person.cou) || 0)) / 400) * 40 - avgEnemyVit * 1.5));
-}
-
 function getTaskEstimateParts(person, task, village) {
   const chr = Number(person.chr) || 0;
   const cou = Number(person.cou) || 0;
@@ -452,13 +490,10 @@ function getTaskEstimateParts(person, task, village) {
   const sexdr = Number(person.sexdr) || 0;
   const str = Number(person.str) || 0;
   const vit = Number(person.vit) || 0;
-  const church = village.buildingFlags && village.buildingFlags.hasChurch;
-  const clinic = village.buildingFlags && village.buildingFlags.hasClinic;
-  const library = village.buildingFlags && village.buildingFlags.hasLibrary;
-  const tavern = village.buildingFlags && village.buildingFlags.hasTavern;
-  const voice = hasTrait(person, "澄んだ声") || hasTrait(person, "通る声");
-  const affectedMen = village.villagers.filter(v => v.spiritSex === "男").length;
-  const affectedWomen = village.villagers.filter(v => v.spiritSex === "女").length;
+  const clinic = hasActiveBuildingFlag(village, "hasClinic", "clinic");
+  const activeVillagers = getActiveVillagers(village);
+  const affectedMen = activeVillagers.filter(v => v.spiritSex === "男").length;
+  const affectedWomen = activeVillagers.filter(v => v.spiritSex === "女").length;
   const affectedAll = village.villagers.length;
   let gain = 0;
   let parts = [];
@@ -470,16 +505,16 @@ function getTaskEstimateParts(person, task, village) {
       parts = ["体力+30", "メンタル+30", "幸福+30"];
       break;
     case "休養": {
-      let hp = person.mindTraits.includes("ワーカホリック") ? 30 : 54;
-      let mp = person.mindTraits.includes("ワーカホリック") ? -10 : 21;
-      hp = Math.floor(hp * ageRestMultiplier(person));
-      mp = Math.floor(mp * ageRestMultiplier(person));
+      let hp = person.mindTraits.includes("ワーカホリック") ? 30 : (clinic ? 53 : 52);
+      let mp = person.mindTraits.includes("ワーカホリック") ? -10 : (clinic ? 21 : 20);
+      hp = Math.floor(hp * getRestRecoveryMultiplier(person, "hp"));
+      mp = Math.floor(mp * getRestRecoveryMultiplier(person, "mp"));
       parts = [`体力+${hp}`, `メンタル${mp >= 0 ? "+" : ""}${mp}`];
       break;
     }
     case "余暇": {
       let mp = person.mindTraits.includes("ニート") ? 100 : 50;
-      if (hasCurrentHobbyMate(person)) mp = Math.round(mp * 1.5);
+      if (hasHobbyMateRelationship(person)) mp = Math.round(mp * 1.5);
       parts = [`メンタル+${mp}`];
       break;
     }
@@ -490,7 +525,11 @@ function getTaskEstimateParts(person, task, village) {
       parts = ["食料+3〜6", "資材+3〜6", `体力-${bodyCost(10, person, village)}`];
       break;
     case "療養":
-      parts = [`体力+${Math.floor(20 * (hasTrait(person, "老人") ? 0.6 : hasTrait(person, "中年") ? 0.8 : 1))}`, `メンタル+${Math.floor(20 * (hasTrait(person, "老人") ? 0.6 : hasTrait(person, "中年") ? 0.8 : 1))}`];
+      parts = [`体力+${Math.floor(20 * ((hasTrait(person, "老人") || hasTrait(person, "老狼")) ? 0.6 : hasTrait(person, "中年") ? 0.8 : 1))}`, `メンタル+${Math.floor(20 * ((hasTrait(person, "老人") || hasTrait(person, "老狼")) ? 0.6 : hasTrait(person, "中年") ? 0.8 : 1))}`];
+      if (hasTrait(person, "負傷")) parts.push("負傷解除");
+      break;
+    case "虜囚":
+      parts = ["体力+10", "メンタル+10"];
       break;
     case "農作業":
       gain = calculateFarmYield(person, village);
@@ -535,10 +574,15 @@ function getTaskEstimateParts(person, task, village) {
       gain = calculateNurseHeal(person, village);
       parts = [`体力回復+${gain}`, `体力-${jobBodyCost("看護", person, village)}`, `メンタル-${jobMindCost("看護", "eth", person, village)}`];
       break;
-    case "あんま":
-      gain = calculateMassageHeal(person);
-      parts = [`体力回復+${gain}`, `体力-${jobBodyCost("あんま", person, village)}`, `メンタル-${jobMindCost("あんま", person.bodySex === "男" ? "int" : "sexdr", person, village)}`];
+    case ACTION_MASSAGE_MALE:
+    case ACTION_MASSAGE_FEMALE:
+    case "あんま": {
+      const jobName = normalizeActionForPerson(task, person);
+      const mindStat = getMassageMindStat(person, jobName);
+      gain = calculateMassageHeal(person, jobName);
+      parts = [`体力回復+${gain}`, `体力-${jobBodyCost(jobName, person, village)}`, `メンタル-${jobMindCost(jobName, mindStat, person, village)}`];
       break;
+    }
     case "シスター":
     case "神官":
       gain = calculatePriestMindHeal(person, village);
@@ -576,16 +620,19 @@ function getTaskEstimateParts(person, task, village) {
       break;
     }
     case "迎撃":
-      parts = [`想定ダメージ${estimateDefendDamage(person, village)}`];
+      parts = [`想定ダメージ${estimateRaidActionDamage(person, ACTION_DEFEND, village)}`, "反撃あり"];
       break;
     case "籠城":
-      parts = ["攻撃なし", "被ダメージ0.8倍", "反撃あり"];
+      parts = [`想定ダメージ${estimateRaidActionDamage(person, ACTION_FORTIFY, village)}`, `被弾${getFortifyDamageMultiplier(village)}倍`, "反撃あり"];
       break;
     case "射撃":
-      parts = [`想定ダメージ${estimateShootDamage(person, village)}`, "反撃なし"];
+      parts = [`想定ダメージ${estimateRaidActionDamage(person, ACTION_SHOOT, village)}`, "先制", `被弾${RAID_MIDDLE_INCOMING_DAMAGE_MULTIPLIER}倍`, "反撃なし"];
+      break;
+    case "火砲":
+      parts = [`想定ダメージ${estimateRaidActionDamage(person, ACTION_CANNON, village)}`, "後攻", `被弾${RAID_CANNON_INCOMING_DAMAGE_MULTIPLIER}倍`, "反撃なし"];
       break;
     case "罠作成":
-      parts = [`想定ダメージ${estimateTrapDamage(person)}`];
+      parts = [`想定ダメージ${estimateRaidActionDamage(person, ACTION_TRAP, village)}`];
       break;
   }
 
@@ -614,7 +661,8 @@ const ACTION_DESCRIPTIONS = {
   "揺籃": "無垢な精神が揺籃の中で守られ、成長を待つ行動。",
   "休養": "体力の回復を優先する一時行動。",
   "余暇": "趣味や息抜きでメンタルを回復する一時行動。",
-  "療養": "負傷・病気・産褥などで行動不能のときに固定される回復行動。",
+  "療養": "負傷・疫病・産褥などで行動不能のときに固定される回復行動。負傷は療養実行時に解除される。",
+  "虜囚": "牢獄の捕虜として過ごす固定行動。",
   "臨終": "危篤状態の固定行動。通常の作業には参加できない。",
   "遊び": "幼い精神が遊びを通じて心身を整える成長段階の行動。",
   "お手伝い": "幼い精神が村の作業を少し手伝い、食料と資材を得る行動。",
@@ -631,6 +679,8 @@ const ACTION_DESCRIPTIONS = {
   "警備": "村を見回り、治安を支える防衛行動。",
   "看護": "負傷者や消耗した村人を支える回復行動。",
   "あんま": "身体感覚や対人能力を活かして村人の体力回復を支える行動。",
+  [ACTION_MASSAGE_MALE]: "筋力と知力を活かして村人の体力回復を支える行動。",
+  [ACTION_MASSAGE_FEMALE]: "魅力と好色を活かして村人の体力回復を支える行動。",
   "シスター": "村人の心を支える信仰系の回復行動。",
   "神官": "村人の心を支える信仰系の回復行動。",
   "踊り子": "娯楽を通じて村人の幸福を高める行動。",
@@ -644,11 +694,12 @@ const ACTION_DESCRIPTIONS = {
   "迎撃": "襲撃中に敵へ直接攻撃する一時行動。",
   "籠城": "襲撃中に前衛で守りを固め、攻撃された時に反撃する一時行動。",
   "射撃": "襲撃中に中衛から攻撃し、反撃を受けない一時行動。",
+  "火砲": "襲撃中に中衛からターンの最後に砲撃する一時行動。反撃は受けないが、狙われた時の被害が大きい。",
   "罠作成": "襲撃中に罠を作り、敵へ事前ダメージを与える一時行動。"
 };
 
 function getActionDescription(action) {
-  return ACTION_DESCRIPTIONS[action] || "この行動を実行します。";
+  return ACTION_DESCRIPTIONS[getActionDisplayName(action)] || ACTION_DESCRIPTIONS[action] || "この行動を実行します。";
 }
 
 function getActionOptionTitle(person, action, village) {
@@ -680,6 +731,8 @@ const JOB_KEY_STATS = {
   "行商": "魅力×知力",
   "丁稚": "魅力×知力",
   "あんま": "男性:筋力×知力/女性:魅力×好色",
+  [ACTION_MASSAGE_MALE]: "筋力×知力",
+  [ACTION_MASSAGE_FEMALE]: "魅力×好色",
   "巫女": "魅力×魔力×好色",
   "バニー": "魅力×好色",
   "錬金術": "魔力×知力",
@@ -689,13 +742,15 @@ const JOB_KEY_STATS = {
   "迎撃": "筋力/魔力×勇気",
   "籠城": "耐久×勇気",
   "射撃": "器用×勇気",
+  "火砲": "魔力×知力",
   "罠作成": "器用×知力"
 };
 
 function getJobLabel(job, compact = false) {
-  if (!JOB_KEY_STATS[job]) return job;
+  const label = getActionDisplayName(job);
+  if (!JOB_KEY_STATS[job]) return label;
   const stats = compact ? compactStatText(JOB_KEY_STATS[job]) : JOB_KEY_STATS[job];
-  return compact ? `${job}(${stats})` : `${job}（${stats}）`;
+  return compact ? `${label}(${stats})` : `${label}（${stats}）`;
 }
 
 function getActionRewardLabel(person, action, village) {
@@ -703,6 +758,7 @@ function getActionRewardLabel(person, action, village) {
 }
 
 function getActionOptionLabel(person, action, village) {
+  const label = getActionDisplayName(action);
   const statLabel = getJobLabel(action, true);
   const reward = getActionRewardLabel(person, action, village);
   const compactReward = reward ? compactEstimateText(reward) : "";
@@ -710,8 +766,8 @@ function getActionOptionLabel(person, action, village) {
     return `${statLabel} ${compactReward}`;
   }
   if (statLabel !== action) return statLabel;
-  if (compactReward) return `${action} ${compactReward}`;
-  return action;
+  if (compactReward) return `${label} ${compactReward}`;
+  return label;
 }
 
 function appendTextCell(row, value, className = "") {
@@ -729,8 +785,10 @@ function appendNumberCell(row, value) {
 function appendPortraitCell(row, person) {
   const cell = document.createElement("td");
   cell.classList.add("villager-portrait-cell");
-  cell.style.cursor = "pointer";
-  cell.onclick = () => openConversationFor(person);
+  if (!isSaltPillar(person)) {
+    cell.style.cursor = "pointer";
+    cell.onclick = () => openConversationFor(person);
+  }
 
   const frame = document.createElement("div");
   frame.classList.add("villager-portrait-frame");
@@ -752,22 +810,30 @@ function appendDictionaryCell(row, terms, options = {}) {
   row.appendChild(cell);
 }
 
+function getSpecialRaiderRowClass(person) {
+  if (person?.raiderType === "黙示録の騎士・支配") return "apocalypse-conquest-row";
+  if (person?.raiderType === "黙示録の騎士・戦争") return "apocalypse-war-row";
+  return "";
+}
+
 function appendIdentityCells(row, person) {
   appendPortraitCell(row, person);
 
   const nameCell = appendTextCell(row, person.name);
-  nameCell.style.cursor = "pointer";
-  nameCell.onclick = () => openConversationFor(person);
+  if (!isSaltPillar(person)) {
+    nameCell.style.cursor = "pointer";
+    nameCell.onclick = () => openConversationFor(person);
+  }
 
   appendTextCell(row, person.bodyOwner);
-  appendTextCell(row, person.race);
+  appendDictionaryCell(row, [person.race || "人間"], { category: "race" });
   // bodySex/bodyAge と spiritSex/spiritAge は別仕様。表示時も統合しない。
-  appendTextCell(row, person.bodySex);
+  appendTextCell(row, person.uiSexDisplay || person.bodySex);
   appendTextCell(row, person.bodyAge);
-  const spiritSexCell = appendTextCell(row, person.spiritSex, "spirit-column");
-  if (person.spiritSex === "男") {
+  const spiritSexCell = appendTextCell(row, person.uiSexDisplay || person.spiritSex, "spirit-column");
+  if (!person.uiSexDisplay && person.spiritSex === "男") {
     spiritSexCell.classList.add("male-basic");
-  } else if (person.spiritSex === "女") {
+  } else if (!person.uiSexDisplay && person.spiritSex === "女") {
     spiritSexCell.classList.add("female-basic");
   }
   appendTextCell(row, person.spiritAge, "spirit-column");
@@ -780,8 +846,8 @@ function appendActionCell(row, person, village, editable) {
   const cell = document.createElement("td");
   cell.classList.add("action-cell");
   if (!editable) {
-    cell.textContent = person.action;
-    cell.title = person.action || "";
+    cell.textContent = getActionDisplayName(person.action);
+    cell.title = getActionDisplayName(person.action) || "";
     row.appendChild(cell);
     return;
   }
@@ -792,7 +858,7 @@ function appendActionCell(row, person, village, editable) {
   const select = document.createElement("select");
   const currentAction = String(person.action || ACTION_NONE).trim() || ACTION_NONE;
   const actionTable = Array.isArray(person.actionTable) ? person.actionTable : [];
-  const isFixedAction = actionTable.length === 1 && [ACTION_CRADLE, ACTION_HEAL, ACTION_LAST_MOMENTS].includes(actionTable[0]);
+  const isFixedAction = actionTable.length === 1 && [ACTION_CRADLE, ACTION_HEAL, ACTION_LAST_MOMENTS, ACTION_SALT_PILLAR].includes(actionTable[0]);
   if (currentAction !== ACTION_NONE) {
     select.title = getActionOptionTitle(person, currentAction, village);
   }
@@ -812,8 +878,14 @@ function appendActionCell(row, person, village, editable) {
     const option = document.createElement("option");
     const label = getActionOptionLabel(person, action, village);
     option.value = action;
+    const slotLimitMessage = RAID_ACTIONS.includes(action)
+      ? getRaidSlotLimitMessage(village, action, person)
+      : "";
     option.textContent = label;
-    option.title = getActionOptionTitle(person, action, village);
+    option.title = [getActionOptionTitle(person, action, village), slotLimitMessage]
+      .filter(Boolean)
+      .join("\n");
+    option.disabled = Boolean(slotLimitMessage);
     if (action === currentAction) option.selected = true;
     select.appendChild(option);
   });
@@ -822,11 +894,15 @@ function appendActionCell(row, person, village, editable) {
   select.onchange = () => {
     const newAction = select.value;
     if (newAction === ACTION_NONE) return;
+    if (RAID_ACTIONS.includes(newAction) && !isRaidActionSlotAvailable(village, newAction, person)) {
+      updateUI(village);
+      return;
+    }
     person.action = newAction;
     if (isPreferredActionCandidate(newAction)) {
       setPreferredAction(person, newAction);
     }
-    showDictionaryEntry(newAction);
+    showDictionaryEntry(getActionDisplayName(newAction));
     refreshJobTable(person, village);
     updateUI(village);
   };
@@ -852,9 +928,97 @@ function appendActionCell(row, person, village, editable) {
   row.appendChild(cell);
 }
 
-function appendPersonalHistoryCell(row, person, village) {
+function getVillageRoleDescription(role) {
+  switch (role) {
+    case VILLAGE_ROLE_HEADMAN:
+      return "里長選挙で選ばれた固定役職。勤勉・勇気・倫理+3。";
+    case VILLAGE_ROLE_LIBRARIAN:
+      return "図書館建設で選べる役職。知力+1、研究・写本の成果1.2倍。";
+    case VILLAGE_ROLE_PRIEST:
+      return "礼拝堂建設で選べる役職。魔力+1、神官・シスター・巫女の成果1.2倍。巫女の神威獲得には補正しません。";
+    case VILLAGE_ROLE_DOCTOR:
+      return "診療所建設で選べる役職。倫理+1、看護・あんまの回復量1.2倍。";
+    default:
+      return "";
+  }
+}
+
+function getVillageRoleSelectTitle(person, currentRole, roles) {
+  if (currentRole !== VILLAGE_ROLE_NONE) return getVillageRoleDescription(currentRole);
+  return "";
+}
+
+function getVillageRoleOptions(person, village, currentRole) {
+  if (currentRole === VILLAGE_ROLE_HEADMAN) return [VILLAGE_ROLE_HEADMAN];
+
+  const roles = [VILLAGE_ROLE_NONE];
+  getUnlockedVillageRoles(village).forEach(role => {
+    if (role === currentRole || canAssignVillageRole(village, person, role)) {
+      roles.push(role);
+    }
+  });
+  if (currentRole !== VILLAGE_ROLE_NONE && !roles.includes(currentRole)) {
+    roles.push(currentRole);
+  }
+  return roles;
+}
+
+function appendVillageRoleCell(row, person, village, editable) {
+  const cell = document.createElement("td");
+  cell.classList.add("village-role-cell");
+  const currentRole = normalizeVillageRoleForPerson(person);
+
+  if (!editable) {
+    cell.title = getVillageRoleDescription(currentRole);
+    if (currentRole === VILLAGE_ROLE_NONE) {
+      cell.textContent = VILLAGE_ROLE_NONE;
+    } else {
+      appendDictionaryTerm(cell, currentRole);
+    }
+    row.appendChild(cell);
+    return;
+  }
+
+  const select = document.createElement("select");
+  select.className = "village-role-select";
+  const roles = getVillageRoleOptions(person, village, currentRole);
+
+  roles.forEach(role => {
+    const option = document.createElement("option");
+    option.value = role;
+    option.textContent = role;
+    const title = getVillageRoleDescription(role);
+    if (title) option.title = title;
+    if (role === currentRole) option.selected = true;
+    select.appendChild(option);
+  });
+
+  select.disabled = currentRole === VILLAGE_ROLE_HEADMAN ||
+    (!isAdultMindForVillageRole(person) && currentRole === VILLAGE_ROLE_NONE);
+  select.title = getVillageRoleSelectTitle(person, currentRole, roles);
+  cell.title = select.title;
+  select.onchange = () => {
+    const nextRole = select.value;
+    if (assignVillageRole(village, person, nextRole)) {
+      syncEffectiveStats(person);
+      if (nextRole !== VILLAGE_ROLE_NONE) showDictionaryEntry(nextRole);
+      updateUI(village);
+      return;
+    }
+    updateUI(village);
+  };
+
+  cell.appendChild(select);
+  row.appendChild(cell);
+}
+
+function appendPersonalHistoryCell(row, person, village, showPersonalHistory = true) {
   const cell = document.createElement("td");
   cell.classList.add("foldable-info");
+  if (!showPersonalHistory) {
+    row.appendChild(cell);
+    return;
+  }
 
   const button = document.createElement("button");
   button.type = "button";
@@ -869,17 +1033,22 @@ function appendPersonalHistoryCell(row, person, village) {
   row.appendChild(cell);
 }
 
-function appendStatCells(row, person, village) {
+function appendStatCells(row, person, village, { showPersonalHistory = true } = {}) {
   ["str", "vit", "dex", "mag", "chr"].forEach(stat => appendNumberCell(row, person[stat]));
   appendDictionaryCell(row, person.bodyTraits, { category: "trait" });
   ["int", "ind", "eth", "cou", "sexdr"].forEach(stat => appendNumberCell(row, person[stat]));
-  appendDictionaryCell(row, person.mindTraits, { category: "trait" });
+  const displayedMindTraits = getSpecialRaiderRowClass(person)
+    ? (person.mindTraits || []).filter(trait => trait !== "襲撃者")
+    : person.mindTraits;
+  appendDictionaryCell(row, displayedMindTraits, { category: "trait" });
   appendDictionaryCell(row, [person.hobby], { category: "hobby" });
-  appendPersonalHistoryCell(row, person, village);
+  appendPersonalHistoryCell(row, person, village, showPersonalHistory);
 }
 
 function applyPersonRowStyle(row, person) {
-  for (let i = 0; i <= 13; i++) {
+  const specialRowClass = getSpecialRaiderRowClass(person);
+  if (specialRowClass) row.classList.add(specialRowClass);
+  for (let i = 0; i <= 14; i++) {
     const cell = row.cells[i];
     if (!cell) continue;
     cell.classList.add(person.bodySex === "男" ? "male-basic" : "female-basic");
@@ -887,9 +1056,9 @@ function applyPersonRowStyle(row, person) {
   const spiritSexCell = row.cells[6];
   if (spiritSexCell) {
     spiritSexCell.classList.remove("male-basic", "female-basic");
-    if (person.spiritSex === "男") {
+    if (!person.uiSexDisplay && person.spiritSex === "男") {
       spiritSexCell.classList.add("male-basic");
-    } else if (person.spiritSex === "女") {
+    } else if (!person.uiSexDisplay && person.spiritSex === "女") {
       spiritSexCell.classList.add("female-basic");
     }
   }
@@ -898,14 +1067,15 @@ function applyPersonRowStyle(row, person) {
   applyStatusHighlights(row, person);
 }
 
-function createPersonRow(person, village, { editable = false } = {}) {
+function createPersonRow(person, village, { editable = false, showPersonalHistory = true } = {}) {
   const row = document.createElement("tr");
   if (editable) {
     refreshJobTable(person, village);
   }
   appendIdentityCells(row, person);
   appendActionCell(row, person, village, editable);
-  appendStatCells(row, person, village);
+  appendVillageRoleCell(row, person, village, editable);
+  appendStatCells(row, person, village, { showPersonalHistory });
   applyPersonRowStyle(row, person);
   return row;
 }
@@ -924,15 +1094,20 @@ function setSectionVisible(section, visible) {
  * メイン画面(村人一覧,資源パネルなど)を更新
  */
 export function updateUI(v) {
+  checkWishCompletion(v);
   const rp = document.getElementById("resourcePanel");
   if (!rp) return;
   applyVillageScaleArtClass(v.building);
+  document.body?.classList.toggle("apocalypse-mode", isApocalypseActive(v));
   const villageInfoHeading = document.getElementById("villageInfoHeading");
+  const scaleTitle = getVillageScaleTitle(v.building);
+  const divineStatus = getDivineMightStatus(v);
+  const divineLabel = `神威 Lv${divineStatus.level}（${divineStatus.amountLabel}）`;
   if (villageInfoHeading) {
-    villageInfoHeading.textContent = getVillageScaleTitle(v.building);
+    villageInfoHeading.textContent = `${scaleTitle}　${divineLabel}`;
   }
   const mobileScaleTitleBox = isMobileViewMode()
-    ? `<div class="resource-box village-scale-title"><span class="resource-value">${getVillageScaleTitle(v.building)}</span></div>`
+    ? `<div class="resource-box village-scale-title"><span class="resource-value">${scaleTitle} / ${divineLabel}</span></div>`
     : "";
   const foodStorage = getResourceStorageStatus(v, "food");
   const materialStorage = getResourceStorageStatus(v, "materials");
@@ -961,8 +1136,7 @@ export function updateUI(v) {
     <div class="resource-box"><span class="resource-label">技術</span><span class="resource-value">${v.tech}</span></div>
     <div class="resource-box"><span class="resource-label">治安</span><span class="resource-value">${v.security}</span></div>
     <div class="resource-box"><span class="resource-label">規模</span><span class="resource-value">${v.building}</span></div>
-    <div class="resource-box"><span class="resource-label">異端</span><span class="resource-value">${v.heresy || 0}</span></div>
-    <div class="resource-box"><span class="resource-label">人口/上限</span><span class="resource-value">${v.villagers.length}/${v.popLimit}</span></div>
+    <div class="resource-box"><span class="resource-label">人口/上限</span><span class="resource-value">${getPopulationCount(v)}/${v.popLimit}</span></div>
     <div class="resource-box resource-traits"><span class="resource-label">村特性</span><span class="resource-value" id="villageTraitsTerms"></span></div>
   `;
   const villageTraitsTerms = document.getElementById("villageTraitsTerms");
@@ -992,18 +1166,22 @@ export function updateUI(v) {
   const tb = document.querySelector("#villagersTable tbody");
   renderPeopleTable(tb, v.villagers || [], v, { editable: true });
 
+  const captives = getCaptives(v);
+  setSectionVisible(document.getElementById("captivesSection"), captives.length > 0);
+  renderPeopleTable(document.querySelector("#captivesTable tbody"), captives, v, { showPersonalHistory: false });
+
   const visitors = Array.isArray(v.visitors) ? v.visitors : [];
   setSectionVisible(document.getElementById("visitorsSection"), visitors.length > 0);
-  renderPeopleTable(document.querySelector("#visitorsTable tbody"), visitors, v);
+  renderPeopleTable(document.querySelector("#visitorsTable tbody"), visitors, v, { showPersonalHistory: false });
 
   const raidEnemies = Array.isArray(v.raidEnemies) ? v.raidEnemies : [];
   const showRaidEnemies = v.villageTraits.includes("襲撃中") && raidEnemies.length > 0;
   setSectionVisible(document.getElementById("raidEnemiesSection"), showRaidEnemies);
-  renderPeopleTable(document.querySelector("#raidEnemiesTable tbody"), showRaidEnemies ? raidEnemies : [], v);
+  renderPeopleTable(document.querySelector("#raidEnemiesTable tbody"), showRaidEnemies ? raidEnemies : [], v, { showPersonalHistory: false });
 
   // テーブル更新後にソート機能をセットアップ
   setupTableSort();
-  
+
   // もし現在ソート中の列があれば、その状態を維持
   if (sortState.column !== null) {
     sortVillagerTable(sortState.column, sortState.isAsc);
@@ -1018,6 +1196,11 @@ let sortState = {
   isAsc: true    // 昇順ならtrue
 };
 
+// 列番号は index.html の村人一覧テーブルと対応する。列を増減したら両方を合わせること。
+// 行動と役職はプルダウンのため、並べ替えの対象にしない。
+const SORTABLE_VILLAGER_COLUMNS = [4, 5, 6, 7, 8, 9, 10, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23];
+const NUMERIC_VILLAGER_COLUMNS = [5, 7, 8, 9, 10, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23];
+
 /**
  * テーブルヘッダーにソート機能を追加
  */
@@ -1026,7 +1209,7 @@ function setupTableSort() {
   if (!table) return;
   const headers = table.querySelectorAll("thead th");
 
-  const sortableColumns = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 21, 22];
+  const sortableColumns = SORTABLE_VILLAGER_COLUMNS;
 
   sortableColumns.forEach(colIndex => {
     const header = headers[colIndex];
@@ -1063,7 +1246,7 @@ function sortVillagerTable(colIndex, isAsc) {
     let bVal = b.cells[colIndex]?.textContent ?? "";
 
     // 数値の場合は数値としてソート
-    if ([5,7,8,9,10,12,13,14,15,16,18,19,20,21,22].includes(colIndex)) {
+    if (NUMERIC_VILLAGER_COLUMNS.includes(colIndex)) {
       aVal = Number(aVal);
       bVal = Number(bVal);
     }

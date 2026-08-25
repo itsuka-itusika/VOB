@@ -1,7 +1,7 @@
 import { grantRandomSecretTreasure } from "./secretTreasures.js";
 
 export const SECRET_TREASURE_JOB_EVENT_CHANCE = 0.01;
-export const MERCHANT_SECRET_TREASURE_CHANCE = 0.03;
+export const MERCHANT_SECRET_TREASURE_CHANCE = 0.1;
 export const MERCHANT_SECRET_TREASURE_PRICE = 300;
 
 const EVENT_DEFINITIONS = {

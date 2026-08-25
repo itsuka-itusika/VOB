@@ -12,7 +12,7 @@
     gtag('config', 'G-TR05T5GRB4');
   </script>
   <title>ヴィレッジオブバッカス</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260509-mobile-ui-3">
+  <link rel="stylesheet" href="css/styles.css?v=20260820-opening-flow">
   <style>
     .action-buttons {
       display: flex;
@@ -29,9 +29,44 @@
   </style>
 
 </head>
-<body>
+<body class="opening-active">
+<div id="openingScreen" class="opening-screen" data-view="menu">
+  <div id="openingMenu" class="opening-view opening-menu">
+    <h1 class="opening-visually-hidden">Village of Bacchus</h1>
+    <div class="opening-menu-panel" role="group" aria-label="ゲーム開始メニュー">
+      <button type="button" id="openingNewGameButton" class="opening-menu-button">はじめから</button>
+      <button type="button" id="openingLoadLocalButton" class="opening-menu-button">
+        <span class="opening-menu-label">つづきから（ローカル読込）</span>
+        <span class="opening-menu-note" id="openingLoadLocalNote" hidden></span>
+      </button>
+      <button type="button" id="openingLoadJsonButton" class="opening-menu-button">つづきから（json）</button>
+    </div>
+    <p class="opening-version" id="openingVersion"></p>
+  </div>
+
+
+  <div id="openingStory" class="opening-view opening-story" role="dialog" aria-modal="true" aria-labelledby="openingStoryTitle" hidden>
+    <h2 id="openingStoryTitle" class="opening-visually-hidden" tabindex="-1">オープニング</h2>
+    <p id="openingStoryStage" class="opening-story-stage"></p>
+    <div id="openingMessageWindow" class="opening-message-window" hidden>
+      <div class="opening-message-content">
+        <div class="opening-message-portrait" aria-hidden="true">？</div>
+        <div class="opening-message-dialogue">
+          <p id="openingMessageSpeaker" class="opening-message-speaker"></p>
+          <p id="openingMessageText" class="opening-message-text" aria-hidden="true"></p>
+          <span id="openingMessageCursor" class="opening-message-cursor" aria-hidden="true" hidden>▼</span>
+        </div>
+      </div>
+      <div class="opening-story-actions">
+        <button type="button" id="openingStorySkipButton" class="opening-skip-button">&gt;&gt;スキップ</button>
+        <button type="button" id="openingStoryContinueButton" hidden>ゲームを始める</button>
+      </div>
+    </div>
+    <p id="openingMessageSr" class="opening-visually-hidden" aria-live="polite"></p>
+  </div>
+</div>
 <header>
-  <h1>Village of Bacchus ver.2.1</h1>
+  <h1 id="appTitle"><span data-debug-title-action="raid">V</span>illage of <span data-debug-title-action="visitor">B</span>acchu<span data-debug-title-action="treasures">s</span> ver.2.1</h1>
 </header>
 <main>
   <section>
@@ -57,6 +92,7 @@
             <option value="load-json">JSON読込</option>
             <option value="save-local">ローカル保存</option>
             <option value="load-local">ローカル読込</option>
+            <option value="opening">オープニングを見る</option>
             <option value="readme">更新履歴・説明</option>
             <option value="debug">デバッグ用</option>
           </select>
@@ -97,20 +133,21 @@
           <th>メンタル</th>  <!--9-->
           <th>幸福</th>      <!--10-->
           <th>行動</th>      <!--11-->
-          <th>筋力</th>      <!--12-->
-          <th>耐久</th>      <!--13-->
-          <th>器用</th>      <!--14-->
-          <th>魔力</th>      <!--15-->
-          <th>魅力</th>      <!--16-->
-          <th>肉体特性</th>  <!--17-->
-          <th>知力</th>      <!--18-->
-          <th>勤勉</th>      <!--19-->
-          <th>倫理</th>      <!--20-->
-          <th>勇気</th>      <!--21-->
-          <th>好色</th>      <!--22-->
-          <th>精神特性</th>  <!--23-->
-          <th>趣味</th>      <!--24-->
-          <th>記録</th>      <!--25-->
+          <th>役職</th>      <!--12-->
+          <th>筋力</th>      <!--13-->
+          <th>耐久</th>      <!--14-->
+          <th>器用</th>      <!--15-->
+          <th>魔力</th>      <!--16-->
+          <th>魅力</th>      <!--17-->
+          <th>肉体特性</th>  <!--18-->
+          <th>知力</th>      <!--19-->
+          <th>勤勉</th>      <!--20-->
+          <th>倫理</th>      <!--21-->
+          <th>勇気</th>      <!--22-->
+          <th>好色</th>      <!--23-->
+          <th>精神特性</th>  <!--24-->
+          <th>趣味</th>      <!--25-->
+          <th>記録</th>      <!--26-->
         </tr>
       </thead>
       <tbody>
@@ -119,6 +156,44 @@
     <div class="table-tools">
       <label><input type="checkbox" id="spiritColumnsToggle" onchange="toggleSpiritColumns(this.checked)"> 精神情報を表示</label>
     </div>
+  </section>
+  <section id="captivesSection" style="display:none;">
+    <h2>捕虜一覧</h2>
+    <table id="captivesTable">
+      <thead>
+        <tr>
+          <th>顔</th>        <!--0-->
+          <th>名前</th>      <!--1-->
+          <th>肉体</th>      <!--2-->
+          <th>種族</th>      <!--3-->
+          <th>性別</th>      <!--4-->
+          <th>年齢</th>      <!--5-->
+          <th class="spirit-column">精神性別</th> <!--6-->
+          <th class="spirit-column">精神年齢</th> <!--7-->
+          <th>体力</th>      <!--8-->
+          <th>メンタル</th>  <!--9-->
+          <th>幸福</th>      <!--10-->
+          <th>行動</th>      <!--11-->
+          <th>役職</th>      <!--12-->
+          <th>筋力</th>      <!--13-->
+          <th>耐久</th>      <!--14-->
+          <th>器用</th>      <!--15-->
+          <th>魔力</th>      <!--16-->
+          <th>魅力</th>      <!--17-->
+          <th>肉体特性</th>  <!--18-->
+          <th>知力</th>      <!--19-->
+          <th>勤勉</th>      <!--20-->
+          <th>倫理</th>      <!--21-->
+          <th>勇気</th>      <!--22-->
+          <th>好色</th>      <!--23-->
+          <th>精神特性</th>  <!--24-->
+          <th>趣味</th>      <!--25-->
+          <th>記録</th>      <!--26-->
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
   </section>
   <section id="visitorsSection" style="display:none;">
     <h2>訪問者一覧</h2>
@@ -137,20 +212,21 @@
           <th>メンタル</th>  <!--9-->
           <th>幸福</th>      <!--10-->
           <th>行動</th>      <!--11-->
-          <th>筋力</th>      <!--12-->
-          <th>耐久</th>      <!--13-->
-          <th>器用</th>      <!--14-->
-          <th>魔力</th>      <!--15-->
-          <th>魅力</th>      <!--16-->
-          <th>肉体特性</th>  <!--17-->
-          <th>知力</th>      <!--18-->
-          <th>勤勉</th>      <!--19-->
-          <th>倫理</th>      <!--20-->
-          <th>勇気</th>      <!--21-->
-          <th>好色</th>      <!--22-->
-          <th>精神特性</th>  <!--23-->
-          <th>趣味</th>      <!--24-->
-          <th>記録</th>      <!--25-->
+          <th>役職</th>      <!--12-->
+          <th>筋力</th>      <!--13-->
+          <th>耐久</th>      <!--14-->
+          <th>器用</th>      <!--15-->
+          <th>魔力</th>      <!--16-->
+          <th>魅力</th>      <!--17-->
+          <th>肉体特性</th>  <!--18-->
+          <th>知力</th>      <!--19-->
+          <th>勤勉</th>      <!--20-->
+          <th>倫理</th>      <!--21-->
+          <th>勇気</th>      <!--22-->
+          <th>好色</th>      <!--23-->
+          <th>精神特性</th>  <!--24-->
+          <th>趣味</th>      <!--25-->
+          <th>記録</th>      <!--26-->
         </tr>
       </thead>
       <tbody>
@@ -174,20 +250,21 @@
           <th>メンタル</th>  <!--9-->
           <th>幸福</th>      <!--10-->
           <th>行動</th>      <!--11-->
-          <th>筋力</th>      <!--12-->
-          <th>耐久</th>      <!--13-->
-          <th>器用</th>      <!--14-->
-          <th>魔力</th>      <!--15-->
-          <th>魅力</th>      <!--16-->
-          <th>肉体特性</th>  <!--17-->
-          <th>知力</th>      <!--18-->
-          <th>勤勉</th>      <!--19-->
-          <th>倫理</th>      <!--20-->
-          <th>勇気</th>      <!--21-->
-          <th>好色</th>      <!--22-->
-          <th>精神特性</th>  <!--23-->
-          <th>趣味</th>      <!--24-->
-          <th>記録</th>      <!--25-->
+          <th>役職</th>      <!--12-->
+          <th>筋力</th>      <!--13-->
+          <th>耐久</th>      <!--14-->
+          <th>器用</th>      <!--15-->
+          <th>魔力</th>      <!--16-->
+          <th>魅力</th>      <!--17-->
+          <th>肉体特性</th>  <!--18-->
+          <th>知力</th>      <!--19-->
+          <th>勤勉</th>      <!--20-->
+          <th>倫理</th>      <!--21-->
+          <th>勇気</th>      <!--22-->
+          <th>好色</th>      <!--23-->
+          <th>精神特性</th>  <!--24-->
+          <th>趣味</th>      <!--25-->
+          <th>記録</th>      <!--26-->
         </tr>
       </thead>
       <tbody>
@@ -228,80 +305,111 @@
 
 <!-- モーダル: 迎撃フェーズ(襲撃イベント) -->
 <div id="raidOverlay"></div>
-<div id="raidModal">
-  <h2>襲撃発生中！ 防衛フェーズ</h2>
-  <div class="raid-buttons">
-    <button id="raidStepButton" onclick="proceedRaidAction()">次のステップ</button>
+<div id="raidModal" class="raid-battle-modal">
+  <div class="raid-battle-header">
+    <div class="raid-battle-title">
+      <h2>襲撃発生中！ 防衛フェーズ</h2>
+      <div id="raidStatusLine" class="raid-status-line"></div>
+    </div>
+    <div class="raid-buttons">
+      <button id="raidRetreatButton" class="raid-retreat-button" onclick="retreatRaid()">撤退</button>
+      <button id="raidStepButton" onclick="proceedRaidAction()">次のステップ</button>
+    </div>
   </div>
-  <div class="raid-section">
-    <h3>後衛（罠作成）</h3>
-    <table id="defenderTable">
-      <thead>
-        <tr>
-          <th>名前</th>
-          <th>体力</th>
-          <th>行動</th>
-          <th>器用</th>
-          <th>知力</th>
-          <th>勇気</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+  <div class="raid-battle-grid">
+    <section class="raid-board raid-board-allies">
+      <h3>村側</h3>
+      <div id="raidFrontSection" class="raid-section raid-role-section">
+        <div class="raid-role-heading">前衛</div>
+        <div class="raid-table-scroll">
+          <table id="raidersTable" class="raid-unit-table">
+            <thead>
+              <tr>
+                <th>顔</th>
+                <th>名前/状態</th>
+                <th>体力</th>
+                <th>メンタル</th>
+                <th>能力</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="raidMiddleSection" class="raid-section raid-role-section">
+        <div class="raid-role-heading">中衛</div>
+        <div class="raid-table-scroll">
+          <table id="shootersTable" class="raid-unit-table">
+            <thead>
+              <tr>
+                <th>顔</th>
+                <th>名前/状態</th>
+                <th>体力</th>
+                <th>メンタル</th>
+                <th>能力</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="raidRearSection" class="raid-section raid-role-section">
+        <div class="raid-role-heading">後衛</div>
+        <div class="raid-table-scroll">
+          <table id="defenderTable" class="raid-unit-table">
+            <thead>
+              <tr>
+                <th>顔</th>
+                <th>名前/状態</th>
+                <th>体力</th>
+                <th>メンタル</th>
+                <th>能力</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+    <section class="raid-board raid-board-enemies">
+      <h3>襲撃者</h3>
+      <div id="enemyFrontSection" class="raid-section raid-role-section">
+        <div class="raid-role-heading">前衛</div>
+        <div class="raid-table-scroll raid-enemy-scroll">
+          <table id="enemyFrontTable" class="raid-unit-table">
+            <thead>
+              <tr>
+                <th>顔</th>
+                <th>名前/状態</th>
+                <th>体力</th>
+                <th>メンタル</th>
+                <th>能力</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="enemyMiddleSection" class="raid-section raid-role-section">
+        <div class="raid-role-heading">中衛</div>
+        <div class="raid-table-scroll raid-enemy-scroll">
+          <table id="enemyMiddleTable" class="raid-unit-table">
+            <thead>
+              <tr>
+                <th>顔</th>
+                <th>名前/状態</th>
+                <th>体力</th>
+                <th>メンタル</th>
+                <th>能力</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
   </div>
-  <div class="raid-section">
-    <h3>中衛（射撃）</h3>
-    <table id="shootersTable">
-      <thead>
-        <tr>
-          <th>名前</th>
-          <th>体力</th>
-          <th>行動</th>
-          <th>筋力</th>
-          <th>耐久</th>
-          <th>器用</th>
-          <th>勇気</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-  <div class="raid-section">
-    <h3>前衛（迎撃・籠城）</h3>
-    <table id="raidersTable">
-      <thead>
-        <tr>
-          <th>名前</th>
-          <th>体力</th>
-          <th>行動</th>
-          <th>筋力</th>
-          <th>耐久</th>
-          <th>魔力</th>
-          <th>勇気</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-  <div class="raid-section">
-    <h3>襲撃者</h3>
-    <table id="enemyTable">
-      <thead>
-        <tr>
-          <th>名前</th>
-          <th>体力</th>
-          <th>行動</th>
-          <th>位置</th>
-          <th>筋力</th>
-          <th>耐久</th>
-          <th>魔力</th>
-          <th>勇気</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-  <div class="raid-section">
+  <div class="raid-section raid-log-section">
     <h3>迎撃ログ</h3>
     <div id="raidLogArea"></div>
   </div>
@@ -327,6 +435,29 @@
     <button onclick="useSelectedSecretTreasure()">使う</button>
     <button onclick="sellSelectedSecretTreasure()">売却する</button>
     <button onclick="closeSecretTreasureModal()">閉じる</button>
+  </div>
+</div>
+
+<!-- モーダル: ドライアドの果実 -->
+<div id="dryadFruitOverlay"></div>
+<div id="dryadFruitModal">
+  <div class="dryad-fruit-content">
+    <div class="dryad-fruit-title">
+      <h3>ドライアドの果実</h3>
+      <p>果実の香りが森の息吹へ変わり、新たな身体に満ちていく。</p>
+    </div>
+    <div class="dryad-fruit-person">
+      <div class="dryad-fruit-portrait-area">
+        <img id="dryadFruitPortrait" src="" alt="portrait">
+      </div>
+      <div class="dryad-fruit-dialogue-area">
+        <strong id="dryadFruitName"></strong>
+        <span id="dryadFruitDialogue"></span>
+      </div>
+    </div>
+  </div>
+  <div class="modal-buttons">
+    <button onclick="closeDryadFruitModal()">閉じる</button>
   </div>
 </div>
 
@@ -415,12 +546,9 @@
   </div>
 </div>
 
-<!-- 
-  ▼ モジュール読込
-     保存/ロード機能を含む全ファイルを読み込む
-     (他のjs: util.js, classes.js, createVillagers.js などは先の回答と同様に配置)
--->
-<script type="module" src="./js/app.js?v=20260509-mobile-ui-3"></script>
+<!-- モジュール読込 -->
+<script src="./js/balance/seedBootstrap.js?v=20260812-balance-seed-2"></script>
+<script type="module" src="./js/app.js?v=20260820-opening-flow"></script>
 
 </body>
 </html>

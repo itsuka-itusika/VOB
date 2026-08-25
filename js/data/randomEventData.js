@@ -11,10 +11,12 @@ export const EVENT_KIND_TITLES = {
 };
 
 export const EVENT_POOLS = {
-  good: ["cat", "gold", "strangeRain", "fireworks", "hotSpring", "bathPerk", "hobbyFriends", "menFriendship", "lover", "yuri", "tattoo", "fashion", "muscle", "selfPleasure"],
-  bad: ["storm", "downpour", "heat", "fire", "thief", "rats", "lightning1", "lightning2", "snow", "fight", "drunk", "epidemic"]
+  good: ["wolfChild", "cat", "gold", "strangeRain", "fireworks", "hotSpring", "bathPerk", "hobbyFriends", "thaw", "menFriendship", "lover", "pickup", "yuri", "tattoo", "fashion", "muscle", "selfPleasure"],
+  bad: ["storm", "downpour", "heat", "fire", "thief", "rats", "lightning1", "lightning2", "snow", "fight", "loverArgument", "argument", "drunk", "epidemic"]
 };
-export const GOLDEN_RAIN_RACES = new Set(["人間", "ハーピー", "半神", "キュクロプス", "サイクロプス"]);
+
+// 村全体へ一律に効くイベント。同じ状況を何人も語る意味がないため、代表1人だけが反応する。
+export const SINGLE_SPEAKER_EVENTS = new Set(["fireworks", "hotSpring", "heat", "snow"]);
 
 export const EVENT_SUBJECTS = {
   "狩猟神": "狩女神の祝福",
@@ -23,6 +25,7 @@ export const EVENT_SUBJECTS = {
   "地母神": "地母神の慈愛",
   goldenRain: "黄金の雨",
   strangeGrowthPotion: "怪しい薬の急成長",
+  wolfChild: "狼の子供",
   cat: "猫との出会い",
   gold: "金貨の発見",
   strangeRain: "不思議な雨",
@@ -30,8 +33,10 @@ export const EVENT_SUBJECTS = {
   hotSpring: "秘湯発見",
   bathPerk: "役得",
   hobbyFriends: "趣味仲間",
+  thaw: "雪解け",
   menFriendship: "男同士の友情",
   lover: "恋の気配",
+  pickup: "ナンパ",
   yuri: "百合の恋",
   tattoo: "刺青",
   fashion: "ファッションショー",
@@ -47,6 +52,8 @@ export const EVENT_SUBJECTS = {
   lightning2: "落雷による肉体交換",
   snow: "大雪",
   fight: "喧嘩",
+  loverArgument: "痴話喧嘩",
+  argument: "言い争い",
   drunk: "飲酒騒ぎ",
   epidemic: "疫病の流行"
 };
@@ -58,6 +65,7 @@ export const EVENT_MOODS = {
   "地母神": "mythic",
   goldenRain: "mythic",
   strangeGrowthPotion: "selfChange",
+  wolfChild: "happy",
   cat: "happy",
   gold: "gain",
   strangeRain: "gain",
@@ -65,8 +73,10 @@ export const EVENT_MOODS = {
   hotSpring: "happy",
   bathPerk: "selfChange",
   hobbyFriends: "friendship",
+  thaw: "friendship",
   menFriendship: "friendship",
   lover: "romance",
+  pickup: "romance",
   yuri: "romance",
   tattoo: "selfChange",
   fashion: "selfChange",
@@ -82,6 +92,8 @@ export const EVENT_MOODS = {
   lightning2: "shock",
   snow: "hardship",
   fight: "conflict",
+  loverArgument: "conflict",
+  argument: "conflict",
   drunk: "conflict",
   epidemic: "hardship"
 };
@@ -167,6 +179,15 @@ export const EVENT_VILLAGER_LINES = {
     bright: "めっちゃ盛り上がったね！ 友達ってやっぱりいいな！",
     male: "気の合う相手ができた。悪くないな。",
     female: "信頼できる相手がいるのは心強いですね。"
+  },
+  pickup: {
+    polite: "思いきって声をかけてみました。案外、話が弾むものですね。",
+    cool: "声をかけた。結果はどうあれ、動かなければ始まらない。",
+    bold: "黙って見てるだけじゃ何も起きねえ。声をかけてきたぜ！",
+    shy: "こ、声をかけてしまいました……心臓が持ちません……",
+    bright: "思いきって話しかけちゃった！ やってみるもんだね！",
+    male: "気になる相手に声をかけてみた。",
+    female: "思いきって声をかけてみました。"
   },
   lover: {
     polite: "この胸の高鳴りは……丁寧に向き合うべきものですね。",
@@ -298,8 +319,10 @@ export const EVENT_SECOND_LINE_BASES = {
   fireworks: "夜空が明るくなって、皆の顔も緩んでいる",
   hotSpring: "湯けむりの奥から、村の新しい楽しみが見つかった",
   bathPerk: "長風呂で気分がすっかりほぐれた",
+  thaw: "あれだけこじれた相手と、また言葉を交わせている",
   menFriendship: "こういう相手がいると少し強くなれる気がする",
   lover: "あの人のことが妙に頭から離れない",
+  pickup: "自分から声をかける度胸が出た",
   yuri: "この気持ちは相手が女でも変わらない",
   tattoo: "肌に刻んだ印を見るたび気持ちが引き締まる",
   fashion: "装いひとつで見える景色まで変わる",
@@ -314,6 +337,8 @@ export const EVENT_SECOND_LINE_BASES = {
   lightning2: "手足の感覚が自分のものではない",
   snow: "雪が深くて一歩進むだけでも骨が折れる",
   fight: "これ以上言われっぱなしではいられない",
+  loverArgument: "好きだからこそ、言葉の棘が深く刺さる",
+  argument: "言葉が刺さって、しばらく顔を合わせづらい",
   drunk: "酒が回って、声も気分も大きくなっている",
   epidemic: "熱とだるさが体の奥まで染みている"
 };

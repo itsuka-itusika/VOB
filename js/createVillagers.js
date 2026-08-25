@@ -3,17 +3,29 @@
 import { Villager } from "./classes.js";
 import { randInt, randChoice, randNormalInRange } from "./util.js";
 import { ACTION_NONE, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
+import { isOriginalBodyPortrait, rememberCurrentPortrait } from "./domain/portraitHistory.js";
+import {
+  ALSEID_PORTRAIT_FILES,
+  ARACHNID_PORTRAIT_FILES,
+  DRYAD_PORTRAIT_FILES,
+  EQUINA_PORTRAIT_FILES,
+  MAENAD_PORTRAIT_FILES,
+  NEREID_PORTRAIT_FILES,
+  SATYR_PORTRAIT_FILES,
+  WINGED_PORTRAIT_FILES
+} from "./data/portraitPaths.js";
 import { applyGenerationBaseTraitBonuses, setBaseStatsFromEffective, syncEffectiveStats } from "./domain/statLayers.js";
+import { PHYSICAL_ABILITY_STATS } from "./domain/personSchema.js";
 import { getVillageScaleStage } from "./villageScale.js";
+import { initializeFoundingFriendships } from "./relationships.js";
 import {
   FEMALE_PORTRAIT_FILES,
   MALE_PORTRAIT_FILES,
   SPEECH_TYPE_MAPPING,
-  TODDLER_PORTRAIT_FILES,
   VISITOR_TYPES
 } from "./data/villagerData.js";
 import { MERCHANT_SECRET_TREASURE_CHANCE } from "./secretTreasureEvents.js";
-export { MALE_PORTRAIT_FILES, TODDLER_PORTRAIT_FILES } from "./data/villagerData.js";
+export { MALE_PORTRAIT_FILES } from "./data/villagerData.js";
 
 /**
  * 初期村人の人数設定
@@ -34,7 +46,6 @@ const VISITOR_TABLES_BY_SCALE = [
   },
   {
     maxStageIndex: 4,
-    // 将来的にレア訪問者 weight 5 を追加予定。現時点では未実装のため、合計95で抽選する。
     entries: [
       { type: "流民", weight: 20 },
       { type: "旅人", weight: 16 },
@@ -42,12 +53,14 @@ const VISITOR_TABLES_BY_SCALE = [
       { type: "巡礼者", weight: 15 },
       { type: "行商人", weight: 15 },
       { type: "冒険者", weight: 12 },
-      { type: "学者", weight: 12 }
+      { type: "学者", weight: 12 },
+      { type: "レア種族", weight: 5 },
+      { type: "エクイナ", weight: 5 }
     ]
   },
   {
     maxStageIndex: Infinity,
-    // 将来的にレア訪問者5、お忍び5、遍歴騎士5を追加予定。未実装のため現行タイプだけで抽選する。
+    // 将来的にお忍び5、遍歴騎士5を追加予定。現時点では未実装のため現行タイプだけで抽選する。
     entries: [
       { type: "流民", weight: 15 },
       { type: "旅人", weight: 10 },
@@ -56,13 +69,254 @@ const VISITOR_TABLES_BY_SCALE = [
       { type: "巡礼者", weight: 15 },
       { type: "行商人", weight: 15 },
       { type: "冒険者", weight: 15 },
-      { type: "学者", weight: 15 }
+      { type: "学者", weight: 15 },
+      { type: "レア種族", weight: 10 },
+      { type: "エクイナ", weight: 10 },
+      { type: "サテュロス", weight: 5 },
+      { type: "メナド", weight: 5 }
     ]
   }
 ];
 
+const RARE_VISITOR_TYPE = "レア種族";
+const RARE_VISITOR_TYPES = [
+  {
+    type: "翼人",
+    weight: 2,
+    implemented: true,
+    visitor: {
+      type: "翼人",
+      displayType: "旅人",
+      forcedSex: "女",
+      ageRange: { min: 18, max: 25 },
+      params: {
+        job: "旅人",
+        action: "訪問",
+        race: "翼人"
+      },
+      ranges: {
+        int: [10, 20],
+        ind: [10, 20],
+        cou: [8, 20],
+        eth: [20, 30],
+        sexdr: [3, 8]
+      },
+      forcedBodyTraits: ["飛行", "光輪"],
+      forcedMindTraits: ["神聖"],
+      chanceMindTraits: [{ trait: "非戦主義", chance: 0.5 }],
+      portraits: WINGED_PORTRAIT_FILES
+    }
+  },
+  {
+    type: "アルセイド",
+    weight: 2,
+    implemented: true,
+    visitor: {
+      type: "アルセイド",
+      displayType: "旅人",
+      forcedSex: "女",
+      ageRange: { min: 18, max: 25 },
+      params: {
+        job: "旅人",
+        action: "訪問",
+        race: "アルセイド"
+      },
+      ranges: {
+        str: [5, 20],
+        vit: [5, 20],
+        chr: [18, 27],
+        mag: [18, 27],
+        int: [5, 25],
+        ind: [5, 20],
+        cou: [3, 25],
+        eth: [12, 25],
+        sexdr: [3, 15]
+      },
+      forcedBodyTraits: ["緑の指", "不老"],
+      forcedMindTraits: ["文明忌避"],
+      chanceMindTraits: [{ trait: "非戦主義", chance: 0.5 }],
+      portraits: ALSEID_PORTRAIT_FILES
+    }
+  },
+  {
+    type: "ネレイド",
+    weight: 2,
+    implemented: true,
+    visitor: {
+      type: "ネレイド",
+      displayType: "旅人",
+      forcedSex: "女",
+      ageRange: { min: 18, max: 25 },
+      params: {
+        job: "旅人",
+        action: "訪問",
+        race: "ネレイド"
+      },
+      ranges: {
+        str: [5, 20],
+        vit: [5, 20],
+        chr: [18, 27],
+        mag: [18, 27],
+        int: [5, 20],
+        cou: [3, 14]
+      },
+      forcedBodyTraits: ["水中呼吸", "不老"],
+      chanceMindTraits: [{ trait: "非戦主義", chance: 0.5 }],
+      portraits: NEREID_PORTRAIT_FILES
+    }
+  },
+  {
+    type: "ドライアド",
+    weight: 1,
+    implemented: true,
+    visitor: {
+      type: "ドライアド",
+      displayType: "旅人",
+      forcedSex: "女",
+      ageRange: { min: 18, max: 25 },
+      params: {
+        job: "旅人",
+        action: "訪問",
+        race: "ドライアド"
+      },
+      ranges: {
+        str: [5, 20],
+        vit: [5, 20],
+        chr: [18, 27],
+        mag: [20, 30],
+        int: [5, 16],
+        ind: [5, 16],
+        eth: [12, 20],
+        cou: [12, 16],
+        sexdr: [3, 8]
+      },
+      forcedBodyTraits: ["緑の指", "光合成"],
+      forcedMindTraits: ["不殺"],
+      portraits: DRYAD_PORTRAIT_FILES
+    }
+  },
+  {
+    type: "アラクニド",
+    weight: 1,
+    implemented: true,
+    uniqueRace: true,
+    visitor: {
+      type: "アラクニド",
+      displayType: "旅人",
+      forcedSex: "女",
+      ageRange: { min: 18, max: 28 },
+      params: {
+        job: "旅人",
+        action: "訪問",
+        race: "アラクニド"
+      },
+      ranges: {
+        int: [5, 16],
+        ind: [5, 16],
+        eth: [5, 18],
+        dex: [18, 25]
+      },
+      forcedBodyTraits: ["糸吐き"],
+      portraits: ARACHNID_PORTRAIT_FILES
+    }
+  }
+];
+
+const EQUINA_VISITOR_TYPE = {
+  type: "エクイナ",
+  displayTypes: [
+    { type: "行商人", weight: 50 },
+    { type: "流民", weight: 30 },
+    { type: "旅人", weight: 20 }
+  ],
+  useDisplayTypeAsJob: true,
+  forcedSex: "女",
+  ageRange: { min: 18, max: 28 },
+  params: {
+    job: "旅人",
+    action: "訪問",
+    race: "エクイナ"
+  },
+  ranges: {
+    str: [11, 25],
+    vit: [11, 25],
+    dex: [11, 25],
+    mag: [15, 27],
+    chr: [18, 27],
+    int: [5, 20],
+    ind: [5, 20],
+    eth: [8, 20],
+    cou: [11, 25],
+    sexdr: [8, 25]
+  },
+  forcedBodyTraits: ["健脚"],
+  portraits: EQUINA_PORTRAIT_FILES
+};
+
+const GOAT_PAIR_DISPLAY_TYPES = [
+  { type: "吟遊詩人", weight: 50 },
+  { type: "巡礼者", weight: 50 }
+];
+
+const SATYR_VISITOR_TYPE = {
+  type: "サテュロス",
+  displayTypes: GOAT_PAIR_DISPLAY_TYPES,
+  useDisplayTypeAsJob: true,
+  forcedSex: "男",
+  ageRange: { min: 18, max: 28 },
+  params: {
+    job: "旅人",
+    action: "訪問",
+    race: "サテュロス"
+  },
+  ranges: {
+    mag: [11, 25],
+    chr: [15, 25],
+    int: [5, 25],
+    ind: [5, 18],
+    eth: [5, 18],
+    cou: [8, 30],
+    sexdr: [18, 30]
+  },
+  forcedBodyTraits: ["通る声", "山羊角"],
+  portraits: SATYR_PORTRAIT_FILES,
+  rareVisitorType: "サテュロス"
+};
+
+const MAENAD_VISITOR_TYPE = {
+  type: "メナド",
+  displayTypes: GOAT_PAIR_DISPLAY_TYPES,
+  useDisplayTypeAsJob: true,
+  forcedSex: "女",
+  ageRange: { min: 16, max: 25 },
+  params: {
+    job: "旅人",
+    action: "訪問",
+    race: "メナド"
+  },
+  ranges: {
+    mag: [20, 27],
+    chr: [20, 27],
+    int: [5, 25],
+    ind: [5, 18],
+    eth: [8, 18],
+    cou: [3, 25],
+    sexdr: [15, 25]
+  },
+  forcedBodyTraits: ["澄んだ声", "山羊角"],
+  portraits: MAENAD_PORTRAIT_FILES,
+  rareVisitorType: "メナド"
+};
+
+const GOAT_PAIR_VISITOR_TYPES = new Map([
+  [SATYR_VISITOR_TYPE.type, SATYR_VISITOR_TYPE],
+  [MAENAD_VISITOR_TYPE.type, MAENAD_VISITOR_TYPE]
+]);
+
 // 使用済みの名前を追跡する Set を追加
 const usedNames = new Set();
+const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成"]);
+const NO_AGING_RACES = new Set(["翼人", "アルセイド", "ネレイド", "ドライアド"]);
 
 export function registerUsedName(name) {
   const normalized = String(name || "").trim();
@@ -100,29 +354,9 @@ export const usedPortraits = {
  * 性別と能力値に応じて顔グラフィックを選択
  */
 
-function getPortraitGroupKeyFromFile(portraitFile) {
-  const match = String(portraitFile || "").match(/^(GG|MA|MB|MC|MD|ME|BB|A|C|D)\d+\.png$/);
-  return match ? match[1] : "";
-}
-
-function getFallbackToddlerPortraitGroup(character) {
-  if ((character.bodySex || character.spiritSex) === "男") {
-    if (character.chr >= 15) return "MC";
-    if (character.chr <= 14 && character.vit >= 15) return "MD";
-    if (character.chr <= 14 && character.vit <= 14) return "ME";
-    return "ME";
-  }
-  return "D";
-}
-
-export function selectToddlerPortraitByCharacter(character) {
-  const groupKey =
-    character.toddlerPortraitGroup ||
-    getPortraitGroupKeyFromFile(character.adultPortraitFile) ||
-    getFallbackToddlerPortraitGroup(character);
-  const portraits = TODDLER_PORTRAIT_FILES[groupKey] || TODDLER_PORTRAIT_FILES.D;
-  character.toddlerPortraitGroup = groupKey;
-  return randChoice(portraits);
+function hasNoAgingBodyTrait(v) {
+  return NO_AGING_RACES.has(v?.race)
+    || (Array.isArray(v?.bodyTraits) && v.bodyTraits.some(trait => NO_AGING_BODY_TRAITS.has(trait)));
 }
 
 export function selectPortraitByCharacter(character) {
@@ -149,21 +383,21 @@ export function selectPortraitByCharacter(character) {
   if (character.bodySex === "男") {
     const bodyTraits = character.bodyTraits;
     let selectedGroup = null;
-    
+
     // 1. まず特性による判定を行う
     if (bodyTraits.some(trait => [
       "巨漢", "怪力", "マッチョ", "筋骨隆々",
-      "筋肉質", "巨躯"
+      "巨躯", "巨人"
     ].includes(trait))) {
       selectedGroup = MALE_PORTRAIT_FILES.GROUP_A;
-    } 
+    }
     else if (bodyTraits.some(trait => [
       "美形", "スマート", "中性的", "眉目秀麗", "優男",
       "色男", "ミステリアス", "クール"
     ].includes(trait))) {
       selectedGroup = MALE_PORTRAIT_FILES.GROUP_B;
     }
-    
+
     // 2. 特性がない場合はステータスで判定
     if (!selectedGroup) {
       if (character.chr >= 15) {
@@ -188,17 +422,17 @@ export function selectPortraitByCharacter(character) {
       usedPortraits.male.add(selected);
       return selected;
     }
-    
+
     // 4. 使用可能な顔グラフィックがない場合は使用済みリストをクリアして再選択
     usedPortraits.male.clear();
     const selected = randChoice(selectedGroup);
     usedPortraits.male.add(selected);
     return selected;
   }
-  
+
   // 女性の場合も同様の処理
   const bodyTraits = character.bodyTraits;
-  
+
   // グループA: 清楚・神秘系
   if (bodyTraits.some(trait => [
     "癒し系", "清楚", "神秘的", "ミステリアス",
@@ -211,7 +445,7 @@ export function selectPortraitByCharacter(character) {
       return selected;
     }
   }
-  
+
   // グループB: 華やか・魅惑系
   if (bodyTraits.some(trait => [
     "華やか", "魔性", "豊満", "スタイル抜群", "絶世の美女"
@@ -223,7 +457,7 @@ export function selectPortraitByCharacter(character) {
       return selected;
     }
   }
-  
+
   // グループC: 凛々しい・健康的系
   if (bodyTraits.some(trait => [
     "凛々しい", "クール", "しなやか",
@@ -236,7 +470,7 @@ export function selectPortraitByCharacter(character) {
       return selected;
     }
   }
-  
+
   // グループD: 普通・地味系
   if (bodyTraits.some(trait => [
     "虚弱", "やせ型", "小柄", "平凡",
@@ -249,7 +483,7 @@ export function selectPortraitByCharacter(character) {
       return selected;
     }
   }
-  
+
   // デフォルト: 特徴がない場合は普通グループから
   const availablePortraits = filterUnusedPortraits(FEMALE_PORTRAIT_FILES.GROUP_D);
   if (availablePortraits.length > 0) {
@@ -257,7 +491,7 @@ export function selectPortraitByCharacter(character) {
     usedPortraits.female.add(selected);
     return selected;
   }
-  
+
   // 全ての顔グラフィックが使用済みの場合、使用済みリストをクリアして再選択
   usedPortraits.female.clear();
   const selected = randChoice(FEMALE_PORTRAIT_FILES.GROUP_D);
@@ -303,6 +537,7 @@ export function createInitialVillagers() {
     }
   }
 
+  initializeFoundingFriendships(villagers);
   return villagers;
 }
 
@@ -318,9 +553,14 @@ export function createInitialVillagers() {
 export function createRandomVillager({ sex, minAge, maxAge, params = {}, ranges = {}, existingNames = [], fallbackParentName = "" }) {
   let age = randInt(minAge, maxAge);
 
-  let nm = generateRandomName(sex, { existingNames, fallbackParentName });
+  let nm = generateRandomName(sex, {
+    existingNames,
+    fallbackParentName,
+    race: params.race,
+    job: params.job
+  });
   let vill = new Villager(nm, sex, age);
-  
+
   if (params || ranges) {
     // デフォルトのランダム値で初期化
     initRandomParams(vill);
@@ -348,7 +588,7 @@ export function createRandomVillager({ sex, minAge, maxAge, params = {}, ranges 
   applyTraitParameterBonuses(vill);
   assignHobby(vill);
   refreshJobTable(vill);
-  
+
   // 顔グラフィックの設定
   // 棄民の場合は専用グループから選択
   if (vill.name && typeof vill.name === 'string' && vill.name.includes("棄民の")) {
@@ -390,20 +630,49 @@ export function generateRandomName(sex, options = {}) {
     "ルミエール","セレスティア","アストリア","エテリア","アウローラ","ノヴァ","アイリス","リリス","アテナ",
     "アルテミシア","フレイヤ","イドゥン","スカディ","エイル","ナンナ","シグリド","ヘル","フリッグ","セレーネ","エオウィン"
   ];
+  const steppeFemaleNames = [
+    "アルタンナ", "アリグナ", "アヤラ", "バヤルマ", "ボルテ", "ボルガナ", "チャガナ", "チメグ", "ダリカ", "エルデネ",
+    "エセンナ", "ガンチメグ", "ハラナ", "ハルガナ", "ホラン", "イルガ", "ジャルガ", "カラナ", "カスミラ", "ケレナ",
+    "クラン", "クルミシュ", "クトルナ", "マラル", "メルゲナ", "ナランナ", "ノミン", "オユン", "オルダナ", "サイハナ",
+    "サラナ", "サリナイ", "セチェナ", "シベナ", "ソロンゴ", "タミラ", "タルカナ", "テムリナ", "トヤナ", "ウルガナ",
+    "ウリナ", "ヤラナ", "ユルドゥナ", "ザラナ", "ズラガナ", "アルシャナ", "アスパラ", "バフラナ", "ファルナ", "ミフリ",
+    "ロクサナ", "サカラ", "スパラ", "ヴァルカナ", "アラシナ", "バルシナ", "イルテリナ", "ビルゲナ", "キュルナ", "トルグナ",
+    "アイスル", "アイヌル", "アイチュレク", "アクチュレク", "アルズ", "アスリ", "バイサル", "ベグミラ", "チョルパナ", "エルキナ",
+    "グルバハル", "グルナズ", "カラグル", "クムリ", "メレク", "ミナラ", "ナズグル", "ヌルアイ", "サビラ", "セヴィル",
+    "トマリス", "トゥラン", "ウルミラ", "ヤスミラ", "ザリナ", "ゼリハ", "アムリタ", "アナヒタ", "アタナ", "フラワル",
+    "マフリナ", "ラナク", "ロシャナ", "スリヤナ", "タパナ", "ヴァルジナ", "ヤシュナ", "アラティ", "バヌカ", "ミトラナ"
+  ];
+  const steppeMaleNames = [
+    "アラト", "アルタン", "アルグン", "バトゥ", "バトル", "ベルグテイ", "ボロル", "ボルカン", "ボルテイ", "ブカ",
+    "チャガン", "チャガタイ", "チルゲン", "チョルン", "ダヤン", "エルデン", "エセン", "ガンバル", "ガントゥル", "ガルサン",
+    "ハラル", "ハルガイ", "ハルタン", "ホルチ", "ホルムズ", "イルベル", "イルハン", "イナル", "ジャライ", "ジェベ",
+    "ジェルメ", "カダン", "カイドゥ", "カイラト", "カラチ", "カラハン", "カスカイ", "カシュガル", "ケレイ", "クチュル",
+    "クルタイ", "クルガン", "クトルグ", "マングダイ", "メルゲン", "ムカリ", "ナラン", "ノガイ", "オグル", "オグズ",
+    "オルダ", "オルホン", "オルクン", "オトチ", "サイハン", "サルバン", "サルタク", "サリク", "セチェン", "シベグ",
+    "シデイ", "ソヨン", "スブタイ", "タバル", "タムガ", "タルカン", "テムゲ", "テムル", "トグリル", "トクトア",
+    "トルイ", "トゥメン", "ウルス", "ウルグ", "ウリャン", "ウズベク", "ヤブグ", "ヤガン", "ヤルカン", "ユルドゥズ",
+    "ザバン", "ザラン", "ズラガ", "アスパル", "アルシャク", "バフラム", "ファルナク", "ミフラク", "ロスタム", "サカール",
+    "スパーダ", "ヴァルカ", "アショク", "アラシュ", "バルス", "イルテリシュ", "クテイ", "トニュクク", "ビルゲ", "キュル"
+  ];
 
   // 性別に応じた名前リストを選択
-  const nameList = sex === "男" ? maleNames : femaleNames;
-  
+  let nameList = sex === "男" ? maleNames : femaleNames;
+  if (options.race === "エクイナ") {
+    nameList = steppeFemaleNames;
+  } else if (options.race === "セントール" || options.job === "セントール" || options.job === "遊牧民" || options.job === "騎馬兵団") {
+    nameList = steppeMaleNames;
+  }
+
   const reservedNames = getReservedNames(options.existingNames);
   const availableNames = nameList.filter(name => !reservedNames.has(name));
-  
+
   if (availableNames.length === 0) {
     const baseName = options.fallbackParentName || randChoice(nameList);
     const fallbackName = buildFallbackChildName(baseName, reservedNames);
     registerUsedName(fallbackName);
     return fallbackName;
   }
-  
+
   // ランダムに名前を選択して使用済みとしてマーク
   const chosenName = randChoice(availableNames);
   registerUsedName(chosenName);
@@ -456,9 +725,11 @@ export function initRandomParams(v) {
  * 精神特性から口調タイプを決定
  */
 export function determineSpeechType(character) {  // export を追加
+  if (character?.race === "狼") return "狼";
+
   // デフォルトの口調
   const defaultSpeechType = (character.spiritSex || character.bodySex) === "男" ? "普通Ｍ" : "普通Ｆ";
-  
+
   // 精神特性がない場合はデフォルトを返す
   if (!character.mindTraits || character.mindTraits.length === 0) {
     return defaultSpeechType;
@@ -467,7 +738,7 @@ export function determineSpeechType(character) {  // export を追加
   // 最初の精神特性を使用して口調を決定
   const trait = character.mindTraits[0];
   const speechTypes = SPEECH_TYPE_MAPPING[trait];
-  
+
   if (!speechTypes) {
     return defaultSpeechType;
   }
@@ -672,7 +943,7 @@ export function assignBodyMindTraits(v) {
     { name: "通る声", condition: (v)=>(v.chr>=20 && v.cou>=20 && v.eth>=20), chance:0.3, target:"body" },
     { name: "非戦主義", condition: (v)=>(v.eth>=25), chance:0.5, target:"mind" },
     { name: "聖女の輝き", condition: (v)=>(v.bodySex==="女" && v.eth>=23 && v.sexdr<=12), chance:0.5, target:"body" },
-    { name: "酒豪", condition: (v)=>(v.vit>=25 && v.chr>=16 && v.sexdr>=18), chance:0.1, target:"body" },
+    { name: "酒豪", condition: (v)=>(v.vit>=20 && v.sexdr>=18), chance:0.1, target:"mind" },
     { name: "繊細な指", condition: (v)=>(v.dex>=22 && v.chr>=22), chance:0.1, target:"body" },
     { name: "緑の指", condition: (v)=>(v.mag>=21), chance:0.15, target:"body" },
     { name: "夜目", condition: (v)=>(v.mag>=18 && v.cou>=20), chance:0.1, target:"body" },
@@ -696,10 +967,12 @@ export function assignBodyMindTraits(v) {
   });
 
   // 年齢由来
-  if (v.bodyAge >= 60) {
-    v.bodyTraits.push("老人");
-  } else if (v.bodyAge >= 40) {
-    v.bodyTraits.push("中年");
+  if (!hasNoAgingBodyTrait(v)) {
+    if (v.bodyAge >= 60) {
+      v.bodyTraits.push("老人");
+    } else if (v.bodyAge >= 40) {
+      v.bodyTraits.push("中年");
+    }
   }
 
   // 精神特性が決定した後に口調タイプを設定
@@ -713,10 +986,12 @@ export function applyTraitParameterBonuses(v) {
   applyGenerationBaseTraitBonuses(v);
 
   // 加齢
-  if (v.bodyAge >= 60) {
-    if (!v.bodyTraits.includes("老人")) v.bodyTraits.push("老人");
-  } else if (v.bodyAge >= 40) {
-    if (!v.bodyTraits.includes("中年")) v.bodyTraits.push("中年");
+  if (!hasNoAgingBodyTrait(v)) {
+    if (v.bodyAge >= 60) {
+      if (!v.bodyTraits.includes("老人")) v.bodyTraits.push("老人");
+    } else if (v.bodyAge >= 40) {
+      if (!v.bodyTraits.includes("中年")) v.bodyTraits.push("中年");
+    }
   }
 
   syncEffectiveStats(v);
@@ -784,6 +1059,93 @@ export function assignHobby(v) {
 /**
  * 重み付き抽選で訪問者タイプを選択
  */
+function hasRaceInVillage(village, race) {
+  const people = [
+    ...(Array.isArray(village?.villagers) ? village.villagers : []),
+    ...(Array.isArray(village?.visitors) ? village.visitors : [])
+  ];
+  return people.some(person => person?.race === race);
+}
+
+function getRareVisitorWeight(entry, village = null) {
+  if (!entry.implemented) return 0;
+  if (entry.uniqueRace && hasRaceInVillage(village, entry.type)) return 0;
+  return entry.weight;
+}
+
+function buildRareVisitorType(entry) {
+  return {
+    ...entry.visitor,
+    rareVisitorType: entry.type
+  };
+}
+
+function selectRareVisitorType(village = null) {
+  const entries = RARE_VISITOR_TYPES
+    .map(entry => ({ entry, weight: getRareVisitorWeight(entry, village) }))
+    .filter(item => item.weight > 0);
+  if (entries.length === 0) return null;
+
+  const totalWeight = entries.reduce((sum, item) => sum + item.weight, 0);
+  let random = Math.random() * totalWeight;
+  for (const item of entries) {
+    random -= item.weight;
+    if (random <= 0) {
+      return buildRareVisitorType(item.entry);
+    }
+  }
+  return buildRareVisitorType(entries[0].entry);
+}
+
+function hasAvailableRareVisitorType(village = null) {
+  return RARE_VISITOR_TYPES.some(entry => getRareVisitorWeight(entry, village) > 0);
+}
+
+function selectWeightedVisitorOption(options = []) {
+  const entries = options
+    .map(option => ({ option, weight: Number(option?.weight) || 0 }))
+    .filter(item => item.weight > 0);
+  if (entries.length === 0) return null;
+
+  const totalWeight = entries.reduce((sum, item) => sum + item.weight, 0);
+  let random = Math.random() * totalWeight;
+  for (const item of entries) {
+    random -= item.weight;
+    if (random <= 0) return item.option;
+  }
+  return entries[0].option;
+}
+
+function getVisitorDisplayType(visitorType) {
+  const selected = selectWeightedVisitorOption(visitorType.displayTypes);
+  return selected?.type || visitorType.displayType || visitorType.type;
+}
+
+function resolveForcedVisitorType(forcedType, village = null) {
+  if (!forcedType) return null;
+  if (forcedType === RARE_VISITOR_TYPE) return selectRareVisitorType(village);
+
+  if (forcedType === EQUINA_VISITOR_TYPE.type) return EQUINA_VISITOR_TYPE;
+  if (GOAT_PAIR_VISITOR_TYPES.has(forcedType)) return GOAT_PAIR_VISITOR_TYPES.get(forcedType);
+
+  const visitorType = VISITOR_TYPES.find(type => type.type === forcedType);
+  if (visitorType) return visitorType;
+
+  const rareEntry = RARE_VISITOR_TYPES.find(entry => entry.type === forcedType && entry.implemented);
+  return rareEntry ? buildRareVisitorType(rareEntry) : null;
+}
+
+export function getVisitorTypeChoices() {
+  return [
+    ...VISITOR_TYPES.map(type => type.type),
+    EQUINA_VISITOR_TYPE.type,
+    SATYR_VISITOR_TYPE.type,
+    MAENAD_VISITOR_TYPE.type,
+    RARE_VISITOR_TYPE,
+    ...RARE_VISITOR_TYPES.filter(entry => entry.implemented).map(entry => entry.type)
+  ];
+}
+
 function resolveVisitorTable(village = null) {
   const table = village
     ? VISITOR_TABLES_BY_SCALE.find(entry => getVillageScaleStage(village.building).index <= entry.maxStageIndex)
@@ -792,6 +1154,15 @@ function resolveVisitorTable(village = null) {
 
   return table.entries
     .map(entry => {
+      if (entry.type === RARE_VISITOR_TYPE) {
+        return hasAvailableRareVisitorType(village) ? { type: RARE_VISITOR_TYPE, weight: entry.weight } : null;
+      }
+      if (entry.type === EQUINA_VISITOR_TYPE.type) {
+        return { ...EQUINA_VISITOR_TYPE, weight: entry.weight };
+      }
+      if (GOAT_PAIR_VISITOR_TYPES.has(entry.type)) {
+        return { ...GOAT_PAIR_VISITOR_TYPES.get(entry.type), weight: entry.weight };
+      }
       const visitorType = VISITOR_TYPES.find(type => type.type === entry.type);
       return visitorType ? { ...visitorType, weight: entry.weight } : null;
     })
@@ -802,54 +1173,190 @@ function selectVisitorType(village = null) {
   const visitorTable = resolveVisitorTable(village);
   const totalWeight = visitorTable.reduce((sum, type) => sum + type.weight, 0);
   let random = Math.random() * totalWeight;
-  
+
   for (const visitorType of visitorTable) {
     random -= visitorType.weight;
     if (random <= 0) {
-      return visitorType;
+      return visitorType.type === RARE_VISITOR_TYPE
+        ? (selectRareVisitorType(village) || VISITOR_TYPES[0])
+        : visitorType;
     }
   }
   return visitorTable[0] || VISITOR_TYPES[0]; // フォールバック
 }
 
+function addUniqueTrait(traits, trait) {
+  if (Array.isArray(traits) && !traits.includes(trait)) {
+    traits.push(trait);
+  }
+}
+
+function applyVisitorTypeTraits(visitor, visitorType) {
+  (visitorType.forcedBodyTraits || []).forEach(trait => addUniqueTrait(visitor.bodyTraits, trait));
+  (visitorType.forcedMindTraits || []).forEach(trait => addUniqueTrait(visitor.mindTraits, trait));
+  (visitorType.chanceMindTraits || []).forEach(({ trait, chance }) => {
+    if (Math.random() < chance) {
+      addUniqueTrait(visitor.mindTraits, trait);
+    }
+  });
+  visitor.speechType = determineSpeechType(visitor);
+  syncEffectiveStats(visitor);
+}
+
+function cloneNullableObject(value) {
+  return value == null ? null : { ...value };
+}
+
+function pickStats(source, stats) {
+  return Object.fromEntries(stats.map(stat => [stat, source?.[stat] ?? 0]));
+}
+
+function applyStats(target, stats) {
+  Object.entries(stats || {}).forEach(([stat, value]) => {
+    target[stat] = value;
+  });
+}
+
+function markGeneratedBodyExchange(person, fromRace, toRace) {
+  Object.defineProperties(person, {
+    lastBodyExchangeSourceRace: {
+      configurable: true,
+      value: fromRace || "人間",
+      writable: true
+    },
+    lastBodyExchangeTargetRace: {
+      configurable: true,
+      value: toRace || "人間",
+      writable: true
+    }
+  });
+}
+
+function exchangeGeneratedVisitorBodies(a, b) {
+  const sourceRaceA = a.race || "人間";
+  const sourceRaceB = b.race || "人間";
+  if (a.portraitFile !== b.portraitFile) {
+    const isOriginalBodyA = isOriginalBodyPortrait(a);
+    const isOriginalBodyB = isOriginalBodyPortrait(b);
+    rememberCurrentPortrait(a, "生成時交換", {
+      caption: isOriginalBodyA ? "元の身体" : "過去の姿",
+      isOriginalBody: isOriginalBodyA
+    });
+    rememberCurrentPortrait(b, "生成時交換", {
+      caption: isOriginalBodyB ? "元の身体" : "過去の姿",
+      isOriginalBody: isOriginalBodyB
+    });
+  }
+  const body = {
+    bodySex: a.bodySex,
+    bodyAge: a.bodyAge,
+    bodyOwner: a.bodyOwner,
+    race: a.race,
+    portraitFile: a.portraitFile,
+    raiderPortrait: a.raiderPortrait,
+    visitorPortrait: a.visitorPortrait,
+    hp: a.hp,
+    baseStats: pickStats(a.baseStats, PHYSICAL_ABILITY_STATS),
+    acquiredStatMods: pickStats(a.acquiredStatMods, PHYSICAL_ABILITY_STATS),
+    bodyTraits: Array.isArray(a.bodyTraits) ? [...a.bodyTraits] : [],
+    pregnancy: a.pregnancy ? JSON.parse(JSON.stringify(a.pregnancy)) : null,
+    postpartumMonths: a.postpartumMonths || 0,
+    bodyPotentialStats: cloneNullableObject(a.bodyPotentialStats),
+    adultBodyTraits: Array.isArray(a.adultBodyTraits) ? [...a.adultBodyTraits] : [],
+    adultBodyReached: !!a.adultBodyReached,
+    adultPortraitFile: a.adultPortraitFile || ""
+  };
+
+  a.bodySex = b.bodySex;
+  a.bodyAge = b.bodyAge;
+  a.bodyOwner = b.bodyOwner;
+  a.race = b.race;
+  a.portraitFile = b.portraitFile;
+  a.raiderPortrait = b.raiderPortrait;
+  a.visitorPortrait = b.visitorPortrait;
+  a.hp = b.hp;
+  applyStats(a.baseStats, pickStats(b.baseStats, PHYSICAL_ABILITY_STATS));
+  applyStats(a.acquiredStatMods, pickStats(b.acquiredStatMods, PHYSICAL_ABILITY_STATS));
+  a.bodyTraits = Array.isArray(b.bodyTraits) ? [...b.bodyTraits] : [];
+  a.pregnancy = b.pregnancy ? JSON.parse(JSON.stringify(b.pregnancy)) : null;
+  a.postpartumMonths = b.postpartumMonths || 0;
+  a.bodyPotentialStats = cloneNullableObject(b.bodyPotentialStats);
+  a.adultBodyTraits = Array.isArray(b.adultBodyTraits) ? [...b.adultBodyTraits] : [];
+  a.adultBodyReached = !!b.adultBodyReached;
+  a.adultPortraitFile = b.adultPortraitFile || "";
+
+  b.bodySex = body.bodySex;
+  b.bodyAge = body.bodyAge;
+  b.bodyOwner = body.bodyOwner;
+  b.race = body.race;
+  b.portraitFile = body.portraitFile;
+  b.raiderPortrait = body.raiderPortrait;
+  b.visitorPortrait = body.visitorPortrait;
+  b.hp = body.hp;
+  applyStats(b.baseStats, body.baseStats);
+  applyStats(b.acquiredStatMods, body.acquiredStatMods);
+  b.bodyTraits = [...body.bodyTraits];
+  b.pregnancy = body.pregnancy ? JSON.parse(JSON.stringify(body.pregnancy)) : null;
+  b.postpartumMonths = body.postpartumMonths;
+  b.bodyPotentialStats = cloneNullableObject(body.bodyPotentialStats);
+  b.adultBodyTraits = [...body.adultBodyTraits];
+  b.adultBodyReached = body.adultBodyReached;
+  b.adultPortraitFile = body.adultPortraitFile;
+
+  syncEffectiveStats(a);
+  syncEffectiveStats(b);
+  markGeneratedBodyExchange(a, sourceRaceA, a.race);
+  markGeneratedBodyExchange(b, sourceRaceB, b.race);
+}
+
+function isGoatPairVisitorType(visitorType) {
+  return !!visitorType && GOAT_PAIR_VISITOR_TYPES.has(visitorType.type);
+}
+
 /**
  * 訪問者を生成する関数
  */
-export function createRandomVisitor(existingNames = [], forcedType = null, village = null) {
-  const visitorType = forcedType
-    ? (VISITOR_TYPES.find(type => type.type === forcedType) || selectVisitorType(village))
-    : selectVisitorType(village);
-  
+function buildVisitorFromType(visitorType, existingNames = [], options = {}) {
+  const displayType = getVisitorDisplayType(visitorType);
+
   // 性別を明示的に設定（visitorTypeに指定がなければランダム）
   const bodySex = visitorType.forcedSex || (Math.random() < 0.5 ? "男" : "女");
-  
+  const visitorParams = {
+    ...visitorType.params,
+    ...(visitorType.useDisplayTypeAsJob ? { job: displayType } : {})
+  };
+
   const visitor = createRandomVillager({
     sex: bodySex,  // 肉体性別を明示的に設定
     minAge: visitorType.ageRange.min,
     maxAge: visitorType.ageRange.max,
-    params: {
-      ...visitorType.params
-    },
+    params: visitorParams,
     ranges: visitorType.ranges,
     existingNames
   });
 
   // 訪問者の名前を修正
-  const visitorName = `${visitorType.type}の${visitor.name}`;
+  const visitorName = `${displayType}の${visitor.name}`;
   const reservedNames = getReservedNames(existingNames);
   visitor.name = reservedNames.has(visitorName)
     ? buildFallbackChildName(visitorName, reservedNames)
     : visitorName;
-  registerUsedName(visitor.name);
-  
+  if (options.registerName !== false) {
+    registerUsedName(visitor.name);
+  }
+
   // 訪問者は村人化するまで訪問固定。通常時の復帰先は持たない。
   setPreferredAction(visitor, ACTION_NONE);
   visitor.jobTable = [];
   visitor.action = "訪問";
   visitor.actionTable = ["訪問"];
-  
+
   // 精神特性に訪問者を追加（1回のみ）
   visitor.mindTraits.push("訪問者");
+  if (visitorType.rareVisitorType) {
+    visitor.rareVisitorType = visitorType.rareVisitorType;
+  }
+  applyVisitorTypeTraits(visitor, visitorType);
 
   if (visitorType.type === "行商人") {
     visitor.merchantStock = {
@@ -863,7 +1370,7 @@ export function createRandomVisitor(existingNames = [], forcedType = null, villa
   if (visitorType.type === "棄民") {
     // 特別な精神特性をランダムで追加
     const specialTraits = [
-      "達人農夫", "達人木樵", "達人狩人", "達人漁師", 
+      "達人農夫", "達人木樵", "達人狩人", "達人漁師",
       "森の知恵", "海の知恵", "歴戦"
     ];
     const randomTrait = specialTraits[Math.floor(Math.random() * specialTraits.length)];
@@ -871,14 +1378,38 @@ export function createRandomVisitor(existingNames = [], forcedType = null, villa
   }
 
   // 顔グラフィックを設定
-  visitor.portraitFile = selectPortraitByCharacter(visitor);
-  
+  visitor.portraitFile = Array.isArray(visitorType.portraits) && visitorType.portraits.length > 0
+    ? randChoice(visitorType.portraits)
+    : selectPortraitByCharacter(visitor);
+
   // 精神性別が設定されていない場合は肉体性別と同じに設定
   if (!visitor.spiritSex) {
     visitor.spiritSex = visitor.bodySex;
   }
 
   return visitor;
+}
+
+function createBodyExchangedPairVisitor(selectedType, existingNames = []) {
+  const satyr = buildVisitorFromType(SATYR_VISITOR_TYPE, existingNames, { registerName: false });
+  const maenad = buildVisitorFromType(MAENAD_VISITOR_TYPE, [...existingNames, satyr.name], { registerName: false });
+  exchangeGeneratedVisitorBodies(satyr, maenad);
+
+  const visitor = selectedType === MAENAD_VISITOR_TYPE.type ? maenad : satyr;
+  registerUsedName(visitor.name);
+  return visitor;
+}
+
+export function createRandomVisitor(existingNames = [], forcedType = null, village = null) {
+  const visitorType = forcedType
+    ? (resolveForcedVisitorType(forcedType, village) || selectVisitorType(village))
+    : selectVisitorType(village);
+
+  if (isGoatPairVisitorType(visitorType)) {
+    return createBodyExchangedPairVisitor(visitorType.type, existingNames);
+  }
+
+  return buildVisitorFromType(visitorType, existingNames);
 }
 
 export function createRandomVisitorOfType(type, existingNames = []) {

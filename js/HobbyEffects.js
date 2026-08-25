@@ -1,6 +1,21 @@
 import { clampValue, randInt } from "./util.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
-import { addAcquiredStat } from "./domain/statLayers.js";
+import { addAcquiredStat, getPermanentStat } from "./domain/statLayers.js";
+import { getActiveVillagers } from "./domain/apocalypseRules.js";
+import { addDivineMight } from "./divineMight.js";
+import {
+  addRelationship,
+  adjustFriendshipScore,
+  getFriendshipScore,
+  getPartnerVillagers,
+  hasCloseOrHostileRelationship,
+  isSingle
+} from "./relationships.js";
+import { recordLoverHistory } from "./history.js";
+import { incrementTitleCounter, TITLE_COUNTER_KEYS } from "./titles.js";
+
+// 趣味によるステータス変動の発生率倍率。全趣味に一律で掛かる。
+const HOBBY_STAT_CHANGE_RATE = 0.4;
 
 export class HobbyEffects {
   static apply(p, v) {
@@ -13,7 +28,7 @@ export class HobbyEffects {
 
     let msg = "";
     switch(h) {
-      case "喧嘩": 
+      case "喧嘩":
         msg = this.applyFighting(p, v);
         break;
       case "筋トレ":
@@ -34,10 +49,8 @@ export class HobbyEffects {
         msg = this.applyGamble(p, v);
         break;
       case "ナンパ":
-        msg = this.applyPickup(p, v, "男");
-        break;
       case "逆ナン":
-        msg = this.applyPickup(p, v, "女");
+        msg = this.applyPickup(p, v);
         break;
       case "滝行":
         msg = this.applyAsceticTraining(p);
@@ -95,6 +108,9 @@ export class HobbyEffects {
         p.hobby = "ハンティング";
         msg = this.applyHuntingHobby(p, v);
         break;
+      case "狩り":
+        msg = this.applyHuntingHobby(p, v, "狩り");
+        break;
       case "お茶会":
         msg = this.applyTeaParty(p, v);
         break;
@@ -107,6 +123,36 @@ export class HobbyEffects {
       case "ダンス":
         msg = this.applyDance(p, v);
         break;
+      case "遠乗り":
+        msg = this.applyLongRide(p);
+        break;
+      case "毛づくろい":
+        msg = this.applyGrooming(p, "毛づくろい");
+        break;
+      case "羽づくろい":
+        msg = this.applyGrooming(p, "羽づくろい");
+        break;
+      case "繁殖":
+        msg = this.applyBreedingHobby(p);
+        break;
+      case "子育て":
+        msg = this.applyChildcareHobby(p, v);
+        break;
+      case "日光浴":
+        msg = this.applySunbathing(p);
+        break;
+      case "歌唱":
+        msg = this.applySinging(p, v);
+        break;
+      case "月光浴":
+        msg = this.applyMoonbathing(p, v);
+        break;
+      case "謎掛け":
+        msg = this.applyRiddleHobby(p, v);
+        break;
+      case "人間観察":
+        msg = this.applyPeopleWatching(p);
+        break;
       default:
         msg = `(趣味[${h}]:追加効果なし)`;
         break;
@@ -116,13 +162,13 @@ export class HobbyEffects {
 
   static isAgeRestrictedHobby(p, hobby) {
     const bodyAge = Number(p.bodyAge) || 0;
-    return bodyAge < 12 && ["自家発電", "飲酒", "ハンティング", "狩猟"].includes(hobby);
+    return bodyAge < 12 && ["自家発電", "飲酒"].includes(hobby);
   }
 
   static applyFighting(p, v) {
     p.hp = clampValue(p.hp-10, 0, 100);
     v.security = clampValue(v.security-10, 0, 100);
-    if (Math.random() < 0.5) {
+    if (this.rollHobbyStatChange(0.5)) {
       addAcquiredStat(p, "cou", 1);
       return "(喧嘩:体力-10,治安-10,勇気+1)";
     }
@@ -131,7 +177,7 @@ export class HobbyEffects {
 
   static applyTraining(p, v) {
     p.hp = clampValue(p.hp-10, 0, 100);
-    if (Math.random() < 0.5) {
+    if (this.rollHobbyStatChange(0.5)) {
       addAcquiredStat(p, "str", 1);
       return "(筋トレ:体力-10,筋力+1)";
     }
@@ -142,7 +188,7 @@ export class HobbyEffects {
     if (v.food >= 10) {
       v.food -= 10;
       p.hp = clampValue(p.hp+50, 0, 100);
-      if (Math.random() < 0.5) {
+      if (this.rollHobbyStatChange(0.5)) {
         addAcquiredStat(p, "vit", 1);
         return "(ドカ食い:食料-10,体力+50,耐久+1)";
       }
@@ -154,16 +200,16 @@ export class HobbyEffects {
   static applyExposure(p, v) {
     p.hp = clampValue(p.hp-10, 0, 100);
     v.security = clampValue(v.security-10, 0, 100);
-    
+
     if (p.bodySex === "男") {
-      v.villagers.forEach(x => {
+      getActiveVillagers(v).forEach(x => {
         x.happiness = clampValue(x.happiness-5, 0, 100);
       });
       return "(露出[男]:体力-10,治安-10,全体幸福-5)";
     } else {
       let msg = "(露出[女]:体力-10,治安-10";
       if (p.chr >= 15) {
-        let men = v.villagers.filter(x => x.spiritSex === "男");
+        let men = getActiveVillagers(v).filter(x => x.spiritSex === "男");
         men.forEach(mm => {
           mm.happiness = clampValue(mm.happiness+5, 0, 100);
         });
@@ -171,10 +217,10 @@ export class HobbyEffects {
         v.mana = clampValue(v.mana+gain, 0, 99999);
         msg += `,男性幸福+5,魔素+${gain}`;
       }
-      if (Math.random() < 0.5) {
+      if (this.rollHobbyStatChange(0.5)) {
         addAcquiredStat(p, "sexdr", 1);
       }
-      if (Math.random() < 0.5) {
+      if (this.rollHobbyStatChange(0.5)) {
         addAcquiredStat(p, "eth", -1);
       }
       return msg + ")";
@@ -184,13 +230,13 @@ export class HobbyEffects {
   static applySelfPower(p, v) {
     p.hp = clampValue(p.hp-20, 0, 100);
     if (p.bodySex === "女") {
-      let men = v.villagers.filter(x => x.spiritSex === "男");
+      let men = getActiveVillagers(v).filter(x => x.spiritSex === "男");
       men.forEach(mm => {
         mm.happiness = clampValue(mm.happiness+3, 0, 100);
       });
       let g = Math.floor(p.mag * p.chr/40);
       v.mana = clampValue(v.mana+g, 0, 99999);
-      if (Math.random() < 0.5) {
+      if (this.rollHobbyStatChange(0.5)) {
         addAcquiredStat(p, "sexdr", 1);
       }
       return `(自家発電[女]:体力-20,男性幸福+3,魔素+${g})`;
@@ -198,8 +244,12 @@ export class HobbyEffects {
     return "(自家発電[男]:体力-20,効果小)";
   }
 
+  static rollHobbyStatChange(chance) {
+    return Math.random() < (Number(chance) || 0) * HOBBY_STAT_CHANGE_RATE;
+  }
+
   static maybeRaiseStat(p, stat, chance, amount = 1) {
-    if (Math.random() < chance) {
+    if (this.rollHobbyStatChange(chance)) {
       addAcquiredStat(p, stat, amount);
       return `,${this.statLabel(stat)}${amount >= 0 ? "+" : ""}${amount}`;
     }
@@ -232,14 +282,130 @@ export class HobbyEffects {
     return `(ギャンブル:資金-${amount}${this.maybeRaiseStat(p, "cou", 0.2)})`;
   }
 
-  static applyPickup(p, v, targetSpiritSex) {
-    p.mp = clampValue(p.mp + 10, 0, 100);
-    const targets = v.villagers.filter(x => x !== p && x.spiritSex === targetSpiritSex);
-    if (targets.length > 0) {
-      const target = targets[randInt(0, targets.length - 1)];
-      target.happiness = clampValue(target.happiness + 4, 0, 100);
+  // ナンパ系の趣味。骨格は共通で、対象条件と成否の数値だけ趣味ごとに変わる。
+  static getPickupRules(hobby) {
+    if (hobby === "逆ナン") {
+      return {
+        label: "逆ナン",
+        counterKey: TITLE_COUNTER_KEYS.REVERSE_PICKUP_SUCCESS,
+        isTargetSex: b => b.spiritSex === "男",
+        minSpiritAge: 16,
+        minBodyAge: 16,
+        getMaxBodyAge: () => null,
+        minCharm: 18,
+        isRefusedBy: () => false,
+        meetsCharmGate: a => (Number(a.chr) || 0) >= 16,
+        getAcceptanceChance: b => (Number(b.sexdr) || 0) * 6 - (Number(b.eth) || 0) * 2,
+        refusePenalty: -20,
+        rejectPenalty: -10
+      };
     }
-    return `(ナンパ系:メンタル+10${this.maybeRaiseStat(p, "chr", 0.3)}${this.maybeRaiseStat(p, "sexdr", 0.25)})`;
+    return {
+      label: "ナンパ",
+      counterKey: TITLE_COUNTER_KEYS.PICKUP_SUCCESS,
+      isTargetSex: b => b.bodySex === "女",
+      minSpiritAge: null,
+      minBodyAge: 16,
+      getMaxBodyAge: a => (Number(a.spiritAge) || 0) + 8,
+      minCharm: 16,
+      isRefusedBy: (a, b) => this.hasMindTrait(b, "男嫌い") && a.bodySex === "男",
+      meetsCharmGate: (a, b) => (Number(a.chr) || 0) >= (Number(b.chr) || 0) - 4,
+      getAcceptanceChance: b => (Number(b.sexdr) || 0) * 5 - (Number(b.eth) || 0) * 3,
+      refusePenalty: -20,
+      rejectPenalty: -20
+    };
+  }
+
+  static hasMindTrait(person, trait) {
+    return Array.isArray(person?.mindTraits) && person.mindTraits.includes(trait);
+  }
+
+  // 塩の柱は getActiveVillagers が除外するため、ここでは判定しない。
+  static isPickupTargetCandidate(a, b, rules) {
+    if (!b || b === a) return false;
+    if (!isSingle(b)) return false;
+    if (hasCloseOrHostileRelationship(a, b)) return false;
+    const bodyTraits = Array.isArray(b.bodyTraits) ? b.bodyTraits : [];
+    if (bodyTraits.includes("四足歩行") || bodyTraits.includes("人面獣身")) return false;
+    if (!rules.isTargetSex(b)) return false;
+    if (rules.minSpiritAge !== null && (Number(b.spiritAge) || 0) < rules.minSpiritAge) return false;
+    const bodyAge = Number(b.bodyAge) || 0;
+    const maxBodyAge = rules.getMaxBodyAge(a);
+    if (bodyAge < rules.minBodyAge) return false;
+    if (maxBodyAge !== null && bodyAge > maxBodyAge) return false;
+    if ((Number(b.chr) || 0) < rules.minCharm) return false;
+    return getFriendshipScore(a, b) >= 0;
+  }
+
+  static refusesPickup(a, b, rules) {
+    if (this.hasMindTrait(b, "神聖")) return true;
+    if (rules.isRefusedBy(a, b)) return true;
+    return getFriendshipScore(b, a) <= -1;
+  }
+
+  // 相手から本人への好感度が0〜39のときだけ通る成否判定。
+  static rollPickupAcceptance(a, b, rules) {
+    if (!rules.meetsCharmGate(a, b)) return false;
+    return Math.random() * 100 < rules.getAcceptanceChance(b);
+  }
+
+  static resolvePickupSuccess(a, b, v, rules) {
+    incrementTitleCounter(a, rules.counterKey, 1, { getPermanentStat });
+    adjustFriendshipScore(a, b, 10);
+    adjustFriendshipScore(b, a, 10);
+    [a, b].forEach(person => {
+      person.mp = clampValue(person.mp + 10, 0, 100);
+      person.happiness = clampValue(person.happiness + 10, 0, 100);
+    });
+
+    const partners = getPartnerVillagers(v, a);
+    partners.forEach(partner => adjustFriendshipScore(partner, a, -20));
+    const jealousy = partners.length > 0
+      ? `,${partners.map(partner => partner.name).join("・")}の好感度-20`
+      : "";
+
+    let loverText = "";
+    if (isSingle(a) && getFriendshipScore(a, b) >= 40) {
+      addRelationship(a, `恋人:${b.name}`);
+      addRelationship(b, `恋人:${a.name}`);
+      a.happiness = clampValue(a.happiness + 20, 0, 100);
+      b.happiness = clampValue(b.happiness + 20, 0, 100);
+      recordLoverHistory(v, a, b, { source: rules.label });
+      v.log(`${a.name}と${b.name}は${rules.label}をきっかけに恋人になった`);
+      loverText = ",恋人成立,双方幸福+20";
+    }
+
+    return `${b.name}と意気投合,双方好感度+10,双方メンタル+10,幸福+10${jealousy}${loverText}`;
+  }
+
+  static resolvePickup(a, b, v, rules) {
+    if (this.refusesPickup(a, b, rules)) {
+      adjustFriendshipScore(b, a, rules.refusePenalty);
+      return `${b.name}に相手にされなかった,好感度${rules.refusePenalty}`;
+    }
+    if (getFriendshipScore(b, a) < 40 && !this.rollPickupAcceptance(a, b, rules)) {
+      adjustFriendshipScore(b, a, rules.rejectPenalty);
+      return `${b.name}に振られた,好感度${rules.rejectPenalty}`;
+    }
+    return this.resolvePickupSuccess(a, b, v, rules);
+  }
+
+  static hasPickupTarget(p, v, rules) {
+    return getActiveVillagers(v).some(x => this.isPickupTargetCandidate(p, x, rules));
+  }
+
+  static applyPickup(p, v, rules = null) {
+    const appliedRules = rules || this.getPickupRules(p.hobby);
+    const targets = getActiveVillagers(v).filter(x => this.isPickupTargetCandidate(p, x, appliedRules));
+    if (targets.length === 0) {
+      return `(${appliedRules.label}:めぼしい相手がいなかった…)`;
+    }
+
+    const target = targets[randInt(0, targets.length - 1)];
+    const outcome = this.resolvePickup(p, target, v, appliedRules);
+    // 魅力上昇が同じ試行の成否へ影響しないよう、能力上昇は判定後に処理する。
+    const statGrowth = `${this.maybeRaiseStat(p, "chr", 0.3)}${this.maybeRaiseStat(p, "sexdr", 0.25)}`;
+    return `(${appliedRules.label}:${outcome}${statGrowth})`;
   }
 
   static applyAsceticTraining(p) {
@@ -338,7 +504,8 @@ export class HobbyEffects {
     p.mp = clampValue(p.mp + 20, 0, 100);
     p.happiness = clampValue(p.happiness + 10, 0, 100);
     v.security = clampValue(v.security - 3, 0, 100);
-    return `(飲酒:メンタル+20,幸福+10,治安-3${this.maybeRaiseStat(p, "cou", 0.2)})`;
+    addDivineMight(v, 1);
+    return `(飲酒:メンタル+20,幸福+10,治安-3,神威+1${this.maybeRaiseStat(p, "cou", 0.2)})`;
   }
 
   static applyInvestment(p, v) {
@@ -360,11 +527,11 @@ export class HobbyEffects {
     return `(天体観測:メンタル+15,魔素+${gain}${this.maybeRaiseStat(p, "int", 0.2)}${this.maybeRaiseStat(p, "mag", 0.2)})`;
   }
 
-  static applyHuntingHobby(p, v) {
+  static applyHuntingHobby(p, v, label = "ハンティング") {
     const gain = randInt(8, 16);
     p.hp = clampValue(p.hp - 8, 0, 100);
     addStoredResource(v, "food", gain);
-    return `(ハンティング:体力-8,食料+${gain}${this.maybeRaiseStat(p, "cou", 0.25)}${this.maybeRaiseStat(p, "dex", 0.15)})`;
+    return `(${label}:体力-8,食料+${gain}${this.maybeRaiseStat(p, "cou", 0.25)}${this.maybeRaiseStat(p, "dex", 0.15)})`;
   }
 
   static applyTeaParty(p, v) {
@@ -388,10 +555,76 @@ export class HobbyEffects {
   static applyDance(p, v) {
     p.hp = clampValue(p.hp - 5, 0, 100);
     p.happiness = clampValue(p.happiness + 12, 0, 100);
-    const men = v.villagers.filter(x => x !== p && x.spiritSex === "男");
+    const men = getActiveVillagers(v).filter(x => x !== p && x.spiritSex === "男");
     men.forEach(mm => {
       mm.happiness = clampValue(mm.happiness + 2, 0, 100);
     });
     return `(ダンス:体力-5,幸福+12,男性幸福+2${this.maybeRaiseStat(p, "dex", 0.2)}${this.maybeRaiseStat(p, "chr", 0.2)})`;
+  }
+
+  static applyLongRide(p) {
+    p.hp = clampValue(p.hp - 8, 0, 100);
+    p.happiness = clampValue(p.happiness + 12, 0, 100);
+    return `(遠乗り:体力-8,幸福+12${this.maybeRaiseStat(p, "cou", 0.2)}${this.maybeRaiseStat(p, "vit", 0.15)})`;
+  }
+
+  static applyGrooming(p, label) {
+    p.mp = clampValue(p.mp + 8, 0, 100);
+    p.happiness = clampValue(p.happiness + 10, 0, 100);
+    return `(${label}:メンタル+8,幸福+10${this.maybeRaiseStat(p, "chr", 0.25)})`;
+  }
+
+  static applyBreedingHobby(p) {
+    p.mp = clampValue(p.mp + 8, 0, 100);
+    p.happiness = clampValue(p.happiness + 12, 0, 100);
+    return `(繁殖:メンタル+8,幸福+12${this.maybeRaiseStat(p, "sexdr", 0.25)})`;
+  }
+
+  static applyChildcareHobby(p, v) {
+    p.mp = clampValue(p.mp + 10, 0, 100);
+    p.happiness = clampValue(p.happiness + 8, 0, 100);
+    const children = Array.isArray(v?.villagers)
+      ? getActiveVillagers(v).filter(x => x !== p && Number(x.bodyAge) < 12)
+      : [];
+    if (children.length > 0) {
+      const child = children[randInt(0, children.length - 1)];
+      child.happiness = clampValue(child.happiness + 4, 0, 100);
+      return `(子育て:メンタル+10,幸福+8,子ども幸福+4${this.maybeRaiseStat(p, "eth", 0.2)})`;
+    }
+    return `(子育て:メンタル+10,幸福+8${this.maybeRaiseStat(p, "eth", 0.2)})`;
+  }
+
+  static applySunbathing(p) {
+    p.hp = clampValue(p.hp + 8, 0, 100);
+    p.happiness = clampValue(p.happiness + 8, 0, 100);
+    return `(日光浴:体力+8,幸福+8${this.maybeRaiseStat(p, "vit", 0.15)})`;
+  }
+
+  static applySinging(p, v) {
+    p.mp = clampValue(p.mp + 12, 0, 100);
+    const listeners = Array.isArray(v?.villagers) ? getActiveVillagers(v).filter(x => x !== p) : [];
+    listeners.forEach(person => {
+      person.happiness = clampValue(person.happiness + 2, 0, 100);
+    });
+    return `(歌唱:メンタル+12,他者幸福+2${this.maybeRaiseStat(p, "chr", 0.25)}${this.maybeRaiseStat(p, "mag", 0.15)})`;
+  }
+
+  static applyMoonbathing(p, v) {
+    const gain = randInt(3, 8);
+    p.mp = clampValue(p.mp + 15, 0, 100);
+    v.mana = clampValue(v.mana + gain, 0, 99999);
+    return `(月光浴:メンタル+15,魔素+${gain}${this.maybeRaiseStat(p, "mag", 0.25)})`;
+  }
+
+  static applyRiddleHobby(p, v) {
+    const gain = randInt(3, 8);
+    p.mp = clampValue(p.mp + 8, 0, 100);
+    v.tech = clampValue(v.tech + gain, 0, 99999);
+    return `(謎掛け:メンタル+8,技術+${gain}${this.maybeRaiseStat(p, "int", 0.3)})`;
+  }
+
+  static applyPeopleWatching(p) {
+    p.mp = clampValue(p.mp + 10, 0, 100);
+    return `(人間観察:メンタル+10${this.maybeRaiseStat(p, "int", 0.25)}${this.maybeRaiseStat(p, "chr", 0.15)})`;
   }
 }

@@ -10,26 +10,42 @@ import { createStatMap, STAT_LAYER_VERSION } from "./domain/statLayers.js";
 
 export class Village {
   constructor() {
-    this.year = 1091;
+    this.year = 1195;
     this.month = 4;
 
-    this.food = 200;
+    this.food = 150;
     this.materials = 120;
     this.funds = 0;
     this.mana = 40;
     this.tech = 0;
     this.security = 60;
     this.building = 0;
-    this.heresy = 0;
+    this.divineMight = 0;
     this.scaleTitleStage = 0;
     this.lastHeadmanElectionYear = null;
     this.nextHeadmanElectionYear = null;
+    this.lastThunderboltMiracleMonth = "";
+    this.apocalypseStarted = false;
+    this.apocalypseStage = 0;
+    this.apocalypseCleared = false;
+    this.apocalypseLocustMonths = null;
+    this.cleanlinessMonths = null;
 
     this.villagers = [];
     this.pendingGoldenRainPregnancies = [];
     this.popLimit = 8;
     this.villageTraits = ["春"];
     this.secretTreasures = [];
+    this.buildingRequest = null;
+    this.hasStartedBuildingRequest = false;
+    this.wish = null;
+    this.festivalFlags = {
+      pineconeStaffIntroShown: false
+    };
+    this.tutorial = {
+      completed: {},
+      complete: false
+    };
 
     this.logs = [];
     this.historyEvents = [];
@@ -43,21 +59,29 @@ export class Village {
     this.monthsSinceRaid = 0;
     this.raidCooldown = 0;
     this.pendingRaid = null;
+    this.battleDebugMode = false;
     this.isRaidProcessDone = false;
     this.isRaidFinalizing = false;
     this.raidTurnCount = 0;
     this.raidActionQueue = [];
     this.raidPhase = "";
     this.currentActionIndex = 0;
+    this.defeatedRaidEnemies = [];
 
     // 訪問者配列を追加
     this.visitors = [];
     this.visitorLimit = 1;
+    this.activeAdventurerQuests = [];
+
+    // 捕虜配列
+    this.captives = [];
 
     // 建築物配列を追加
     this.buildings = [];
     // 建築物フラグを追加
     this.buildingFlags = {};
+    this.damagedBuildings = [];
+    this.nonHousePopLimitBonus = 0;
 
     // ソート状態の保存
     this.tableSort = {
@@ -132,9 +156,18 @@ export class Villager {
 
     /** 人間関係(文字列格納) */
     this.relationships = [];
+    this.friendships = {};
+    this.friendshipStats = {
+      workTogether: {},
+      frontRaidTogether: {}
+    };
     this.socialAttemptedThisMonth = false;
     this.titleIds = [];
     this.titleStats = {};
+    this.hasBeenCritical = false;
+    this.criticalCause = "";
+    this.pendingEpidemicInfection = false;
+    this.adventurerQuestOffers = null;
 
     /** 行動割り当て関連 */
     // preferredAction は通常時の復帰先。job は旧セーブ・旧コード互換の別名として同期する。
@@ -146,6 +179,7 @@ export class Villager {
     /** 今月実行する行動 */
     this.action = "なし";
     this.actionTable = [];
+    this.villageRole = "なし";
 
     /** この肉体の元の持ち主 */
     this.bodyOwner = name;
@@ -159,6 +193,7 @@ export class Villager {
 
     /** 顔グラフィックのファイル名 */
     this.portraitFile = "default.png";
+    this.pastPortraitFiles = [];
 
     /** 口調タイプ */
     this.speechType = "";
@@ -173,8 +208,6 @@ export class Villager {
     this.adultMindTraits = [];
     this.adultHobby = "";
     this.adultPortraitFile = "";
-    this.toddlerPortraitFile = "";
-    this.toddlerPortraitGroup = "";
     this.childMindTrait = "";
     this.adultBodyReached = false;
     this.adultMindReached = false;

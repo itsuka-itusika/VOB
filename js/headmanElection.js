@@ -1,9 +1,18 @@
 import { getPermanentStat, syncEffectiveStats } from "./domain/statLayers.js";
+import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { HISTORY_EVENT_TYPES, recordHeadmanElectionHistory } from "./history.js";
 import { parseRelationship, normalizeRelationships } from "./relationships.js";
 import { grantTitle, incrementTitleCounter, TITLE_COUNTER_KEYS } from "./titles.js";
+import {
+  VILLAGE_ROLE_HEADMAN,
+  VILLAGE_ROLE_NONE,
+  clearLegacyHeadmanTrait,
+  getVillageRole,
+  isHeadman,
+  setVillageRole
+} from "./domain/villageRoles.js";
+import { getActiveVillagers } from "./domain/apocalypseRules.js";
 
-const HEADMAN_TRAIT = "里長";
 const ELECTION_MONTH = 7;
 const ELECTION_INTERVAL_YEARS = 3;
 const ASSEMBLY_HALL_ID = "assemblyHall";
@@ -16,6 +25,8 @@ const PRIORITY_MODAL_SELECTORS = [
   "#seasonChangeDialog",
   "#festivalModal",
   "#randomEventModal",
+  "#wishModal",
+  "#wishCompleteModal",
   ".effect-result-modal",
   "#secretTreasureEventModal"
 ];
@@ -24,14 +35,7 @@ let pendingElectionMessage = null;
 let modalObserver = null;
 
 function hasAssemblyHall(village) {
-  return !!(
-    village?.buildingFlags?.hasAssemblyHall ||
-    (Array.isArray(village?.buildings) && village.buildings.includes(ASSEMBLY_HALL_ID))
-  );
-}
-
-function hasMindTrait(person, trait) {
-  return Array.isArray(person?.mindTraits) && person.mindTraits.includes(trait);
+  return hasActiveBuildingFlag(village, "hasAssemblyHall", ASSEMBLY_HALL_ID);
 }
 
 function isAdultMind(person) {
@@ -39,15 +43,15 @@ function isAdultMind(person) {
 }
 
 function getCurrentHeadmen(village) {
-  return (village.villagers || []).filter(person => hasMindTrait(person, HEADMAN_TRAIT));
+  return getActiveVillagers(village).filter(isHeadman);
 }
 
 function getCandidates(village) {
-  return (village.villagers || []).filter(person => isAdultMind(person) && !hasMindTrait(person, HEADMAN_TRAIT));
+  return getActiveVillagers(village).filter(person => isAdultMind(person) && !isHeadman(person));
 }
 
 function getVoters(village) {
-  return (village.villagers || []).filter(isAdultMind);
+  return getActiveVillagers(village).filter(isAdultMind);
 }
 
 function stat(person, key) {
@@ -172,12 +176,13 @@ function formatVoteCounts(candidates, voteCounts) {
 function appointHeadman(village, headman) {
   (village.villagers || []).forEach(person => {
     person.mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
+    clearLegacyHeadmanTrait(person);
+    if (getVillageRole(person) === VILLAGE_ROLE_HEADMAN) {
+      setVillageRole(person, VILLAGE_ROLE_NONE);
+    }
     syncEffectiveStats(person);
   });
-  (village.villagers || []).forEach(person => {
-    person.mindTraits = person.mindTraits.filter(trait => trait !== HEADMAN_TRAIT);
-  });
-  headman.mindTraits.push(HEADMAN_TRAIT);
+  setVillageRole(headman, VILLAGE_ROLE_HEADMAN);
   (village.villagers || []).forEach(syncEffectiveStats);
 }
 

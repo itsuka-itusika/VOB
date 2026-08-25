@@ -1,16 +1,21 @@
 import { isForcedHealingAction } from "../util.js";
+import { hasActiveBuildingFlag } from "./buildingState.js";
 import {
+  ACTION_CANNON,
   ACTION_DEFEND,
   ACTION_FORTIFY,
   ACTION_SHOOT,
   ACTION_TRAP,
   RAID_ACTIONS,
+  canCannonInRaid,
   canDefendInRaid,
   canFortifyInRaid,
   canMakeTrapInRaid,
   canShootInRaid
 } from "../raidRules.js";
 import { syncEffectiveStats } from "./statLayers.js";
+import { FOUR_LEGGED_TRAIT, IMMATURE_MIND_TRAIT, isWolf, WILD_MIND_TRAIT } from "./speciesTraits.js";
+import { isSaltPillar } from "./apocalypseRules.js";
 
 export const ACTION_NONE = "なし";
 export const ACTION_REST = "休養";
@@ -18,21 +23,28 @@ export const ACTION_LEISURE = "余暇";
 export const ACTION_HEAL = "療養";
 export const ACTION_LAST_MOMENTS = "臨終";
 export const ACTION_CRADLE = "揺籃";
+export const ACTION_SALT_PILLAR = "塩柱";
+export const ACTION_MASSAGE_MALE = "あんま男";
+export const ACTION_MASSAGE_FEMALE = "あんま女";
+export const MASSAGE_ACTIONS = [ACTION_MASSAGE_MALE, ACTION_MASSAGE_FEMALE];
 
 const TEMPORARY_ACTIONS = new Set([ACTION_REST, ACTION_LEISURE]);
-const FORCED_ACTIONS = new Set([ACTION_HEAL, ACTION_LAST_MOMENTS]);
+const FORCED_ACTIONS = new Set([ACTION_HEAL, ACTION_LAST_MOMENTS, ACTION_SALT_PILLAR]);
 const NON_PREFERRED_ACTIONS = new Set([
   ACTION_NONE,
   ACTION_REST,
   ACTION_LEISURE,
   ACTION_HEAL,
   ACTION_LAST_MOMENTS,
+  ACTION_SALT_PILLAR,
   ACTION_DEFEND,
   ACTION_FORTIFY,
   ACTION_SHOOT,
+  ACTION_CANNON,
   ACTION_TRAP,
   "訪問",
-  "襲撃"
+  "襲撃",
+  "虜囚"
 ]);
 const INFANT_BODY_ALLOWED_ACTIONS = new Set([
   ACTION_REST,
@@ -42,31 +54,137 @@ const INFANT_BODY_ALLOWED_ACTIONS = new Set([
   "採集",
   "内職",
   "研究",
-  "研究助手"
+  "研究助手",
+  "詩人",
+  "神官",
+  "シスター"
+]);
+const SACRED_BLOCKED_ADULT_ACTIONS = new Set(["踊り子", "バニー", ACTION_MASSAGE_FEMALE, "巫女"]);
+const CIVILIZATION_AVOIDANT_BLOCKED_ACTIONS = new Set([
+  "内職",
+  "行商",
+  "研究",
+  "写本",
+  "錬金術",
+  "醸造",
+  "機織り",
+  "バニー"
+]);
+const NO_KILLING_BLOCKED_ACTIONS = new Set([
+  "農作業",
+  "狩猟",
+  "漁",
+  "伐採",
+  "醸造"
+]);
+const HALF_HORSE_BLOCKED_ACTIONS = new Set([
+  "内職",
+  "写本",
+  "機織り",
+  ...MASSAGE_ACTIONS
+]);
+const HUMAN_BEAST_BLOCKED_ACTIONS = new Set([
+  "農作業",
+  "狩猟",
+  "漁",
+  "伐採",
+  "採集",
+  "内職",
+  "行商",
+  "看護",
+  ...MASSAGE_ACTIONS,
+  "写本",
+  "醸造",
+  "錬金術",
+  "機織り",
+  "詩人",
+  "踊り子",
+  "バニー",
+  "巫女",
+  "お手伝い",
+  "丁稚",
+  ACTION_SHOOT,
+  ACTION_CANNON,
+  ACTION_TRAP
+]);
+const FOUR_LEGGED_BLOCKED_ACTIONS = new Set([
+  "農作業",
+  "伐採",
+  "漁",
+  "内職",
+  "行商",
+  "丁稚",
+  "研究",
+  "研究助手",
+  "写本",
+  "機織り",
+  "錬金術",
+  "看護",
+  ...MASSAGE_ACTIONS,
+  "踊り子",
+  "バニー",
+  "巫女",
+  "醸造"
+]);
+const WILD_BLOCKED_ACTIONS = new Set([
+  "農作業",
+  "採集",
+  "伐採",
+  "漁",
+  "内職",
+  "行商",
+  "丁稚",
+  "研究",
+  "研究助手",
+  "写本",
+  "機織り",
+  "錬金術",
+  "醸造",
+  "看護",
+  ACTION_MASSAGE_MALE,
+  "シスター",
+  "神官",
+  "詩人"
 ]);
 
 function traitList(person, key) {
   return Array.isArray(person?.[key]) ? person[key] : [];
 }
 
+export function getMassageActionForPerson(person) {
+  return person?.bodySex === "男" ? ACTION_MASSAGE_MALE : ACTION_MASSAGE_FEMALE;
+}
+
+export function normalizeActionForPerson(action, person) {
+  const value = String(action || "").trim();
+  return value === "あんま" ? getMassageActionForPerson(person) : value;
+}
+
+export function getActionDisplayName(action) {
+  const value = String(action || "").trim();
+  return MASSAGE_ACTIONS.includes(value) ? "あんま" : value;
+}
+
 function hasInfantMind(person) {
   const mindTraits = traitList(person, "mindTraits");
-  return mindTraits.includes("無垢") || (Number(person?.spiritAge) || 0) <= 3;
+  return mindTraits.includes("無垢");
 }
 
 function hasInfantBody(person) {
   const bodyTraits = traitList(person, "bodyTraits");
-  return bodyTraits.includes("赤子") || (Number(person?.bodyAge) || 0) <= 3;
+  if (bodyTraits.includes("赤子")) return true;
+  if (isWolf(person)) return false;
+  return (Number(person?.bodyAge) || 0) <= 3;
 }
 
 function getRawPreferredAction(person) {
-  const explicit = String(person?.preferredAction || "").trim();
+  const explicit = normalizeActionForPerson(person?.preferredAction, person);
   if (explicit) return explicit;
 
-  const legacyJob = String(person?.job || "").trim();
+  const legacyJob = normalizeActionForPerson(person?.job, person);
   if (isPreferredActionCandidate(legacyJob)) return legacyJob;
 
-  const currentAction = String(person?.action || "").trim();
+  const currentAction = normalizeActionForPerson(person?.action, person);
   if (isPreferredActionCandidate(currentAction)) return currentAction;
 
   return ACTION_NONE;
@@ -87,7 +205,8 @@ export function isPreferredActionCandidate(action) {
 
 export function setPreferredAction(person, action) {
   if (!person) return;
-  const next = isPreferredActionCandidate(action) ? action : ACTION_NONE;
+  const normalizedAction = normalizeActionForPerson(action, person);
+  const next = isPreferredActionCandidate(normalizedAction) ? normalizedAction : ACTION_NONE;
   person.preferredAction = next;
   // 旧セーブ・旧コード互換。UI上の「仕事」は廃止するが、内部参照の退避先として同期する。
   person.job = next;
@@ -104,6 +223,42 @@ function applyInfantBodyActionFilter(person) {
   person.actionTable = person.actionTable.filter(action => INFANT_BODY_ALLOWED_ACTIONS.has(action));
 }
 
+function applyCivilizationAvoidanceFilter(person) {
+  if (!traitList(person, "mindTraits").includes("文明忌避")) return;
+  person.jobTable = person.jobTable.filter(action => !CIVILIZATION_AVOIDANT_BLOCKED_ACTIONS.has(action));
+  person.actionTable = person.actionTable.filter(action => !CIVILIZATION_AVOIDANT_BLOCKED_ACTIONS.has(action));
+}
+
+function applyNoKillingFilter(person) {
+  if (!traitList(person, "mindTraits").includes("不殺")) return;
+  person.jobTable = person.jobTable.filter(action => !NO_KILLING_BLOCKED_ACTIONS.has(action));
+  person.actionTable = person.actionTable.filter(action => !NO_KILLING_BLOCKED_ACTIONS.has(action));
+}
+
+function applyHalfHorseBodyFilter(person) {
+  if (!traitList(person, "bodyTraits").includes("半人半馬")) return;
+  person.jobTable = person.jobTable.filter(action => !HALF_HORSE_BLOCKED_ACTIONS.has(action));
+  person.actionTable = person.actionTable.filter(action => !HALF_HORSE_BLOCKED_ACTIONS.has(action));
+}
+
+function applyHumanBeastBodyFilter(person) {
+  if (!traitList(person, "bodyTraits").includes("人面獣身")) return;
+  person.jobTable = person.jobTable.filter(action => !HUMAN_BEAST_BLOCKED_ACTIONS.has(action));
+  person.actionTable = person.actionTable.filter(action => !HUMAN_BEAST_BLOCKED_ACTIONS.has(action));
+}
+
+function applyFourLeggedBodyFilter(person) {
+  if (!traitList(person, "bodyTraits").includes(FOUR_LEGGED_TRAIT)) return;
+  person.jobTable = person.jobTable.filter(action => !FOUR_LEGGED_BLOCKED_ACTIONS.has(action));
+  person.actionTable = person.actionTable.filter(action => !FOUR_LEGGED_BLOCKED_ACTIONS.has(action));
+}
+
+function applyWildMindFilter(person) {
+  if (!traitList(person, "mindTraits").includes(WILD_MIND_TRAIT)) return;
+  person.jobTable = person.jobTable.filter(action => !WILD_BLOCKED_ACTIONS.has(action));
+  person.actionTable = person.actionTable.filter(action => !WILD_BLOCKED_ACTIONS.has(action));
+}
+
 function addRaidActionsIfAllowed(person, village) {
   const villageTraits = Array.isArray(village?.villageTraits) ? village.villageTraits : [];
   if (!villageTraits.includes("襲撃中")) return;
@@ -112,6 +267,7 @@ function addRaidActionsIfAllowed(person, village) {
   if (canDefendInRaid(person)) raidActions.push(ACTION_DEFEND);
   if (canFortifyInRaid(person, village)) raidActions.push(ACTION_FORTIFY);
   if (canShootInRaid(person, village)) raidActions.push(ACTION_SHOOT);
+  if (canCannonInRaid(person, village)) raidActions.push(ACTION_CANNON);
   if (canMakeTrapInRaid(person)) raidActions.push(ACTION_TRAP);
   if (raidActions.length === 0) return;
 
@@ -130,10 +286,13 @@ function normalizePreferredForTable(person, preferredTable, { defaultPreferred =
 
 function normalizeCurrentAction(person) {
   const actionTable = Array.isArray(person.actionTable) ? person.actionTable : [];
-  const preferred = String(person.preferredAction || ACTION_NONE).trim() || ACTION_NONE;
-  const current = String(person.action || ACTION_NONE).trim() || ACTION_NONE;
+  const preferred = normalizeActionForPerson(person.preferredAction || ACTION_NONE, person) || ACTION_NONE;
+  const current = normalizeActionForPerson(person.action || ACTION_NONE, person) || ACTION_NONE;
 
-  if (actionTable.includes(current)) return;
+  if (actionTable.includes(current)) {
+    person.action = current;
+    return;
+  }
   if (preferred !== ACTION_NONE && actionTable.includes(preferred)) {
     person.action = preferred;
     return;
@@ -166,6 +325,22 @@ export function applyForcedActionRestriction(person) {
   const bodyTraits = traitList(person, "bodyTraits");
   const mindTraits = traitList(person, "mindTraits");
 
+  if (isSaltPillar(person)) {
+    preservePreferredBeforeRestriction(person);
+    setTables(person, [], [ACTION_SALT_PILLAR]);
+    person.action = ACTION_SALT_PILLAR;
+    return {
+      restricted: true,
+      changed: beforePreferred !== person.preferredAction ||
+        beforeJob !== person.job ||
+        beforeAction !== person.action ||
+        beforeJobTable !== person.jobTable.join("\u0001") ||
+        beforeActionTable !== person.actionTable.join("\u0001"),
+      reason: "塩の柱",
+      action: ACTION_SALT_PILLAR
+    };
+  }
+
   if (bodyTraits.includes("危篤")) {
     preservePreferredBeforeRestriction(person);
     setTables(person, [], [ACTION_LAST_MOMENTS]);
@@ -184,7 +359,7 @@ export function applyForcedActionRestriction(person) {
 
   if (isForcedHealingAction(person)) {
     const reasons = [];
-    ["病気", "疫病", "負傷", "過労", "産褥"].forEach(trait => {
+    ["疫病", "負傷", "重体", "過労", "産褥"].forEach(trait => {
       if (bodyTraits.includes(trait)) reasons.push(trait);
     });
     if (mindTraits.includes("抑鬱")) reasons.push("抑鬱");
@@ -208,7 +383,6 @@ export function applyForcedActionRestriction(person) {
 }
 
 function buildAdultPersistentActions(person, village) {
-  const buildingFlags = village?.buildingFlags || {};
   const common = [
     "農作業", "狩猟", "漁",
     "伐採",
@@ -216,20 +390,22 @@ function buildAdultPersistentActions(person, village) {
     "研究", "警備", "看護"
   ];
 
-  if (buildingFlags.hasClinic) common.push("あんま");
-  if (buildingFlags.hasLibrary) common.push("写本");
-  if (buildingFlags.hasBrewery) common.push("醸造");
-  if (buildingFlags.hasAlchemy) common.push("錬金術");
-  if (buildingFlags.hasWeaving) common.push("機織り");
+  if (hasActiveBuildingFlag(village, "hasClinic", "clinic")) common.push(getMassageActionForPerson(person));
+  if (hasActiveBuildingFlag(village, "hasLibrary", "library")) common.push("写本");
+  if (hasActiveBuildingFlag(village, "hasBrewery", "brewery")) common.push("醸造");
+  if (hasActiveBuildingFlag(village, "hasAlchemy", "alchemy")) common.push("錬金術");
+  if (hasActiveBuildingFlag(village, "hasWeaving", "weaving")) common.push("機織り");
 
-  if (person.bodySex === "男") {
-    return [...common, "詩人", "神官"];
+  const actions = person.bodySex === "男"
+    ? [...common, "詩人", "神官"]
+    : [...common, "踊り子", "シスター"];
+  if (person.bodySex !== "男") {
+    if (hasActiveBuildingFlag(village, "hasTavern", "tavern")) actions.push("バニー");
+    if (hasActiveBuildingFlag(village, "hasChurch", "church")) actions.push("巫女");
   }
 
-  const actions = [...common, "踊り子", "シスター"];
-  if (buildingFlags.hasTavern) actions.push("バニー");
-  if (buildingFlags.hasChurch) actions.push("巫女");
-  return actions;
+  if (!traitList(person, "mindTraits").includes("神聖")) return actions;
+  return actions.filter(action => !SACRED_BLOCKED_ADULT_ACTIONS.has(action));
 }
 
 export function refreshJobTable(v, village = {}) {
@@ -239,16 +415,24 @@ export function refreshJobTable(v, village = {}) {
     return;
   }
 
-  const sa = Number(v.spiritAge) || 0;
   const mindTraits = traitList(v, "mindTraits");
+  if (mindTraits.includes(IMMATURE_MIND_TRAIT)) {
+    const preferredTable = ["遊び"];
+    setTables(v, preferredTable, [ACTION_REST, "遊び"]);
+    normalizePreferredForTable(v, v.jobTable, { defaultPreferred: "遊び" });
+    normalizeCurrentAction(v);
+    return;
+  }
+
   const infantMind = hasInfantMind(v);
-  const isToddlerStage = !infantMind && (mindTraits.includes("萌芽") || sa <= 9);
-  const isAdolescentStage = !infantMind && !isToddlerStage && (mindTraits.includes("思春期") || sa <= 15);
+  const isToddlerStage = !infantMind && mindTraits.includes("萌芽");
+  const isAdolescentStage = !infantMind && !isToddlerStage && mindTraits.includes("思春期");
 
   if (infantMind) {
     setTables(v, [ACTION_CRADLE], [ACTION_CRADLE]);
     setPreferredAction(v, ACTION_CRADLE);
     addRaidActionsIfAllowed(v, village);
+    applyHumanBeastBodyFilter(v);
     normalizeCurrentAction(v);
     return;
   }
@@ -256,7 +440,13 @@ export function refreshJobTable(v, village = {}) {
   if (isToddlerStage) {
     const preferredTable = ["遊び", "お手伝い"];
     setTables(v, preferredTable, [ACTION_REST, "遊び", "お手伝い"]);
+    applyCivilizationAvoidanceFilter(v);
+    applyNoKillingFilter(v);
     applyInfantBodyActionFilter(v);
+    applyHalfHorseBodyFilter(v);
+    applyFourLeggedBodyFilter(v);
+    applyWildMindFilter(v);
+    applyHumanBeastBodyFilter(v);
     normalizePreferredForTable(v, v.jobTable, { defaultPreferred: "遊び" });
     addRaidActionsIfAllowed(v, village);
     normalizeCurrentAction(v);
@@ -266,7 +456,13 @@ export function refreshJobTable(v, village = {}) {
   if (isAdolescentStage) {
     const preferredTable = ["遊び", "農作業", "伐採", "狩猟", "漁", "採集", "内職", "丁稚", "研究助手"];
     setTables(v, preferredTable, [ACTION_REST, ...preferredTable]);
+    applyCivilizationAvoidanceFilter(v);
+    applyNoKillingFilter(v);
     applyInfantBodyActionFilter(v);
+    applyHalfHorseBodyFilter(v);
+    applyFourLeggedBodyFilter(v);
+    applyWildMindFilter(v);
+    applyHumanBeastBodyFilter(v);
     normalizePreferredForTable(v, v.jobTable, { defaultPreferred: "遊び" });
     addRaidActionsIfAllowed(v, village);
     normalizeCurrentAction(v);
@@ -275,7 +471,13 @@ export function refreshJobTable(v, village = {}) {
 
   const preferredTable = buildAdultPersistentActions(v, village);
   setTables(v, preferredTable, [ACTION_REST, ACTION_LEISURE, ...preferredTable]);
+  applyCivilizationAvoidanceFilter(v);
+  applyNoKillingFilter(v);
   applyInfantBodyActionFilter(v);
+  applyHalfHorseBodyFilter(v);
+  applyFourLeggedBodyFilter(v);
+  applyWildMindFilter(v);
+  applyHumanBeastBodyFilter(v);
   normalizePreferredForTable(v, v.jobTable);
   addRaidActionsIfAllowed(v, village);
   normalizeCurrentAction(v);

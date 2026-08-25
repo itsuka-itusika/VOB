@@ -1,5 +1,9 @@
 // util.js
 
+import { getPortraitAssetPathForCharacter } from "./data/portraitPaths.js";
+import { isGoblin, isWolf, YOUNG_WOLF_TRAIT } from "./domain/speciesTraits.js";
+import { isSaltPillar } from "./domain/apocalypseRules.js";
+
 /** 乱数系/Clamp/シャッフルなどのユーティリティ */
 
 /**
@@ -73,11 +77,7 @@ export function randNormalInRange(min, max, mean = (min + max) / 2, stddev = (ma
  * @returns {string} 顔グラフィックのパス
  */
 export function getPortraitPath(character) {
-  const fileName = String(character?.portraitFile || "").trim();
-  const normalizedFileName = !fileName || fileName.toLowerCase() === "default.png"
-    ? "default.png"
-    : fileName;
-  return `images/portraits/${normalizedFileName}`;
+  return getPortraitAssetPathForCharacter(character);
 }
 
 /**
@@ -87,29 +87,41 @@ export function isForcedHealingAction(character) {
   if (!character) return false;
   const bodyTraits = Array.isArray(character.bodyTraits) ? character.bodyTraits : [];
   const mindTraits = Array.isArray(character.mindTraits) ? character.mindTraits : [];
-  return bodyTraits.includes("病気") ||
-    bodyTraits.includes("疫病") ||
+  return bodyTraits.includes("疫病") ||
     bodyTraits.includes("負傷") ||
+    bodyTraits.includes("重体") ||
     bodyTraits.includes("過労") ||
     bodyTraits.includes("産褥") ||
     mindTraits.includes("抑鬱");
 }
 
 export function getVillagerFoodConsumption(character) {
+  if (isSaltPillar(character)) return 0;
   const bodyTraits = Array.isArray(character?.bodyTraits) ? character.bodyTraits : [];
   const mindTraits = Array.isArray(character?.mindTraits) ? character.mindTraits : [];
-  if (bodyTraits.includes("赤子")) return 2;
-  if (bodyTraits.includes("子供")) return 6;
-  if (bodyTraits.includes("少年") || bodyTraits.includes("少女")) return 8;
-  if (mindTraits.includes("大食い")) return 12;
-  if (mindTraits.includes("小食")) return 8;
-  return 10;
+  if (bodyTraits.includes(YOUNG_WOLF_TRAIT)) return 2;
+  if (isWolf(character)) return 4;
+  if (isGoblin(character)) return 4;
+  if (bodyTraits.includes("光合成")) return 0;
+  let cost = 10;
+  if (bodyTraits.includes("赤子")) cost = 2;
+  else if (bodyTraits.includes("幼児")) cost = 6;
+  else if (bodyTraits.includes("少年") || bodyTraits.includes("少女")) cost = 8;
+  else if (mindTraits.includes("大食い")) cost = 12;
+  else if (mindTraits.includes("小食")) cost = 8;
+  if (bodyTraits.includes("巨人")) cost += 5;
+  if (bodyTraits.includes("半人半馬")) cost += 2;
+  if (bodyTraits.includes("人面獣身")) cost += 8;
+  return cost;
 }
 
 export function getVillagerWinterMaterialConsumption(character) {
+  if (isSaltPillar(character)) return 0;
   const bodyTraits = Array.isArray(character?.bodyTraits) ? character.bodyTraits : [];
+  if (isWolf(character)) return 0;
+  if (isGoblin(character)) return 4;
   if (bodyTraits.includes("赤子")) return 2;
-  if (bodyTraits.includes("子供")) return 6;
+  if (bodyTraits.includes("幼児")) return 6;
   if (bodyTraits.includes("少年") || bodyTraits.includes("少女")) return 8;
   return 10;
 }

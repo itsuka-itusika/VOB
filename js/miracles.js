@@ -1,37 +1,115 @@
 // miracles.js
 
-import { clampValue, getPortraitPath } from "./util.js";
-import { addRelationship, removeRelationship, checkHasRelationship, getRelationshipTargetName, clearRelationshipsForDepartedVillager, addSpouseRelationships } from "./relationships.js";
+import { clampValue, getPortraitPath, shuffleArray } from "./util.js";
+import { addRelationship, removeRelationship, checkHasRelationship, hasLoverRelationship, getRelationshipTargetName, clearRelationshipsForDepartedVillager, addSpouseRelationships, raiseMutualFriendshipTo } from "./relationships.js";
 import { updateUI } from "./ui.js";  // 実行後にUIを更新する
-import { doExchange } from "./exchange.js";
+import { canExchangeBody, doExchange } from "./exchange.js";
 import { createRandomVisitor, createRandomVisitorOfType, determineSpeechType } from "./createVillagers.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
 import { recordMarriageHistory, recordVillagerLeaveHistory } from "./history.js";
+import { DEFAULT_PORTRAIT_KEY, getPortraitAssetPath } from "./data/portraitPaths.js";
+import { clearHopeLossTraits, DESPAIR_TRAIT, DISAPPOINTMENT_TRAIT } from "./domain/despair.js";
 import { resolveDialogueTone } from "./data/dialogue/toneProfiles.js";
-import { BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
+import { getDialogueLine } from "./dialogue/dialogueEngine.js";
+import { BODY_EXCHANGE_SOURCE_RACE_LINE_KEYS, BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
+import { getVisitorArrivalLine } from "./data/dialogue/visitorLines.js";
+import { getActiveVillagers, isSaltPillar } from "./domain/apocalypseRules.js";
+import { getSelectableRaidTables, startRaidEvent } from "./raidStart.js";
+import { getRaiderIncomingDamageMultiplier } from "./raidRules.js";
+import { completeTutorialTask } from "./tutorial.js";
+import { getCaptives, normalizeCaptive } from "./captives.js";
+import { hasActiveBuildingFlag } from "./domain/buildingState.js";
+import { getVillageRole, VILLAGE_ROLE_DOCTOR } from "./domain/villageRoles.js";
+import { checkWishCompletion } from "./wishes.js";
+import {
+  addDivineMight,
+  DIVINE_MIGHT_LEVELS,
+  getDivineMightGainFromMiracleCost,
+  getDivineMightStatus,
+  getMiracleUnlockInfo,
+  showPendingDivineMightLevelUpModal,
+  subtractDivineMight
+} from "./divineMight.js";
+
+const DEFAULT_PORTRAIT_PATH = getPortraitAssetPath(DEFAULT_PORTRAIT_KEY);
+const AUTONOMOUS_SETTLEMENT_SCALE = 350;
+const THUNDERBOLT_MIRACLE_DAMAGE = 80;
+const HEAVY_DRINKER_TRAIT = "酒豪";
+let pendingExchangeResultVillage = null;
+const POST_CLEAR_MIRACLE_IDS = new Set(["18", "19"]);
+const EFFECT_RESULT_DIALOGUES = {
+  "清拭の奇跡": { scene: "miracle", key: "cleanliness" },
+  "常春の奇跡": { scene: "miracle", key: "everSpring" },
+  "冥王妃の神像": { scene: "miracle", key: "everSpring" },
+  "宴会の奇跡": { scene: "miracle", key: "feast" },
+  "狂宴の奇跡": { scene: "miracle", key: "revel" },
+  "酒杯の奇跡": { scene: "miracle", key: "goblet" },
+  "戦神の奇跡": { scene: "miracle", key: "warGod" },
+  "雷霆の奇跡": { scene: "miracle", key: "thunderbolt" },
+  "豊穣の奇跡": { scene: "miracle", key: "abundance" },
+  "豊穣の角": { scene: "miracle", key: "abundance" },
+  "マナの奇跡": { scene: "miracle", key: "mana" },
+  "ミダスの奇跡": { scene: "miracle", key: "midas" },
+  "アンブロシア": { scene: "secretTreasure", key: "ambrosia" },
+  "告天使の絵画": { scene: "secretTreasure", key: "annunciationPainting" },
+  "ネクタル": { scene: "secretTreasure", key: "nectar" },
+  "奇妙な計算機械": { scene: "secretTreasure", key: "strangeCalculator" },
+  "蛇の巻き付いた杖": { scene: "secretTreasure", key: "serpentStaff" },
+  "クロノスの秘薬": { scene: "secretTreasure", key: "chronosElixir" }
+};
+
+function getAlcoholMiracleRecoveryAmount(person, baseAmount) {
+  const mindTraits = Array.isArray(person?.mindTraits) ? person.mindTraits : [];
+  const multiplier = mindTraits.includes(HEAVY_DRINKER_TRAIT) ? 1.5 : 1;
+  return Math.round((Number(baseAmount) || 0) * multiplier);
+}
 /**
  * 奇跡リスト
  */
 export const MIRACLES = [
   {id:"12", name:"交換の奇跡(20)", cost:20, desc:"2人の肉体を交換"},
-  {id:"13", name:"交換の奇跡・強(80)", cost:80, desc:"村外含む2人交換"},
+  {id:"13", name:"交換の奇跡・強(100)", cost:100, desc:"村外含む2人交換"},
   {id:"1",  name:"豊穣の奇跡(100)", cost:100, desc:"今月のみ、農作業・伐採・狩猟・漁・採集の成果と醸造の食料獲得2倍"},
   {id:"2",  name:"マナの奇跡(40)",  cost:40,  desc:"食料+80"},
   {id:"3",  name:"クピドの奇跡(80)", cost:80, desc:"2人を強制結婚(条件無視)"},
-  {id:"4",  name:"宴会の奇跡(人数×15)", cost:-1, desc:"全員体力/メンタル+20,幸福+20 (資金×人数分も要)"},
-  {id:"5",  name:"狂宴の奇跡(人数×30)", cost:-2, desc:"全員体力/メンタル+60,幸福+50,倫理↓,好色+15"},
-  {id:"6",  name:"癒しの奇跡(80)", cost:80, desc:"1人の負傷/疫病/疲労等回復,体力+50"},
-  {id:"16", name:"酒杯の奇跡(50)", cost:50, desc:"1人の心労/抑鬱回復,メンタル+50,幸福+30,酩酊付与"},
-  {id:"7",  name:"戦神の奇跡(80)", cost:80, desc:"1人に火星の加護(3ヶ月,筋力/耐久/勇気+7,魔力/知力/勤勉/倫理*0.2)"},
-  {id:"8",  name:"竈女神の奇跡(60)", cost:60, desc:"恋人を結婚100%(いなければ30返還)"},
+  {id:"4",  name:"宴会の奇跡(人数×15)", cost:-1, desc:"全員体力/メンタル+20,幸福+20,失望/絶望解除。酒豪は回復量1.5倍 (資金×人数分も要)"},
+  {id:"5",  name:"狂宴の奇跡(人数×30)", cost:-2, desc:"全員体力/メンタル+60,幸福+50,失望/絶望解除,倫理↓,好色+15。酒豪は回復量1.5倍"},
+  {id:"6",  name:"癒しの奇跡(80)", cost:80, desc:"1人の負傷/重体/疫病/疲労等回復,体力+50"},
+  {id:"20", name:"清拭の奇跡(60)", cost:60, desc:"3ヶ月間、村特性「清浄」を付与し、疫病の感染と重体の危篤化を防ぐ"},
+  {id:"16", name:"酒杯の奇跡(50)", cost:50, desc:"1人の心労/抑鬱/失望/絶望回復,メンタル+50,幸福+30,酩酊付与。酒豪は回復量1.5倍"},
+  {id:"7",  name:"戦神の奇跡(80)", cost:80, desc:"1人に火星の加護(3ヶ月,筋力/耐久/勇気+7,知力/勤勉/倫理*0.2)"},
+  {id:"8",  name:"竈女神の奇跡(40)", cost:40, desc:"恋人を結婚100%(対象なしなら使用不可)"},
   {id:"9",  name:"常春の奇跡(300)", cost:300,desc:"村特性→春に固定。次の季節まで継続"},
   {id:"10", name:"旅人の奇跡(60)", cost:60, desc:"ランダム来訪者(訪問者付与)"},
   {id:"11", name:"出立の奇跡(50)", cost:50, desc:"1人離脱→幸福度分の魔素獲得"},
   {id:"14", name:"ミダスの奇跡(100)", cost:100, desc:"1ヶ月間、食料を得る代わりに資金を得る"},
-  {id:"15", name:"市場の奇跡(150)", cost:150, desc:"行商人の訪問者を3人生成"}
+  {id:"15", name:"市場の奇跡(120)", cost:120, desc:"行商人の訪問者を3人生成"},
+  {id:"17", name:"雷霆の奇跡(150)", cost:150, desc:"月1回。襲撃者1体の体力を80減らす。最低1で止まる"},
+  {id:"18", name:"騒擾の奇跡(100)", cost:100, desc:"襲撃中でない時、選んだ規模（異端を含む）の襲撃テーブルから、ただちに襲撃を発生させる"},
+  {id:"19", name:"稀人の奇跡(300)", cost:300, desc:"翼人、アルセイド、ネレイド、ドライアド、アラクニド、エクイナ、サテュロス、メナドの訪問者を1人呼ぶ"}
 ];
+
+const MIRACLE_UNLOCK_ORDER = DIVINE_MIGHT_LEVELS.flatMap(entry => entry.miracleIds);
+
+function getVillageMiracleUnlockInfo(miracleId, village) {
+  const unlockInfo = getMiracleUnlockInfo(miracleId, village);
+  if (!unlockInfo.unlocked || miracleId !== "20") return unlockInfo;
+  if (hasActiveBuildingFlag(village, "hasBrewery", "brewery")) return unlockInfo;
+  return { ...unlockInfo, unlocked: false, reason: "醸造所建設で解放" };
+}
+
+function getMiraclesForModal(village) {
+  const byId = new Map(MIRACLES.map(miracle => [miracle.id, miracle]));
+  const ordered = MIRACLE_UNLOCK_ORDER
+    .map(id => byId.get(id))
+    .filter(Boolean);
+  const listedIds = new Set(MIRACLE_UNLOCK_ORDER);
+  return ordered
+    .concat(MIRACLES.filter(miracle => !listedIds.has(miracle.id)))
+    .filter(miracle => village?.apocalypseCleared || !POST_CLEAR_MIRACLE_IDS.has(miracle.id));
+}
 
 /**
  * 奇跡モーダルを開く
@@ -47,7 +125,7 @@ export function openMiracleModal(village) {
   let sel = document.getElementById("miracleSelect");
   if (sel.parentElement) sel.parentElement.style.display = "none";
   sel.innerHTML="";
-  MIRACLES.forEach(m=>{
+  getMiraclesForModal(village).forEach(m=>{
     let op=document.createElement("option");
     op.value=m.id;
     op.textContent=m.name;
@@ -83,7 +161,9 @@ export function onSelectMiracleChange(village) {
   // 特定のIDは対象選択が必要
   if (["3","6","7","11","12","13","16"].includes(mid)) {
     if (mid==="3"||mid==="12"||mid==="13") {
-      const selectOptions = mid === "12" ? { normalExchangeOnly: true } : (mid === "3" ? { villagersOnly: true } : {});
+      const selectOptions = mid === "12"
+        ? { normalExchangeOnly: true, includeSaltPillar: true }
+        : (mid === "13" ? { includeSaltPillar: true, excludeExchangeImmune: true } : { villagersOnly: true });
       div.appendChild(createVillagerSelect("targetA", village, selectOptions));
       div.appendChild(createVillagerSelect("targetB", village, selectOptions));
     } else {
@@ -102,59 +182,99 @@ function getMiracleCostInfo(miracle, village) {
     const amount = peopleCount * 30;
     return { mana: amount, funds: amount, label: `魔素: ${amount} / 資金: ${amount}` };
   }
-  return { mana: miracle.cost, funds: 0, label: `魔素: ${miracle.cost}` };
+  const hasGoldenStatue = hasActiveBuildingFlag(village, "hasBacchusGoldenStatue", "bacchusGoldenStatue");
+  const mana = hasGoldenStatue && ["12", "13"].includes(miracle.id)
+    ? Math.ceil(miracle.cost / 2)
+    : miracle.cost;
+  return { mana, funds: 0, label: `魔素: ${mana}` };
 }
 
-function getMiracleBlockReason(costInfo, village) {
+function getMiracleBlockReason(costInfo, village, miracleId = "") {
   const reasons = [];
+  const unlockReason = getVillageMiracleUnlockInfo(miracleId, village).reason;
+  if (unlockReason) reasons.push(unlockReason);
   if (village.mana < costInfo.mana) reasons.push("魔素不足");
   if (village.funds < costInfo.funds) reasons.push("資金不足");
+  if (miracleId === "8" && !hasHearthMiracleTarget(village)) reasons.push("対象村人なし");
+  if (miracleId === "17" && hasUsedThunderboltMiracleThisMonth(village)) reasons.push("今月は使用済み");
+  if (miracleId === "18" && village.villageTraits.includes("襲撃中")) reasons.push("襲撃中は使用不可");
   return reasons.join(", ");
-}
-
-function getHeresyIncreaseForManaCost(cost) {
-  return Math.floor((Number(cost) || 0) / 10);
 }
 
 function spendMiracleMana(village, cost) {
   village.mana = clampValue(village.mana - cost, 0, 99999);
-  village.heresy = clampValue(
-    (Number(village.heresy) || 0) + getHeresyIncreaseForManaCost(cost),
-    0,
-    99999
-  );
+  addDivineMight(village, getDivineMightGainFromMiracleCost(cost));
 }
 
 function refundMiracleMana(village, cost) {
   village.mana = clampValue(village.mana + cost, 0, 99999);
-  village.heresy = clampValue(
-    (Number(village.heresy) || 0) - getHeresyIncreaseForManaCost(cost),
-    0,
-    99999
-  );
+  subtractDivineMight(village, getDivineMightGainFromMiracleCost(cost));
+}
+
+function clearHopeLossByMiracle(person, village) {
+  const recovered = clearHopeLossTraits(person);
+  if (recovered.length > 0) {
+    syncEffectiveStats(person);
+    refreshJobTable(person, village);
+  }
+  return recovered;
+}
+
+function getVillageMonthKey(village) {
+  return `${Number(village?.year) || 0}-${Number(village?.month) || 0}`;
+}
+
+function hasUsedThunderboltMiracleThisMonth(village) {
+  return village?.lastThunderboltMiracleMonth === getVillageMonthKey(village);
+}
+
+function getHearthMiraclePairs(village) {
+  const pairs = [];
+  const done = new Set();
+  village.villagers.forEach(a => {
+    if (done.has(a) || isSaltPillar(a) || !hasLoverRelationship(a) || checkHasRelationship(a, "既婚")) return;
+    const bName = getRelationshipTargetName(a, "恋人");
+    const b = bName ? village.villagers.find(person => person.name === bName) : null;
+    if (!b || done.has(b) || isSaltPillar(b) || checkHasRelationship(b, "既婚")) return;
+    pairs.push([a, b]);
+    done.add(a);
+    done.add(b);
+  });
+  return pairs;
+}
+
+function hasHearthMiracleTarget(village) {
+  return getHearthMiraclePairs(village).length > 0;
 }
 
 function getMiracleTargetCount(mid) {
   if (["3", "12", "13"].includes(mid)) return 2;
-  if (["6", "7", "11", "16"].includes(mid)) return 1;
+  if (["6", "7", "11", "16", "17"].includes(mid)) return 1;
   return 0;
 }
 
 function getMiracleTargetOptions(mid) {
-  if (mid === "12") return { normalExchangeOnly: true };
-  if (mid === "3" || mid === "6" || mid === "7" || mid === "11" || mid === "16") return { villagersOnly: true };
+  if (mid === "17") return { raidersOnly: true };
+  if (mid === "12") return { normalExchangeOnly: true, includeSaltPillar: true };
+  if (mid === "6" || mid === "16") return { villagersOnly: true, includeCaptives: true };
+  if (mid === "3" || mid === "7" || mid === "11") return { villagersOnly: true };
+  if (mid === "13") return { includeSaltPillar: true, excludeExchangeImmune: true };
   return {};
 }
 
 function findMiracleTargetByName(name, village) {
   if (!name) return null;
   return village.villagers.find(x => x.name === name) ||
+    getCaptives(village).find(x => x.name === name) ||
     village.visitors.find(x => x.name === name) ||
     village.raidEnemies.find(x => x.name === name) ||
     null;
 }
 
 function areMiracleTargetsReady(mid) {
+  if (mid === "18") {
+    return Boolean(document.getElementById("riotRaidTable")?.value);
+  }
   const count = getMiracleTargetCount(mid);
   if (count === 0) return true;
   const targetA = document.getElementById("targetA");
@@ -165,9 +285,33 @@ function areMiracleTargetsReady(mid) {
 
 function describeMiracleTarget(person) {
   if (!person) return "";
-  const sex = person.bodySex || person.sex || "-";
+  const sex = person.uiSexDisplay || person.bodySex || person.sex || "-";
   const age = person.bodyAge ?? person.age ?? "-";
   return `${person.name}: ${person.race || "-"} / ${sex} / ${age}歳 / 筋${person.str} 耐${person.vit} 器${person.dex} 魔${person.mag} 魅${person.chr}`;
+}
+
+function createExchangePreviewPerson(person) {
+  const row = document.createElement("div");
+  row.className = "miracle-exchange-preview-person";
+
+  const portrait = document.createElement("img");
+  portrait.className = "miracle-exchange-preview-portrait";
+  portrait.src = getPortraitPath(person);
+  portrait.alt = "";
+  portrait.onerror = () => {
+    portrait.onerror = null;
+    portrait.src = DEFAULT_PORTRAIT_PATH;
+  };
+
+  const primaryBodyTrait = Array.isArray(person.bodyTraits) && person.bodyTraits.length > 0
+    ? person.bodyTraits[0]
+    : "-";
+  const details = document.createElement("div");
+  details.textContent = `${person.name}：${person.race || "-"} / ${person.uiSexDisplay || person.bodySex || person.sex || "-"} / ${person.bodyAge ?? person.age ?? "-"}歳 / 筋${Math.floor(Number(person.str) || 0)} 耐${Math.floor(Number(person.vit) || 0)} 器${Math.floor(Number(person.dex) || 0)} 魔${Math.floor(Number(person.mag) || 0)} 魅${Math.floor(Number(person.chr) || 0)} /（${primaryBodyTrait}）`;
+
+  row.appendChild(portrait);
+  row.appendChild(details);
+  return row;
 }
 
 function updateMiraclePreview(mid, village, preview) {
@@ -179,13 +323,16 @@ function updateMiraclePreview(mid, village, preview) {
 
   if (["12", "13"].includes(mid)) {
     if (personA && personB && personA !== personB) {
-      preview.innerHTML = `
-        <div>名前と精神は残り、肉体名・種族・年齢・身体能力が入れ替わります。</div>
-        <div>${personA.name} ← ${describeMiracleTarget(personB)}</div>
-        <div>${personB.name} ← ${describeMiracleTarget(personA)}</div>
-      `;
+      const description = document.createElement("div");
+      description.className = "miracle-exchange-preview-description";
+      description.textContent = "種族・性別・年齢・身体能力が入れ替わります。";
+      preview.replaceChildren(
+        description,
+        createExchangePreviewPerson(personA),
+        createExchangePreviewPerson(personB)
+      );
     } else {
-      preview.textContent = "2人を選ぶと、交換後の肉体プレビューを表示します。";
+      preview.textContent = "2人を選ぶと、交換する肉体の情報を表示します。";
     }
     return;
   }
@@ -200,14 +347,54 @@ function updateMiraclePreview(mid, village, preview) {
 }
 
 function updateMiracleActionButton(mid, button, village, costInfo, preview) {
-  const reason = getMiracleBlockReason(costInfo, village);
+  const reason = getMiracleBlockReason(costInfo, village, mid);
   const targetsReady = areMiracleTargetsReady(mid);
   button.disabled = Boolean(reason) || !targetsReady;
-  button.textContent = targetsReady ? "行使" : "対象を選んでください";
+  button.textContent = reason || (targetsReady ? "行使" : "対象を選んでください");
   updateMiraclePreview(mid, village, preview);
 }
 
 function createMiracleTargetControls(miracle, village, button, costInfo) {
+  if (miracle.id === "18") {
+    const controls = document.createElement("div");
+    controls.className = "miracle-targets";
+
+    const label = document.createElement("label");
+    label.className = "miracle-target";
+    const labelText = document.createElement("span");
+    labelText.textContent = "襲撃テーブル";
+
+    const select = document.createElement("select");
+    select.id = "riotRaidTable";
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "(規模・異端を選択)";
+    select.appendChild(placeholder);
+    getSelectableRaidTables().forEach(table => {
+      const option = document.createElement("option");
+      option.value = table.id;
+      option.textContent = table.label;
+      select.appendChild(option);
+    });
+
+    const preview = document.createElement("div");
+    preview.className = "miracle-preview";
+    preview.textContent = "選んだ襲撃テーブルから、重みに従って襲撃を1件抽選します。";
+
+    const updateButton = () => {
+      const reason = getMiracleBlockReason(costInfo, village, miracle.id);
+      const ready = Boolean(select.value);
+      button.disabled = Boolean(reason) || !ready;
+      button.textContent = reason || (ready ? "行使" : "襲撃テーブルを選んでください");
+    };
+    select.addEventListener("change", updateButton);
+
+    label.append(labelText, select);
+    controls.append(label, preview);
+    updateButton();
+    return controls;
+  }
+
   const targetCount = getMiracleTargetCount(miracle.id);
   if (targetCount === 0) return null;
 
@@ -252,16 +439,18 @@ function setSelectedMiracle(id, village) {
 function createMiracleItem(miracle, village, selectedId) {
   const div = document.createElement("div");
   const isActive = miracle.id === selectedId;
+  const unlockInfo = getVillageMiracleUnlockInfo(miracle.id, village);
+  const isLocked = !unlockInfo.unlocked;
   const costInfo = getMiracleCostInfo(miracle, village);
-  const reasonText = getMiracleBlockReason(costInfo, village);
+  const reasonText = getMiracleBlockReason(costInfo, village, miracle.id);
   const targetCount = getMiracleTargetCount(miracle.id);
-  const needsTarget = targetCount > 0;
+  const needsTarget = targetCount > 0 || miracle.id === "18";
 
-  div.className = `miracle-item${isActive ? " active" : ""}`;
+  div.className = `miracle-item${isActive ? " active" : ""}${isLocked ? " locked" : ""}`;
   div.innerHTML = `
     <div class="miracle-header">
-      <h4>${miracle.name}</h4>
-      ${isActive ? '<span class="miracle-mark">選択中</span>' : ""}
+      <h4>${getMiracleDisplayName(miracle, costInfo)}</h4>
+      ${isLocked ? '<span class="miracle-mark locked">未解放</span>' : (isActive ? '<span class="miracle-mark">選択中</span>' : "")}
     </div>
     <div class="miracle-desc">${miracle.desc}</div>
     <div class="miracle-cost"><div>${costInfo.label}</div></div>
@@ -271,11 +460,14 @@ function createMiracleItem(miracle, village, selectedId) {
   const button = document.createElement("button");
   button.className = "miracle-button";
 
-  if (reasonText) {
+  if (isLocked) {
+    button.disabled = true;
+    button.textContent = unlockInfo.reason;
+  } else if (reasonText) {
     button.disabled = true;
     button.textContent = "行使不可";
   } else if (!isActive && needsTarget) {
-    button.textContent = "対象選択";
+    button.textContent = miracle.id === "18" ? "襲撃テーブル選択" : "対象選択";
     button.onclick = () => setSelectedMiracle(miracle.id, village);
   } else {
     button.textContent = "行使";
@@ -293,34 +485,52 @@ function createMiracleItem(miracle, village, selectedId) {
 
   div.appendChild(button);
   div.onclick = (event) => {
+    if (isLocked) return;
     if (event.target.closest("button") || event.target.closest("select")) return;
     if (!isActive) setSelectedMiracle(miracle.id, village);
   };
   return div;
 }
 
+function getMiracleDisplayName(miracle, costInfo) {
+  if (!["12", "13"].includes(miracle.id) || costInfo.mana === miracle.cost) return miracle.name;
+  return miracle.name.replace(/\([^)]*\)$/, `(${costInfo.mana})`);
+}
+
 function renderMiracleCards(village, selectedId = "12") {
   const content = document.getElementById("miracleOptions");
   if (!content) return;
-  const currentId = MIRACLES.some(m => m.id === selectedId) ? selectedId : "12";
+  const miraclesForModal = getMiraclesForModal(village);
+  const fallbackId = miraclesForModal.find(m => getVillageMiracleUnlockInfo(m.id, village).unlocked)?.id || "12";
+  const selectedMiracle = MIRACLES.find(m => m.id === selectedId);
+  const currentId = selectedMiracle && getVillageMiracleUnlockInfo(selectedMiracle.id, village).unlocked
+    ? selectedId
+    : fallbackId;
   const select = document.getElementById("miracleSelect");
   if (select) select.value = currentId;
+  const divineStatus = getDivineMightStatus(village);
+  const nextDivineText = divineStatus.next
+    ? (divineStatus.next.requiresApocalypseClear
+        ? `次Lv${divineStatus.next.level}: 黙示録の四騎士撃退で解放`
+        : `次Lv${divineStatus.next.level}: 神威${divineStatus.next.threshold}まで残り${Math.ceil(divineStatus.remaining)}`)
+    : "すべて解放済み";
 
   content.innerHTML = `
     <div class="miracle-resources">
       <div>魔素: ${village.mana}</div>
       <div>資金: ${village.funds}</div>
-      <div>異端: ${village.heresy || 0}</div>
+      <div>神威: Lv${divineStatus.level} / ${divineStatus.amountLabel}</div>
+      <div>${nextDivineText}</div>
       <div>村人: ${village.villagers.length}</div>
     </div>
     <div class="miracle-list">
-      <h3>行使できる奇跡</h3>
+      <h3>奇跡</h3>
       <div class="miracle-grid"></div>
     </div>
   `;
 
   const grid = content.querySelector(".miracle-grid");
-  MIRACLES.forEach(miracle => grid.appendChild(createMiracleItem(miracle, village, currentId)));
+  miraclesForModal.forEach(miracle => grid.appendChild(createMiracleItem(miracle, village, currentId)));
 }
 
 function createVillagerSelect(id, village, options = {}) {
@@ -332,29 +542,62 @@ function createVillagerSelect(id, village, options = {}) {
   sel.appendChild(op0);
 
   // 村人を追加
-  village.villagers
-    .filter(vv => !options.normalExchangeOnly || isNormalExchangeCandidate(vv, village))
-    .forEach(vv=>{
-    let opp=document.createElement("option");
-    opp.value=vv.name;
-    opp.textContent=vv.name;
-    sel.appendChild(opp);
-  });
+  if (!options.raidersOnly) {
+    village.villagers
+      .filter(vv => options.includeSaltPillar || !isSaltPillar(vv))
+      .filter(vv => !options.normalExchangeOnly || isNormalExchangeCandidate(vv, village))
+      .forEach(vv=>{
+      let opp=document.createElement("option");
+      opp.value=vv.name;
+      opp.textContent=vv.name;
+      sel.appendChild(opp);
+    });
+  }
+
+  if (!options.raidersOnly && options.normalExchangeOnly) {
+    getCaptives(village).forEach(vv=>{
+      let opp=document.createElement("option");
+      opp.value=vv.name;
+      opp.textContent=`${vv.name}(捕虜)`;
+      sel.appendChild(opp);
+    });
+  }
+
+  if (options.includeCaptives) {
+    getCaptives(village)
+      .filter(vv => options.includeSaltPillar || !isSaltPillar(vv))
+      .forEach(vv=>{
+      let opp=document.createElement("option");
+      opp.value=vv.name;
+      opp.textContent=`${vv.name}(捕虜)`;
+      sel.appendChild(opp);
+      });
+  }
 
   if (options.normalExchangeOnly || options.villagersOnly) {
     return sel;
   }
 
   // 訪問者を追加
-  village.visitors.forEach(vv=>{
-    let opp=document.createElement("option");
-    opp.value=vv.name;
-    opp.textContent=`${vv.name}(訪問者)`;
-    sel.appendChild(opp);
-  });
+  if (!options.raidersOnly) {
+    getCaptives(village).forEach(vv=>{
+      let opp=document.createElement("option");
+      opp.value=vv.name;
+      opp.textContent=`${vv.name}(捕虜)`;
+      sel.appendChild(opp);
+    });
+    village.visitors.forEach(vv=>{
+      let opp=document.createElement("option");
+      opp.value=vv.name;
+      opp.textContent=`${vv.name}(訪問者)`;
+      sel.appendChild(opp);
+    });
+  }
 
   // 襲撃者を追加
-  village.raidEnemies.forEach(vv=>{
+  village.raidEnemies
+    .filter(vv => (!options.raidersOnly || Number(vv.hp) > 0) && (!options.excludeExchangeImmune || canExchangeBody(vv)))
+    .forEach(vv=>{
     let opp=document.createElement("option");
     opp.value=vv.name;
     opp.textContent=`${vv.name}(襲撃者)`;
@@ -365,7 +608,7 @@ function createVillagerSelect(id, village, options = {}) {
 }
 
 function isNormalExchangeCandidate(person, village) {
-  return village.villagers.includes(person);
+  return village.villagers.includes(person) || getCaptives(village).includes(person);
 }
 
 /**
@@ -376,18 +619,23 @@ export function performMiracle(village) {
   let mid=sel.value;
   let info=MIRACLES.find(x=>x.id===mid);
   if (!info) return;
+  const unlockReason = getVillageMiracleUnlockInfo(info.id, village).reason;
+  if (unlockReason) {
+    village.log(`【奇跡】${info.name}は${unlockReason}`);
+    return;
+  }
 
   // コスト計算
-  let cost = info.cost;
+  let cost = getMiracleCostInfo(info, village).mana;
   let vc = village.villagers.length;
-  if (cost===-1) {
+  if (info.cost===-1) {
     // 宴会(人数×15)
     cost = vc * 15;
     if (village.mana<cost || village.funds<cost) {
       village.log(`魔素or資金不足(必要:${cost})`);
       return;
     }
-  } else if (cost===-2) {
+  } else if (info.cost===-2) {
     // 狂宴(人数×30)
     cost = vc * 30;
     if (village.mana<cost || village.funds<cost) {
@@ -406,16 +654,36 @@ export function performMiracle(village) {
   let vA=null;
   let vB=null;
   if (ta && ta.value) {
-    // 村人、訪問者、襲撃者から対象を検索
+    // 村人、捕虜、訪問者、襲撃者から対象を検索
     vA = village.villagers.find(x=>x.name===ta.value) ||
+         getCaptives(village).find(x=>x.name===ta.value) ||
          village.visitors.find(x=>x.name===ta.value) ||
          village.raidEnemies.find(x=>x.name===ta.value);
   }
   if (tb && tb.value) {
-    // 村人、訪問者、襲撃者から対象を検索
+    // 村人、捕虜、訪問者、襲撃者から対象を検索
     vB = village.villagers.find(x=>x.name===tb.value) ||
+         getCaptives(village).find(x=>x.name===tb.value) ||
          village.visitors.find(x=>x.name===tb.value) ||
          village.raidEnemies.find(x=>x.name===tb.value);
+  }
+
+  if (mid === "8" && !hasHearthMiracleTarget(village)) {
+    village.log("【竈女神の奇跡】対象村人なし");
+    return;
+  }
+  if (mid === "18" && village.villageTraits.includes("襲撃中")) {
+    village.log("【騒擾の奇跡】襲撃中は使用できません");
+    return;
+  }
+  const selectableRaidTables = mid === "18" ? getSelectableRaidTables() : [];
+  const riotRaidTableId = mid === "18"
+    ? (document.getElementById("riotRaidTable")?.value || "")
+    : "";
+  const riotRaidTable = selectableRaidTables.find(table => table.id === riotRaidTableId);
+  if (mid === "18" && !riotRaidTable) {
+    village.log("【騒擾の奇跡】襲撃テーブルを選択してください");
+    return;
   }
 
   // 実行
@@ -423,30 +691,46 @@ export function performMiracle(village) {
     case "4": // 宴会
       spendMiracleMana(village, cost);
       village.funds-=cost;
+      let feastRecoveredCount = 0;
+      let feastHeavyDrinkerCount = 0;
       village.villagers.forEach(p=>{
-        p.hp=clampValue(p.hp+20,0,100);
-        p.mp=clampValue(p.mp+20,0,100);
-        p.happiness=clampValue(p.happiness+20,0,100);
+        if (isSaltPillar(p)) return;
+        const hpRecovery = getAlcoholMiracleRecoveryAmount(p, 20);
+        const mpRecovery = getAlcoholMiracleRecoveryAmount(p, 20);
+        const happinessRecovery = getAlcoholMiracleRecoveryAmount(p, 20);
+        p.hp=clampValue(p.hp+hpRecovery,0,100);
+        p.mp=clampValue(p.mp+mpRecovery,0,100);
+        p.happiness=clampValue(p.happiness+happinessRecovery,0,100);
+        if (hpRecovery > 20) feastHeavyDrinkerCount++;
+        if (clearHopeLossByMiracle(p, village).length > 0) feastRecoveredCount++;
       });
-      village.log(`【宴会】全員体力/メンタル+20,幸福+20(費用:${cost})`);
-      showMiracleResultModal(village, "宴会の奇跡", "村中に賑やかな宴が開かれました。", village.villagers);
+      village.log(`【宴会】全員体力/メンタル+20,幸福+20(費用:${cost})${feastHeavyDrinkerCount > 0 ? `,酒豪${feastHeavyDrinkerCount}人は回復量1.5倍` : ""}${feastRecoveredCount > 0 ? `,失望・絶望${feastRecoveredCount}人解除` : ""}`);
+      showMiracleResultModal(village, "宴会の奇跡", "村中に賑やかな宴が開かれました。", getActiveVillagers(village));
       break;
 
     case "5": // 狂宴
       spendMiracleMana(village, cost);
       village.funds-=cost;
+      let revelRecoveredCount = 0;
+      let revelHeavyDrinkerCount = 0;
       village.villagers.forEach(p=>{
-        p.hp=clampValue(p.hp+60,0,100);
-        p.mp=clampValue(p.mp+60,0,100);
-        p.happiness=clampValue(p.happiness+50,0,100);
+        if (isSaltPillar(p)) return;
+        const hpRecovery = getAlcoholMiracleRecoveryAmount(p, 60);
+        const mpRecovery = getAlcoholMiracleRecoveryAmount(p, 60);
+        const happinessRecovery = getAlcoholMiracleRecoveryAmount(p, 50);
+        p.hp=clampValue(p.hp+hpRecovery,0,100);
+        p.mp=clampValue(p.mp+mpRecovery,0,100);
+        p.happiness=clampValue(p.happiness+happinessRecovery,0,100);
+        if (hpRecovery > 60) revelHeavyDrinkerCount++;
+        if (clearHopeLossByMiracle(p, village).length > 0) revelRecoveredCount++;
         // 狂乱特性を付与（まだ持っていない場合のみ）
         if (!p.mindTraits.includes("狂乱")) {
           p.mindTraits.push("狂乱");
           syncEffectiveStats(p);
         }
       });
-      village.log(`【狂宴】全員体力/メンタル+60,幸福+50,狂乱付与(倫理*0.2,好色+15)`);
-      showMiracleResultModal(village, "狂宴の奇跡", "理性を揺らす熱気が村を満たしました。", village.villagers);
+      village.log(`【狂宴】全員体力/メンタル+60,幸福+50,狂乱付与(倫理*0.2,好色+15)${revelHeavyDrinkerCount > 0 ? `,酒豪${revelHeavyDrinkerCount}人は回復量1.5倍` : ""}${revelRecoveredCount > 0 ? `,失望・絶望${revelRecoveredCount}人解除` : ""}`);
+      showMiracleResultModal(village, "狂宴の奇跡", "理性を揺らす熱気が村を満たしました。", getActiveVillagers(village));
       break;
 
     default:
@@ -474,18 +758,45 @@ export function performMiracle(village) {
             refundMiracleMana(village, cost);
             return;
           }
+          if (isSaltPillar(vA) || isSaltPillar(vB)) {
+            village.log("【クピド】塩の柱状態の村人は対象外です");
+            refundMiracleMana(village, cost);
+            return;
+          }
           forceMarriage(vA,vB,village);
           break;
         case "6": // 癒し(1人回復)
-          if (!vA || !village.villagers.includes(vA)) {
+          if (!vA || (!village.villagers.includes(vA) && !getCaptives(village).includes(vA))) {
             village.log("【癒し】対象1人を選択");
+            refundMiracleMana(village, cost);
+            return;
+          }
+          if (isSaltPillar(vA)) {
+            village.log("【癒しの奇跡】塩の柱は治療できません");
             refundMiracleMana(village, cost);
             return;
           }
           healMiracle(vA,village);
           break;
+        case "20": // 清拭
+          if (!village.villageTraits.includes("清浄")) {
+            village.villageTraits.push("清浄");
+          }
+          village.cleanlinessMonths = 0;
+          village.log("【清拭の奇跡】3ヶ月間、村特性「清浄」を付与");
+          {
+            const speaker = getCleanlinessMiracleSpeaker(village);
+            showMiracleResultModal(
+              village,
+              "清拭の奇跡",
+              "清めの酒の強い匂いが村を満たしました。",
+              speaker ? [speaker] : [],
+              { allowEmpty: true }
+            );
+          }
+          break;
         case "16": // 酒杯(1人回復)
-          if (!vA || !village.villagers.includes(vA)) {
+          if (!vA || (!village.villagers.includes(vA) && !getCaptives(village).includes(vA))) {
             village.log("【酒杯】対象1人を選択");
             refundMiracleMana(village, cost);
             return;
@@ -500,12 +811,26 @@ export function performMiracle(village) {
           }
           warMiracle(vA,village);
           break;
+        case "17": // 雷霆(襲撃者1体)
+          if (hasUsedThunderboltMiracleThisMonth(village)) {
+            village.log("【雷霆の奇跡】今月はすでに使用済みです");
+            refundMiracleMana(village, cost);
+            return;
+          }
+          if (!vA || !village.raidEnemies.includes(vA)) {
+            village.log("【雷霆の奇跡】襲撃者1体を選択");
+            refundMiracleMana(village, cost);
+            return;
+          }
+          thunderboltMiracle(vA, village);
+          break;
         case "8": // 竈女神
           hearthMiracle(village);
           break;
         case "9": // 常春
           let rm=["夏","秋","冬","冷夏","飛蝗","厳冬","疫病流行"];
           village.villageTraits=village.villageTraits.filter(x=>!rm.includes(x));
+          village.apocalypseLocustMonths = null;
           if (!village.villageTraits.includes("春")) {
             village.villageTraits.push("春");
           }
@@ -531,15 +856,15 @@ export function performMiracle(village) {
           }
           // 通常の交換は村人同士のみ
           if (!isNormalExchangeCandidate(vA, village) || !isNormalExchangeCandidate(vB, village)) {
-            village.log("【交換の奇跡】村人以外は対象外です");
+            village.log("【交換の奇跡】村人・捕虜以外は対象外です");
             refundMiracleMana(village, cost);
             return;
           }
           doExchange(vA,vB,village,false);
           village.log(`【交換の奇跡】${vA.name}と${vB.name}が肉体交換`);
-          
+
           // 交換専用モーダルを表示
-          openExchangeModal(vA, vB);
+          openExchangeModal(vA, vB, { village });
           break;
         case "13": // 交換(強)
           if (!vA||!vB||vA===vB) {
@@ -549,9 +874,9 @@ export function performMiracle(village) {
           }
           doExchange(vA,vB,village,false);
           village.log(`【交換の奇跡・強】${vA.name}と${vB.name}が肉体交換`);
-          
+
           // 交換専用モーダルを表示
-          openExchangeModal(vA, vB);
+          openExchangeModal(vA, vB, { village });
           break;
         case "14": // ミダスの奇跡
           if (!village.villageTraits.includes("ミダス")) {
@@ -563,10 +888,19 @@ export function performMiracle(village) {
         case "15": // 市場の奇跡
           marketMiracle(village);
           break;
+        case "18": // 騒擾の奇跡
+          village.log(`【騒擾の奇跡】「${riotRaidTable.label}」の襲撃テーブルから、村へ騒乱が引き寄せられた`);
+          startRaidEvent(village, { raidTableId: riotRaidTable.id });
+          break;
+        case "19": // 稀人の奇跡
+          rareGuestMiracle(village);
+          break;
       }
       break;
   }
 
+  checkWishCompletion(village, { miracleId: mid });
+  completeTutorialTask(village, "use_miracle");
   updateUI(village);
   closeMiracleModal();
 }
@@ -579,6 +913,7 @@ function forceMarriage(a,b,v) {
   addRelationship(b,"既婚");
   a.happiness=clampValue(a.happiness+50,0,100);
   b.happiness=clampValue(b.happiness+50,0,100);
+  raiseMutualFriendshipTo(a, b, 60);
 
   addSpouseRelationships(a, b);
   recordMarriageHistory(v, a, b, { source: "クピドの奇跡" });
@@ -589,20 +924,20 @@ function forceMarriage(a,b,v) {
 
 /** 癒し: 負傷など回復 */
 function healMiracle(p,v) {
-  let arr=["負傷","疲労","過労","飢餓","疫病","産褥","凍え"];
+  let arr=["負傷","重体","疲労","過労","飢餓","疫病","産褥","凍え"];
   let recoveredTraits = [];
 
   arr.forEach(trait => {
     if (p.bodyTraits.includes(trait)) {
       recoveredTraits.push(trait);
       p.bodyTraits = p.bodyTraits.filter(t => t !== trait);
-      if (trait === "疫病") p.hp = clampValue(p.hp / 0.5, 0, 100);
       if (trait === "産褥") p.postpartumMonths = 0;
     }
   });
 
   syncEffectiveStats(p);
-  refreshJobTable(p, v);
+  if (getCaptives(v).includes(p)) normalizeCaptive(p);
+  else refreshJobTable(p, v);
 
   p.hp=clampValue(p.hp+50,0,100);
 
@@ -616,25 +951,28 @@ function healMiracle(p,v) {
 function gobletMiracle(p,v) {
   const recoveredTraits = [];
 
-  ["心労","抑鬱"].forEach(trait => {
+  ["心労","抑鬱", DISAPPOINTMENT_TRAIT, DESPAIR_TRAIT].forEach(trait => {
     if (p.mindTraits.includes(trait)) {
       recoveredTraits.push(trait);
       p.mindTraits = p.mindTraits.filter(t => t !== trait);
     }
   });
 
-  p.mp=clampValue(p.mp+50,0,100);
-  p.happiness=clampValue(p.happiness+30,0,100);
+  const mentalRecovery = getAlcoholMiracleRecoveryAmount(p, 50);
+  const happinessRecovery = getAlcoholMiracleRecoveryAmount(p, 30);
+  p.mp=clampValue(p.mp+mentalRecovery,0,100);
+  p.happiness=clampValue(p.happiness+happinessRecovery,0,100);
   if (!p.mindTraits.includes("酩酊")) {
     p.mindTraits.push("酩酊");
   }
 
   syncEffectiveStats(p);
-  refreshJobTable(p, v);
+  if (getCaptives(v).includes(p)) normalizeCaptive(p);
+  else refreshJobTable(p, v);
 
   const recoveryMsg = recoveredTraits.length > 0 ?
     `${recoveredTraits.join(",")}を回復,` : "";
-  v.log(`【酒杯の奇跡】${p.name}${recoveryMsg}メンタル+50,幸福+30,酩酊付与`);
+  v.log(`【酒杯の奇跡】${p.name}${recoveryMsg}メンタル+${mentalRecovery},幸福+${happinessRecovery},酩酊付与`);
   showMiracleResultModal(v, "酒杯の奇跡", `${p.name}の心に甘い酔いが満ちました。`, [p]);
 }
 
@@ -648,59 +986,79 @@ function warMiracle(p, v) {
   }
   syncEffectiveStats(p);
   refreshJobTable(p, v);
-  v.log(`【戦神の奇跡】${p.name}に火星の加護付与(筋力+7,耐久+7,勇気+7,魔力/知力/勤勉/倫理*0.2)3ヶ月継続`);
+  v.log(`【戦神の奇跡】${p.name}に火星の加護付与(筋力+7,耐久+7,勇気+7,知力/勤勉/倫理*0.2)3ヶ月継続`);
   showMiracleResultModal(v, "戦神の奇跡", `${p.name}に戦神の加護が宿りました。`, [p]);
+}
+
+function thunderboltMiracle(target, village) {
+  const beforeHp = Number(target.hp) || 0;
+  const damage = THUNDERBOLT_MIRACLE_DAMAGE * getRaiderIncomingDamageMultiplier(target);
+  target.hp = beforeHp <= 1 ? beforeHp : Math.max(1, beforeHp - damage);
+  village.lastThunderboltMiracleMonth = getVillageMonthKey(village);
+  const actualDamage = Math.max(0, beforeHp - target.hp);
+  village.log(`【雷霆の奇跡】${target.name}に雷霆を落としました。体力-${actualDamage}`);
+  showMiracleResultModal(village, "雷霆の奇跡", `${target.name}を雷光が打ちました。`, [target]);
 }
 
 /** 竈女神(恋人を結婚100%) */
 function hearthMiracle(v) {
-  let c=v.villagers.filter(x=> checkHasRelationship(x,"恋人") && !checkHasRelationship(x,"既婚"));
-  if (c.length===0) {
-    v.log("【竈女神の奇跡】結婚すべき恋人なし→30魔素返還");
-    refundMiracleMana(v, 30);
+  const pairs = getHearthMiraclePairs(v);
+  if (pairs.length===0) {
+    v.log("【竈女神の奇跡】対象村人なし");
     return;
   }
-  let done=[];
-  c.forEach(a=>{
-    if (!done.includes(a)) {
-      let bName=getRelationshipTargetName(a,"恋人");
-      if (bName) {
-        let b=v.villagers.find(xx=>xx.name===bName);
-        if (b && !done.includes(b) && !checkHasRelationship(a,"既婚") && !checkHasRelationship(b,"既婚")) {
-          removeRelationship(a,`恋人:${b.name}`);
-          removeRelationship(b,`恋人:${a.name}`);
-          addRelationship(a,"既婚");
-          addRelationship(b,"既婚");
-          a.happiness=clampValue(a.happiness+50,0,100);
-          b.happiness=clampValue(b.happiness+50,0,100);
+  pairs.forEach(([a, b]) => {
+    removeRelationship(a,`恋人:${b.name}`);
+    removeRelationship(b,`恋人:${a.name}`);
+    addRelationship(a,"既婚");
+    addRelationship(b,"既婚");
+    a.happiness=clampValue(a.happiness+50,0,100);
+    b.happiness=clampValue(b.happiness+50,0,100);
 
-          addSpouseRelationships(a, b);
-          recordMarriageHistory(v, a, b, { source: "竈女神の奇跡" });
+    addSpouseRelationships(a, b);
+    recordMarriageHistory(v, a, b, { source: "竈女神の奇跡" });
 
-          v.log(`【竈女神の奇跡】${a.name}と${b.name}結婚100%`);
-          done.push(a,b);
-        }
-      }
-    }
+    v.log(`【竈女神の奇跡】${a.name}と${b.name}結婚100%`);
   });
-  if (done.length > 0) {
-    const pairs = [];
-    for (let i = 0; i < done.length; i += 2) {
-      pairs.push([done[i], done[i + 1]]);
-    }
-    showMarriageMiracleModal(v, "竈女神の奇跡", pairs);
-  }
+  showMarriageMiracleModal(v, "竈女神の奇跡", pairs);
 }
 
 /** 旅人の奇跡(1名来訪) */
 function travelerMiracle(v) {
+  const visitorTableVillage = {
+    ...v,
+    building: AUTONOMOUS_SETTLEMENT_SCALE
+  };
   let newV = createRandomVisitor([
     ...v.villagers.map(person => person.name),
     ...v.visitors.map(person => person.name)
-  ], null, v);
+  ], null, visitorTableVillage);
   v.visitors.push(newV);
   v.log(`【旅人の奇跡】${newV.name}が来訪(訪問者)`);
-  showMiracleResultModal(v, "旅人の奇跡", `${newV.name}が村を訪れました。`, [newV]);
+  const arrivalLine = getVisitorArrivalLine(newV);
+  if (arrivalLine) v.log(`${newV.name}「${arrivalLine}」`);
+  const message = arrivalLine
+    ? `${newV.name}が村を訪れました。<br>「${arrivalLine}」`
+    : `${newV.name}が村を訪れました。`;
+  showMiracleResultModal(v, "旅人の奇跡", message, [newV]);
+}
+
+function rareGuestMiracle(v) {
+  const types = ["レア種族", "エクイナ", "サテュロス", "メナド"];
+  const type = types[Math.floor(Math.random() * types.length)];
+  const existingNames = [
+    ...v.villagers.map(person => person.name),
+    ...v.visitors.map(person => person.name)
+  ];
+  const newVisitor = createRandomVisitor(existingNames, type, v);
+  v.visitors.push(newVisitor);
+  v.log(`【稀人の奇跡】${newVisitor.name}が来訪(訪問者)`);
+  const arrivalLine = getVisitorArrivalLine(newVisitor);
+  if (arrivalLine) v.log(`${newVisitor.name}「${arrivalLine}」`);
+  const message = arrivalLine
+    ? `${newVisitor.name}が村を訪れました。<br>「${arrivalLine}」`
+    : `${newVisitor.name}が村を訪れました。`;
+  showMiracleResultModal(v, "稀人の奇跡", message, [newVisitor]);
 }
 
 /** 市場の奇跡(行商人3名来訪) */
@@ -746,7 +1104,47 @@ function getChildlikeMiracleLine(person) {
   return null;
 }
 
+function getGrotesquePortraitLine(person) {
+  const mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
+  if (mindTraits.includes("無垢")) return randFrom(["あ……こわい。", "ん……いや。"]);
+  if (mindTraits.includes("萌芽")) {
+    const lines = person.spiritSex === "女"
+      ? ["この絵、なんだかこわい……わたしの顔なの？", "胸がざわざわする。見ちゃだめな気がする。"]
+      : ["この絵、なんだかこわい……ぼくの顔なの？", "胸がざわざわする。見ちゃだめな気がする。"];
+    return randFrom(lines);
+  }
+  const type = person.speechType || determineSpeechType(person);
+  const lines = {
+    "普通Ｍ": ["……この絵、俺に似ているのか。見ていると、胸の奥がざわつくな。", "顔を描かれただけなのに、何かを置いてきた気がする。"],
+    "普通Ｆ": ["この絵、私の中の暗いところまで映しているみたいです。", "見つめていると、少し怖いのに目を離せません。"],
+    "強気Ｍ": ["上等だ。この不気味な絵ごと、俺の力にしてやる。", "清らかさなんて、今は邪魔になるだけだ。"],
+    "強気Ｆ": ["気味が悪い絵ね。でも、この艶だけは悪くないわ。", "私の影まで描くなら、その影も使ってみせる。"],
+    "内気": ["こ、これ……私なんですか？ 見ていると心まで汚れるみたいで……。", "怖いです。でも、目をそらせないんです……。"],
+    "陰気": ["……よく描けている。俺の嫌なところまでな。", "この絵の目、俺より正直だ。……不愉快なくらいに。"],
+    "お調子者": ["うわ、怖い絵っすね……でも妙に色気が出てないっすか？", "これ本当に自分っすか？ なんか危ない感じがするっす。"],
+    "快活": ["なんだか怖い絵だね。でも、今の私、少し強く見えるかも。", "胸がざわざわする……これも私の顔なんだね。"],
+    "お嬢様": ["まあ……なんて禍々しい筆致ですの。でも、目を離せませんわ。", "この肖像、私の影まで飾り立ててしまうのですわね。"],
+    "クールＭ": ["肖像の影響を確認した。ためらいが薄れ、印象が強まっている。", "不快な絵だが、変化は明確だ。利用価値はある。"],
+    "クールＦ": ["肖像の影響を確認したわ。ためらいが薄れて、印象だけが強く残る。", "気味は悪いけれど、変化は認めるしかないわね。"],
+    "老人": ["なんとも悍ましい絵じゃ。わしの業まで塗り込めたようじゃな。", "長く生きた影が、顔に浮いたかのう。目をそらせんわい。"],
+    "丁寧Ｍ": ["この絵に描かれているのは、私が隠していた部分でしょうか……。", "見るに堪えないはずなのに、目を離せません。困ったものです。"],
+    "丁寧Ｆ": ["この絵、わたくしの奥にあるものまで写しているようです……。", "恐ろしいのに、どこか惹かれてしまいます。おかしいですね。"],
+    "乱暴": ["ぞっとする絵だな。……だが、この顔つきは嫌いじゃねえ。", "汚ねえ絵だ。それが俺だってんなら、上等じゃねえか。"],
+    "蓮っ葉": ["嫌な絵だねえ。でも、この目つきは悪くないじゃない。", "きれいごとの顔より、こっちのほうが似合ってるかもね。"],
+    "おっとり": ["まあ、ずいぶん恐ろしい絵ですねえ。……それでも、目が離せません。", "わたくしの奥にも、こんな色があったのですねえ。"],
+    "ぶりっこ": ["やだぁ、こわい絵……。でも、ちょっとどきどきしちゃう。", "これがわたし？ 悪い子の顔になってるよぉ。"],
+    "ギャル風": ["うわ、この絵こわ……。でも妙に色っぽくない？", "きれいな自分より、こっちのほうがウケそうなのが嫌なんだけど。"],
+    "中性的": ["この絵は、隠していたものまで描いてしまうんだね。", "怖いけれど、否定はできない。これも自分だ。"]
+  };
+  return randFrom(lines[type] || lines[person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
+}
+
 function getGenericMiracleLine(person, miracleName) {
+  if (miracleName === "悍ましい肖像画") return getGrotesquePortraitLine(person);
+  const dedicatedDialogue = EFFECT_RESULT_DIALOGUES[miracleName];
+  if (dedicatedDialogue) {
+    return getDialogueLine({ character: person, ...dedicatedDialogue });
+  }
   const childLine = getChildlikeMiracleLine(person);
   if (childLine) return childLine;
   if (miracleName === "市場の奇跡") return getMarketMiracleLine(person);
@@ -765,9 +1163,27 @@ function getGenericMiracleLine(person, miracleName) {
     "お嬢様": ["まあ……神々しい輝きですわ。", "この恵みに感謝いたしますわ。"],
     "クールＭ": ["現象を確認した。効果は明確だ。", "奇跡の発動を確認した。"],
     "クールＦ": ["発動したわね。効果を見極めましょう。", "不思議だけれど、結果は確かね。"],
-    "老人": ["ありがたいことじゃのう。", "長く生きても、奇跡には驚かされるわい。"]
+    "老人": ["ありがたいことじゃのう。", "長く生きても、奇跡には驚かされるわい。"],
+    "丁寧Ｍ": [`${miracleName}を目にできるとは、ありがたいことです。`, "今の輝きは、確かに人の業ではありませんね。"],
+    "丁寧Ｆ": [`${miracleName}のお力ですね。胸が静かに満たされます。`, "この恵み、忘れずにおきたいと思います。"],
+    "乱暴": ["おい、今のはなんだ！ すげえ力じゃねえか！", "神の力だろうがなんだろうが、効くならありがたいぜ。"],
+    "蓮っ葉": ["へえ、大した力じゃないの。神様も気前がいいね。", "こういうのは素直に受け取っておくもんだよ。"],
+    "おっとり": ["まあ、あたたかい光ですねえ。心まで緩んでしまいます。", "不思議なこともあるものですねえ。"],
+    "ぶりっこ": ["わあ、きらきらしてる！ 奇跡ってすごいねぇ。", "なんだか、あったかい気持ちになっちゃった。"],
+    "ギャル風": ["え、今の光やばくない？ 奇跡ってマジであるんだ。", "こういうのは素直に喜んどこ。ありがたいっしょ。"],
+    "中性的": ["理屈は分からないけれど、確かに何かが変わったね。", "奇跡というものを、初めて身近に感じた気がする。"]
   };
   return randFrom(lines[type] || lines[person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
+}
+
+function getCleanlinessMiracleSpeaker(village) {
+  const villagers = getActiveVillagers(village);
+  const doctor = villagers.find(person => getVillageRole(person) === VILLAGE_ROLE_DOCTOR);
+  if (doctor) return doctor;
+  return villagers.reduce((best, person) => {
+    if (!best) return person;
+    return (Number(person.eth) || 0) > (Number(best.eth) || 0) ? person : best;
+  }, null);
 }
 
 function getTravelerMiracleLine(person) {
@@ -786,7 +1202,13 @@ function getTravelerMiracleLine(person) {
     "お嬢様": ["この村へ導かれるとは、きっと意味のある巡り合わせですわ。", "旅路に奇跡が差すなんて、物語の一節のようですわね。"],
     "クールＭ": ["移動経路に不可解な偏りがあった。だが到着地点はこの村で間違いない。", "導きの原因は不明だ。しばらく観察と滞在を希望する。"],
     "クールＦ": ["理由は説明できないけれど、この村に来る必要があった。そう判断しているわ。", "旅程は狂ったけれど、結果としてここへ着いた。悪くないわね。"],
-    "老人": ["足が勝手にこちらへ向いてのう。奇跡とは年寄りにも容赦がないわい。", "長旅の途中で、不思議な光に導かれたわい。少し腰を下ろさせておくれ。"]
+    "老人": ["足が勝手にこちらへ向いてのう。奇跡とは年寄りにも容赦がないわい。", "長旅の途中で、不思議な光に導かれたわい。少し腰を下ろさせておくれ。"],
+    "乱暴": ["妙な力に引きずられて来ちまった。文句はねえけどな。", "どこへ行くつもりもなかったが、ここで足が止まった。"],
+    "蓮っ葉": ["気づいたらこの村さ。まあ、悪くない引きだったね。", "呼ばれたなら来るしかないだろ。世話になるよ。"],
+    "おっとり": ["まあ、ここまで導かれてしまいました。少し休ませてくださいねえ。", "不思議な旅路でしたねえ。この村なら、落ち着けそうです。"],
+    "ぶりっこ": ["なんだか呼ばれた気がして来ちゃった。よろしくねぇ。", "道に迷ったんじゃないよ。ここに来たかったの。"],
+    "ギャル風": ["なんか呼ばれた感じ？ 気づいたらここにいたんだけど。", "旅の途中で光が見えてさ。まあ、来てよかったっしょ。"],
+    "中性的": ["導かれた、という言い方がいちばん近いかな。しばらく世話になるよ。", "行き先を決めた覚えはないのに、ここに着いた。不思議だね。"]
   };
   return randFrom(lines[type] || lines[person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
 }
@@ -807,7 +1229,13 @@ function getMarketMiracleLine(person) {
     "お嬢様": ["まあ、奇跡に招かれて市を開くとは、なんとも優雅ですわ。品定めをどうぞ。", "村の皆様のお役に立てる品を揃えておりますわ。"],
     "クールＭ": ["市場形成の機会と判断した。食料と資材を取引可能だ。", "招致の経緯は不明だが、商取引は成立する。品目を確認してくれ。"],
     "クールＦ": ["市場の成立を確認したわ。食料と資材、どちらも取引できる。", "奇跡の経路は不明だけれど、商いには支障ないわ。品を見て。"],
-    "老人": ["ほう、奇跡に呼ばれて市を開くとはのう。古い品も新しい品も見ていきなされ。", "長く商いをしてきたが、神に呼ばれる市は珍しいわい。さあ、見ておくれ。"]
+    "老人": ["ほう、奇跡に呼ばれて市を開くとはのう。古い品も新しい品も見ていきなされ。", "長く商いをしてきたが、神に呼ばれる市は珍しいわい。さあ、見ておくれ。"],
+    "乱暴": ["呼ばれて来たからには売るぞ。冷やかしは勘弁な。", "食い物も資材もある。持ってけ、値は正直につけてるぜ。"],
+    "蓮っ葉": ["いい市になりそうじゃないの。さあ、見ていっとくれ。", "呼ばれた以上は損はさせないよ。品を見ておくれ。"],
+    "おっとり": ["まあ、ここで市を開かせていただけるのですねえ。どうぞご覧ください。", "急ぎませんから、ゆっくりお選びくださいねえ。"],
+    "ぶりっこ": ["いい品を持ってきたよぉ。見ていってくれると嬉しいな。", "奇跡で呼ばれちゃった。せっかくだから買ってね？"],
+    "ギャル風": ["奇跡で呼ばれるとか、なかなかないっしょ。品はいいから見てって！", "食料も資材もあるよ。今日はお得だと思う。"],
+    "中性的": ["導かれて市を開くことになった。食料も資材も揃っているよ。", "経緯は不思議だけれど、商いはいつも通りだ。見ていってくれ。"]
   };
   return randFrom(lines[type] || lines[person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
 }
@@ -826,25 +1254,54 @@ function getDepartureMiracleLine(person) {
     "お嬢様": ["名残惜しいですわ。けれど、この胸の導きを無視できませんの。", "皆様のご恩は忘れませんわ。私の旅路に、どうか祝福を。"],
     "クールＭ": ["衝動の発生源は不明だ。だが、進むべき方向だけは明確だ。", "村を離れる。感傷はあるが、使命を優先する。"],
     "クールＦ": ["説明しきれない感覚ね。けれど、行くべきだと判断したわ。", "別れは惜しいけれど、迷っている時間はない。旅立つわ。"],
-    "老人": ["この年でまた旅支度とはのう。奇跡とは人を落ち着かせてくれん。", "世話になったのう。残りの道を、もう少し歩いてみるとするか。"]
+    "老人": ["この年でまた旅支度とはのう。奇跡とは人を落ち着かせてくれん。", "世話になったのう。残りの道を、もう少し歩いてみるとするか。"],
+    "丁寧Ｍ": ["急なことで申し訳ありません。行かねばならない気がするのです。", "皆様のご恩は忘れません。どうか、お達者で。"],
+    "丁寧Ｆ": ["突然のお別れをお許しください。遠くから、呼ばれている気がするのです。", "この村で過ごした日々は忘れません。ありがとうございました。"],
+    "乱暴": ["行くぜ。理由なんざ聞かれても答えられねえ。", "湿っぽいのは苦手だ。……達者でな。"],
+    "蓮っ葉": ["ここらが潮時だね。呼ばれてるうちに行くとするよ。", "泣くんじゃないよ。あたしが決めたことなんだから。"],
+    "おっとり": ["まあ、急なお話ですけれど……行かなくてはいけない気がするのです。", "皆さまとお別れするのは寂しいですねえ。……それでも、参ります。"],
+    "ぶりっこ": ["ごめんね、行かなきゃいけないみたいなの。", "寂しいけど……呼ばれちゃったんだもん。"],
+    "ギャル風": ["ごめん、なんか呼ばれてるっぽくてさ。行ってくるわ。", "泣かないでよ、湿っぽいの苦手だから。……ありがと。"],
+    "中性的": ["理由は言葉にできない。それでも、行き先だけは分かるんだ。", "別れは惜しい。けれど、留まる理由のほうが薄くなった。"]
   };
   return randFrom(lines[type] || lines[person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
 }
 
+// 反応を並べる人数の上限。村人全員を対象にする奇跡でも、この人数までを代表として表示する。
+const MIRACLE_RESULT_MAX_SPEAKERS = 3;
+
+// 代表を選ぶ際、同じセリフになる相手は後回しにしてセリフの重複を避ける。
+function pickMiracleResultSpeakers(targets, miracleName) {
+  if (targets.length <= MIRACLE_RESULT_MAX_SPEAKERS) {
+    return targets.map(person => ({ person, line: getGenericMiracleLine(person, miracleName) }));
+  }
+  const picked = [];
+  const usedLines = new Set();
+  shuffleArray(targets).forEach(person => {
+    if (picked.length >= MIRACLE_RESULT_MAX_SPEAKERS) return;
+    const line = getGenericMiracleLine(person, miracleName);
+    if (usedLines.has(line)) return;
+    usedLines.add(line);
+    picked.push({ person, line });
+  });
+  return picked;
+}
+
 export function showMiracleResultModal(village, miracleName, message, people = [], options = {}) {
   if (typeof document === "undefined") return;
-  const entries = (people || []).filter(Boolean);
-  if (entries.length === 0 && !options.allowEmpty) return;
+  const targets = (people || []).filter(Boolean);
+  if (targets.length === 0 && !options.allowEmpty) return;
+  const entries = pickMiracleResultSpeakers(targets, miracleName);
   const overlay = document.createElement("div");
   overlay.className = "effect-result-overlay";
   overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;";
   const modal = document.createElement("div");
   modal.className = "effect-result-modal";
-  modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;max-width:620px;width:calc(100% - 32px);max-height:min(80vh,720px);overflow:auto;border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
-  const rows = entries.map(person => `
+  modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);box-sizing:border-box;background:#fff;padding:20px;max-width:620px;width:calc(100% - 32px);max-height:min(80vh,720px);overflow:auto;border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
+  const rows = entries.map(({ person, line }) => `
     <div style="display:grid;grid-template-columns:72px 1fr;gap:12px;margin:12px 0;align-items:center;">
       <img src="${getPortraitPath(person)}" alt="${person.name}" style="width:72px;height:72px;object-fit:cover;border:1px solid #ddd;background:#f6f0e6;">
-      <p><strong>${person.name}</strong>: ${getGenericMiracleLine(person, miracleName)}</p>
+      <p><strong>${person.name}</strong>: ${line}</p>
     </div>
   `).join("");
   modal.innerHTML = `
@@ -859,6 +1316,7 @@ export function showMiracleResultModal(village, miracleName, message, people = [
     overlay.remove();
     modal.remove();
     updateUI(village);
+    showPendingDivineMightLevelUpModal(village);
   };
 }
 
@@ -878,7 +1336,15 @@ function getMarriageMiracleLine(person, partner, miracleName) {
     "お嬢様": [`${partner.name}様と結ばれるとは……奇跡とは優雅なものですわ。`, "突然ではありますけれど、心を込めて歩みますわ。"],
     "クールＭ": [`${miracleName}の結果は理解した。${partner.name}との関係を大切にする。`, "状況は急だが、責任は果たす。"],
     "クールＦ": [`${partner.name}と夫婦ね。冷静に受け止めるわ。`, "奇跡の結果なら、これからを考えるだけよ。"],
-    "老人": [`ほう、${partner.name}と夫婦とはのう。長く生きても驚きは尽きん。`, "奇跡とはまこと不思議なものじゃな。"]
+    "老人": [`${partner.name}と夫婦になるとはのう。奇跡に導かれた縁、大事にしよう。`, "新たな家族を得るとはな。わしも心を決めよう。"],
+    "丁寧Ｍ": [`${partner.name}さんと夫婦になるのですね。誠実に努めます。`, "急なことですが、この縁を大切にいたします。"],
+    "丁寧Ｆ": [`${partner.name}さんと夫婦に……。驚きましたが、嬉しく思います。`, "至らぬ身ですが、精一杯お支えいたします。"],
+    "乱暴": [`${partner.name}と夫婦だと！？ ……まあ、悪い話じゃねえ。`, "面倒は嫌いだが、決まったなら守るだけだ。"],
+    "蓮っ葉": [`${partner.name}と夫婦かい。まあ、悪くない相手だね。`, "こうなったら腹をくくるよ。よろしく頼むね。"],
+    "おっとり": [`まあ、${partner.name}さんと夫婦に。……ふふ、悪くありませんねえ。`, "急なことですけれど、ゆっくり馴染んでいきましょうねえ。"],
+    "ぶりっこ": [`${partner.name}とけっこん……？ えへへ、なんだか照れちゃう。`, "びっくりしたけど、いやじゃないよ？"],
+    "ギャル風": [`え、${partner.name}と結婚！？ 展開が早すぎでしょ！`, "まあ、決まったなら仲良くやってこ。よろしくね！"],
+    "中性的": [`${partner.name}と夫婦か。急な話だけれど、逃げる気はないよ。`, "縁というのは、選ぶより先に来るものらしいね。"]
   };
   return randFrom(lines[type] || lines[person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
 }
@@ -924,12 +1390,22 @@ function randFrom(lines) {
   return lines[Math.floor(Math.random() * lines.length)];
 }
 
-function getBodyExchangeReactionLine(person) {
+function getBodyExchangeLineKey(person) {
   const raiderTypes = ["野盗", "ゴブリン", "狼", "キュクロプス", "ハーピー"];
-  let type = resolveDialogueTone(person);
   if (person.mindTraits && person.mindTraits.includes("襲撃者")) {
-    type = raiderTypes.find(raiderType => person.name.includes(raiderType)) || type;
+    const raiderType = raiderTypes.find(type => person.name.includes(type));
+    if (raiderType) return raiderType;
   }
+  const sourceRace = person.lastBodyExchangeSourceRace;
+  if (sourceRace && sourceRace !== person.race) {
+    const sourceRaceKey = BODY_EXCHANGE_SOURCE_RACE_LINE_KEYS[sourceRace];
+    if (sourceRaceKey) return sourceRaceKey;
+  }
+  return resolveDialogueTone(person);
+}
+
+function getBodyExchangeReactionLine(person) {
+  const type = getBodyExchangeLineKey(person);
   const fallbackType = person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ";
   return randFrom(BODY_EXCHANGE_REACTION_LINES[type] || BODY_EXCHANGE_REACTION_LINES[fallbackType] || BODY_EXCHANGE_REACTION_LINES["普通Ｍ"]);
 }
@@ -944,11 +1420,11 @@ function createPanFluteExchangePerson(person) {
   try {
     img.src = getPortraitPath(person);
   } catch {
-    img.src = "images/portraits/default.png";
+    img.src = DEFAULT_PORTRAIT_PATH;
   }
   img.alt = `${person.name} portrait`;
   img.onerror = () => {
-    img.src = "images/portraits/default.png";
+    img.src = DEFAULT_PORTRAIT_PATH;
   };
   portraitArea.appendChild(img);
 
@@ -1019,20 +1495,21 @@ export function closePanFluteExchangeModal() {
  * 交換の奇跡モーダルを開く
  */
 export function openExchangeModal(personA, personB, options = {}) {
+  pendingExchangeResultVillage = options.village || null;
   const overlay = document.getElementById("exchangeOverlay");
   const modal = document.getElementById("exchangeModal");
   const portraitA = document.getElementById("exchangePortraitA");
   const portraitB = document.getElementById("exchangePortraitB");
   const textA = document.getElementById("exchangeTextA");
   const textB = document.getElementById("exchangeTextB");
-  
+
   if (!overlay || !modal || !portraitA || !portraitB || !textA || !textB) return;
 
   const title = modal.querySelector(".exchange-title h3");
   const message = modal.querySelector(".exchange-title p");
   if (title) title.textContent = options.title || "交換の奇跡";
   if (message) message.textContent = options.message || "二人の魂は互いの体を見て驚いている...";
-  
+
   // 顔グラフィックを設定（エラーハンドリング付き）
   try {
     // 共通関数を使用して顔グラフィックのパスを取得
@@ -1040,54 +1517,39 @@ export function openExchangeModal(personA, personB, options = {}) {
     portraitA.src = getPortraitPath(personA);
     portraitA.onerror = () => {
       console.error(`Portrait image not found: ${portraitA.src}`);
-      portraitA.src = 'images/portraits/default.png';
+      portraitA.src = DEFAULT_PORTRAIT_PATH;
     };
-    
+
     // 同様に、personBの体はpersonAの顔グラフィックを表示
     portraitB.src = getPortraitPath(personB);
     portraitB.onerror = () => {
       console.error(`Portrait image not found: ${portraitB.src}`);
-      portraitB.src = 'images/portraits/default.png';
+      portraitB.src = DEFAULT_PORTRAIT_PATH;
     };
   } catch (error) {
     console.error('Error loading portraits:', error);
-    portraitA.src = 'images/portraits/default.png';
-    portraitB.src = 'images/portraits/default.png';
+    portraitA.src = DEFAULT_PORTRAIT_PATH;
+    portraitB.src = DEFAULT_PORTRAIT_PATH;
   }
-  
-  // 交換反応は精神側の実効口調で選び、襲撃者だけ専用キーを優先する。
-  const getExchangeLineKey = (person) => {
-    // 襲撃者の場合は襲撃者タイプを使用
-    if (person.mindTraits && person.mindTraits.includes("襲撃者")) {
-      // 名前から襲撃者タイプを抽出
-      const raiderTypes = ["野盗", "ゴブリン", "狼", "キュクロプス", "ハーピー"];
-      for (const type of raiderTypes) {
-        if (person.name.includes(type)) {
-          return type;
-        }
-      }
-    }
-    return resolveDialogueTone(person);
-  };
 
-  const speechTypeA = getExchangeLineKey(personA);
-  const speechTypeB = getExchangeLineKey(personB);
-  
+  const speechTypeA = getBodyExchangeLineKey(personA);
+  const speechTypeB = getBodyExchangeLineKey(personB);
+
   // 入れ替わり時のセリフをランダムに選択
   const getRandomLine = (patterns, type, person) => {
     const fallbackType = person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ";
     return randFrom(patterns[type] || patterns[fallbackType] || patterns["普通Ｍ"]);
   };
-  
+
   // 会話テキストを設定
   textA.innerHTML = `
     <p><strong>${personA.name}:</strong> ${getRandomLine(BODY_EXCHANGE_REACTION_LINES, speechTypeA, personA)}</p>
   `;
-  
+
   textB.innerHTML = `
     <p><strong>${personB.name}:</strong> ${getRandomLine(BODY_EXCHANGE_REACTION_LINES, speechTypeB, personB)}</p>
   `;
-  
+
   overlay.style.display = "block";
   modal.style.display = "block";
 }
@@ -1098,7 +1560,10 @@ export function openExchangeModal(personA, personB, options = {}) {
 export function closeExchangeModal() {
   const overlay = document.getElementById("exchangeOverlay");
   const modal = document.getElementById("exchangeModal");
-  
+  const village = pendingExchangeResultVillage;
+  pendingExchangeResultVillage = null;
+
   if (overlay) overlay.style.display = "none";
   if (modal) modal.style.display = "none";
+  if (village) showPendingDivineMightLevelUpModal(village);
 }

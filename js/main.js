@@ -10,6 +10,8 @@ import { handleAllVillagerJobs } from "./jobs.js";
 import { recordGameStartHistory } from "./history.js";
 import { isUnassignedActionVillager } from "./domain/rules.js";
 import { getRaidReadiness } from "./raidRules.js";
+import { hasDespairState } from "./domain/despair.js";
+import { getActiveVillagers } from "./domain/apocalypseRules.js";
 
 // Villageインスタンスを生成
 export const theVillage = new Village();
@@ -32,7 +34,19 @@ const TURN_BLOCKING_MODAL_SELECTORS = [
   "#festivalModal",
   "#seasonChangeDialog",
   "#raidWarningModal",
+  "#buildingRequestModal",
+  "#buildingRequestCompleteModal",
+  "#wishModal",
+  "#wishCompleteModal",
+  "#heresyInquisitionModal",
+  "#inquisitionHospitalityResultModal",
+  "#inquisitionExpulsionResultModal",
+  "#bacchusGoldenStatueEventModal",
+  "#apocalypseStartModal",
+  "#apocalypseEventModal",
   "#secretTreasureEventModal",
+  "#adventurerQuestModal",
+  "#adventurerQuestResultModal",
   ".effect-result-modal",
   "#recruitmentModal",
   "#seductionModal",
@@ -42,11 +56,13 @@ const TURN_BLOCKING_MODAL_SELECTORS = [
   "#secretTreasureModal",
   "#historyModal",
   "#personalHistoryModal",
+  "#friendshipDetailModal",
   "#conversationModal",
   "#exchangeModal",
   "#panFluteExchangeModal",
   "#raidModal",
   "#villageScaleModal",
+  "#divineMightLevelUpModal",
   "#headmanElectionModal",
   "[data-close-relationship-modal]",
   "[data-close-reproduction-modal]"
@@ -69,6 +85,19 @@ function isTurnBlockingModalOpen() {
     const element = document.querySelector(selector);
     return isVisibleElement(element);
   });
+}
+
+function formatPersonNamesForConfirm(people) {
+  const visibleNames = people.slice(0, 5).map(person => person.name).join("、");
+  return people.length > 5 ? `${visibleNames} ほか${people.length - 5}人` : visibleNames;
+}
+
+function confirmDespairingVillagersBeforeTurn(village) {
+  const despairingVillagers = getActiveVillagers(village).filter(hasDespairState);
+  if (despairingVillagers.length === 0 || typeof window === "undefined") return true;
+
+  const names = formatPersonNamesForConfirm(despairingVillagers);
+  return window.confirm(`絶望している村人がいます。\n${names}\n解除しないまま次の月を迎えると村を去ります。\nこのまま月を進めますか？`);
 }
 
 /**
@@ -101,6 +130,8 @@ export function onNextTurn() {
     return;
   }
 
+  if (!confirmDespairingVillagersBeforeTurn(theVillage)) return;
+
   applyTurnStartRestrictions(theVillage);
 
   const noActionVillagers = theVillage.villagers.filter(isUnassignedActionVillager);
@@ -118,6 +149,7 @@ export function onNextTurn() {
   if (theVillage.villagers.length===0) {
     theVillage.log("村人ゼロ→バッカスは眠りに...(GameOver)");
     theVillage.gameOver=true;
+    updateUI(theVillage);
     return;
   }
   theVillage.month++;

@@ -1,14 +1,23 @@
 // RandomEvents.js
 
 import { randInt, clampValue, round3 } from "./util.js";
-import { doLoverCheck, addRelationship as addCategorizedRelationship, hasNonEnemyRelationship, normalizeRelationship, parseRelationship } from "./relationships.js";
-import { doExchange } from "./exchange.js";
+import { adjustMutualFriendship, doLoverCheck, addRelationship as addCategorizedRelationship, getPairFriendshipMaximum, getPairFriendshipMinimum, isSingle, normalizeRelationship, parseRelationship } from "./relationships.js";
+import { canExchangeBody, doExchange } from "./exchange.js";
 import { showRandomEventModal } from "./randomEventModal.js";
-import { matureBodyToAdultOnly, scheduleGoldenRainPregnancy } from "./reproduction.js";
+import { HobbyEffects } from "./HobbyEffects.js";
+import {
+  canReceiveGoldenRainPregnancy,
+  createWolfFoundling,
+  matureBodyToAdultOnly,
+  scheduleGoldenRainPregnancy
+} from "./reproduction.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
+import { hasActiveBuildingFlag } from "./domain/buildingState.js";
+import { getActiveVillagers, getVillagersIncludingSaltPillar } from "./domain/apocalypseRules.js";
 import { addAcquiredStat, syncEffectiveStats } from "./domain/statLayers.js";
-import { recordHobbyAwakeningHistory, recordMythicEventHistory, recordSocialRelationHistory } from "./history.js";
+import { recordHobbyAwakeningHistory, recordLoverHistory, recordMythicEventHistory, recordSocialRelationHistory, recordVillagerJoinHistory } from "./history.js";
+import { updateUI } from "./ui.js";
 import {
   getChildlikeRandomEventLine,
   getDialogueLine,
@@ -24,16 +33,21 @@ import {
   EVENT_POOLS,
   EVENT_SECOND_LINE_BASES,
   EVENT_SUBJECTS,
-  GOLDEN_RAIN_RACES
+  SINGLE_SPEAKER_EVENTS
 } from "./data/randomEventData.js";
 
 const VILLAGER_STATE_KEYS = [
   "hp", "mp", "happiness",
   "str", "vit", "dex", "mag", "chr", "int", "ind", "eth", "cou", "sexdr",
-  "bodyTraits", "mindTraits", "relationships", "hobby",
+  "bodyTraits", "mindTraits", "relationships", "friendships", "friendshipStats", "hobby",
   "bodySex", "bodyAge", "bodyOwner", "race", "portraitFile"
 ];
 const YURI_BLOCKING_RELATION_PREFIXES = ["天敵", "母", "父", "子", "夫", "妻", "恋人"];
+const FIGHT_ALLOWED_RELATION_PREFIXES = new Set(["村設立の同志", "仕事仲間"]);
+
+function hasMindTrait(person, trait) {
+  return Array.isArray(person?.mindTraits) && person.mindTraits.includes(trait);
+}
 
 function snapshotVillager(person) {
   return JSON.stringify(Object.fromEntries(VILLAGER_STATE_KEYS.map(key => [key, person[key]])));
@@ -54,11 +68,11 @@ export class RandomEvents {
   }
 
   static captureVillagerState(village) {
-    return new Map(village.villagers.map(p => [p, snapshotVillager(p)]));
+    return new Map(getActiveVillagers(village).map(p => [p, snapshotVillager(p)]));
   }
 
   static collectChangedVillagers(village, beforeState) {
-    return village.villagers.filter(p => beforeState.get(p) !== snapshotVillager(p));
+    return getActiveVillagers(village).filter(p => beforeState.get(p) !== snapshotVillager(p));
   }
 
   static getEventSubject(eventKey, kind) {
@@ -75,10 +89,7 @@ export class RandomEvents {
   }
 
   static hasBuilding(village, flagName, buildingId) {
-    return !!(
-      (village?.buildingFlags && village.buildingFlags[flagName]) ||
-      (Array.isArray(village?.buildings) && village.buildings.includes(buildingId))
-    );
+    return hasActiveBuildingFlag(village, flagName, buildingId);
   }
 
   static getSpeechType(character) {
@@ -90,7 +101,7 @@ export class RandomEvents {
     return getChildlikeRandomEventLine(character, { eventKey, kind, mood });
   }
 
-  static createEventLine(kind, character, eventKey) {
+  static createEventLine(kind, character, eventKey, variantIndex = null) {
     return getDialogueLine({
       character,
       scene: "randomEvent",
@@ -98,7 +109,8 @@ export class RandomEvents {
       context: {
         kind,
         subject: this.getEventSubject(eventKey, kind),
-        mood: this.getEventMood(eventKey, kind)
+        mood: this.getEventMood(eventKey, kind),
+        variantIndex
       }
     }) || "...";
   }
@@ -153,18 +165,25 @@ export class RandomEvents {
     if (this.shouldSuppressRandomEventAnnouncement(eventKey)) return;
 
     const changedVillagers = this.collectChangedVillagers(village, beforeState);
-    const speakers = [...new Set([...changedVillagers, ...this._forcedSpeakers])];
-    if (speakers.length === 0 && village.villagers.length > 0) {
+    let speakers = [...new Set([...changedVillagers, ...this._forcedSpeakers])];
+    if (speakers.length === 0 && getActiveVillagers(village).length > 0) {
       // 資源のみが変化したイベントでも代表者のセリフを表示
-      const rep = this.randChoice(village.villagers);
+      const rep = this.randChoice(getActiveVillagers(village));
       if (rep) speakers.push(rep);
+    }
+    if (SINGLE_SPEAKER_EVENTS.has(eventKey) && speakers.length > 1) {
+      speakers = [this.randChoice(speakers)];
     }
     const title = EVENT_SUBJECTS[eventKey] || EVENT_KIND_TITLES[kind] || "ランダムイベント";
     const message = logs.length > 0 ? logs.join("\n") : `${phase}ランダムイベントが発生しました。`;
 
     try {
+      // 複数人が話すイベントでは、話者ごとに別の候補を割り当ててセリフの重複を避ける。
       const participants = speakers
-        .map(p => this.participant(p, this.createEventLine(kind, p, eventKey)));
+        .map((p, index) => this.participant(
+          p,
+          this.createEventLine(kind, p, eventKey, speakers.length > 1 ? index : null)
+        ));
       this.announce(title, message, participants);
     } catch (error) {
       console.error("Random event announcement failed", error);
@@ -174,7 +193,7 @@ export class RandomEvents {
 
   static shouldSuppressRandomEventAnnouncement(eventKey) {
     // doLoverCheck 側で恋人成立専用モーダルを出すため、汎用ランダムイベントモーダルは重ねない。
-    return eventKey === "lover";
+    return eventKey === "lover" || eventKey === "wolfChild";
   }
 
   static chooseEventKind({ chanceMultiplier = 1 } = {}) {
@@ -211,37 +230,36 @@ export class RandomEvents {
    */
   static doMythicEvent(v) {
     let cands = [];
-    v.villagers.forEach(p => {
-      if (p.bodySex === "女" && p.bodyAge >= 16 && p.bodyAge <= 25 && p.sexdr <= 5 && 
+    const mythicVillagers = getActiveVillagers(v).filter(p => (p.race || "人間") === "人間");
+    mythicVillagers.forEach(p => {
+      if (p.bodySex === "女" && p.bodyAge >= 16 && p.bodyAge <= 25 && p.sexdr <= 5 &&
           !p.bodyTraits.includes("月の巫女")) {
         cands.push({ type: "狩猟神", vill: p });
       }
-      if (p.bodySex === "女" && p.bodyAge >= 16 && p.bodyAge <= 25 && p.chr >= 25 && 
+      if (p.bodySex === "女" && p.bodyAge >= 16 && p.bodyAge <= 25 && p.chr >= 25 &&
           !p.bodyTraits.includes("太陽の巫女")) {
         cands.push({ type: "太陽神", vill: p });
       }
-      if (p.bodySex === "女" && p.bodyAge >= 16 && p.bodyAge <= 28 && p.cou >= 20 && p.int >= 20 && 
+      if (p.bodySex === "女" && p.bodyAge >= 16 && p.bodyAge <= 28 && p.cou >= 20 && p.int >= 20 &&
           !p.bodyTraits.includes("梟の巫女")) {
         cands.push({ type: "戦女神", vill: p });
       }
-      if (p.bodySex === "女" && p.bodyAge >= 16 && p.bodyAge <= 28 && p.ind >= 20 && p.eth >= 20 && 
+      if (p.bodySex === "女" && p.bodyAge >= 16 && p.bodyAge <= 28 && p.ind >= 20 && p.eth >= 20 &&
           !p.bodyTraits.includes("大地の巫女")) {
         cands.push({ type: "地母神", vill: p });
       }
-      if (p.bodySex === "女" &&
-          Number(p.bodyAge) >= 16 &&
-          Number(p.bodyAge) <= 29 &&
-          Number(p.chr) >= 25 &&
-          GOLDEN_RAIN_RACES.has(p.race || "人間") &&
-          !p.pregnancy &&
-          !p.bodyTraits.includes("妊娠") &&
-          !p.bodyTraits.includes("臨月") &&
-          !p.bodyTraits.includes("産褥")) {
+    });
+
+    // 黄金の雨は巫女系と違い、人間に限らず人型種族へ起こる。
+    getActiveVillagers(v).forEach(p => {
+      if (Number(p.chr) >= 25 && canReceiveGoldenRainPregnancy(p)) {
         cands.push({ type: "goldenRain", vill: p });
       }
     });
 
-    const growthPotionCandidates = v.villagers.filter(person => Number(person.bodyAge) <= 9);
+    // 怪しい薬は巫女系と違い、狼以外の全種族が対象。
+    const growthPotionCandidates = getActiveVillagers(v)
+      .filter(person => (person.race || "人間") !== "狼" && Number(person.bodyAge) <= 9);
     if (growthPotionCandidates.length > 0 && Math.random() < 0.2) {
       cands.push({ type: "strangeGrowthPotion", vill: this.randChoice(growthPotionCandidates) });
     }
@@ -293,15 +311,44 @@ export class RandomEvents {
    * グッドイベント(24%)
    */
   static doGoodEvent(v) {
-    let ev = this.randChoice(EVENT_POOLS.good);
+    let ev = this.chooseGoodEvent();
 
     switch (ev) {
+      case "wolfChild": {
+        if (v.villagers.some(person => person.race === "狼")) return null;
+
+        v.log("狼の子供が村に迷い込んできた。");
+        showRandomEventModal({
+          title: "狼の子供",
+          message: "森の端から、まだ幼い狼の子供が一匹、村へ迷い込んできました。どうしますか？",
+          closeOnOverlay: false,
+          actions: [
+            {
+              label: "村で飼う",
+              onSelect: () => {
+                const wolf = createWolfFoundling(v);
+                v.villagers.push(wolf);
+                recordVillagerJoinHistory(v, wolf, { source: "保護" });
+                v.log(`${wolf.name}（0歳の狼）を村で飼うことにした。`);
+                updateUI(v);
+              }
+            },
+            {
+              label: "森に返す",
+              onSelect: () => {
+                v.log("狼の子供を森へ返した。");
+              }
+            }
+          ]
+        });
+        break;
+      }
       case "cat": {
-        if (v.villagers.length > 0) {
-          let t = this.randChoice(v.villagers);
+        if (getActiveVillagers(v).length > 0) {
+          let t = this.randChoice(getActiveVillagers(v));
           let inc = randInt(20, 30);
           t.happiness = clampValue(t.happiness + inc, 0, 100);
-          v.log(`子猫イベント:${t.name}幸福+${inc}`);
+          v.log(`猫との出会い:${t.name}幸福+${inc}`);
         }
         break;
       }
@@ -319,7 +366,7 @@ export class RandomEvents {
       }
       case "fireworks": {
         let inc = randInt(5, 10);
-        v.villagers.forEach(p => {
+        getActiveVillagers(v).forEach(p => {
           p.happiness = clampValue(p.happiness + inc, 0, 100);
         });
         v.log(`花火師来訪:村全体幸福+${inc}`);
@@ -327,7 +374,7 @@ export class RandomEvents {
       }
       case "hotSpring": {
         const hpGain = 10;
-        v.villagers.forEach(p => {
+        getActiveVillagers(v).forEach(p => {
           p.hp = clampValue(p.hp + hpGain, 0, 100);
         });
         if (!v.buildingFlags) v.buildingFlags = {};
@@ -340,12 +387,13 @@ export class RandomEvents {
           return null;
         }
 
-        const candidates = v.villagers.filter(person =>
+        const candidates = getActiveVillagers(v).filter(person =>
           Number(person.eth) <= 14 &&
           Number(person.sexdr) >= 20 &&
           person.bodySex === "女" &&
           person.spiritSex === "男" &&
-          Number(person.spiritAge) >= 12
+          Number(person.spiritAge) >= 12 &&
+          !hasMindTrait(person, "野生")
         );
 
         if (candidates.length === 0) {
@@ -365,12 +413,13 @@ export class RandomEvents {
       }
       case "hobbyFriends": {
         const pairs = [];
-        v.villagers.forEach((a, i) => {
+        getActiveVillagers(v).forEach((a, i) => {
           if (!a.hobby) return;
-          v.villagers.slice(i + 1).forEach(b => {
+          getActiveVillagers(v).slice(i + 1).forEach(b => {
             if (a.hobby !== b.hobby) return;
             const relA = `${a.hobby}仲間:${b.name}`;
             const relB = `${b.hobby}仲間:${a.name}`;
+            if (getPairFriendshipMinimum(a, b) < 0) return;
             if (this.hasPairRelationship(a, b, ["天敵", `${a.hobby}仲間`])) return;
             pairs.push({ a, b, hobby: a.hobby, relA, relB });
           });
@@ -380,21 +429,41 @@ export class RandomEvents {
           const pair = this.randChoice(pairs);
           pair.a.happiness = clampValue(pair.a.happiness + 10, 0, 100);
           pair.b.happiness = clampValue(pair.b.happiness + 10, 0, 100);
+          adjustMutualFriendship(pair.a, pair.b, 30);
           this.addRelationship(pair.a, pair.relA);
           this.addRelationship(pair.b, pair.relB);
           recordSocialRelationHistory(v, pair.a, pair.b, "趣味仲間", { hobby: pair.hobby });
-          v.log(`趣味仲間:${pair.a.name}と${pair.b.name}は${pair.hobby}の話で盛り上がった。幸福+10、${pair.hobby}の余暇メンタル回復1.5倍`);
+          v.log(`趣味仲間:${pair.a.name}と${pair.b.name}は${pair.hobby}の話で盛り上がった。幸福+10、好感度+30、${pair.hobby}の余暇メンタル回復1.5倍`);
         } else {
           return null;
         }
         break;
       }
+      case "thaw": {
+        const villagers = getActiveVillagers(v);
+        const pairs = [];
+        villagers.forEach((a, index) => {
+          villagers.slice(index + 1).forEach(b => {
+            if (getPairFriendshipMaximum(a, b) <= -30) pairs.push([a, b]);
+          });
+        });
+        if (pairs.length === 0) {
+          return null;
+        }
+
+        const [a, b] = this.randChoice(pairs);
+        adjustMutualFriendship(a, b, 30);
+        this.addForcedSpeaker(a);
+        this.addForcedSpeaker(b);
+        v.log(`雪解け:${a.name}と${b.name}のわだかまりがほどけた。好感度+30`);
+        break;
+      }
       case "menFriendship": {
-        let men = v.villagers.filter(x => x.spiritSex === "男" && x.bodyAge >= 16);
+        let men = getActiveVillagers(v).filter(x => x.spiritSex === "男" && x.bodyAge >= 16);
         const pairs = [];
         men.forEach((a, index) => {
           men.slice(index + 1).forEach(b => {
-            if (!this.hasPairRelationship(a, b, ["天敵", "親友"])) pairs.push([a, b]);
+            if (getPairFriendshipMinimum(a, b) >= 10 && !this.hasPairRelationship(a, b, ["天敵", "親友"])) pairs.push([a, b]);
           });
         });
         if (pairs.length > 0) {
@@ -402,10 +471,13 @@ export class RandomEvents {
           let incc = randInt(10, 15);
           m1.happiness = clampValue(m1.happiness + incc, 0, 100);
           m2.happiness = clampValue(m2.happiness + incc, 0, 100);
-          this.addRelationship(m1, `親友:${m2.name}`);
-          this.addRelationship(m2, `親友:${m1.name}`);
-          recordSocialRelationHistory(v, m1, m2, "親友");
-          v.log(`男の友情:${m1.name}と${m2.name}は夜通し語り合い、友情を深めた。幸福+${incc}`);
+          const friendship = adjustMutualFriendship(m1, m2, 30);
+          if (friendship >= 50) {
+            this.addRelationship(m1, `親友:${m2.name}`);
+            this.addRelationship(m2, `親友:${m1.name}`);
+            recordSocialRelationHistory(v, m1, m2, "親友");
+          }
+          v.log(`男の友情:${m1.name}と${m2.name}は夜通し語り合い、友情を深めた。幸福+${incc},好感度+30`);
         } else {
           return null;
         }
@@ -418,19 +490,20 @@ export class RandomEvents {
         break;
       }
       case "yuri": {
-        let candidates = v.villagers.filter(x => 
+        let candidates = getActiveVillagers(v).filter(x =>
           x.spiritSex === "男" &&
           x.bodySex === "女" &&
           x.bodyAge >= 12 && x.bodyAge <= 30 &&
           x.spiritAge >= 16 &&
-          !x.relationships.some(r => r.includes("既婚") || r.includes("恋人"))
+          !hasMindTrait(x, "神聖") &&
+          isSingle(x)
         );
 
         if (candidates.length >= 2) {
           const pairs = [];
           candidates.forEach((a, index) => {
             candidates.slice(index + 1).forEach(b => {
-              if (!this.hasPairRelationship(a, b, YURI_BLOCKING_RELATION_PREFIXES)) pairs.push([a, b]);
+              if (getPairFriendshipMinimum(a, b) >= 20 && !this.hasPairRelationship(a, b, YURI_BLOCKING_RELATION_PREFIXES)) pairs.push([a, b]);
             });
           });
 
@@ -442,9 +515,11 @@ export class RandomEvents {
 
           a.happiness = clampValue(a.happiness + 50, 0, 100);
           b.happiness = clampValue(b.happiness + 50, 0, 100);
+          adjustMutualFriendship(a, b, 30);
 
           this.addRelationship(a, `恋人:${b.name}`);
           this.addRelationship(b, `恋人:${a.name}`);
+          recordLoverHistory(v, a, b, { source: "百合の恋" });
 
           v.log(`百合イベント:${a.name}と${b.name}は互いに惹かれ合い、恋人になった。幸福+50`);
         } else {
@@ -453,17 +528,18 @@ export class RandomEvents {
         break;
       }
       case "tattoo": {
-        let candidates = v.villagers.filter(x => 
+        let candidates = getActiveVillagers(v).filter(x =>
           x.spiritSex === "男" &&
           x.bodyAge >= 12 &&
           x.spiritAge >= 16 &&
           x.eth <= 12 &&
+          !hasMindTrait(x, "野生") &&
           !this.hasBodyTrait(x, "刺青")
         );
 
         if (candidates.length > 0) {
           let a = this.randChoice(candidates);
-          
+
           a.bodyTraits.push("刺青");
           addAcquiredStat(a, "chr", 1);
           a.happiness = clampValue(a.happiness + 20, 0, 100);
@@ -475,18 +551,19 @@ export class RandomEvents {
         break;
       }
       case "fashion": {
-        let candidates = v.villagers.filter(x => 
+        let candidates = getActiveVillagers(v).filter(x =>
           x.spiritSex === "男" &&
           x.bodySex === "女" &&
           x.bodyAge >= 12 && x.bodyAge <= 30 &&
           x.spiritAge >= 16 &&
           x.sexdr >= 20 &&
+          !hasMindTrait(x, "野生") &&
           !this.hasHobby(x, "オシャレ")
         );
 
         if (candidates.length > 0) {
           let a = this.randChoice(candidates);
-          
+
           addAcquiredStat(a, "chr", 3);
           a.happiness = clampValue(a.happiness + 20, 0, 100);
           a.hobby = "オシャレ";
@@ -499,7 +576,7 @@ export class RandomEvents {
         break;
       }
       case "muscle": {
-        let candidates = v.villagers.filter(x => 
+        let candidates = getActiveVillagers(v).filter(x =>
           x.spiritSex === "女" &&
           x.bodySex === "男" &&
           x.spiritAge >= 16 &&
@@ -509,7 +586,7 @@ export class RandomEvents {
 
         if (candidates.length > 0) {
           let b = this.randChoice(candidates);
-          
+
           addAcquiredStat(b, "str", 3);
           b.hobby = "筋トレ";
           recordHobbyAwakeningHistory(v, b, "筋トレ");
@@ -520,8 +597,25 @@ export class RandomEvents {
         }
         break;
       }
+      case "pickup": {
+        const rules = HobbyEffects.getPickupRules("ナンパ");
+        const candidates = getActiveVillagers(v).filter(a => {
+          if (a.spiritSex !== "男" || Number(a.spiritAge) < 16) return false;
+          // 相手がいる者は、より強い好色と低い倫理でなければ声をかけない。
+          const meetsDesire = isSingle(a)
+            ? Number(a.sexdr) >= 18
+            : Number(a.sexdr) >= 20 && Number(a.eth) <= 14;
+          return meetsDesire && HobbyEffects.hasPickupTarget(a, v, rules);
+        });
+        if (candidates.length === 0) return null;
+
+        const a = this.randChoice(candidates);
+        v.log(`ナンパイベント:${a.name}${HobbyEffects.applyPickup(a, v, rules)}`);
+        this.addForcedSpeaker(a);
+        break;
+      }
       case "selfPleasure": {
-        let candidates = v.villagers.filter(x =>
+        let candidates = getActiveVillagers(v).filter(x =>
           x.spiritSex === "男" &&
           x.bodySex === "女" &&
           x.spiritAge >= 16 &&
@@ -550,6 +644,25 @@ export class RandomEvents {
       }
     }
     return ev;
+  }
+
+  static chooseGoodEvent() {
+    const events = EVENT_POOLS.good;
+    const otherEvents = events.filter(key => key !== "lover");
+    if (!events.includes("lover") || otherEvents.length === 0) {
+      return this.randChoice(events);
+    }
+
+    // 通常の均等抽選（1 / events.length）に対し、「恋の気配」だけを正確に2倍にする。
+    const loverChance = Math.min(1, 2 / events.length);
+    const roll = Math.random();
+    if (roll < loverChance) return "lover";
+
+    const otherIndex = Math.min(
+      otherEvents.length - 1,
+      Math.floor(((roll - loverChance) / (1 - loverChance)) * otherEvents.length)
+    );
+    return otherEvents[otherIndex];
   }
 
   static getCurrentSeason(village) {
@@ -629,7 +742,7 @@ export class RandomEvents {
         break;
       }
       case "heat": {
-        v.villagers.forEach(p => {
+        getActiveVillagers(v).forEach(p => {
           p.hp = clampValue(p.hp - 10, 0, 100);
         });
         v.log("猛暑:全員体力-10");
@@ -645,7 +758,7 @@ export class RandomEvents {
         let loss = Math.floor(v.funds * 0.1);
         v.funds = clampValue(v.funds - loss, 0, 99999);
         v.security = clampValue(v.security - 5, 0, 100);
-        v.log(`窃盗団:資金-${loss},治安-5`);
+        v.log(`盗賊団:資金-${loss},治安-5`);
         break;
       }
       case "rats": {
@@ -655,25 +768,26 @@ export class RandomEvents {
         break;
       }
       case "lightning1": {
-        if (v.villagers.length > 0) {
-          let t = this.randChoice(v.villagers);
+        if (getActiveVillagers(v).length > 0) {
+          let t = this.randChoice(getActiveVillagers(v));
           t.hp = clampValue(t.hp - 50, 0, 100);
-          t.bodyTraits.push("負傷");
+          if (!t.bodyTraits.includes("負傷")) t.bodyTraits.push("負傷");
           v.log(`落雷1:${t.name}体力-50,負傷`);
         }
         break;
       }
       case "lightning2": {
-        if (v.villagers.length >= 2) {
-          let a = this.randChoice(v.villagers);
-          let b = this.randChoice(v.villagers.filter(x => x !== a));
+        const candidates = getVillagersIncludingSaltPillar(v).filter(canExchangeBody);
+        if (candidates.length >= 2) {
+          let a = this.randChoice(candidates);
+          let b = this.randChoice(candidates.filter(x => x !== a));
           doExchange(a, b, v, true);
           v.log(`落雷2:${a.name}と${b.name}の肉体交換`);
         }
         break;
       }
       case "snow": {
-        v.villagers.forEach(p => {
+        getActiveVillagers(v).forEach(p => {
           p.hp = clampValue(p.hp - 5, 0, 100);
           p.mp = clampValue(p.mp - 5, 0, 100);
         });
@@ -681,17 +795,20 @@ export class RandomEvents {
         break;
       }
       case "fight": {
-        let candidates = v.villagers.filter(x => 
-          x.spiritSex === "男" &&
+        let candidates = getActiveVillagers(v).filter(x =>
           x.spiritAge >= 12 &&
-          x.eth <= 12 &&
-          !hasNonEnemyRelationship(x)
+          (x.eth <= 14 || (x.eth <= 18 && x.mp <= 40))
         );
 
         const pairs = [];
         candidates.forEach((a, index) => {
           candidates.slice(index + 1).forEach(b => {
-            if (!this.hasMutualRelationship(a, b, "天敵")) pairs.push([a, b]);
+            if (a.spiritSex === b.spiritSex &&
+                getPairFriendshipMinimum(a, b) <= 19 &&
+                !this.hasMutualRelationship(a, b, "天敵") &&
+                !this.hasFightBlockingRelationship(a, b)) {
+              pairs.push([a, b]);
+            }
           });
         });
 
@@ -703,18 +820,73 @@ export class RandomEvents {
 
           v.security = clampValue(v.security - 12, 0, 100);
 
-          this.addRelationship(a, `天敵:${b.name}`);
-          this.addRelationship(b, `天敵:${a.name}`);
-          recordSocialRelationHistory(v, a, b, "天敵");
+          const friendship = adjustMutualFriendship(a, b, -30);
+          let friendshipLoss = 30;
+          if (friendship <= -1) {
+            this.addRelationship(a, `天敵:${b.name}`);
+            this.addRelationship(b, `天敵:${a.name}`);
+            adjustMutualFriendship(a, b, -30);
+            friendshipLoss += 30;
+            recordSocialRelationHistory(v, a, b, "天敵");
+          }
 
-          v.log(`喧嘩イベント:${a.name}と${b.name}は殴り合いの大喧嘩をした！ 体力-20,治安-12`);
+          v.log(`喧嘩イベント:${a.name}と${b.name}は殴り合いの大喧嘩をした！ 体力-20,治安-12,好感度-${friendshipLoss}`);
         } else {
           return null;
         }
         break;
       }
+      case "loverArgument": {
+        const villagers = getActiveVillagers(v);
+        const pairs = [];
+        villagers.forEach((a, index) => {
+          villagers.slice(index + 1).forEach(b => {
+            if (this.hasMutualRelationship(a, b, "恋人")) {
+              pairs.push([a, b]);
+            }
+          });
+        });
+        if (pairs.length === 0) {
+          return null;
+        }
+
+        const [a, b] = this.randChoice(pairs);
+        adjustMutualFriendship(a, b, -20);
+        this.addForcedSpeaker(a);
+        this.addForcedSpeaker(b);
+        v.log(`痴話喧嘩:${a.name}と${b.name}は言葉をぶつけ合った。好感度-20`);
+        break;
+      }
+      case "argument": {
+        const pairs = [];
+        getActiveVillagers(v).forEach((a, index) => {
+          getActiveVillagers(v).slice(index + 1).forEach(b => {
+            pairs.push([a, b]);
+          });
+        });
+        if (pairs.length === 0) {
+          return null;
+        }
+
+        const [a, b] = this.randChoice(pairs);
+        const friendship = adjustMutualFriendship(a, b, -20);
+        let friendshipLoss = 20;
+        if (friendship <= -1 && !this.hasMutualRelationship(a, b, "天敵")) {
+          this.addRelationship(a, `天敵:${b.name}`);
+          this.addRelationship(b, `天敵:${a.name}`);
+          adjustMutualFriendship(a, b, -30);
+          friendshipLoss += 30;
+          recordSocialRelationHistory(v, a, b, "天敵");
+        }
+        a.happiness = clampValue(a.happiness - 10, 0, 100);
+        b.happiness = clampValue(b.happiness - 10, 0, 100);
+        this.addForcedSpeaker(a);
+        this.addForcedSpeaker(b);
+        v.log(`言い争い:${a.name}と${b.name}は言葉をぶつけ合った。好感度-${friendshipLoss},幸福-10`);
+        break;
+      }
       case "drunk": {
-        let candidates = v.villagers.filter(x => 
+        let candidates = getActiveVillagers(v).filter(x =>
           x.spiritSex === "男" &&
           x.bodyAge >= 12 &&
           x.eth <= 14 &&
@@ -724,7 +896,7 @@ export class RandomEvents {
         if (candidates.length > 0) {
           let a = this.randChoice(candidates);
           this.addForcedSpeaker(a);
-          
+
           v.security = clampValue(v.security - 12, 0, 100);
 
           v.log(`飲酒イベント:${a.name}は飲んだくれて騒ぎを起こした！ 治安-12`);
@@ -734,7 +906,7 @@ export class RandomEvents {
         break;
       }
       case "epidemic": {
-        const candidates = v.villagers.filter(x =>
+        const candidates = getActiveVillagers(v).filter(x =>
           Array.isArray(x.bodyTraits) && !x.bodyTraits.includes("疫病")
         );
 
@@ -794,6 +966,31 @@ export class RandomEvents {
       this.hasRelationshipTo(b, a, prefixes);
   }
 
+  static getPairRelationshipPrefixes(a, b) {
+    const prefixes = [];
+    [
+      [a, b],
+      [b, a]
+    ].forEach(([person, target]) => {
+      if (!person || !target?.name || !Array.isArray(person.relationships)) return;
+      person.relationships.forEach(existing => {
+        const parsed = parseRelationship(normalizeRelationship(existing));
+        if (parsed?.target === target.name) prefixes.push(parsed.prefix);
+      });
+    });
+    return [...new Set(prefixes)];
+  }
+
+  static isFightAllowedRelationshipPrefix(prefix) {
+    return FIGHT_ALLOWED_RELATION_PREFIXES.has(prefix) || String(prefix || "").endsWith("仲間");
+  }
+
+  static hasFightBlockingRelationship(a, b) {
+    return this.getPairRelationshipPrefixes(a, b).some(prefix =>
+      prefix !== "天敵" && !this.isFightAllowedRelationshipPrefix(prefix)
+    );
+  }
+
   static hasHobby(person, hobby) {
     return String(person?.hobby || "") === hobby;
   }
@@ -808,4 +1005,4 @@ export class RandomEvents {
   static addRelationship(person, rel) {
     addCategorizedRelationship(person, rel);
   }
-} 
+}

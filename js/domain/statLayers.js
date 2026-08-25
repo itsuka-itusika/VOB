@@ -1,27 +1,53 @@
 import { clampValue, round3 } from "../util.js";
-import { ABILITY_STATS, PHYSICAL_ABILITY_STATS } from "./personSchema.js";
+import { ABILITY_STATS, MENTAL_ABILITY_STATS, PHYSICAL_ABILITY_STATS } from "./personSchema.js";
 import { evaluateTitles } from "../titles.js";
+import { IMMATURE_MIND_TRAIT, OLD_WOLF_TRAIT, YOUNG_WOLF_TRAIT } from "./speciesTraits.js";
+import {
+  VILLAGE_ROLE_DOCTOR,
+  VILLAGE_ROLE_HEADMAN,
+  VILLAGE_ROLE_LIBRARIAN,
+  VILLAGE_ROLE_PRIEST,
+  getVillageRole
+} from "./villageRoles.js";
 
-export const STAT_LAYER_VERSION = 1;
+export const STAT_LAYER_VERSION = 2;
 
 const ZERO_STAT_MAP = Object.freeze(Object.fromEntries(ABILITY_STATS.map(stat => [stat, 0])));
+const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成"]);
 
 const PERMANENT_BODY_TRAIT_ADDS = Object.freeze({
+  "巨躯": { str: 10 },
+  "巨人": { str: 5, vit: 5 },
   "聖女の輝き": { mag: 10, chr: 10 },
   "大地の巫女": { vit: 10, chr: 10 },
   "月の巫女": { dex: 10, chr: 10 },
   "太陽の巫女": { str: 15, chr: 5 },
   "梟の巫女": { mag: 10, chr: 10 },
+  "光輪": { mag: 3, chr: 5 },
   "大地の加護": { vit: 5 },
   "月の加護": { dex: 5 },
   "太陽の加護": { str: 5 },
   "梟の加護": { mag: 5 },
-  "雷霆神の加護": Object.freeze(Object.fromEntries(PHYSICAL_ABILITY_STATS.map(stat => [stat, 3])))
+  "半人半馬": { str: 3, vit: 5 },
+  "雷霆の加護": Object.freeze(Object.fromEntries(PHYSICAL_ABILITY_STATS.map(stat => [stat, 3])))
 });
 
 const PERMANENT_MIND_TRAIT_ADDS = Object.freeze({
   "ニート": { ind: -2 },
-  "里長": { ind: 3, eth: 3, cou: 3 }
+  "狂信": { cou: 10 },
+  "餓狼": { cou: 8 },
+  "古代知識": { mag: 5 },
+  "聖霊の加護": { int: 3, ind: 3, eth: 3, cou: 3 },
+  "秘蹟：剣": { str: 10 },
+  "秘蹟：盾": { vit: 10 },
+  "秘蹟：光": { mag: 10 }
+});
+
+const VILLAGE_ROLE_ADDS = Object.freeze({
+  [VILLAGE_ROLE_HEADMAN]: { ind: 3, eth: 3, cou: 3 },
+  [VILLAGE_ROLE_LIBRARIAN]: { int: 1 },
+  [VILLAGE_ROLE_PRIEST]: { mag: 1 },
+  [VILLAGE_ROLE_DOCTOR]: { eth: 1 }
 });
 
 const TEMP_BODY_TRAIT_EFFECTS = Object.freeze({
@@ -31,15 +57,17 @@ const TEMP_BODY_TRAIT_EFFECTS = Object.freeze({
   "過労": { mul: { str: 0.25, vit: 0.25, dex: 0.25 } },
   "疫病": { mul: { str: 0.5, vit: 0.5, dex: 0.5 } },
   "臨月": { mul: { str: 0.5, vit: 0.5 } },
-  "産褥": { mul: { str: 0.5, vit: 0.5 } }
+  "産褥": { mul: { str: 0.5, vit: 0.5 } },
+  [YOUNG_WOLF_TRAIT]: { mul: Object.freeze(Object.fromEntries(PHYSICAL_ABILITY_STATS.map(stat => [stat, 0.25]))) }
 });
 
 const TEMP_MIND_TRAIT_EFFECTS = Object.freeze({
+  [IMMATURE_MIND_TRAIT]: { mul: Object.freeze(Object.fromEntries(MENTAL_ABILITY_STATS.map(stat => [stat, 0.25]))) },
   "心労": { mul: { int: 0.8, ind: 0.8, eth: 0.8, cou: 0.8, sexdr: 0.8 } },
   "抑鬱": { mul: { int: 0.25, ind: 0.25, eth: 0.25, cou: 0.25, sexdr: 0.25 } },
   "狂乱": { mul: { eth: 0.2 }, add: { sexdr: 15 } },
-  "酩酊": { mul: { ind: 0.2, eth: 0.2 }, add: { sexdr: 10 } },
-  "火星の加護": { mul: { mag: 0.2, int: 0.2, ind: 0.2, eth: 0.2 }, add: { str: 7, vit: 7, cou: 7 } },
+  "酩酊": { mul: { eth: 0.2 }, add: { sexdr: 10 } },
+  "火星の加護": { mul: { int: 0.2, ind: 0.2, eth: 0.2 }, add: { str: 7, vit: 7, cou: 7 } },
   "ニケ": { add: { cou: 10 } }
 });
 
@@ -84,6 +112,7 @@ function getTraitAdditions(person) {
 
   [...new Set(bodyTraits)].forEach(trait => addStats(additions, PERMANENT_BODY_TRAIT_ADDS[trait]));
   [...new Set(mindTraits)].forEach(trait => addStats(additions, PERMANENT_MIND_TRAIT_ADDS[trait]));
+  addStats(additions, VILLAGE_ROLE_ADDS[getVillageRole(person)]);
   return additions;
 }
 
@@ -112,7 +141,8 @@ function getTemporaryEffect(person, { includeLegacyAres = false } = {}) {
 function getAgeMultiplier(person, stat) {
   if (!["str", "vit", "chr"].includes(stat)) return 1;
   const bodyTraits = Array.isArray(person?.bodyTraits) ? person.bodyTraits : [];
-  if (bodyTraits.includes("老人")) return 0.375;
+  if (bodyTraits.some(trait => NO_AGING_BODY_TRAITS.has(trait))) return 1;
+  if (bodyTraits.includes("老人") || bodyTraits.includes(OLD_WOLF_TRAIT)) return 0.375;
   if (bodyTraits.includes("中年")) return 0.75;
   return 1;
 }
@@ -136,6 +166,17 @@ export function hasStatLayerData(source) {
   return !!source && typeof source.baseStats === "object" && source.baseStats !== null;
 }
 
+function hasBodyTrait(person, trait) {
+  return Array.isArray(person?.bodyTraits) && person.bodyTraits.includes(trait);
+}
+
+function migrateStatLayers(person, source) {
+  const version = Number(source?.statLayerVersion) || 0;
+  if (version < 2 && hasBodyTrait(person, "巨躯")) {
+    person.baseStats.str = clampValue(round3(numberOr(person.baseStats.str, 10) - 10), 0, 100);
+  }
+}
+
 export function ensureStatLayers(person) {
   if (!person) return person;
   if (!hasStatLayerData(person)) {
@@ -144,6 +185,7 @@ export function ensureStatLayers(person) {
   } else {
     person.baseStats = normalizeStatMap(person.baseStats, person, 10);
     person.acquiredStatMods = normalizeStatMap(person.acquiredStatMods, ZERO_STAT_MAP, 0);
+    migrateStatLayers(person, person);
   }
   person.statLayerVersion = STAT_LAYER_VERSION;
   return person;
@@ -154,6 +196,7 @@ export function hydrateStatLayersFromObject(person, source) {
   if (hasStatLayerData(source)) {
     person.baseStats = normalizeStatMap(source.baseStats, source, 10);
     person.acquiredStatMods = normalizeStatMap(source.acquiredStatMods, ZERO_STAT_MAP, 0);
+    migrateStatLayers(person, source);
   } else {
     person.baseStats = inferLegacyBaseStats(person);
     person.acquiredStatMods = createStatMap(0);
@@ -234,9 +277,6 @@ export function setBaseStatsFromEffective(person) {
 }
 
 export function applyGenerationBaseTraitBonuses(person) {
-  if (Array.isArray(person?.bodyTraits) && person.bodyTraits.includes("巨躯")) {
-    addBaseStat(person, "str", 10);
-  }
   if (Array.isArray(person?.mindTraits) && person.mindTraits.includes("箱入り")) {
     addBaseStat(person, "chr", 5);
   }

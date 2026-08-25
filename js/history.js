@@ -1,5 +1,10 @@
 import { getPortraitPath } from "./util.js";
+import { getPastPortraitFiles, isOriginalBodyOwner } from "./domain/portraitHistory.js";
+import { DEFAULT_PORTRAIT_KEY, isKnownPortraitKey, normalizePortraitKey } from "./data/portraitPaths.js";
 import { getPersonTitles } from "./titles.js";
+import { SPEECH_TYPE_MAPPING } from "./data/villagerData.js";
+import { showDictionaryEntry } from "./dictionary.js";
+import { combinedDictionaryData } from "./data/dictionaryData.js";
 
 export const HISTORY_EVENT_TYPES = Object.freeze({
   ARCHIVE_GAP: "archiveGap",
@@ -12,13 +17,15 @@ export const HISTORY_EVENT_TYPES = Object.freeze({
   MARRIAGE: "marriage",
   BIRTH: "birth",
   BODY_EXCHANGE: "bodyExchange",
+  DRYAD_FRUIT: "dryadFruit",
   MYTHIC_EVENT: "mythicEvent",
   LOVER: "lover",
   SOCIAL_RELATION: "socialRelation",
   HOBBY_AWAKENING: "hobbyAwakening",
   PREGNANCY: "pregnancy",
   ADULTHOOD: "adulthood",
-  CRITICAL: "critical"
+  CRITICAL: "critical",
+  APOCALYPSE: "apocalypse"
 });
 
 const HISTORY_TYPE_LABELS = Object.freeze({
@@ -32,13 +39,15 @@ const HISTORY_TYPE_LABELS = Object.freeze({
   [HISTORY_EVENT_TYPES.MARRIAGE]: "婚姻",
   [HISTORY_EVENT_TYPES.BIRTH]: "出生",
   [HISTORY_EVENT_TYPES.BODY_EXCHANGE]: "肉体交換",
+  [HISTORY_EVENT_TYPES.DRYAD_FRUIT]: "ドライアド化",
   [HISTORY_EVENT_TYPES.MYTHIC_EVENT]: "怪異",
   [HISTORY_EVENT_TYPES.LOVER]: "恋人",
   [HISTORY_EVENT_TYPES.SOCIAL_RELATION]: "交友",
   [HISTORY_EVENT_TYPES.HOBBY_AWAKENING]: "趣味",
   [HISTORY_EVENT_TYPES.PREGNANCY]: "妊娠",
   [HISTORY_EVENT_TYPES.ADULTHOOD]: "成人",
-  [HISTORY_EVENT_TYPES.CRITICAL]: "危篤"
+  [HISTORY_EVENT_TYPES.CRITICAL]: "危篤",
+  [HISTORY_EVENT_TYPES.APOCALYPSE]: "黙示録"
 });
 
 const HISTORY_SCOPES = Object.freeze({
@@ -234,12 +243,15 @@ export function recordVillagerLeaveHistory(village, person, options = {}) {
 
 export function recordVillagerDeathHistory(village, person, options = {}) {
   if (!person) return;
+  const reason = options.reason || "死亡";
   addHistoryEvent(village, {
     type: HISTORY_EVENT_TYPES.VILLAGER_DEATH,
     title: `${person.name}、逝く`,
-    text: `${person.name}が村での生を終えた。`,
+    text: reason === "死亡"
+      ? `${person.name}が村での生を終えた。`
+      : `${person.name}が${reason}により村での生を終えた。`,
     people: [person],
-    tags: ["死別", options.reason || "死亡"]
+    tags: ["死別", reason]
   });
 }
 
@@ -373,8 +385,23 @@ export function recordBodyExchangeHistory(village, personA, personB, options = {
   });
 }
 
+export function recordDryadFruitHistory(village, person, options = {}) {
+  if (!person) return;
+  const previousRace = options.previousRace || "人間";
+  addHistoryEvent(village, {
+    type: HISTORY_EVENT_TYPES.DRYAD_FRUIT,
+    title: `${person.name}、ドライアドの身体となる`,
+    text: `${person.name}がドライアドの果実を食べ、${previousRace}の身体からドライアドの身体となった。`,
+    people: [person],
+    importance: "minor",
+    scope: HISTORY_SCOPES.PERSON,
+    tags: ["ドライアドの果実", previousRace, "ドライアド"]
+  });
+}
+
 export function recordCriticalHistory(village, person, options = {}) {
   if (!person) return;
+  person.hasBeenCritical = true;
   const reason = options.reason || "老衰";
   addHistoryEvent(village, {
     type: HISTORY_EVENT_TYPES.CRITICAL,
@@ -402,6 +429,19 @@ export function recordMythicEventHistory(village, eventKey, person, options = {}
   });
 }
 
+export function recordApocalypsePersonalHistory(village, person, text, options = {}) {
+  if (!person || !text) return;
+  addHistoryEvent(village, {
+    type: HISTORY_EVENT_TYPES.APOCALYPSE,
+    title: options.title || "黙示録",
+    text,
+    people: [person],
+    importance: "minor",
+    scope: HISTORY_SCOPES.PERSON,
+    tags: ["黙示録", ...(Array.isArray(options.tags) ? options.tags : [])]
+  });
+}
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -409,6 +449,27 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function getDictionaryTermTitle(term) {
+  const entry = combinedDictionaryData[term];
+  return entry?.description || `${term}の辞書を表示`;
+}
+
+function renderDictionaryTerm(term) {
+  const label = String(term || "").trim();
+  if (!label) return "";
+  return `<span class="dictionary-term" tabindex="0" data-dictionary-term="${escapeHtml(label)}" title="${escapeHtml(getDictionaryTermTitle(label))}">${escapeHtml(label)}</span>`;
+}
+
+function bindDictionaryTerms(content) {
+  content.querySelectorAll("[data-dictionary-term]").forEach(element => {
+    const label = (element.dataset.dictionaryTerm || element.textContent || "").trim();
+    if (!label) return;
+    const showEntry = () => showDictionaryEntry(label);
+    element.addEventListener("mouseenter", showEntry);
+    element.addEventListener("focus", showEntry);
+  });
 }
 
 function formatHistoryDate(event) {
@@ -430,7 +491,9 @@ function getEventSource(event) {
 }
 
 function normalizeJoinSource(source) {
-  return source === "誘惑" ? "誘惑" : "勧誘";
+  if (source === "誘惑") return "誘惑";
+  if (source === "保護") return "保護";
+  return "勧誘";
 }
 
 function getBodyExchangeVillageText(event) {
@@ -488,7 +551,12 @@ function getVillageHistoryText(event) {
       if (personA) return `${personA}が村を去った。`;
       break;
     case HISTORY_EVENT_TYPES.VILLAGER_DEATH:
-      if (personA) return `${personA}が村での生を終えた。`;
+      if (personA) {
+        const reason = getEventSource(event);
+        return reason && reason !== "死亡"
+          ? `${personA}が${reason}により村での生を終えた。`
+          : `${personA}が村での生を終えた。`;
+      }
       break;
     case HISTORY_EVENT_TYPES.MARRIAGE:
       if (personA && personB) return `${personA}と${personB}が夫婦となった。`;
@@ -502,6 +570,8 @@ function getVillageHistoryText(event) {
     case HISTORY_EVENT_TYPES.BODY_EXCHANGE:
       if (personA && personB) return getBodyExchangeVillageText(event);
       break;
+    case HISTORY_EVENT_TYPES.DRYAD_FRUIT:
+      return cleanRecordText(event.text || event.title);
     case HISTORY_EVENT_TYPES.MYTHIC_EVENT:
       return cleanRecordText(event.text || event.title);
     case HISTORY_EVENT_TYPES.LOVER:
@@ -528,6 +598,8 @@ function getPersonalHistoryText(event, personName) {
   switch (event.type) {
     case HISTORY_EVENT_TYPES.BODY_EXCHANGE:
       return getBodyExchangePersonalText(event, otherName);
+    case HISTORY_EVENT_TYPES.DRYAD_FRUIT:
+      return cleanRecordText(event.text).replace(`${personName}が`, "").trim() || "ドライアドの身体となった。";
     case HISTORY_EVENT_TYPES.MARRIAGE:
       return otherName ? `${otherName}と夫婦となった。` : cleanRecordText(event.text);
     case HISTORY_EVENT_TYPES.LOVER:
@@ -568,7 +640,9 @@ function getPersonalHistoryText(event, personName) {
     case HISTORY_EVENT_TYPES.VILLAGER_LEAVE:
       return "村を去った。";
     case HISTORY_EVENT_TYPES.VILLAGER_DEATH:
-      return "村での生を終えた。";
+      return getEventSource(event) && getEventSource(event) !== "死亡"
+        ? `${getEventSource(event)}により村での生を終えた。`
+        : "村での生を終えた。";
     case HISTORY_EVENT_TYPES.ADULTHOOD:
       return "成人した。";
     case HISTORY_EVENT_TYPES.CRITICAL:
@@ -643,7 +717,7 @@ function formatRelationshipCategory(person, category) {
   const relationships = Array.isArray(person.relationships) ? person.relationships : [];
   const labels = relationships
     .map(parsePersonalRelationship)
-    .filter(item => item?.category === category)
+    .filter(item => item?.category === category && !item.label.startsWith("村設立の同志："))
     .map(item => item.label);
   return labels.length > 0 ? [...new Set(labels)].join("、") : "なし";
 }
@@ -656,17 +730,186 @@ function renderPersonalTitleSummary(person) {
   )).join("、");
 }
 
+function getPersonalityTrait(person) {
+  const mindTraits = Array.isArray(person?.mindTraits) ? person.mindTraits : [];
+  return mindTraits.find(trait => Object.prototype.hasOwnProperty.call(SPEECH_TYPE_MAPPING, trait)) || "特徴なし";
+}
+
+const BODY_EXCHANGE_PORTRAIT_SOURCES = new Set(["奇跡", "落雷", "秘宝", "生成時交換"]);
+
+function hasPortraitImage(portraitFile) {
+  const portraitKey = normalizePortraitKey(portraitFile);
+  return portraitKey !== DEFAULT_PORTRAIT_KEY && isKnownPortraitKey(portraitKey);
+}
+
+function isLegacyOriginalBodyEntry(entry) {
+  if (typeof entry.isOriginalBody === "boolean" || entry.bodyOwner) return false;
+  return entry.caption === "元の身体" || (!entry.caption && BODY_EXCHANGE_PORTRAIT_SOURCES.has(entry.source));
+}
+
+function getPastPortraitCaption(entry, person, index, legacyOriginalBodyIndex) {
+  if (entry.isOriginalBody === true) return "元の身体";
+  if (entry.isOriginalBody === false) return entry.caption && entry.caption !== "元の身体" ? entry.caption : "過去の姿";
+  if (entry.bodyOwner) {
+    return isOriginalBodyOwner(person?.name, entry.bodyOwner) ? "元の身体" : "過去の姿";
+  }
+  if (isLegacyOriginalBodyEntry(entry)) {
+    return index === legacyOriginalBodyIndex ? "元の身体" : "過去の姿";
+  }
+  if (entry.caption) return entry.caption;
+  return "過去の姿";
+}
+
+function makePortraitStep(portraitFile, caption) {
+  return {
+    path: getPortraitPath({ portraitFile }),
+    hasImage: hasPortraitImage(portraitFile),
+    caption
+  };
+}
+
+function makeCurrentPortraitStep(person) {
+  return makePortraitStep(person?.portraitFile, "現在の姿");
+}
+
+function getPastPortraitSequence(person) {
+  const currentPath = makeCurrentPortraitStep(person).path;
+  const entries = getPastPortraitFiles(person);
+  const legacyOriginalBodyIndex = entries.findIndex(isLegacyOriginalBodyEntry);
+  const pastPortraits = entries
+    .map((entry, index) => makePortraitStep(
+      entry.portraitFile,
+      getPastPortraitCaption(entry, person, index, legacyOriginalBodyIndex)
+    ));
+  return pastPortraits.some(step => step.path !== currentPath) ? pastPortraits.reverse() : [];
+}
+
+function renderPastPortraitControls(person) {
+  const currentPortrait = makeCurrentPortraitStep(person);
+  const pastPortraits = getPastPortraitSequence(person);
+  if (pastPortraits.length === 0) return "";
+
+  return `
+    <div
+      class="personal-history-portrait-controls"
+      data-portrait-controls
+      data-current-portrait="${escapeHtml(JSON.stringify(currentPortrait))}"
+      data-past-portraits="${escapeHtml(JSON.stringify(pastPortraits))}"
+    >
+      <button type="button" class="personal-history-portrait-nav-button" data-portrait-step="older" aria-label="過去の肖像へ">&lt;&lt;</button>
+      <span class="personal-history-portrait-caption" data-portrait-caption>${escapeHtml(currentPortrait.caption)}</span>
+      <button type="button" class="personal-history-portrait-nav-button" data-portrait-step="newer" aria-label="現在に近い肖像へ">&gt;&gt;</button>
+    </div>
+  `;
+}
+
+function renderPortraitFrame(person) {
+  const currentPortrait = makeCurrentPortraitStep(person);
+  const hiddenAttr = currentPortrait.hasImage ? "" : " hidden";
+  const unknownHiddenAttr = currentPortrait.hasImage ? " hidden" : "";
+  const unknownClass = currentPortrait.hasImage ? "" : " is-unknown";
+  return `
+    <div class="personal-history-portrait-frame${unknownClass}" data-personal-history-portrait-frame>
+      <img data-personal-history-portrait src="${escapeHtml(currentPortrait.path)}" alt="${escapeHtml(person.name)}"${hiddenAttr}>
+      <span class="personal-history-portrait-unknown" data-personal-history-portrait-unknown${unknownHiddenAttr}>不明</span>
+    </div>
+  `;
+}
+
+function setPersonalHistoryPortrait(frame, portrait, unknown, step) {
+  if (!frame || !portrait || !unknown || !step) return;
+  if (!step.hasImage) {
+    portrait.hidden = true;
+    unknown.hidden = false;
+    frame.classList.add("is-unknown");
+    return;
+  }
+  frame.classList.remove("is-unknown");
+  unknown.hidden = true;
+  portrait.hidden = false;
+  portrait.src = step.path;
+}
+
+function bindPersonalHistoryPortraitFallback(content) {
+  const frame = content.querySelector("[data-personal-history-portrait-frame]");
+  const portrait = content.querySelector("[data-personal-history-portrait]");
+  const unknown = content.querySelector("[data-personal-history-portrait-unknown]");
+  if (!frame || !portrait || !unknown) return;
+
+  portrait.addEventListener("error", () => {
+    portrait.hidden = true;
+    unknown.hidden = false;
+    frame.classList.add("is-unknown");
+  });
+}
+
+function bindPastPortraitControls(content) {
+  const controls = content.querySelector("[data-portrait-controls]");
+  const portrait = content.querySelector("[data-personal-history-portrait]");
+  const frame = content.querySelector("[data-personal-history-portrait-frame]");
+  const unknown = content.querySelector("[data-personal-history-portrait-unknown]");
+  const caption = content.querySelector("[data-portrait-caption]");
+  const olderButton = content.querySelector('[data-portrait-step="older"]');
+  const newerButton = content.querySelector('[data-portrait-step="newer"]');
+  if (!controls || !portrait || !frame || !unknown || !caption || !olderButton || !newerButton) return;
+
+  let currentPortrait = null;
+  let pastPortraits = [];
+  try {
+    currentPortrait = JSON.parse(controls.dataset.currentPortrait || "null");
+    pastPortraits = JSON.parse(controls.dataset.pastPortraits || "[]");
+  } catch (error) {
+    currentPortrait = null;
+    pastPortraits = [];
+  }
+  if (!currentPortrait?.path) return;
+  pastPortraits = pastPortraits.filter(step => step?.path);
+
+  const portraitSteps = [currentPortrait, ...pastPortraits];
+  let portraitIndex = 0;
+  const renderPortraitStep = () => {
+    const step = portraitSteps[portraitIndex];
+    setPersonalHistoryPortrait(frame, portrait, unknown, step);
+    caption.textContent = step.caption || (portraitIndex === 0 ? "現在の姿" : "過去の姿");
+    olderButton.disabled = portraitIndex >= portraitSteps.length - 1;
+    newerButton.disabled = portraitIndex <= 0;
+  };
+
+  olderButton.addEventListener("click", () => {
+    if (portraitIndex >= portraitSteps.length - 1) return;
+    portraitIndex += 1;
+    renderPortraitStep();
+  });
+  newerButton.addEventListener("click", () => {
+    if (portraitIndex <= 0) return;
+    portraitIndex -= 1;
+    renderPortraitStep();
+  });
+  renderPortraitStep();
+}
+
 function renderPersonalHistorySummary(person) {
   const profileFields = [
     { label: "名前", value: person.name || "不明", className: "is-name" },
-    { label: "種族", value: person.race || "人間", className: "is-race" },
+    { label: "種族", valueHtml: renderDictionaryTerm(person.race || "人間"), className: "is-race" },
     { label: "肉体", value: `${person.bodyAge ?? "?"}歳/${person.bodySex || "不明"}`, className: "is-body" },
     { label: "精神", value: `${person.spiritAge ?? "?"}歳/${person.spiritSex || "不明"}`, className: "is-spirit" },
+    { label: "性格", value: getPersonalityTrait(person), className: "is-personality" },
     { label: "趣味", value: person.hobby || "なし", className: "is-hobby" }
   ];
+  const familyRelations = formatRelationshipCategory(person, "family");
+  const socialRelations = formatRelationshipCategory(person, "social");
   const relationshipFields = [
-    { label: "家族関係", value: formatRelationshipCategory(person, "family") },
-    { label: "人間関係", value: formatRelationshipCategory(person, "social") }
+    { label: "家族関係", value: familyRelations },
+    {
+      label: "人間関係",
+      valueHtml: `
+        <span class="personal-history-relationship-text">${escapeHtml(socialRelations)}</span>
+        <span class="personal-history-detail-row">
+          <button type="button" class="personal-history-detail-button" data-open-friendship-detail>詳細</button>
+        </span>
+      `
+    }
   ];
   const detailFields = [
     ...relationshipFields,
@@ -674,14 +917,15 @@ function renderPersonalHistorySummary(person) {
   ];
   return `
     <section class="personal-history-summary">
-      <div class="personal-history-portrait-frame">
-        <img src="${escapeHtml(getPortraitPath(person))}" alt="${escapeHtml(person.name)}">
+      <div class="personal-history-portrait-area">
+        ${renderPortraitFrame(person)}
+        ${renderPastPortraitControls(person)}
       </div>
       <div class="personal-history-profile">
         <div class="personal-history-profile-grid">
           <div class="personal-history-profile-table">
             ${profileFields.map(field => `<span class="personal-history-profile-label ${escapeHtml(field.className)}">${escapeHtml(field.label)}</span>`).join("")}
-            ${profileFields.map(field => `<strong class="personal-history-profile-value ${escapeHtml(field.className)}">${escapeHtml(field.value)}</strong>`).join("")}
+            ${profileFields.map(field => `<strong class="personal-history-profile-value ${escapeHtml(field.className)}">${field.valueHtml ?? escapeHtml(field.value)}</strong>`).join("")}
           </div>
           ${detailFields.map(field => `
             <div class="personal-history-profile-field is-detail">
@@ -715,6 +959,13 @@ export function openPersonalHistoryModal(village, person, options = {}) {
       ? `<div class="history-list">${events.map(event => renderHistoryEntry(event, { personName: person.name })).join("")}</div>`
       : `<div class="history-empty">この人物の歩みは、まだ村の帳面には記されていない。</div>`}
   `;
+  bindPersonalHistoryPortraitFallback(content);
+  bindPastPortraitControls(content);
+  bindDictionaryTerms(content);
+  content.querySelector("[data-open-friendship-detail]")?.addEventListener("click", async () => {
+    const { openFriendshipDetailModal } = await import("./relationships.js");
+    openFriendshipDetailModal(village, person);
+  });
 
   overlay.style.display = "block";
   modal.style.display = "block";

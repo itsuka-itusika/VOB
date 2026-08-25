@@ -1,27 +1,82 @@
 import { Villager } from "./classes.js";
-import { randChoice, clampValue, randFloat, getPortraitPath } from "./util.js";
+import { randChoice, randInt, clampValue, randFloat, getPortraitPath } from "./util.js";
 import {
   generateRandomName,
+  createRandomVillager,
   assignBodyMindTraits,
   assignHobby,
   determineSpeechType,
-  selectPortraitByCharacter,
-  selectToddlerPortraitByCharacter
+  selectPortraitByCharacter
 } from "./createVillagers.js";
 import { refreshJobTable } from "./domain/jobTables.js";
+import { addNonHousePopLimitBonus } from "./domain/buildingState.js";
+import {
+  ALSEID_PORTRAIT_FILES,
+  ARACHNID_PORTRAIT_FILES,
+  BABY_FEMALE_PORTRAIT_KEY,
+  BABY_MALE_PORTRAIT_KEY,
+  CENTAUR_PORTRAIT_FILES,
+  CYCLOPS_PORTRAIT_FILES,
+  DRYAD_PORTRAIT_FILES,
+  EQUINA_PORTRAIT_FILES,
+  GOBLIN_PORTRAIT_FILES,
+  HARPY_PORTRAIT_FILES,
+  MAENAD_PORTRAIT_FILES,
+  NEREID_PORTRAIT_FILES,
+  SATYR_PORTRAIT_FILES,
+  WOLF_PUP_PORTRAIT_KEY,
+  WINGED_PORTRAIT_FILES
+} from "./data/portraitPaths.js";
+import { getRaiderTypeByType } from "./data/raidData.js";
 import { getBaseStat, setBaseStat, setBaseStatsFromEffective, syncEffectiveStats } from "./domain/statLayers.js";
+import { IMMATURE_MIND_TRAIT, OLD_WOLF_TRAIT, syncWolfSpeciesTraits, WILD_MIND_TRAIT, YOUNG_WOLF_TRAIT } from "./domain/speciesTraits.js";
+import { getRaiderSpeechType } from "./domain/raiderSpeechTypes.js";
 import { recordAdulthoodHistory, recordBirthHistory, recordPregnancyHistory } from "./history.js";
 import { addRelationship, checkHasRelationship, getRelationshipTargetName, normalizeRelationship } from "./relationships.js";
 import { getDialogueLine } from "./dialogue/dialogueEngine.js";
+import { isSaltPillar } from "./domain/apocalypseRules.js";
 
-const HUMANOID_RACES = new Set(["人間", "ハーピー", "半神", "キュクロプス", "サイクロプス", "巨人"]);
+const HUMANOID_RACES = new Set(["人間", "ゴブリン", "ハーピー", "半神", "キュクロプス", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド", "エクイナ", "サテュロス", "メナド", "セントール"]);
+const FEMALE_FIXED_RACES = new Set(["ハーピー", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド", "エクイナ", "メナド"]);
+const LONG_LIVED_RACES = new Set(["ドライアド", "ネレイド", "アルセイド", "翼人"]);
+const RACE_BODY_TRAITS = {
+  "翼人": ["飛行", "光輪"],
+  "アルセイド": ["緑の指", "不老"],
+  "ネレイド": ["水中呼吸", "不老"],
+  "ドライアド": ["緑の指", "光合成"],
+  "アラクニド": ["糸吐き"],
+  "キュクロプス": ["巨人", "単眼"],
+  "ハーピー": ["飛行", "澄んだ声"],
+  "エクイナ": ["健脚"],
+  "サテュロス": ["山羊角", "通る声"],
+  "メナド": ["山羊角", "澄んだ声"],
+  "セントール": ["半人半馬"]
+};
+const CHILD_ADULT_PORTRAITS_BY_RACE = new Map([
+  ["ゴブリン", GOBLIN_PORTRAIT_FILES],
+  ["ハーピー", HARPY_PORTRAIT_FILES],
+  ["キュクロプス", CYCLOPS_PORTRAIT_FILES],
+  ["翼人", WINGED_PORTRAIT_FILES],
+  ["アルセイド", ALSEID_PORTRAIT_FILES],
+  ["ネレイド", NEREID_PORTRAIT_FILES],
+  ["ドライアド", DRYAD_PORTRAIT_FILES],
+  ["アラクニド", ARACHNID_PORTRAIT_FILES],
+  ["エクイナ", EQUINA_PORTRAIT_FILES],
+  ["サテュロス", SATYR_PORTRAIT_FILES],
+  ["メナド", MAENAD_PORTRAIT_FILES],
+  ["セントール", CENTAUR_PORTRAIT_FILES],
+  ["狼", Array.from({ length: 6 }, (_, index) => `WOLF${index + 1}.png`)]
+]);
 const PHYSICAL_STATS = ["str", "vit", "dex", "mag", "chr"];
 const MENTAL_STATS = ["int", "ind", "eth", "cou", "sexdr"];
-const CHILD_BODY_TRAITS = ["赤子", "子供", "少年", "少女"];
+const CHILD_BODY_TRAITS = ["赤子", "幼児", "少年", "少女"];
 const CHILD_MIND_TRAITS = ["無垢", "萌芽", "思春期"];
 const PREGNANCY_FULL_TERM_MONTHS = 10;
 const POSTPARTUM_MONTHS = 3;
-const THUNDER_BLESSING_TRAIT = "雷霆神の加護";
+const THUNDER_BLESSING_TRAIT = "雷霆の加護";
+const HOLY_SPIRIT_BLESSING_TRAIT = "聖霊の加護";
+const GOLDEN_RAIN_PREGNANCY_KIND = "goldenRain";
+const ANNUNCIATION_PREGNANCY_KIND = "annunciationPainting";
 const GENETIC_EXCLUDED_BODY_TRAITS = new Set([
   "火星の加護",
   "飢餓",
@@ -31,7 +86,9 @@ const GENETIC_EXCLUDED_BODY_TRAITS = new Set([
   "疫病",
   "産褥",
   "中年",
-  "老人"
+  "老人",
+  YOUNG_WOLF_TRAIT,
+  OLD_WOLF_TRAIT
 ]);
 const VIRTUAL_THUNDER_FATHER = {
   name: "不明",
@@ -49,6 +106,23 @@ const VIRTUAL_THUNDER_FATHER = {
   eth: 30,
   cou: 30,
   sexdr: 40
+};
+const VIRTUAL_ANNUNCIATION_FATHER = {
+  name: "不明",
+  bodyOwner: "不明",
+  race: "人間",
+  bodySex: "男",
+  bodyTraits: [],
+  str: 30,
+  vit: 30,
+  dex: 30,
+  mag: 30,
+  chr: 30,
+  int: 30,
+  ind: 30,
+  eth: 40,
+  cou: 30,
+  sexdr: 20
 };
 
 function hasTrait(person, trait) {
@@ -68,12 +142,20 @@ function removeTraits(list, traits) {
 }
 
 function isHumanoid(person) {
-  return HUMANOID_RACES.has(person?.race || "人間");
+  return HUMANOID_RACES.has(normalizeChildRace(person?.race));
 }
 
 function normalizeChildRace(race) {
   if (race === "サイクロプス" || race === "巨人") return "キュクロプス";
   return race || "人間";
+}
+
+function isFemaleFixedRace(race) {
+  return FEMALE_FIXED_RACES.has(normalizeChildRace(race));
+}
+
+function isLongLivedRace(race) {
+  return LONG_LIVED_RACES.has(normalizeChildRace(race));
 }
 
 function snapshotParent(person) {
@@ -137,6 +219,25 @@ function applyInheritedBodyTraits(child, traits) {
   syncEffectiveStats(child);
 }
 
+function applyInheritedMindTraits(child, traits) {
+  traits.forEach(trait => addUnique(child.mindTraits, trait));
+  syncEffectiveStats(child);
+}
+
+function applyRaceBodyTraits(character) {
+  (RACE_BODY_TRAITS[normalizeChildRace(character?.race)] || [])
+    .forEach(trait => addUnique(character.bodyTraits, trait));
+  syncWolfSpeciesTraits(character);
+  syncEffectiveStats(character);
+}
+
+function selectAdultPortraitForChild(child, adult) {
+  const portraits = CHILD_ADULT_PORTRAITS_BY_RACE.get(normalizeChildRace(child?.race));
+  return Array.isArray(portraits) && portraits.length > 0
+    ? randChoice(portraits)
+    : selectPortraitByCharacter(adult);
+}
+
 function hasOwnChildInVillage(village, parent) {
   if (!Array.isArray(parent?.relationships)) return false;
   return parent.relationships.some(rel => normalizeRelationship(rel).startsWith("【家族関係】子："));
@@ -154,11 +255,17 @@ function getBuddingStatusLine(character) {
   return randChoice(character?.spiritSex === "女" ? femaleLines : maleLines);
 }
 
+function isPregnancyAge(person, maxAge) {
+  const age = Number(person?.bodyAge) || 0;
+  return age >= 16 && (isLongLivedRace(person?.race) || age <= maxAge);
+}
+
 function canBeMother(person, village) {
   return isHumanoid(person) &&
+    !isSaltPillar(person) &&
     person.bodySex === "女" &&
-    Number(person.bodyAge) >= 16 &&
-    Number(person.bodyAge) <= 38 &&
+    isPregnancyAge(person, 38) &&
+    !hasMindTrait(person, "神聖") &&
     checkHasRelationship(person, "既婚") &&
     !person.pregnancy &&
     !hasTrait(person, "妊娠") &&
@@ -169,19 +276,48 @@ function canBeMother(person, village) {
 
 function canBeFather(person) {
   return isHumanoid(person) &&
+    !isSaltPillar(person) &&
     person.bodySex === "男" &&
     Number(person.bodyAge) >= 12;
 }
 
-function canReceiveGoldenRainPregnancy(person) {
-  return isHumanoid(person) &&
+function canReceiveMysticPregnancy(person) {
+  return !isSaltPillar(person) &&
     person.bodySex === "女" &&
-    Number(person.bodyAge) >= 16 &&
-    Number(person.bodyAge) <= 29 &&
     !person.pregnancy &&
     !hasTrait(person, "妊娠") &&
     !hasTrait(person, "臨月") &&
     !hasTrait(person, "産褥");
+}
+
+export function canReceiveGoldenRainPregnancy(person) {
+  return isHumanoid(person) && canReceiveMysticPregnancy(person) && isPregnancyAge(person, 29);
+}
+
+function canReceiveAnnunciationPregnancy(person) {
+  return isHumanoid(person) && canReceiveMysticPregnancy(person);
+}
+
+// 神秘の妊娠の予約は肉体に紐づく。肉体交換が起きた場合は、その身体を得た人物へ移る。
+function getBodyIdentity(person) {
+  return person?.bodyOwner || person?.name || "";
+}
+
+function matchesPendingMysticTarget(entry, person) {
+  // targetName は肉体紐づけ以前の保存データ向けの読み替え。
+  const target = entry?.targetBodyOwner || entry?.targetName;
+  return !!target && target === getBodyIdentity(person);
+}
+
+function hasPendingMysticPregnancy(village, person) {
+  return Array.isArray(village?.pendingGoldenRainPregnancies) &&
+    village.pendingGoldenRainPregnancies.some(entry => matchesPendingMysticTarget(entry, person));
+}
+
+export function canUseAnnunciationPaintingOn(person, village) {
+  if (!canReceiveAnnunciationPregnancy(person) || hasPendingMysticPregnancy(village, person)) return false;
+  const age = Number(person.bodyAge) || 0;
+  return age >= 16;
 }
 
 function getNextMonthDate(village) {
@@ -197,24 +333,63 @@ function isDue(village, due) {
 }
 
 export function scheduleGoldenRainPregnancy(village, mother) {
-  if (!village || !mother || !canReceiveGoldenRainPregnancy(mother)) return false;
+  if (!village || !mother || !canReceiveGoldenRainPregnancy(mother) || hasPendingMysticPregnancy(village, mother)) return false;
   if (!Array.isArray(village.pendingGoldenRainPregnancies)) {
     village.pendingGoldenRainPregnancies = [];
   }
   const due = getNextMonthDate(village);
   village.pendingGoldenRainPregnancies.push({
-    targetName: mother.name,
+    targetBodyOwner: getBodyIdentity(mother),
     dueYear: due.year,
-    dueMonth: due.month
+    dueMonth: due.month,
+    kind: GOLDEN_RAIN_PREGNANCY_KIND
   });
   village.log(`${mother.name}は黄金の雨を浴びました。来月、神秘の妊娠が訪れるかもしれません。`);
   return true;
 }
 
-function decideChildSex(race) {
-  if (race === "ハーピー") return "女";
-  if (race === "キュクロプス" || race === "サイクロプス" || race === "巨人") return "男";
+export function scheduleAnnunciationPaintingPregnancy(village, mother) {
+  if (!village || !mother || !canUseAnnunciationPaintingOn(mother, village)) return false;
+  if (!Array.isArray(village.pendingGoldenRainPregnancies)) {
+    village.pendingGoldenRainPregnancies = [];
+  }
+  const due = getNextMonthDate(village);
+  village.pendingGoldenRainPregnancies.push({
+    targetBodyOwner: getBodyIdentity(mother),
+    dueYear: due.year,
+    dueMonth: due.month,
+    kind: ANNUNCIATION_PREGNANCY_KIND
+  });
+  village.log(`【秘宝】${mother.name}は告天使の絵画から降り注ぐ光を受けました。翌月、神秘の妊娠が訪れます。`);
+  return true;
+}
+
+function decideChildSex() {
   return Math.random() < 0.5 ? "男" : "女";
+}
+
+function decideChildRace(childSex, motherSnapshot, fatherSnapshot, explicitRace = null) {
+  if (explicitRace) return normalizeChildRace(explicitRace);
+  const motherRace = normalizeChildRace(motherSnapshot?.race);
+  if (motherRace === "エクイナ") {
+    return childSex === "男" ? "セントール" : "エクイナ";
+  }
+  if (motherRace === "メナド") {
+    return childSex === "男" ? "サテュロス" : "メナド";
+  }
+  if (childSex === "男" && isFemaleFixedRace(motherSnapshot?.race)) {
+    return "人間";
+  }
+  return motherRace;
+}
+
+function decidePregnancyChildRace(childSex, motherSnapshot, fatherSnapshot, options = {}) {
+  const raceFatherSnapshot = options.childRaceFatherSnapshot || fatherSnapshot;
+  const childRace = decideChildRace(childSex, motherSnapshot, raceFatherSnapshot, options.childRace);
+  if (options.humanChildRace && childRace === "人間") {
+    return normalizeChildRace(options.humanChildRace);
+  }
+  return childRace;
 }
 
 function inheritStat(mother, father, stat, variance) {
@@ -302,12 +477,9 @@ function buildAdultTemplate(child, potentialStats) {
   assignBodyMindTraits(adult);
   adult.bodyTraits = removeTraits(adult.bodyTraits, ["中年", "老人"]);
   adult.mindTraits = removeTraits(adult.mindTraits, CHILD_MIND_TRAITS);
-  if (adult.race === "ハーピー") {
-    addUnique(adult.bodyTraits, "飛行");
-    addUnique(adult.bodyTraits, "澄んだ声");
-  }
+  applyRaceBodyTraits(adult);
   assignHobby(adult);
-  adult.portraitFile = selectPortraitByCharacter(adult);
+  adult.portraitFile = selectAdultPortraitForChild(child, adult);
   return adult;
 }
 
@@ -360,24 +532,61 @@ function chooseChildMindTrait(child) {
 }
 
 function setChildPortrait(child) {
-  if (child.bodyAge < 10) {
-    if (child.bodyAge <= 3) {
-      child.portraitFile = child.bodySex === "男" ? "../malebaby.png" : "../femalebaby.png";
-    } else {
-      if (!child.toddlerPortraitFile) {
-        child.toddlerPortraitFile = selectToddlerPortraitByCharacter(child);
-      }
-      child.portraitFile = child.toddlerPortraitFile;
-    }
+  if (child.race === "狼") {
+    child.portraitFile = child.bodyAge === 0
+      ? WOLF_PUP_PORTRAIT_KEY
+      : (child.adultPortraitFile || "WOLF1.png");
+    return;
+  }
+
+  if (child.bodyAge <= 3) {
+    child.portraitFile = child.bodySex === "男" ? BABY_MALE_PORTRAIT_KEY : BABY_FEMALE_PORTRAIT_KEY;
   } else if (child.adultPortraitFile) {
     child.portraitFile = child.adultPortraitFile;
   }
 }
 
+export function createWolfFoundling(village) {
+  const sex = Math.random() < 0.5 ? "男" : "女";
+  const wolfType = getRaiderTypeByType("狼");
+  const child = createRandomVillager({
+    sex,
+    minAge: 0,
+    maxAge: 0,
+    existingNames: village.villagers.map(person => person.name),
+    params: {
+      ...wolfType.params,
+      race: wolfType.race
+    },
+    ranges: wolfType.ranges
+  });
+  child.spiritAge = 0;
+  child.spiritSex = sex;
+  const exclusiveMindTrait = child.mindTraits[0];
+  child.bodyTraits = [randChoice(wolfType.bodyTraits), ...wolfType.forcedBodyTraits, YOUNG_WOLF_TRAIT];
+  child.mindTraits = [exclusiveMindTrait, WILD_MIND_TRAIT, IMMATURE_MIND_TRAIT].filter(Boolean);
+  child.hobby = randChoice(wolfType.hobbies);
+  child.speechType = getRaiderSpeechType(wolfType.type);
+  child.portraitFile = WOLF_PUP_PORTRAIT_KEY;
+  child.adultPortraitFile = randChoice(wolfType.portraits);
+  syncWolfSpeciesTraits(child, { includeWildMindTrait: true });
+  syncEffectiveStats(child);
+  updateChildGrowthStage(child, village);
+  return child;
+}
+
 export function updateChildGrowthStage(child, village, { announce = false } = {}) {
   const bodyPotential = child.bodyPotentialStats !== undefined ? child.bodyPotentialStats : child.potentialStats;
   const mindPotential = child.mindPotentialStats !== undefined ? child.mindPotentialStats : child.potentialStats;
-  if (!child.potentialStats && !bodyPotential && !mindPotential) return;
+  if (!child.potentialStats && !bodyPotential && !mindPotential) {
+    if (child.race === "狼") {
+      syncWolfSpeciesTraits(child);
+      syncEffectiveStats(child);
+      setChildPortrait(child);
+      refreshJobTable(child, village);
+    }
+    return;
+  }
 
   applyGrowthStats(child);
 
@@ -386,9 +595,9 @@ export function updateChildGrowthStage(child, village, { announce = false } = {}
     addUnique(child.bodyTraits, "赤子");
   } else if (child.bodyAge <= 9) {
     child.bodyTraits = removeTraits(child.bodyTraits, ["赤子", "少年", "少女"]);
-    addUnique(child.bodyTraits, "子供");
+    addUnique(child.bodyTraits, "幼児");
   } else if (child.bodyAge <= 15) {
-    child.bodyTraits = removeTraits(child.bodyTraits, ["赤子", "子供"]);
+    child.bodyTraits = removeTraits(child.bodyTraits, ["赤子", "幼児"]);
     addUnique(child.bodyTraits, child.bodySex === "男" ? "少年" : "少女");
   } else {
     const currentBodyTraits = removeTraits(child.bodyTraits, CHILD_BODY_TRAITS);
@@ -420,13 +629,14 @@ export function updateChildGrowthStage(child, village, { announce = false } = {}
   }
 
   child.speechType = determineSpeechType(child);
+  syncWolfSpeciesTraits(child);
   syncEffectiveStats(child);
   setChildPortrait(child);
   refreshJobTable(child, village);
 
   if (announce) {
     if (child.bodyAge === 4 || child.spiritAge === 4) {
-      village.log(`${child.name}は子供期に入りました`);
+      village.log(`${child.name}は幼児期に入りました`);
     } else if (child.bodyAge === 10 || child.spiritAge === 10) {
       village.log(`${child.name}は少年期に入りました`);
     } else if (child.bodyAge === 16 || child.spiritAge === 16) {
@@ -458,6 +668,7 @@ export function matureBodyToAdultOnly(character, village) {
 
   const currentBodyTraits = removeTraits(character.bodyTraits, CHILD_BODY_TRAITS);
   character.bodyTraits = [...new Set([...(character.adultBodyTraits || []), ...currentBodyTraits])];
+  syncWolfSpeciesTraits(character);
   syncEffectiveStats(character);
 
   if (!character.adultPortraitFile) {
@@ -470,6 +681,7 @@ export function matureBodyToAdultOnly(character, village) {
 
 export function handleBirthAndPostpartum(village) {
   village.villagers.forEach(person => {
+    if (isSaltPillar(person)) return;
     if (Number(person.postpartumMonths) > 0) {
       person.postpartumMonths -= 1;
       if (person.postpartumMonths <= 0 && hasTrait(person, "産褥")) {
@@ -483,6 +695,7 @@ export function handleBirthAndPostpartum(village) {
   const mothers = [...village.villagers];
   mothers.forEach(mother => {
     if (!mother.pregnancy) return;
+    if (isSaltPillar(mother)) return;
 
     mother.pregnancy.months = (Number(mother.pregnancy.months) || 0) + 1;
     if (mother.pregnancy.months >= 8) {
@@ -507,12 +720,16 @@ export function handleBirthAndPostpartum(village) {
 }
 
 export function handlePregnancyChecks(village) {
-  processPendingGoldenRainPregnancies(village);
   processPregnancyChecks(village);
+}
+
+export function handlePendingMysticPregnancies(village) {
+  processPendingGoldenRainPregnancies(village);
 }
 
 export function handlePregnancyAndBirth(village) {
   handleBirthAndPostpartum(village);
+  handlePendingMysticPregnancies(village);
   handlePregnancyChecks(village);
 }
 
@@ -538,24 +755,47 @@ function processPendingGoldenRainPregnancies(village) {
 
   const remaining = [];
   village.pendingGoldenRainPregnancies.forEach(entry => {
+    const isAnnunciation = entry?.kind === ANNUNCIATION_PREGNANCY_KIND;
     const due = { year: Number(entry.dueYear) || 0, month: Number(entry.dueMonth) || 0 };
     if (!isDue(village, due)) {
       remaining.push(entry);
       return;
     }
 
-    const mother = village.villagers.find(person => person.name === entry.targetName);
-    if (!mother || !canReceiveGoldenRainPregnancy(mother)) {
-      if (mother) village.log(`${mother.name}への黄金の雨の兆しは、妊娠には至りませんでした。`);
+    const mother = village.villagers.find(person => matchesPendingMysticTarget(entry, person));
+    // 対象が死亡・離脱していれば予約ごと消える。判定関数へ渡す前に外す。
+    if (!mother) return;
+    if (isSaltPillar(mother)) {
+      remaining.push(entry);
+      return;
+    }
+    const canReceive = isAnnunciation
+      ? canReceiveAnnunciationPregnancy(mother)
+      : canReceiveGoldenRainPregnancy(mother);
+    if (!canReceive) {
+      const sourceName = isAnnunciation ? "告天使の絵画の光" : "黄金の雨の兆し";
+      village.log(`${mother.name}への${sourceName}は、妊娠には至りませんでした。`);
       return;
     }
 
-    startPregnancy(village, mother, null, {
-      fatherSnapshot: VIRTUAL_THUNDER_FATHER,
-      childRace: "半神",
-      inheritedBodyTraits: [THUNDER_BLESSING_TRAIT],
-      geneticFatherUnknown: true
-    });
+    if (isAnnunciation) {
+      startPregnancy(village, mother, null, {
+        fatherSnapshot: VIRTUAL_ANNUNCIATION_FATHER,
+        humanChildRace: "半神",
+        inheritedMindTraits: [HOLY_SPIRIT_BLESSING_TRAIT],
+        geneticFatherUnknown: true,
+        source: "告天使の絵画"
+      });
+    } else {
+      startPregnancy(village, mother, null, {
+        fatherSnapshot: VIRTUAL_THUNDER_FATHER,
+        childRaceFatherSnapshot: { race: "人間" },
+        humanChildRace: "半神",
+        inheritedBodyTraits: [THUNDER_BLESSING_TRAIT],
+        geneticFatherUnknown: true,
+        source: "黄金の雨"
+      });
+    }
   });
 
   village.pendingGoldenRainPregnancies = remaining;
@@ -564,13 +804,16 @@ function processPendingGoldenRainPregnancies(village) {
 function startPregnancy(village, mother, father, options = {}) {
   const motherSnapshot = snapshotParent(mother);
   const fatherSnapshot = options.fatherSnapshot || snapshotParent(father);
-  const childRace = normalizeChildRace(options.childRace || mother.race);
-  const childSex = decideChildSex(childRace);
+  const childSex = decideChildSex();
+  const childRace = decidePregnancyChildRace(childSex, motherSnapshot, fatherSnapshot, options);
   const potentialStats = buildPotentialStats(motherSnapshot, fatherSnapshot, childSex, childRace);
   const inheritedBodyTraits = [
     ...rollInheritedTraits({ motherSnapshot, fatherSnapshot, childSex }),
     ...(Array.isArray(options.inheritedBodyTraits) ? options.inheritedBodyTraits : [])
   ];
+  const inheritedMindTraits = Array.isArray(options.inheritedMindTraits)
+    ? [...new Set(options.inheritedMindTraits)]
+    : [];
 
   mother.pregnancy = {
     months: 0,
@@ -583,12 +826,13 @@ function startPregnancy(village, mother, father, options = {}) {
     childSex,
     potentialStats,
     inheritedBodyTraits,
+    inheritedMindTraits,
     fullTermApplied: false
   };
   addUnique(mother.bodyTraits, "妊娠");
   recordPregnancyHistory(village, mother, father, {
     geneticFatherUnknown: !!options.geneticFatherUnknown,
-    source: options.geneticFatherUnknown ? "黄金の雨" : "妊娠"
+    source: options.source || (options.geneticFatherUnknown ? "神秘の妊娠" : "妊娠")
   });
   village.log(`${mother.name}が妊娠しました`);
   showPregnancyModal(village, mother, father);
@@ -617,11 +861,9 @@ function giveBirth(village, mother) {
   setBaseStatsFromEffective(child);
   child.bodyTraits = ["赤子"];
   child.mindTraits = ["無垢"];
-  if (child.race === "ハーピー") {
-    addUnique(child.bodyTraits, "飛行");
-    addUnique(child.bodyTraits, "澄んだ声");
-  }
+  applyRaceBodyTraits(child);
   applyInheritedBodyTraits(child, data.inheritedBodyTraits || []);
+  applyInheritedMindTraits(child, data.inheritedMindTraits || []);
   child.hobby = "";
   child.hp = 100;
   child.mp = 100;
@@ -659,7 +901,7 @@ function giveBirth(village, mother) {
   }
 
   mother.pregnancy = null;
-  village.popLimit = (Number(village.popLimit) || 0) + 1;
+  addNonHousePopLimitBonus(village, 1);
   village.villagers.push(child);
   recordBirthHistory(village, mother, child, {
     spouse,

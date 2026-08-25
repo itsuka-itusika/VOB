@@ -1,14 +1,20 @@
 // events.js
 
 import { randInt, clampValue, round3, getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "./util.js";
-import { doLoverCheck, doMarriageCheck, clearRelationshipsForDepartedVillager } from "./relationships.js";
+import { doLoverCheck, doMarriageCheck, clearRelationshipsForDepartedVillager, processMonthlyFriendship } from "./relationships.js";
 import { createRandomVillager, createRandomVisitor } from "./createVillagers.js";
 import { processRaidScheduleAtMonthStart } from "./raidSchedule.js";
 import { RandomEvents } from "./RandomEvents.js";
-import { recordCriticalHistory, recordVillagerDeathHistory } from "./history.js";
-import { handleBirthAndPostpartum, handlePregnancyChecks, updateChildGrowthStage } from "./reproduction.js";
-import { showFestivalModal } from "./festivalModal.js";
+import { recordCriticalHistory, recordVillagerDeathHistory, recordVillagerLeaveHistory } from "./history.js";
+import {
+  handleBirthAndPostpartum,
+  handlePendingMysticPregnancies,
+  handlePregnancyChecks,
+  updateChildGrowthStage
+} from "./reproduction.js";
+import { runAfterFestivalModals, showFestivalModal, showPineconeStaffIntroModal } from "./festivalModal.js";
 import { runHeadmanElectionIfDue } from "./headmanElection.js";
+import { grantSecretTreasure, PINECONE_STAFF_SECRET_TREASURE_ID } from "./secretTreasures.js";
 import {
   ACTION_CRADLE,
   ACTION_HEAL,
@@ -22,19 +28,178 @@ import {
   applyForcedActionRestriction
 } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
+import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
+import { getBalanceSimulationOptions } from "./balance/simulationOptions.js";
+import { isWolf, OLD_WOLF_TRAIT, syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
+import {
+  addDisappointmentState,
+  clearDisappointmentIfHappinessRecovered,
+  hasDespairState,
+  hasHopeLossState,
+  promoteDisappointmentToDespair
+} from "./domain/despair.js";
+import { getVisitorArrivalLine } from "./data/dialogue/visitorLines.js";
+import { addDivineMight, getDivineMightGainFromMonthlyMana, runAfterPendingDivineMightLevelUp } from "./divineMight.js";
+import { BUILDINGS } from "./buildings.js";
+import { advanceBuildingRequestMonth, tryStartBuildingRequest } from "./buildingRequests.js";
+import { advanceWishMonth, tryStartWish } from "./wishes.js";
+import { tryTriggerHeresyInquisition } from "./heresyInquisition.js";
+import { tryTriggerBacchusGoldenStatueEvent } from "./bacchusGoldenStatue.js";
+import { advanceApocalypseLocustMonths, advanceSaltPillarMonths, processApocalypseMonthStart } from "./apocalypse.js";
+import { getActiveVillagers, isSaltPillar } from "./domain/apocalypseRules.js";
+import {
+  clearCaptiveFailedTraits,
+  getCaptives,
+  getPeopleForFoodAndWinterMaterials,
+  processCaptiveActionRecovery,
+  processCaptiveReleaseDeadlines
+} from "./captives.js";
+import { processAdventurerQuestReturns, showAdventurerQuestResultModals } from "./adventurerQuests.js";
 
-const OPENING_RAID_GRACE_YEAR = 1091;
+const OPENING_RAID_GRACE_YEAR = 1195;
 const OPENING_RAID_GRACE_LAST_MONTH = 6;
+const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成"]);
+
+const TRAIT_INJURED = "負傷";
+const TRAIT_SERIOUS_INJURY = "重体";
+const TRAIT_CRITICAL = "危篤";
+const TRAIT_EPIDEMIC = "疫病";
+const TRAIT_EXPOSURE = "曝露";
+const VILLAGE_TRAIT_CLEANLINESS = "清浄";
+const CLEANLINESS_DURATION_MONTHS = 3;
+const BATTLE_DEBUG_BODY_TRAITS_TO_REMOVE = new Set([
+  "負傷", "重体", "危篤", "疲労", "過労", "飢餓", "凍え", "疫病", "曝露", "産褥"
+]);
+const BATTLE_DEBUG_MIND_TRAITS_TO_REMOVE = new Set([
+  "心労", "抑鬱", "失望", "絶望", "狂乱"
+]);
+
+function recoverBattleDebugVillagers(village) {
+  if (!village.battleDebugMode) return;
+
+  village.villagers.forEach(person => {
+    const hadPostpartum = Array.isArray(person.bodyTraits) && person.bodyTraits.includes("産褥");
+    person.bodyTraits = Array.isArray(person.bodyTraits)
+      ? person.bodyTraits.filter(trait => !BATTLE_DEBUG_BODY_TRAITS_TO_REMOVE.has(trait))
+      : [];
+    person.mindTraits = Array.isArray(person.mindTraits)
+      ? person.mindTraits.filter(trait => !BATTLE_DEBUG_MIND_TRAITS_TO_REMOVE.has(trait))
+      : [];
+    if (hadPostpartum) person.postpartumMonths = 0;
+    person.hp = 100;
+    person.mp = 100;
+    syncEffectiveStats(person);
+    refreshJobTable(person, village);
+  });
+
+  village.log("【デバッグ】全村人の状態・体力・メンタルが全回復しました");
+}
+
+function processSeriousInjuryMonthStart(village) {
+  const isClean = Array.isArray(village.villageTraits) && village.villageTraits.includes(VILLAGE_TRAIT_CLEANLINESS);
+  getPeopleForFoodAndWinterMaterials(village).forEach(person => {
+    if (isSaltPillar(person)) return;
+    if (!Array.isArray(person.bodyTraits)) person.bodyTraits = [];
+    if (!person.bodyTraits.includes(TRAIT_SERIOUS_INJURY)) return;
+
+    person.bodyTraits = person.bodyTraits.filter(trait => trait !== TRAIT_SERIOUS_INJURY);
+    if (isClean || Math.random() < 0.8) {
+      if (!person.bodyTraits.includes(TRAIT_INJURED)) {
+        person.bodyTraits.push(TRAIT_INJURED);
+      }
+      village.log(`${person.name}の重体は負傷まで回復した`);
+    } else {
+      if (!person.bodyTraits.includes(TRAIT_CRITICAL)) {
+        person.bodyTraits.push(TRAIT_CRITICAL);
+        person.criticalCause = TRAIT_SERIOUS_INJURY;
+        recordCriticalHistory(village, person, { reason: "重体" });
+      }
+      village.log(`${person.name}の重体が悪化し、危篤状態になった...`);
+    }
+    syncEffectiveStats(person);
+    refreshJobTable(person, village);
+  });
+}
+
+function processExposureMonthStart(village) {
+  getPeopleForFoodAndWinterMaterials(village).forEach(person => {
+    if (isSaltPillar(person)) return;
+    if (!Array.isArray(person.bodyTraits) || !person.bodyTraits.includes(TRAIT_EXPOSURE)) return;
+
+    person.bodyTraits = person.bodyTraits.filter(trait => trait !== TRAIT_EXPOSURE);
+    if (!person.bodyTraits.includes(TRAIT_CRITICAL)) {
+      person.bodyTraits.push(TRAIT_CRITICAL);
+    }
+    person.criticalCause = TRAIT_EXPOSURE;
+    recordCriticalHistory(village, person, { reason: "光の柱への曝露" });
+    syncEffectiveStats(person);
+    refreshJobTable(person, village);
+    village.log(`${person.name}は光の柱への曝露のため、危篤状態になった...`);
+  });
+}
+
+function processPendingEpidemicInfections(village) {
+  const isClean = Array.isArray(village.villageTraits) && village.villageTraits.includes(VILLAGE_TRAIT_CLEANLINESS);
+  (village.villagers || []).forEach(person => {
+    if (!person.pendingEpidemicInfection) return;
+    person.pendingEpidemicInfection = false;
+    if (isClean) return;
+
+    if (!Array.isArray(person.bodyTraits)) person.bodyTraits = [];
+    if (!person.bodyTraits.includes(TRAIT_EPIDEMIC)) {
+      person.bodyTraits.push(TRAIT_EPIDEMIC);
+      syncEffectiveStats(person);
+      refreshJobTable(person, village);
+      village.log(`${person.name}は疫病に感染した`);
+    }
+  });
+}
+
+function processEpidemicSpreadAtMonthEnd(village) {
+  if (!Array.isArray(village.villagers) || village.villagers.length === 0) return;
+  if (village.villageTraits.includes(VILLAGE_TRAIT_CLEANLINESS)) return;
+
+  const epidemicCount = village.villagers.filter(person => {
+    return Array.isArray(person.bodyTraits) && person.bodyTraits.includes(TRAIT_EPIDEMIC);
+  }).length;
+  if (epidemicCount === 0) return;
+
+  const candidates = village.villagers.filter(person => {
+    const bodyTraits = Array.isArray(person.bodyTraits) ? person.bodyTraits : [];
+    return !bodyTraits.includes(TRAIT_EPIDEMIC) && !person.pendingEpidemicInfection;
+  });
+  const infectionCount = Math.min(candidates.length, randInt(0, epidemicCount * 2));
+  for (let i = 0; i < infectionCount; i++) {
+    const selectedIndex = randInt(0, candidates.length - 1);
+    const [person] = candidates.splice(selectedIndex, 1);
+    person.pendingEpidemicInfection = true;
+  }
+}
+
+function advanceCleanlinessMonth(village) {
+  if (!village.villageTraits.includes(VILLAGE_TRAIT_CLEANLINESS)) {
+    village.cleanlinessMonths = null;
+    return;
+  }
+
+  village.cleanlinessMonths = Math.max(0, Number(village.cleanlinessMonths) || 0) + 1;
+  if (village.cleanlinessMonths < CLEANLINESS_DURATION_MONTHS) return;
+
+  village.villageTraits = village.villageTraits.filter(trait => trait !== VILLAGE_TRAIT_CLEANLINESS);
+  village.cleanlinessMonths = null;
+  village.log("【清拭の奇跡終了】村の清浄効果が切れました");
+}
 
 function resetMonthlySocialAttemptFlags(village) {
   (village.villagers || []).forEach(person => {
     person.socialAttemptedThisMonth = false;
   });
+  clearCaptiveFailedTraits(village);
 }
 
 function applySecurityBaselineDecay(village) {
-  const villagers = Array.isArray(village.villagers) ? village.villagers : [];
+  const villagers = getActiveVillagers(village);
   const averageEthics = villagers.length > 0
     ? villagers.reduce((sum, person) => sum + (Number(person.eth) || 0), 0) / villagers.length
     : 0;
@@ -51,6 +216,23 @@ function applySecurityBaselineDecay(village) {
 
   village.security = nextSecurity;
   village.log(`治安自然低下: 基礎値${baselineSecurity}を上回ったため治安-${actualLoss}`);
+}
+
+function removeResidentOrCaptive(village, person) {
+  const villagerIndex = village.villagers.indexOf(person);
+  if (villagerIndex !== -1) {
+    village.villagers.splice(villagerIndex, 1);
+    return true;
+  }
+
+  const captives = getCaptives(village);
+  const captiveIndex = captives.indexOf(person);
+  if (captiveIndex !== -1) {
+    captives.splice(captiveIndex, 1);
+    return true;
+  }
+
+  return false;
 }
 
 /**
@@ -99,7 +281,7 @@ export function doFixedEventPost(village) {
 function newYearFestival(v) {
   showFestivalModal("newYear");
   v.log("【新年祭】体力+20,メンタル+20,幸福+20-30 全員");
-  v.villagers.forEach(p=>{
+  getActiveVillagers(v).forEach(p=>{
     p.hp=clampValue(p.hp+20,0,100);
     p.mp=clampValue(p.mp+20,0,100);
     let inc=randInt(20,30);
@@ -110,7 +292,7 @@ function newYearFestival(v) {
 function resurrectionFestival(v) {
   showFestivalModal("resurrection");
   v.log("【復活祭】体力+20,メンタル+20");
-  v.villagers.forEach(p=>{
+  getActiveVillagers(v).forEach(p=>{
     p.hp=clampValue(p.hp+20,0,100);
     p.mp=clampValue(p.mp+20,0,100);
   });
@@ -119,7 +301,7 @@ function resurrectionFestival(v) {
 function summerSolsticeFestival(v) {
   showFestivalModal("summerSolstice");
   v.log("【夏至祭】体力+20,メンタル+20 +結婚判定");
-  v.villagers.forEach(p=>{
+  getActiveVillagers(v).forEach(p=>{
     p.hp=clampValue(p.hp+20,0,100);
     p.mp=clampValue(p.mp+20,0,100);
   });
@@ -127,9 +309,13 @@ function summerSolsticeFestival(v) {
 }
 
 function harvestFestival(v) {
+  const treasure = grantSecretTreasure(v, PINECONE_STAFF_SECRET_TREASURE_ID);
   showFestivalModal("harvest");
-  v.log("【収穫祭】全員体力+30,メンタル+10");
-  v.villagers.forEach(p=>{
+  if (treasure) {
+    runAfterFestivalModals(showPineconeStaffIntroModal);
+  }
+  v.log(`【収穫祭】全員体力+30,メンタル+10${treasure ? `,${treasure.name}+1` : ""}`);
+  getActiveVillagers(v).forEach(p=>{
     p.hp=clampValue(p.hp+30,0,100);
     p.mp=clampValue(p.mp+10,0,100);
   });
@@ -151,7 +337,13 @@ export function doRandomEventPost(village) {
   // 後ランダムイベントは廃止。ランダムイベントは行動前のみ発生する。
 }
 
-export function doRaidStartCheck(village) {
+export function doRaidStartCheck(village, options = {}) {
+  if (!options.skipDivineMightDelay && runAfterPendingDivineMightLevelUp(village, () => {
+    doRaidStartCheck(village, { skipDivineMightDelay: true });
+  })) {
+    return;
+  }
+
   processRaidScheduleAtMonthStart(village, {
     suspendReservation: isOpeningRaidGraceActive(village)
   });
@@ -188,33 +380,44 @@ function restoreRecoveredForcedActions(village) {
 }
 
 export function runMonthStartPhase(village) {
+  const simulationOptions = getBalanceSimulationOptions(village);
+  advanceSaltPillarMonths(village);
+  advanceApocalypseLocustMonths(village);
   const monthStartSeason = [3,6,9,12].includes(village.month)
     ? updateSeason(village, { showDialog: false, logChange: false })
     : "";
-  doMonthStartProcess(village);
+  doMonthStartProcess(village, simulationOptions);
+  if (village.gameOver) return;
   if (monthStartSeason) {
     showSeasonChangeDialog(monthStartSeason);
     village.log(`${monthStartSeason}が訪れた`);
   }
   doFixedEventPre(village);
   handleBirthAndPostpartum(village);
+  handlePendingMysticPregnancies(village);
   restoreRecoveredForcedActions(village);
-  doRandomEventPre(village);
+  const apocalypseActive = processApocalypseMonthStart(village);
+  if (!apocalypseActive && !simulationOptions.suppressRandomEvents) doRandomEventPre(village);
+  if (!simulationOptions.suppressBuildingRequests) tryStartBuildingRequest(village, BUILDINGS);
+  tryStartWish(village);
   applyMonthStartRestrictions(village);
   runHeadmanElectionIfDue(village);
-  doRaidStartCheck(village);
+  tryTriggerHeresyInquisition(village);
+  if (!apocalypseActive && !simulationOptions.suppressRaids) doRaidStartCheck(village);
+  tryTriggerBacchusGoldenStatueEvent(village);
+  showAdventurerQuestResultModals(village.pendingAdventurerQuestReports);
+  village.pendingAdventurerQuestReports = [];
 }
 
 function getVisitorLimit(village) {
-  const savedLimit = Number(village.visitorLimit) || 1;
-  const baseLimit = village.buildingFlags && village.buildingFlags.hasTavern ? 2 : 1;
+  const baseLimit = hasActiveBuildingFlag(village, "hasTavern", "tavern") ? 2 : 1;
   const prosperityBonus = (Number(village.building) || 0) >= 250 ? 1 : 0;
-  return Math.max(1, savedLimit, baseLimit + prosperityBonus);
+  return Math.max(1, baseLimit + prosperityBonus);
 }
 
 function getPublicBathMonthlyRecovery(person, village) {
   const flags = village.buildingFlags || {};
-  if (!flags.hasPublicBath) return 0;
+  if (!hasActiveBuildingFlag(village, "hasPublicBath", "publicBath")) return 0;
   if (isPublicBathRecoveryBlocked(person)) return 0;
   const traitBonus = Array.isArray(person.mindTraits) && person.mindTraits.includes("風呂好き") ? 2 : 0;
   return 5 + (Number(flags.publicBathRecoveryBonus) || 0) + traitBonus;
@@ -227,13 +430,14 @@ function isPublicBathRecoveryBlocked(person) {
 }
 
 function applyPublicBathMonthlyRecovery(village) {
-  if (!(village.buildingFlags && village.buildingFlags.hasPublicBath)) return;
+  if (!hasActiveBuildingFlag(village, "hasPublicBath", "publicBath")) return;
 
-  const baseRecovery = 5 + (Number(village.buildingFlags.publicBathRecoveryBonus) || 0);
+  const baseRecovery = 5 + (Number(village.buildingFlags?.publicBathRecoveryBonus) || 0);
   let bathLoverCount = 0;
   let recoveredCount = 0;
   let blockedCount = 0;
   village.villagers.forEach(person => {
+    if (isSaltPillar(person)) return;
     if (isPublicBathRecoveryBlocked(person)) {
       blockedCount++;
       return;
@@ -255,10 +459,7 @@ function applyPublicBathMonthlyRecovery(village) {
 }
 
 function hasWatermill(village) {
-  return !!(
-    (village.buildingFlags && village.buildingFlags.hasWatermill) ||
-    (Array.isArray(village.buildings) && village.buildings.includes("watermill"))
-  );
+  return hasActiveBuildingFlag(village, "hasWatermill", "watermill");
 }
 
 function applyWatermillMonthlyFood(village) {
@@ -268,19 +469,82 @@ function applyWatermillMonthlyFood(village) {
 }
 
 function hasFountain(village) {
-  return !!(
-    (village.buildingFlags && village.buildingFlags.hasFountain) ||
-    (Array.isArray(village.buildings) && village.buildings.includes("fountain"))
-  );
+  return hasActiveBuildingFlag(village, "hasFountain", "fountain");
 }
 
 function applyFountainMonthlyHappiness(village) {
   if (!hasFountain(village)) return;
+  let affectedCount = 0;
+  let blockedCount = 0;
   village.villagers.forEach(person => {
+    if (isSaltPillar(person)) return;
+    if (hasHopeLossState(person)) {
+      blockedCount++;
+      return;
+    }
     const gain = randInt(1, 2);
     person.happiness = clampValue(person.happiness + gain, 0, 100);
+    affectedCount++;
   });
-  village.log("噴水:全員幸福度+1〜2");
+  if (affectedCount === 0 && blockedCount > 0) {
+    village.log(`噴水:失望・絶望${blockedCount}人は効果なし`);
+    return;
+  }
+  const blockedText = blockedCount > 0 ? `、失望・絶望${blockedCount}人は効果なし` : "";
+  village.log(`噴水:対象者幸福度+1〜2${blockedText}`);
+}
+
+function leaveVillageByDespair(village, person) {
+  recordVillagerLeaveHistory(village, person, { source: "絶望" });
+  village.log(`${person.name}は絶望のまま村を去りました`);
+  const index = village.villagers.indexOf(person);
+  if (index >= 0) {
+    clearRelationshipsForDepartedVillager(village, person);
+    village.villagers.splice(index, 1);
+  }
+}
+
+function processHopeLossAtMonthStart(village) {
+  const leavingPeople = [];
+
+  village.villagers.forEach(person => {
+    if (isSaltPillar(person)) return;
+    person.mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
+
+    if (hasDespairState(person)) {
+      leavingPeople.push(person);
+      return;
+    }
+
+    const recovered = clearDisappointmentIfHappinessRecovered(person);
+    if (recovered.length > 0) {
+      syncEffectiveStats(person);
+      refreshJobTable(person, village);
+      village.log(`${person.name}の失望が和らいだ`);
+      return;
+    }
+
+    if ((Number(person.happiness) || 0) > 0) return;
+
+    if (promoteDisappointmentToDespair(person)) {
+      syncEffectiveStats(person);
+      refreshJobTable(person, village);
+      village.log(`${person.name}は絶望した`);
+      return;
+    }
+
+    if (addDisappointmentState(person)) {
+      syncEffectiveStats(person);
+      refreshJobTable(person, village);
+      village.log(`${person.name}は失望した`);
+    }
+  });
+
+  leavingPeople.forEach(person => leaveVillageByDespair(village, person));
+  if (village.villagers.length === 0) {
+    village.log("村人ゼロ→バッカスは眠りに...(GameOver)");
+    village.gameOver = true;
+  }
 }
 
 // -------------------------
@@ -288,6 +552,8 @@ function applyFountainMonthlyHappiness(village) {
 // -------------------------
 export function endOfMonthProcess(v) {
   v.log("【月末処理】");
+  processCaptiveActionRecovery(v);
+  advanceBuildingRequestMonth(v);
 
   // 治安31以上で荒廃状態解除
   if (v.security > 30) {
@@ -302,11 +568,16 @@ export function endOfMonthProcess(v) {
   let totalMat=0;
   let isWinter = v.villageTraits.includes("冬");
 
-  v.villagers.forEach(p=>{
+  getPeopleForFoodAndWinterMaterials(v).forEach(p=>{
+    if (isSaltPillar(p)) return;
     totalF += getVillagerFoodConsumption(p);
 
     if (isWinter) {
       totalMat += getVillagerWinterMaterialConsumption(p);
+      if (Array.isArray(p.bodyTraits) && p.bodyTraits.includes("光合成")) {
+        p.hp = clampValue((Number(p.hp) || 0) - 10, 0, 100);
+        v.log(`${p.name}は冬の光不足で体力-10`);
+      }
     }
   });
   v.food=clampValue(v.food - totalF,0,99999);
@@ -316,27 +587,34 @@ export function endOfMonthProcess(v) {
   if (totalMat>0) v.log(`資材-${totalMat}`);
 
   applySecurityBaselineDecay(v);
+  processMonthlyFriendship(v);
 
   let removeList=["豊穣","訪問者","襲撃者","ミダス"];
   // "襲撃中" はここでは消さない(raid.js 内で完了時に消す)
   v.villageTraits = v.villageTraits.filter(tr=> !removeList.includes(tr));
 
+  recoverBattleDebugVillagers(v);
+
   // 危篤者の死亡処理（危篤者は必ず死亡）
-  let deadPeople = v.villagers.filter(p => p.bodyTraits.includes("危篤"));
+  let deadPeople = getPeopleForFoodAndWinterMaterials(v).filter(p => !isSaltPillar(p) && p.bodyTraits.includes("危篤"));
   deadPeople.forEach(p => {
-    let index = v.villagers.indexOf(p);
-    if (index !== -1) {
-      recordVillagerDeathHistory(v, p, { reason: "老衰" });
+    if (removeResidentOrCaptive(v, p)) {
+      const deathReason = p.criticalCause === TRAIT_SERIOUS_INJURY
+        ? "重体の悪化"
+        : p.criticalCause === TRAIT_EXPOSURE
+          ? "光の柱への曝露"
+          : "老衰";
+      recordVillagerDeathHistory(v, p, { reason: deathReason });
       clearRelationshipsForDepartedVillager(v, p);
-      v.villagers.splice(index, 1);
-      v.log(`${p.name}は老衰により死亡した...`);
+      v.log(`${p.name}は${deathReason}により死亡した...`);
     }
   });
 
   handlePregnancyChecks(v);
 
   // 狂乱・酩酊の解除処理
-  v.villagers.forEach(p => {
+  getPeopleForFoodAndWinterMaterials(v).forEach(p => {
+    if (isSaltPillar(p)) return;
     if (p.mindTraits.includes("狂乱")) {
       p.mindTraits = p.mindTraits.filter(t => t !== "狂乱");
       syncEffectiveStats(p);
@@ -351,6 +629,7 @@ export function endOfMonthProcess(v) {
 
   // 火星の加護の効果期間更新 (3ヶ月経過した場合、効果を終了)
   v.villagers.forEach(p => {
+    if (isSaltPillar(p)) return;
     p.bodyTraits = Array.isArray(p.bodyTraits) ? p.bodyTraits : [];
     p.mindTraits = Array.isArray(p.mindTraits) ? p.mindTraits : [];
     if (p.bodyTraits.includes("火星の加護") || p.mindTraits.includes("火星の加護")) {
@@ -377,6 +656,7 @@ export function endOfMonthProcess(v) {
 
   // ニケの効果期間更新 (1ヶ月経過した場合、効果を終了)
   v.villagers.forEach(p => {
+    if (isSaltPillar(p)) return;
     if (p.mindTraits.includes("ニケ")) {
       if (typeof p.nikeMonths !== "number") {
         p.nikeMonths = 0;
@@ -393,6 +673,7 @@ export function endOfMonthProcess(v) {
 
   // 肖像の効果期間更新 (1ヶ月経過した場合、効果を終了)
   v.villagers.forEach(p => {
+    if (isSaltPillar(p)) return;
     if (p.mindTraits.includes("肖像")) {
       if (typeof p.portraitMonths !== "number") {
         p.portraitMonths = 0;
@@ -409,14 +690,17 @@ export function endOfMonthProcess(v) {
     }
   });
 
+  processEpidemicSpreadAtMonthEnd(v);
+  advanceCleanlinessMonth(v);
+
   // 状態異常の解除処理
   v.villagers.forEach(p => {
+    if (isSaltPillar(p)) return;
     let changed = false;
-    let bodyTraitsToRemove = ["飢餓", "凍え", "疲労", "過労", "病気", "疫病"];
+    let bodyTraitsToRemove = ["飢餓", "凍え", "疲労", "過労", "疫病"];
     bodyTraitsToRemove.forEach(trait => {
       if (p.bodyTraits.includes(trait)) {
         p.bodyTraits = p.bodyTraits.filter(t => t !== trait);
-        if (trait === "疫病") p.hp = clampValue(round3((Number(p.hp) || 0) / 0.5), 0, 100);
         changed = true;
       }
     });
@@ -431,6 +715,8 @@ export function endOfMonthProcess(v) {
 
     if (changed) syncEffectiveStats(p);
   });
+
+  advanceWishMonth(v);
 
   // ログ出力を元に戻す処理を削除
   // v.log = originalLog;
@@ -447,9 +733,13 @@ export function endOfMonthProcess(v) {
  *  - 訪問者生成
  *  - 行動テーブル再構築
  */
-export function doMonthStartProcess(v) {
+export function doMonthStartProcess(v, simulationOptions = {}) {
   v.log("【月初処理】");
   resetMonthlySocialAttemptFlags(v);
+  processCaptiveReleaseDeadlines(v);
+  processPendingEpidemicInfections(v);
+  processSeriousInjuryMonthStart(v);
+  processExposureMonthStart(v);
 
   // 治安30以下で荒廃状態に
   if (v.security <= 30 && !v.villageTraits.includes("荒廃")) {
@@ -457,11 +747,13 @@ export function doMonthStartProcess(v) {
     v.log("治安悪化により村が荒廃状態になった！");
   }
 
-  // 老人の危篤化判定（5%）
-  v.villagers.forEach(p => {
-    if (p.bodyTraits.includes("老人") && !p.bodyTraits.includes("危篤")) {
+  // 老人・老狼の危篤化判定（5%）
+  getPeopleForFoodAndWinterMaterials(v).forEach(p => {
+    if (isSaltPillar(p)) return;
+    if ((p.bodyTraits.includes("老人") || p.bodyTraits.includes(OLD_WOLF_TRAIT)) && !p.bodyTraits.includes("危篤")) {
       if (Math.random() < 0.05) {  // 5%の確率
         p.bodyTraits.push("危篤");
+        p.criticalCause = "老衰";
         recordCriticalHistory(v, p, { reason: "老衰" });
         v.log(`${p.name}は老衰により危篤状態になった...`);
       }
@@ -470,23 +762,33 @@ export function doMonthStartProcess(v) {
 
   // 幸福度由来の魔素増加
   let tot=0;
-  v.villagers.forEach(p=>{
-    let amt=10*(p.happiness/100);
+  getActiveVillagers(v).forEach(p=>{
+    let amt=6*(p.happiness/100);
     tot+=amt;
   });
   let gain=Math.floor(tot);
   v.mana=clampValue(v.mana+gain,0,99999);
   v.log(`魔素+${gain}(村人幸福度由来)`);
+  const divineGain = getDivineMightGainFromMonthlyMana(gain);
+  if (divineGain > 0) {
+    addDivineMight(v, divineGain);
+    v.log(`神威+${divineGain}(幸福度由来魔素)`);
+  }
 
   // 食料/資材0のペナルティ
   if (v.food<=0) {
     v.log("食料0→飢餓発生");
-    v.villagers.forEach(p=>{
+    getPeopleForFoodAndWinterMaterials(v).forEach(p=>{
+      if (isSaltPillar(p)) return;
+      if (Array.isArray(p.bodyTraits) && p.bodyTraits.includes("光合成")) {
+        v.log(`${p.name}は光合成により飢餓を免れた`);
+        return;
+      }
       // 飢餓の身体特性を付与（まだ持っていない場合のみ）
       if (!p.bodyTraits.includes("飢餓")) {
         p.bodyTraits.push("飢餓");
       }
-      
+
       // 各種ステータスにペナルティ
       syncEffectiveStats(p);
       p.hp = Math.floor(p.hp * 0.5);  // 体力を50%に
@@ -496,9 +798,10 @@ export function doMonthStartProcess(v) {
   }
   if (v.villageTraits.includes("冬") && v.materials<=0) {
     v.log("冬なのに資材0→凍え");
-    v.villagers.forEach(p=>{
-      if (p.bodyTraits.includes("モフモフ")) {
-        v.log(`${p.name}はモフモフに守られて凍えを免れた`);
+    getPeopleForFoodAndWinterMaterials(v).forEach(p=>{
+      if (isSaltPillar(p)) return;
+      if (isWolf(p)) {
+        v.log(`${p.name}は狼の耐寒性で凍えを免れた`);
         return;
       }
 
@@ -506,7 +809,7 @@ export function doMonthStartProcess(v) {
       if (!p.bodyTraits.includes("凍え")) {
         p.bodyTraits.push("凍え");
       }
-      
+
       // 各種ステータスにペナルティ
       syncEffectiveStats(p);
       p.hp = Math.floor(p.hp * 0.5);  // 体力を50%に
@@ -517,6 +820,7 @@ export function doMonthStartProcess(v) {
 
   // 体力・メンタル状態によるペナルティ
   v.villagers.forEach(p => {
+    if (isSaltPillar(p)) return;
     // 体力に関するペナルティ
     if (p.hp <= 0) {
       // 過労状態
@@ -525,7 +829,7 @@ export function doMonthStartProcess(v) {
       }
       syncEffectiveStats(p);
       p.happiness = clampValue(p.happiness - 30, 0, 100);
-      
+
 
       v.log(`${p.name}は過労状態になった`);
     } else if (p.hp <= 33) {
@@ -536,7 +840,7 @@ export function doMonthStartProcess(v) {
       syncEffectiveStats(p);
       v.log(`${p.name}は疲労状態になった`);
     }
-    
+
     // メンタルに関するペナルティ
     if (p.mp <= 0) {
       // 抑鬱状態
@@ -560,10 +864,12 @@ export function doMonthStartProcess(v) {
 
   applyPublicBathMonthlyRecovery(v);
   applyWatermillMonthlyFood(v);
+  processHopeLossAtMonthStart(v);
+  if (v.gameOver) return;
   applyFountainMonthlyHappiness(v);
 
   // 幸福度調整
-  v.villagers.forEach(p=>{
+  getActiveVillagers(v).forEach(p=>{
     if (p.happiness>50) {
       let diff = p.happiness-50;
       let dec = Math.floor(diff * randFloat(0.2,0.4));
@@ -572,24 +878,33 @@ export function doMonthStartProcess(v) {
   });
   // 既存の訪問者をクリア
   v.visitors = [];
+  v.pendingAdventurerQuestReports = processAdventurerQuestReturns(v);
 
   const visitorLimit = getVisitorLimit(v);
   v.visitorLimit = visitorLimit;
 
   // 各訪問者枠ごとに50%の確率で訪問者を生成
-  for (let i = 0; i < visitorLimit; i++) {
-    if (Math.random() < 0.5) {
-      let visitor = createRandomVisitor([
-        ...v.villagers.map(person => person.name),
-        ...v.visitors.map(person => person.name)
-      ], null, v);
-      v.visitors.push(visitor);
-      v.log(`訪問者 ${visitor.name} が村を訪れました`);
+  if (!simulationOptions.suppressVisitors) {
+    for (let i = 0; i < visitorLimit; i++) {
+      if (Math.random() < 0.5) {
+        let visitor = createRandomVisitor([
+          ...v.villagers.map(person => person.name),
+          ...v.visitors.map(person => person.name),
+          ...(Array.isArray(v.activeAdventurerQuests)
+            ? v.activeAdventurerQuests.map(quest => quest?.adventurer?.name).filter(Boolean)
+            : [])
+        ], null, v);
+        v.visitors.push(visitor);
+        v.log(`訪問者 ${visitor.name} が村を訪れました`);
+        const arrivalLine = getVisitorArrivalLine(visitor);
+        if (arrivalLine) v.log(`${visitor.name}「${arrivalLine}」`);
+      }
     }
   }
 
   // 全村人の行動テーブルを再構築し、一時行動から通常の復帰先へ戻す
   v.villagers.forEach(p=>{
+    if (isSaltPillar(p)) return;
     const currentAction = String(p.action || ACTION_NONE).trim() || ACTION_NONE;
 
     p.actionTable = [];
@@ -605,7 +920,7 @@ export function doMonthStartProcess(v) {
 
     const preferredAction = String(p.preferredAction || p.job || ACTION_NONE).trim() || ACTION_NONE;
     const hasPreferredAction = preferredAction !== ACTION_NONE && p.actionTable.includes(preferredAction);
-    const isRaidAction = currentAction === "迎撃" || currentAction === "籠城" || currentAction === "射撃" || currentAction === "罠作成";
+    const isRaidAction = currentAction === "迎撃" || currentAction === "籠城" || currentAction === "射撃" || currentAction === "火砲" || currentAction === "罠作成";
     const isFixedAction = [ACTION_CRADLE, ACTION_HEAL, ACTION_LAST_MOMENTS].includes(p.action);
 
     if (!isFixedAction && (isTemporaryAction(currentAction) || isRaidAction || !p.actionTable.includes(currentAction))) {
@@ -681,9 +996,19 @@ export function doMonthStartProcess(v) {
 export function doAgingProcess(v) {
   v.log("【加齢処理】");
   v.villagers.forEach(p=>{
+    if (isSaltPillar(p)) return;
     p.bodyAge++;
     p.spiritAge++;
-    if (!p.bodyTraits.includes("老人")) {
+    const wasOldWolf = p.bodyTraits.includes(OLD_WOLF_TRAIT);
+    const ageLimitedTraitsChanged = syncWolfSpeciesTraits(p);
+    if (isWolf(p)) {
+      if (!wasOldWolf && p.bodyTraits.includes(OLD_WOLF_TRAIT)) {
+        v.log(`${p.name}は老狼になった`);
+      }
+      if (ageLimitedTraitsChanged) syncEffectiveStats(p);
+    } else if (p.bodyTraits.some(trait => NO_AGING_BODY_TRAITS.has(trait))) {
+      syncEffectiveStats(p);
+    } else if (!p.bodyTraits.includes("老人")) {
       if (p.bodyAge>=60) {
         p.bodyTraits.push("老人");
         syncEffectiveStats(p);
@@ -693,6 +1018,10 @@ export function doAgingProcess(v) {
         syncEffectiveStats(p);
         v.log(`${p.name}は中年になった`);
       }
+    }
+    if (ageLimitedTraitsChanged && !isWolf(p)) {
+      syncEffectiveStats(p);
+      refreshJobTable(p, v);
     }
     v.log(`${p.name}:${p.bodyAge}歳(精神年齢${p.spiritAge})`);
     updateChildGrowthStage(p, v, { announce: true });
@@ -761,7 +1090,8 @@ function showSeasonChangeDialog(season) {
       accent: "#d5e8ff",
       tips: [
         "農作業の生産量が0.5倍、狩猟の生産量が1.2倍になります。",
-        "月末に村人1人あたり資材10を消費します。資材0だと凍えが発生します。"
+        "月末に村人1人あたり資材10を消費します。資材0だと凍えが発生します。",
+        "狼は冬の資材消費が0で、凍えが発生しません。"
       ]
     }
   };

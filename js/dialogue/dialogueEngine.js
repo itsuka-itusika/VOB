@@ -1,6 +1,9 @@
 import {
   getToneLookupKeys,
+  getSpecialDialogueToneFallbackLines,
+  getSpecialToneLookupKeys,
   isChildlikeDialogueTone,
+  isSpecialDialogueTone,
   normalizeDialogueTone,
   resolveDialogueTone,
   resolveStoredSpeechType,
@@ -11,7 +14,16 @@ import { SEASONAL_LINES } from "../data/dialogue/seasonLines.js";
 import { CONDITION_LINES } from "../data/dialogue/conditionLines.js";
 import { JOB_LINES } from "../data/dialogue/jobLines.js";
 import { REPRODUCTION_LINES } from "../data/dialogue/reproductionLines.js";
-import { VISITOR_GENERIC_LINES, VISITOR_LINES } from "../data/dialogue/visitorLines.js";
+import { EXCHANGE_SITUATION_LINES } from "../data/dialogue/exchangeSituationLines.js";
+import { SECRET_TREASURE_LINES } from "../data/dialogue/secretTreasureLines.js";
+import { MIRACLE_RESULT_LINES } from "../data/dialogue/miracleLines.js";
+import {
+  getVisitorLineKey,
+  VISITOR_APOCALYPSE_GENERIC_LINES,
+  VISITOR_APOCALYPSE_LINES,
+  VISITOR_GENERIC_LINES,
+  VISITOR_LINES
+} from "../data/dialogue/visitorLines.js";
 import {
   BUDDING_EVENT_LINES,
   EVENT_LINES_BY_SPEECH_TYPE,
@@ -22,6 +34,8 @@ import {
   expandEventVillagerLines,
   findLineByKeys
 } from "../data/dialogue/randomEventLines.js";
+import { BODY_EXCHANGE_SOURCE_RACE_LINE_KEYS } from "../data/dialogue/exchangeLines.js";
+import { isApocalypseActive } from "../domain/apocalypseRules.js";
 
 export { resolveDialogueTone, resolveStoredSpeechType } from "../data/dialogue/toneProfiles.js";
 
@@ -33,12 +47,12 @@ export const CONVERSATION_PRIORITY = {
 };
 
 const SEASON_TRAITS = ["春", "夏", "秋", "冬"];
+const NON_HUMANOID_EXCHANGE_RACES = new Set(["狼", "スフィンクス"]);
 
 const BODY_CONDITION_CANDIDATES = [
   { trait: "危篤", scene: "condition", key: "critical", priority: CONVERSATION_PRIORITY.CRITICAL },
   { trait: "負傷", scene: "condition", key: "injured", priority: CONVERSATION_PRIORITY.SEVERE },
   { trait: "疫病", scene: "condition", key: "epidemic", priority: CONVERSATION_PRIORITY.SEVERE },
-  { trait: "病気", scene: "condition", key: "sickness", priority: CONVERSATION_PRIORITY.SEVERE },
   { trait: "過労", scene: "condition", key: "overwork", priority: CONVERSATION_PRIORITY.SEVERE },
   { trait: "産褥", scene: "reproduction", key: "postpartumConversation", priority: CONVERSATION_PRIORITY.NORMAL },
   { trait: "飢餓", scene: "condition", key: "hunger", priority: CONVERSATION_PRIORITY.SEVERE },
@@ -71,6 +85,13 @@ function asLineArray(value, context = {}) {
 function selectToneLines(group, character, context = {}) {
   if (!group) return [];
   const tone = resolveDialogueTone(character);
+  if (isSpecialDialogueTone(tone)) {
+    const keys = getSpecialToneLookupKeys(tone);
+    const key = keys.find(candidate => group[candidate]);
+    return key
+      ? asLineArray(group[key], context)
+      : asLineArray(getSpecialDialogueToneFallbackLines(tone), context);
+  }
   const keys = getToneLookupKeys(tone, character);
   const key = keys.find(candidate => group[candidate]);
   return key ? asLineArray(group[key], context) : [];
@@ -80,7 +101,13 @@ function getStatusLines(character, status, context = {}) {
   return selectToneLines(STATUS_LINES[status], character, context);
 }
 
-function getVisitorLines(visitorType) {
+function getVisitorLines(visitorType, context = {}) {
+  if (context.apocalypseActive) {
+    const apocalypseLines = asLineArray(
+      VISITOR_APOCALYPSE_LINES[visitorType] || VISITOR_APOCALYPSE_GENERIC_LINES
+    );
+    if (apocalypseLines.length > 0) return apocalypseLines;
+  }
   return asLineArray(VISITOR_LINES[visitorType] || VISITOR_GENERIC_LINES);
 }
 
@@ -108,10 +135,17 @@ export function getChildlikeRandomEventLine(character, { eventKey = null, kind =
   return null;
 }
 
-export function selectRandomEventLineBySpeechType(group, speechType, character) {
+export function selectRandomEventLineBySpeechType(group, speechType, character, options = {}) {
   if (!group) return null;
+  const extraKeys = Array.isArray(options.extraKeys) ? options.extraKeys : [];
+  if (isSpecialDialogueTone(speechType)) {
+    const keys = getSpecialToneLookupKeys(speechType);
+    return findLineByKeys(group, keys) || getSpecialDialogueToneFallbackLines(speechType);
+  }
+
   const genderFallback = character?.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ";
   const keys = uniqueKeys([
+    ...extraKeys,
     speechType,
     ...(SPEECH_TYPE_LINE_FALLBACKS[speechType] || []),
     genderFallback,
@@ -124,19 +158,39 @@ export function selectRandomEventLineBySpeechType(group, speechType, character) 
   return findLineByKeys(group, keys);
 }
 
-function getRandomEventLine(character, eventKey, { kind = null, subject = null, mood = null } = {}) {
-  const childLine = getChildlikeRandomEventLine(character, { eventKey, kind, mood });
-  if (childLine) return childLine;
+// 同じイベントで複数人が話す場合に、セリフが被らないよう話者ごとの候補を選び分ける。
+function pickLineByVariant(value, variantIndex) {
+  if (!Number.isInteger(variantIndex) || !Array.isArray(value) || value.length < 2) return null;
+  return pickDialogueLine(value[variantIndex % value.length]);
+}
 
-  const speechType = resolveStoredSpeechType(character);
-  const eventLine = selectRandomEventLineBySpeechType(EVENT_LINES_BY_SPEECH_TYPE[eventKey], speechType, character);
-  if (eventLine) return pickDialogueLine(eventLine);
+function getRandomEventLine(character, eventKey, { kind = null, subject = null, mood = null, variantIndex = null } = {}) {
+  const isBodyExchangeEvent = eventKey === "lightning2";
+  if (!isBodyExchangeEvent) {
+    const childLine = getChildlikeRandomEventLine(character, { eventKey, kind, mood });
+    if (childLine) return childLine;
+  }
+
+  const speechType = isBodyExchangeEvent ? resolveDialogueTone(character) : resolveStoredSpeechType(character);
+  const sourceRace = character?.lastBodyExchangeSourceRace;
+  const sourceRaceLineKey = sourceRace && sourceRace !== character?.race
+    ? BODY_EXCHANGE_SOURCE_RACE_LINE_KEYS[sourceRace]
+    : null;
+  const eventLine = selectRandomEventLineBySpeechType(EVENT_LINES_BY_SPEECH_TYPE[eventKey], speechType, character, {
+    extraKeys: isBodyExchangeEvent && !isChildlikeDialogueTone(speechType) ? [sourceRaceLineKey] : []
+  });
+  if (eventLine) return pickLineByVariant(eventLine, variantIndex) || pickDialogueLine(eventLine);
+
+  if (isBodyExchangeEvent) {
+    const childLine = getChildlikeRandomEventLine(character, { eventKey, kind, mood });
+    if (childLine) return childLine;
+  }
 
   const fallbackLines = createRandomEventFallbackLines(subject || "出来事");
   const eventMood = mood || getRandomEventMood(eventKey, kind);
   const group = fallbackLines[eventMood] || fallbackLines[kind] || fallbackLines.happy;
   const selected = selectRandomEventLineBySpeechType(expandEventVillagerLines(group), speechType, character);
-  return pickDialogueLine(selected);
+  return pickLineByVariant(selected, variantIndex) || pickDialogueLine(selected);
 }
 
 function getRandomEventSecondLine(character, eventKey, { base = null, speechType = null, kind = null, mood = null } = {}) {
@@ -145,6 +199,9 @@ function getRandomEventSecondLine(character, eventKey, { base = null, speechType
   if (!base) return null;
 
   const resolvedSpeechType = speechType || resolveStoredSpeechType(character);
+  if (isSpecialDialogueTone(resolvedSpeechType)) {
+    return pickDialogueLine(getSpecialDialogueToneFallbackLines(resolvedSpeechType));
+  }
   const style = SPEECH_TYPE_TONES[resolvedSpeechType] || (character?.spiritSex === "女" ? "female" : "male");
   const isMale = character?.spiritSex !== "女";
 
@@ -188,8 +245,14 @@ export function getDialogueLines({ character, scene, key, context = {} }) {
       return selectToneLines(JOB_LINES[key], character, context);
     case "reproduction":
       return selectToneLines(REPRODUCTION_LINES[key], character, context);
+    case "exchangeSituation":
+      return selectToneLines(EXCHANGE_SITUATION_LINES[key], character, context);
+    case "secretTreasure":
+      return selectToneLines(SECRET_TREASURE_LINES[key], character, context);
+    case "miracle":
+      return selectToneLines(MIRACLE_RESULT_LINES[key], character, context);
     case "visitor":
-      return getVisitorLines(key);
+      return getVisitorLines(key, context);
     default:
       return [];
   }
@@ -234,9 +297,77 @@ function getCurrentSeason(village) {
   return SEASON_TRAITS.find(trait => traits.includes(trait)) || "";
 }
 
+function hasDifferentBodyOwner(character) {
+  const name = String(character?.name || "").trim();
+  const bodyOwner = String(character?.bodyOwner || "").trim();
+  return name !== "" && bodyOwner !== "" && name !== bodyOwner;
+}
+
+function isHumanoidExchangeBody(character) {
+  return !NON_HUMANOID_EXCHANGE_RACES.has(character?.race || "人間");
+}
+
+function getAbsoluteMonth(year, month) {
+  const normalizedYear = Number(year);
+  const normalizedMonth = Number(month);
+  if (!Number.isFinite(normalizedYear) || !Number.isFinite(normalizedMonth)) return null;
+  return normalizedYear * 12 + normalizedMonth - 1;
+}
+
+function hasRecentBodyExchange(character, village) {
+  const currentMonth = getAbsoluteMonth(village?.year, village?.month);
+  if (currentMonth === null || !Array.isArray(village?.historyEvents)) return false;
+  return village.historyEvents.some(event => {
+    if (event?.type !== "bodyExchange" || !Array.isArray(event.people) || !event.people.includes(character?.name)) return false;
+    const eventMonth = getAbsoluteMonth(event.year, event.month);
+    if (eventMonth === null) return false;
+    const elapsedMonths = currentMonth - eventMonth;
+    return elapsedMonths >= 0 && elapsedMonths <= 6;
+  });
+}
+
+function hasExchangeSituationLines(character, key) {
+  const tone = resolveDialogueTone(character);
+  return Array.isArray(EXCHANGE_SITUATION_LINES[key]?.[tone]) && EXCHANGE_SITUATION_LINES[key][tone].length > 0;
+}
+
+export function getExchangeSituationKey(character, village) {
+  if (!hasDifferentBodyOwner(character)) return "";
+
+  const tone = resolveDialogueTone(character);
+  const bodyAge = Number(character?.bodyAge);
+  const spiritAge = Number(character?.spiritAge);
+  const isYoungAdultBody = bodyAge >= 16 && bodyAge <= 30;
+  const isHumanoidBody = isHumanoidExchangeBody(character);
+
+  if (
+    character?.spiritSex === "男"
+    && spiritAge >= 16
+    && Number(character?.sexdr) >= 18
+    && character?.bodySex === "女"
+    && isYoungAdultBody
+    && isHumanoidBody
+    && hasExchangeSituationLines(character, "roleBenefit")
+  ) return "roleBenefit";
+
+  if (tone === "老人" && character?.bodySex === "女" && isYoungAdultBody && isHumanoidBody) return "rejuvenatedFemale";
+  if (tone === "老人" && character?.bodySex === "男" && isYoungAdultBody && isHumanoidBody) return "rejuvenatedMale";
+  if (bodyAge <= 9) return "youngChildBody";
+  if (tone !== "狼" && character?.race === "狼") return "wolfBody";
+
+  if (
+    character?.spiritSex === "女"
+    && spiritAge >= 16
+    && character?.bodySex === "男"
+    && Number(character?.str) >= 20
+    && hasExchangeSituationLines(character, "strongMaleBody")
+  ) return "strongMaleBody";
+
+  return hasRecentBodyExchange(character, village) ? "discomfort" : "";
+}
+
 function getVisitorType(visitor) {
-  const match = visitor?.name?.match(/^(.+)の/);
-  return match ? match[1] : null;
+  return getVisitorLineKey(visitor, VISITOR_LINES);
 }
 
 export function collectConversationCandidates({ character, village, context = {} }) {
@@ -275,6 +406,15 @@ export function collectConversationCandidates({ character, village, context = {}
     key: healthStatus.key,
     priority: healthStatus.priority
   }, sharedContext);
+
+  const exchangeSituationKey = getExchangeSituationKey(character, village);
+  if (exchangeSituationKey) {
+    addCandidate(candidates, character, {
+      scene: "exchangeSituation",
+      key: exchangeSituationKey,
+      priority: CONVERSATION_PRIORITY.NORMAL
+    }, sharedContext);
+  }
 
   if (hasTrait(character, "臨月", "bodyTraits")) {
     addCandidate(candidates, character, {
@@ -330,7 +470,13 @@ export function selectConversationCandidate(candidates) {
 
 export function getConversationLine({ character, village, context = {} }) {
   if (hasTrait(character, "訪問者", "mindTraits")) {
-    return getDialogueLine({ character, scene: "visitor", key: getVisitorType(character), context }) || "...";
+    const visitorContext = { ...context, apocalypseActive: isApocalypseActive(village) };
+    return getDialogueLine({
+      character,
+      scene: "visitor",
+      key: getVisitorType(character),
+      context: visitorContext
+    }) || "...";
   }
 
   if (hasTrait(character, "襲撃者", "mindTraits") && Array.isArray(character?.raiderDialogues) && character.raiderDialogues.length > 0) {

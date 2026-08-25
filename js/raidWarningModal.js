@@ -1,6 +1,9 @@
 import { isHeadmanElectionModalPendingOrOpen } from "./headmanElection.js";
 import { getConversationLine } from "./dialogue/dialogueEngine.js";
+import { DEFAULT_PORTRAIT_KEY, getPortraitAssetPath } from "./data/portraitPaths.js";
 import { getPortraitPath } from "./util.js";
+
+const DEFAULT_PORTRAIT_PATH = getPortraitAssetPath(DEFAULT_PORTRAIT_KEY);
 
 const MODAL_OVERLAY_ID = "raidWarningOverlay";
 const MODAL_ID = "raidWarningModal";
@@ -9,6 +12,13 @@ const PRIORITY_MODAL_SELECTORS = [
   "#seasonChangeDialog",
   "#festivalModal",
   "#randomEventModal",
+  "#buildingRequestModal",
+  "#buildingRequestCompleteModal",
+  "#wishModal",
+  "#wishCompleteModal",
+  "#heresyInquisitionModal",
+  "#inquisitionHospitalityResultModal",
+  "#inquisitionExpulsionResultModal",
   ".effect-result-modal",
   "#secretTreasureEventModal"
 ];
@@ -22,16 +32,20 @@ export function showRaidWarningModal({
   introDialogues = [],
   enemyCount,
   avoidanceOption = null,
+  avoidanceOptions = null,
   onAvoidance = null
 }) {
   if (typeof document === "undefined") return;
+  const resolvedAvoidanceOptions = Array.isArray(avoidanceOptions)
+    ? avoidanceOptions
+    : (avoidanceOption ? [avoidanceOption] : []);
 
   pendingRaidWarning = {
     raidName,
     representative,
     introDialogues,
     enemyCount,
-    avoidanceOption,
+    avoidanceOptions: resolvedAvoidanceOptions,
     onAvoidance
   };
   closeRaidWarningModal();
@@ -75,7 +89,7 @@ function showRaidWarningWhenReady() {
     representative,
     introDialogues,
     enemyCount,
-    avoidanceOption,
+    avoidanceOptions,
     onAvoidance
   } = pendingRaidWarning;
   pendingRaidWarning = null;
@@ -104,10 +118,10 @@ function showRaidWarningWhenReady() {
   const portraitArea = document.createElement("div");
   portraitArea.className = "portrait-area";
   const portrait = document.createElement("img");
-  portrait.src = representative ? getPortraitPath(representative) : "images/portraits/default.png";
+  portrait.src = representative ? getPortraitPath(representative) : DEFAULT_PORTRAIT_PATH;
   portrait.alt = "";
   portrait.onerror = () => {
-    portrait.src = "images/portraits/default.png";
+    portrait.src = DEFAULT_PORTRAIT_PATH;
   };
   portraitArea.appendChild(portrait);
 
@@ -129,11 +143,12 @@ function showRaidWarningWhenReady() {
   const detail = document.createElement("div");
   detail.className = "raid-warning-detail";
   detail.textContent = `${raidName || "襲撃"} / ${countText}`;
-  if (avoidanceOption?.detail) {
+  avoidanceOptions.forEach(avoidanceOption => {
+    if (!avoidanceOption?.detail) return;
     const avoidanceDetail = document.createElement("div");
     avoidanceDetail.textContent = avoidanceOption.detail;
     detail.appendChild(avoidanceDetail);
-  }
+  });
 
   dialogueArea.appendChild(characterInfo);
   dialogueArea.appendChild(text);
@@ -144,7 +159,29 @@ function showRaidWarningWhenReady() {
   const buttons = document.createElement("div");
   buttons.className = "modal-buttons";
 
-  if (avoidanceOption) {
+  const interceptButton = document.createElement("button");
+  interceptButton.type = "button";
+  interceptButton.textContent = "防衛する";
+  interceptButton.onclick = closeRaidWarningModal;
+  buttons.appendChild(interceptButton);
+
+  avoidanceOptions.forEach(avoidanceOption => {
+    let candidateSelect = null;
+    if (Array.isArray(avoidanceOption.candidates)) {
+      candidateSelect = document.createElement("select");
+      candidateSelect.setAttribute("aria-label", "問答に挑む村人");
+      candidateSelect.disabled = !!avoidanceOption.disabled;
+      avoidanceOption.candidates.forEach((candidate, index) => {
+        const candidateOption = document.createElement("option");
+        candidateOption.value = String(index);
+        candidateOption.textContent = typeof avoidanceOption.candidateLabel === "function"
+          ? avoidanceOption.candidateLabel(candidate)
+          : candidate.name;
+        candidateSelect.appendChild(candidateOption);
+      });
+      buttons.appendChild(candidateSelect);
+    }
+
     const avoidanceButton = document.createElement("button");
     avoidanceButton.type = "button";
     avoidanceButton.textContent = avoidanceOption.label;
@@ -153,22 +190,30 @@ function showRaidWarningWhenReady() {
       avoidanceButton.title = avoidanceOption.disabledReason;
     }
     avoidanceButton.onclick = () => {
-      if (typeof onAvoidance === "function" && onAvoidance()) {
+      const selectedIndex = candidateSelect ? Number(candidateSelect.value) : -1;
+      const selectedPerson = selectedIndex >= 0 ? avoidanceOption.candidates[selectedIndex] : null;
+      const resolvedOption = candidateSelect
+        ? { ...avoidanceOption, selectedPerson }
+        : avoidanceOption;
+      const outcome = typeof onAvoidance === "function" ? onAvoidance(resolvedOption) : false;
+      if (outcome === true || outcome?.close === true) {
         closeRaidWarningModal();
+      } else if (outcome?.message) {
+        lineElement.textContent = outcome.message;
+        const resultDetail = document.createElement("div");
+        resultDetail.textContent = "問答は一度限りです。「防衛する」を選んでください。";
+        detail.appendChild(resultDetail);
+        buttons.querySelectorAll("button, select").forEach(control => {
+          if (control !== interceptButton) control.disabled = true;
+        });
       }
     };
     buttons.appendChild(avoidanceButton);
-  }
-
-  const interceptButton = document.createElement("button");
-  interceptButton.type = "button";
-  interceptButton.textContent = "防衛する";
-  interceptButton.onclick = closeRaidWarningModal;
+  });
 
   modal.appendChild(title);
   modal.appendChild(content);
   modal.appendChild(buttons);
-  buttons.appendChild(interceptButton);
 
   document.body.appendChild(overlay);
   document.body.appendChild(modal);
@@ -181,6 +226,12 @@ export function closeRaidWarningModal() {
   const modal = document.getElementById(MODAL_ID);
   if (overlay) overlay.remove();
   if (modal) modal.remove();
+}
+
+export function clearRaidWarningModal() {
+  pendingRaidWarning = null;
+  closeRaidWarningModal();
+  stopWaitingForPriorityModals();
 }
 
 function getRaidWarningLine({ representative, introDialogues, raidName }) {
@@ -198,6 +249,7 @@ function getRaidWarningLine({ representative, introDialogues, raidName }) {
 function getRepresentativeDisplayName(representative, fallbackName) {
   const name = representative?.name || fallbackName || "襲撃者";
   const raiderType = String(representative?.raiderType || "").trim();
+  if (/^《.+》$/.test(name)) return name;
   if (!raiderType || name === raiderType || name.startsWith(`${raiderType}の`)) {
     return name;
   }

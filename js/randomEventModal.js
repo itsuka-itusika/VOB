@@ -4,8 +4,8 @@ const DEFAULT_LINE = "なにかが起きたようだ。";
 const eventQueue = [];
 let isShowing = false;
 
-export function showRandomEventModal({ title, message, participants = [] }) {
-  eventQueue.push({ title, message, participants });
+export function showRandomEventModal({ title, message, participants = [], actions = [], closeOnOverlay = true }) {
+  eventQueue.push({ title, message, participants, actions, closeOnOverlay });
   if (isShowing) return;
   showNextRandomEventModal();
 }
@@ -17,7 +17,7 @@ function showNextRandomEventModal() {
     return;
   }
   isShowing = true;
-  const { title, message, participants = [] } = event;
+  const { title, message, participants = [], actions = [], closeOnOverlay = true } = event;
 
   const overlay = document.createElement("div");
   overlay.id = "randomEventOverlay";
@@ -118,14 +118,27 @@ function showNextRandomEventModal() {
   }
 
   const buttons = document.createElement("div");
-  buttons.style.cssText = "text-align:right;";
-  const closeButton = document.createElement("button");
-  closeButton.textContent = "閉じる";
-  closeButton.onclick = () => closeRandomEventModal();
-  buttons.appendChild(closeButton);
+  buttons.style.cssText = "display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;";
+  if (actions.length > 0) {
+    actions.forEach(action => {
+      const actionButton = document.createElement("button");
+      actionButton.type = "button";
+      actionButton.textContent = action.label;
+      actionButton.onclick = () => {
+        action.onSelect?.();
+        closeRandomEventModal();
+      };
+      buttons.appendChild(actionButton);
+    });
+  } else {
+    const closeButton = document.createElement("button");
+    closeButton.textContent = "閉じる";
+    closeButton.onclick = () => closeRandomEventModal();
+    buttons.appendChild(closeButton);
+  }
   modal.appendChild(buttons);
 
-  overlay.onclick = () => closeRandomEventModal();
+  if (closeOnOverlay) overlay.onclick = () => closeRandomEventModal();
   document.body.appendChild(overlay);
   document.body.appendChild(modal);
 }

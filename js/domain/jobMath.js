@@ -1,6 +1,18 @@
+import { hasActiveBuildingFlag } from "./buildingState.js";
+import { SENSITIVE_NOSE_TRAIT } from "./speciesTraits.js";
+import {
+  VILLAGE_ROLE_DOCTOR,
+  VILLAGE_ROLE_LIBRARIAN,
+  VILLAGE_ROLE_PRIEST,
+  getVillageRoleMultiplier
+} from "./villageRoles.js";
+
+const ACTION_MASSAGE_MALE = "あんま男";
+const ACTION_MASSAGE_FEMALE = "あんま女";
 const SWEATY_TRAIT = "汗かき";
 const COLD_SENSITIVE_TRAIT = "寒がり";
 const WORKAHOLIC_TRAIT = "ワーカホリック";
+const SENSITIVE_FINGERS_TRAIT = "繊細な指";
 const SUMMER_TRAIT = "夏";
 const WINTER_TRAIT = "冬";
 const SEASONAL_COST_MULTIPLIER = 1.2;
@@ -33,6 +45,8 @@ export const JOB_COST_TYPES = {
   "神官": WORK_COST_TYPES.MENTAL,
   "行商": WORK_COST_TYPES.BALANCED,
   "あんま": WORK_COST_TYPES.BALANCED,
+  "あんま男": WORK_COST_TYPES.BALANCED,
+  "あんま女": WORK_COST_TYPES.BALANCED,
   "巫女": WORK_COST_TYPES.BALANCED,
   "バニー": WORK_COST_TYPES.BALANCED,
   "錬金術": WORK_COST_TYPES.BALANCED,
@@ -44,8 +58,11 @@ export const JOB_COST_TYPES = {
 const ABUNDANCE_JOBS = ["農作業", "伐採", "狩猟", "漁", "採集"];
 const AUTUMN_JOBS = ["農作業", "採集"];
 const COLD_SUMMER_JOBS = ["農作業", "伐採"];
+const LOCUST_JOBS = ["農作業", "採集", "伐採", "醸造"];
 const GREEN_THUMB_JOBS = ["農作業", "伐採", "採集"];
 const FLYING_JOBS = ["狩猟", "採集"];
+const SWIFT_LEGS_JOBS = ["行商", "採集"];
+const HALF_HORSE_JOBS = ["狩猟"];
 const YOUTH_WORK_JOBS = ["農作業", "伐採", "狩猟", "漁", "採集", "内職", "丁稚", "研究助手"];
 
 function defaultRandomFloat(min, max) {
@@ -64,6 +81,10 @@ function statTripleProduct(person, first, second, third) {
   return statProduct(person, first, second) * ((Number(person?.[third]) || 0) / 20);
 }
 
+function applyVillageRoleMultiplier(amount, person, role) {
+  return Math.round(amount * getVillageRoleMultiplier(person, role));
+}
+
 export function hasVillageTrait(village, trait) {
   return Array.isArray(village?.villageTraits) && village.villageTraits.includes(trait);
 }
@@ -76,6 +97,14 @@ export function hasBodyTrait(person, trait) {
   return Array.isArray(person?.bodyTraits) && person.bodyTraits.includes(trait);
 }
 
+export function getRestRecoveryMultiplier(person, resource = "hp") {
+  if (hasBodyTrait(person, "老人") || hasBodyTrait(person, "老狼")) return 0.7;
+  if (hasBodyTrait(person, "中年")) return 0.9;
+  if (resource === "hp" && hasBodyTrait(person, "幼児")) return 1.4;
+  if (resource === "hp" && (hasBodyTrait(person, "少年") || hasBodyTrait(person, "少女"))) return 1.2;
+  return 1;
+}
+
 export function getBodyCostMultiplier(person, village) {
   if (hasMindTrait(person, SWEATY_TRAIT) && hasVillageTrait(village, SUMMER_TRAIT)) {
     return SEASONAL_COST_MULTIPLIER;
@@ -84,12 +113,12 @@ export function getBodyCostMultiplier(person, village) {
 }
 
 export function getMindCostMultiplier(person, village) {
+  if (hasMindTrait(person, WORKAHOLIC_TRAIT)) {
+    return 0;
+  }
   let mul = 1;
   if (hasMindTrait(person, COLD_SENSITIVE_TRAIT) && hasVillageTrait(village, WINTER_TRAIT)) {
     mul *= SEASONAL_COST_MULTIPLIER;
-  }
-  if (hasMindTrait(person, WORKAHOLIC_TRAIT)) {
-    mul *= 0.5;
   }
   return mul;
 }
@@ -126,6 +155,7 @@ export function getLaborYieldMultiplier(job, person = null, village = null) {
   if (hasVillageTrait(village, "冬") && job === "農作業") mul *= 0.5;
   if (hasVillageTrait(village, "冬") && job === "狩猟") mul *= 1.2;
   if (hasVillageTrait(village, "冷夏") && COLD_SUMMER_JOBS.includes(job)) mul *= 0.5;
+  if (hasVillageTrait(village, "飛蝗") && LOCUST_JOBS.includes(job)) mul *= 0.2;
   if (hasBodyTrait(person, "緑の指") && GREEN_THUMB_JOBS.includes(job)) mul *= 1.2;
   if (hasMindTrait(person, "熟練農夫") && job === "農作業") mul *= 1.3;
   if (hasMindTrait(person, "達人農夫") && job === "農作業") mul *= 1.5;
@@ -140,11 +170,18 @@ export function getLaborYieldMultiplier(job, person = null, village = null) {
   if (hasBodyTrait(person, "月の巫女") && job === "狩猟") mul *= 1.5;
   if (hasBodyTrait(person, "月の加護") && job === "狩猟") mul *= 1.2;
   if (hasBodyTrait(person, "夜目") && job === "狩猟") mul *= 1.2;
+  if (hasBodyTrait(person, SENSITIVE_NOSE_TRAIT) && job === "採集") mul *= 1.5;
+  if (hasBodyTrait(person, SENSITIVE_NOSE_TRAIT) && job === "狩猟") mul *= 1.2;
   if (hasBodyTrait(person, "大地の加護") && job === "農作業") mul *= 1.2;
   if (hasBodyTrait(person, "水中呼吸") && job === "漁") mul *= 2;
+  if (hasBodyTrait(person, "健脚") && SWIFT_LEGS_JOBS.includes(job)) mul *= 1.2;
+  if (hasBodyTrait(person, "半人半馬") && HALF_HORSE_JOBS.includes(job)) mul *= 1.2;
   if (hasMindTrait(person, "森の知恵") && job === "採集") mul *= 1.2;
   if (hasMindTrait(person, "海の知恵") && job === "漁") mul *= 1.2;
-  if ((person?.hobby === "ハンティング" || person?.hobby === "狩猟") && job === "狩猟") mul *= 1.1;
+  if (hasBodyTrait(person, SENSITIVE_FINGERS_TRAIT) && job === "内職") mul *= 1.2;
+  if ((person?.hobby === "ハンティング" || person?.hobby === "狩猟" || person?.hobby === "狩り") && job === "狩猟") mul *= 1.1;
+  if (person?.hobby === "釣り" && job === "漁") mul *= 1.1;
+  if ((person?.hobby === "読書" || person?.hobby === "自由研究") && job === "研究") mul *= 1.1;
   if (hasMindTrait(person, MID_TEEN_TRAIT) && YOUTH_WORK_JOBS.includes(job)) mul *= 0.8;
   return mul;
 }
@@ -160,9 +197,8 @@ export function calculateLumberYield(person, village) {
 }
 
 function getExpectedHarvestBase(job, village) {
-  const flags = village?.buildingFlags || {};
-  if (job === "狩猟" && flags.hasHuntingLodge) return IMPROVED_HARVEST_EXPECTED_BASE;
-  if (job === "漁" && flags.hasDock) return IMPROVED_HARVEST_EXPECTED_BASE;
+  if (job === "狩猟" && hasActiveBuildingFlag(village, "hasHuntingLodge", "huntingLodge")) return IMPROVED_HARVEST_EXPECTED_BASE;
+  if (job === "漁" && hasActiveBuildingFlag(village, "hasDock", "dock")) return IMPROVED_HARVEST_EXPECTED_BASE;
   return RANDOM_HARVEST_EXPECTED_BASE;
 }
 
@@ -193,14 +229,23 @@ export function calculateHandiworkYield(person, village) {
 }
 
 export function calculateResearchYield(person, village, job = "研究") {
-  const libraryMultiplier = village?.buildingFlags?.hasLibrary ? 1.2 : 1;
-  return Math.round((30 * statProduct(person, "int", "mag")) * libraryMultiplier * getLaborYieldMultiplier(job, person, village));
+  let amount = Math.round((30 * statProduct(person, "int", "mag")) * getLaborYieldMultiplier(job, person, village));
+  if (job === "研究") {
+    amount = applyVillageRoleMultiplier(amount, person, VILLAGE_ROLE_LIBRARIAN);
+  }
+  return amount;
 }
 
 export function calculateGuardYield(person) {
   let amount = Math.round(12 * statProduct(person, "str", "eth"));
   if (hasBodyTrait(person, "夜目")) {
     amount = Math.round(amount * 1.2);
+  }
+  if (hasBodyTrait(person, "半人半馬")) {
+    amount = Math.round(amount * 1.2);
+  }
+  if (hasBodyTrait(person, SENSITIVE_NOSE_TRAIT)) {
+    amount = Math.round(amount * 1.5);
   }
   return Math.max(1, amount);
 }
@@ -224,17 +269,12 @@ function calculateTradingLikeYield(person, job, baseValue) {
 
 export function calculateNurseHeal(person, village) {
   let amount = Math.round(25 * statProduct(person, "mag", "eth"));
-  if (village?.buildingFlags?.hasClinic) {
-    amount = Math.round(amount * 1.2);
-  }
-  return amount;
+  return applyVillageRoleMultiplier(amount, person, VILLAGE_ROLE_DOCTOR);
 }
 
 export function calculatePriestMindHeal(person, village) {
   let amount = Math.round(8 * statProduct(person, "chr", "eth"));
-  if (village?.buildingFlags?.hasChurch) {
-    amount = Math.round(amount * 1.2);
-  }
+  amount = applyVillageRoleMultiplier(amount, person, VILLAGE_ROLE_PRIEST);
   if (hasBodyTrait(person, "澄んだ声") || hasBodyTrait(person, "通る声")) {
     amount = Math.round(amount * 1.2);
   }
@@ -243,9 +283,6 @@ export function calculatePriestMindHeal(person, village) {
 
 export function calculateDancerHappiness(person, village) {
   let amount = Math.round(10 * statProduct(person, "chr", "sexdr"));
-  if (village?.buildingFlags?.hasTavern) {
-    amount = Math.round(amount * 1.2);
-  }
   if (hasBodyTrait(person, "澄んだ声") || hasBodyTrait(person, "通る声")) {
     amount = Math.round(amount * 1.2);
   }
@@ -257,9 +294,6 @@ export function calculateDancerHappiness(person, village) {
 
 export function calculatePoetHappiness(person, village) {
   let amount = Math.round(10 * statProduct(person, "chr", "int"));
-  if (village?.buildingFlags?.hasTavern) {
-    amount = Math.round(amount * 1.2);
-  }
   if (hasBodyTrait(person, "澄んだ声") || hasBodyTrait(person, "通る声")) {
     amount = Math.round(amount * 1.2);
   }
@@ -272,14 +306,30 @@ export function calculatePoetHappiness(person, village) {
   return amount;
 }
 
-export function calculateMassageHeal(person) {
-  return person?.bodySex === "男"
-    ? Math.round(30 * statProduct(person, "str", "int"))
-    : Math.round(30 * statProduct(person, "chr", "sexdr"));
+function isMaleMassageAction(action, person) {
+  const value = String(action || "").trim();
+  if (value === ACTION_MASSAGE_MALE) return true;
+  if (value === ACTION_MASSAGE_FEMALE) return false;
+  return person?.bodySex === "男";
+}
+
+export function getMassageMindStat(person, action = person?.action) {
+  return isMaleMassageAction(action, person) ? "int" : "sexdr";
+}
+
+export function calculateMassageHeal(person, action = person?.action) {
+  let amount = isMaleMassageAction(action, person)
+    ? Math.round(25 * statProduct(person, "str", "int"))
+    : Math.round(25 * statProduct(person, "chr", "sexdr"));
+  if (hasBodyTrait(person, SENSITIVE_FINGERS_TRAIT)) {
+    amount = Math.round(amount * 1.2);
+  }
+  return applyVillageRoleMultiplier(amount, person, VILLAGE_ROLE_DOCTOR);
 }
 
 export function calculateMikoMana(person) {
-  return Math.round(12 * statTripleProduct(person, "chr", "mag", "sexdr"));
+  const amount = Math.round(12 * statTripleProduct(person, "chr", "mag", "sexdr"));
+  return applyVillageRoleMultiplier(amount, person, VILLAGE_ROLE_PRIEST);
 }
 
 export function calculateBunnySupport(person) {
@@ -295,11 +345,18 @@ export function calculateAlchemyYield(person) {
 }
 
 export function calculateCopyBookYield(person) {
-  return Math.round(20 * statProduct(person, "vit", "int"));
+  const amount = Math.round(20 * statProduct(person, "vit", "int"));
+  return applyVillageRoleMultiplier(amount, person, VILLAGE_ROLE_LIBRARIAN);
 }
 
 export function calculateWeavingYield(person) {
   let amount = Math.round(42 * statProduct(person, "dex", "ind"));
+  if (hasBodyTrait(person, SENSITIVE_FINGERS_TRAIT)) {
+    amount = Math.round(amount * 1.2);
+  }
+  if (hasBodyTrait(person, "糸吐き")) {
+    amount = Math.round(amount * 2);
+  }
   if (hasBodyTrait(person, "梟の巫女")) {
     amount = Math.round(amount * 1.5);
   }

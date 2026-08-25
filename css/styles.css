@@ -33,6 +33,353 @@ body {
   background: #f5f5f5;
   color: #333;
 }
+body.opening-active {
+  overflow: hidden;
+}
+.opening-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  color: #f8efd8;
+  background: #17130e url("../images/OPENING.png") center / cover no-repeat;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "Hiragino Mincho Pro", serif;
+  opacity: 1;
+  isolation: isolate;
+  transition: opacity 240ms ease;
+}
+.opening-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(to bottom, rgba(8, 7, 4, 0.02) 42%, rgba(8, 6, 3, 0.76) 100%);
+  transition: background 240ms ease;
+}
+.opening-screen[data-view="story"]::before {
+  background: #000;
+}
+.opening-screen.is-closing {
+  pointer-events: none;
+  opacity: 0;
+}
+.opening-screen[hidden],
+.opening-view[hidden] {
+  display: none !important;
+}
+.opening-view {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+}
+.opening-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.opening-menu {
+  display: grid;
+  align-content: end;
+  justify-items: center;
+  padding: 24px;
+}
+.opening-menu-label {
+  display: block;
+}
+.opening-menu-note {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.76rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  opacity: 0.78;
+}
+.opening-menu-button:disabled {
+  border-color: #8b7a5b;
+  background: linear-gradient(#cdc3ac, #ada38b);
+  color: #4b4335;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.opening-version {
+  margin: 0;
+  color: rgba(243, 229, 189, 0.72);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+.opening-menu-panel {
+  display: grid;
+  width: min(360px, calc(100vw - 48px));
+  gap: 10px;
+  box-sizing: border-box;
+  padding: 18px;
+  margin-bottom: clamp(8px, 4vh, 42px);
+  border: 1px solid rgba(224, 194, 125, 0.72);
+  border-radius: 4px;
+  background: rgba(18, 13, 7, 0.78);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5), inset 0 0 24px rgba(226, 192, 112, 0.08);
+  backdrop-filter: blur(3px);
+}
+.opening-menu-button,
+.opening-story-actions button {
+  box-sizing: border-box;
+  min-height: 46px;
+  margin: 0;
+  padding: 10px 18px;
+  border: 1px solid #b99a58;
+  border-radius: 3px;
+  background: linear-gradient(#f3e5bd, #d2b77a);
+  color: #2c2112;
+  font: 700 1rem/1.3 "Yu Mincho", "Hiragino Mincho ProN", "Hiragino Mincho Pro", serif;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px rgba(255, 255, 255, 0.45);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.55), 0 3px 9px rgba(0, 0, 0, 0.34);
+}
+.opening-menu-button:hover:not(:disabled),
+.opening-story-actions button:hover {
+  border-color: #e3c475;
+  background: linear-gradient(#fff2cd, #dfc386);
+}
+.opening-menu-button:focus-visible,
+.opening-story-actions button:focus-visible {
+  outline: 3px solid #fff0aa;
+  outline-offset: 3px;
+}
+.opening-story {
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  overflow-y: auto;
+  cursor: pointer;
+}
+/* ト書きは配置に影響させず、暗闇の中央へ置く。 */
+.opening-story-stage {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  margin: 0;
+  padding: 0 16px;
+  color: #c9b98f;
+  /* 大きさは .opening-message-text と揃え、位置だけで見せる。 */
+  font-size: clamp(0.98rem, 2vw, 1.12rem);
+  text-align: center;
+  letter-spacing: 0.06em;
+  transform: translateY(-50%);
+  opacity: 0;
+  transition: opacity 1s ease-out;
+}
+/* 声が聞こえ始めたらト書きは退場し、暗闇と話者だけを残す。 */
+.opening-story-stage.is-visible {
+  opacity: 1;
+}
+/* 以下は会話モーダル（#conversationModal）の構成を、暗い配色で再現したもの。 */
+.opening-message-window {
+  box-sizing: border-box;
+  width: min(760px, 100%);
+  padding: 20px;
+  border: 1px solid rgba(211, 181, 111, 0.7);
+  border-radius: 4px;
+  background: rgba(8, 7, 5, 0.92);
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.68), inset 0 0 40px rgba(207, 168, 87, 0.06);
+  animation: openingWindowFadeIn 0.5s ease-out both;
+}
+.opening-message-content {
+  display: flex;
+  gap: 20px;
+}
+/* 顔グラ枠。話者の姿が見えないことを、空の枠そのもので示す。 */
+.opening-message-portrait {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 200px;
+  height: 200px;
+  border: 1px solid rgba(211, 181, 111, 0.28);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(216, 185, 104, 0.45);
+  font-size: 4rem;
+}
+.opening-message-dialogue {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 200px;
+  padding: 10px 14px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.035);
+}
+.opening-message-speaker {
+  margin: 0 0 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(211, 181, 111, 0.35);
+  color: #d8b968;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.opening-message-text {
+  margin: 0;
+  font-size: clamp(0.98rem, 2vw, 1.12rem);
+  line-height: 1.85;
+}
+/* 台本の改行で区切った1行。行内の折り返しは自然な位置に任せる。 */
+.opening-message-line {
+  display: block;
+}
+.opening-message-cursor {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  color: #e5c77f;
+  font-size: 0.9rem;
+  animation: openingCursorBlink 1.1s steps(1, end) infinite;
+}
+.opening-story-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  min-height: 46px;
+  margin-top: 14px;
+}
+/* 導入シーンのボタンは、会話モーダルの閉じるボタンに倣って控えめにする。
+   共有の .opening-story-actions button より詳細度を上げないと金色装飾に負ける。 */
+.opening-story .opening-story-actions button {
+  min-height: 34px;
+  padding: 5px 16px;
+  border-color: rgba(185, 154, 88, 0.55);
+  background: rgba(20, 16, 10, 0.6);
+  color: #cdb27a;
+  font-weight: 400;
+  font-size: 0.9rem;
+  text-shadow: none;
+  box-shadow: none;
+}
+.opening-story .opening-story-actions button:hover {
+  border-color: #e3c475;
+  background: rgba(36, 29, 18, 0.78);
+  color: #f0dba6;
+}
+/* スキップは押し間違えないよう、枠を外して左下に小さく置く。 */
+.opening-story .opening-story-actions .opening-skip-button {
+  min-height: 0;
+  padding: 2px 2px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: rgba(200, 174, 120, 0.7);
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  box-shadow: none;
+}
+.opening-story .opening-story-actions .opening-skip-button:hover {
+  background: none;
+  color: #e6d0a0;
+}
+#openingStoryContinueButton {
+  min-width: 190px;
+  margin-left: auto;
+}
+/* 導入を見終えたら、メッセージだけ先に消す。時間は STORY_FADE_OUT_MS と揃える。 */
+.opening-story.is-ending {
+  pointer-events: none;
+}
+.opening-story.is-ending .opening-message-window {
+  animation: none;
+  opacity: 0;
+  transition: opacity 500ms ease;
+}
+@keyframes openingWindowFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes openingCursorBlink {
+  0%, 55% { opacity: 1; }
+  56%, 100% { opacity: 0; }
+}
+@media (max-width: 640px) {
+  .opening-menu {
+    padding: 16px;
+  }
+  .opening-menu-panel {
+    width: min(360px, calc(100vw - 32px));
+    padding: 14px;
+  }
+  .opening-story {
+    padding: 16px;
+  }
+  .opening-message-content {
+    gap: 12px;
+  }
+  .opening-message-portrait {
+    width: 128px;
+    height: 128px;
+    font-size: 2.6rem;
+  }
+  .opening-message-dialogue {
+    min-height: 128px;
+  }
+}
+@media (max-height: 620px) and (orientation: landscape) {
+  .opening-menu {
+    padding: 12px;
+  }
+  .opening-menu-panel {
+    width: min(330px, calc(100vw - 24px));
+    gap: 7px;
+    padding: 11px;
+    margin-bottom: 0;
+  }
+  .opening-menu-button {
+    min-height: 38px;
+    padding: 7px 14px;
+    font-size: 0.9rem;
+  }
+  .opening-story {
+    padding: 12px;
+  }
+  .opening-message-window {
+    padding: 14px;
+  }
+  .opening-message-content {
+    gap: 12px;
+  }
+  .opening-message-portrait {
+    width: 128px;
+    height: 128px;
+    font-size: 2.6rem;
+  }
+  .opening-message-dialogue {
+    min-height: 128px;
+    line-height: 1.55;
+  }
+  .opening-story-actions {
+    min-height: 38px;
+    margin-top: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .opening-screen,
+  .opening-screen::before {
+    transition: none;
+  }
+  .opening-story-stage {
+    transition: none;
+  }
+  .opening-message-window,
+  .opening-message-cursor {
+    animation: none;
+  }
+}
 header, footer {
   background: #333;
   color: #fff;
@@ -169,6 +516,26 @@ button {
   text-align: center;
   white-space: nowrap;
 }
+#captivesTable td.action-cell {
+  width: 230px;
+  max-width: 230px;
+  padding-left: 3px;
+  padding-right: 1px;
+  text-align: center;
+  white-space: nowrap;
+}
+#villagersTable td.village-role-cell,
+#visitorsTable td.village-role-cell,
+#raidEnemiesTable td.village-role-cell,
+#captivesTable td.village-role-cell {
+  width: 70px;
+  max-width: 70px;
+  text-align: center;
+  white-space: nowrap;
+}
+.village-role-select {
+  max-width: 66px;
+}
 .assignment-lock-toggle {
   flex: 0 0 auto;
   width: 28px;
@@ -264,6 +631,18 @@ button {
   color: #a40000;
   font-weight: bold;
 }
+.message-item.tutorial {
+  color: #5d3d12;
+  background: #faf6ee;
+  border-left: 3px solid #b8a36d;
+  padding-left: 6px;
+}
+.message-item.request {
+  color: #5d3d12;
+  background: #f7f1e4;
+  border-left: 3px solid #9c7a39;
+  padding-left: 6px;
+}
 .message-empty {
   color: #666;
 }
@@ -288,12 +667,20 @@ table {
   width: max-content;
   min-width: 100%;
 }
+#captivesTable {
+  width: max-content;
+  min-width: 100%;
+}
 #villagersTable th,
 #villagersTable td,
 #visitorsTable th,
 #visitorsTable td,
 #raidEnemiesTable th,
 #raidEnemiesTable td {
+  white-space: nowrap;
+}
+#captivesTable th,
+#captivesTable td {
   white-space: nowrap;
 }
 th, td {
@@ -443,6 +830,20 @@ body.scale-stage-6 .log-area,
 #villageScaleModal.scale-stage-6 {
   --village-scale-image: url("../images/village-scale-07-autonomous-settlement.jpg");
 }
+
+/* 黙示録が続く間は、画面の色調をわずかに不穏へ寄せる */
+body.apocalypse-mode header {
+  background: #3a1414;
+}
+body.apocalypse-mode .log-area {
+  background:
+    linear-gradient(rgba(255, 236, 232, 0.85), rgba(243, 219, 214, 0.92)),
+    var(--village-scale-image) center / cover no-repeat #fff;
+  border-color: #a45f5f;
+}
+body.apocalypse-mode #villageInfoHeading {
+  color: #7b2020;
+}
 .village-scale-modal-body {
   padding: 34px 38px 28px;
   color: #2f2719;
@@ -483,7 +884,18 @@ body.scale-stage-6 .log-area,
   background: #f9d8e9; /* 薄赤 */
 }
 
-/* ▼筋力～魅力(列8~13) => 薄黄色 */
+tr.apocalypse-conquest-row > td {
+  background: #fff !important;
+  border-color: #d4af37 !important;
+  color: #211805;
+}
+
+tr.apocalypse-war-row > td {
+  background: #f26649 !important;
+  color: #35120b;
+}
+
+/* ▼筋力～魅力 => 薄黄色 */
 .male-basic.happiness-cell {
   background: #d8e9f9;
 }
@@ -492,22 +904,22 @@ body.scale-stage-6 .log-area,
   background: #f9d8e9;
 }
 
-tr td:nth-child(11),
-tr td:nth-child(12),
-tr td:nth-child(13),
 tr td:nth-child(14),
 tr td:nth-child(15),
-tr td:nth-child(16) {
+tr td:nth-child(16),
+tr td:nth-child(17),
+tr td:nth-child(18),
+tr td:nth-child(19) {
   background: #faf2d3;
 }
 
-/* ▼知力～好色(列14~19) => 薄緑 */
-tr td:nth-child(17),
-tr td:nth-child(18),
-tr td:nth-child(19),
+/* ▼知力～好色 => 薄緑 */
 tr td:nth-child(20),
 tr td:nth-child(21),
-tr td:nth-child(22) {
+tr td:nth-child(22),
+tr td:nth-child(23),
+tr td:nth-child(24),
+tr td:nth-child(25) {
   background: #e2f9d8;
 }
 
@@ -576,50 +988,74 @@ table.show-spirit-columns .spirit-column {
 }
 #villagersTable td:nth-child(11),
 #villagersTable td:nth-child(12),
+#villagersTable td:nth-child(13),
 #visitorsTable td:nth-child(11),
 #visitorsTable td:nth-child(12),
+#visitorsTable td:nth-child(13),
 #raidEnemiesTable td:nth-child(11),
-#raidEnemiesTable td:nth-child(12) {
+#raidEnemiesTable td:nth-child(12),
+#raidEnemiesTable td:nth-child(13) {
   background: inherit;
 }
-#villagersTable td:nth-child(13),
+#captivesTable td:nth-child(11),
+#captivesTable td:nth-child(12),
+#captivesTable td:nth-child(13) {
+  background: inherit;
+}
 #villagersTable td:nth-child(14),
 #villagersTable td:nth-child(15),
 #villagersTable td:nth-child(16),
 #villagersTable td:nth-child(17),
 #villagersTable td:nth-child(18),
-#visitorsTable td:nth-child(13),
+#villagersTable td:nth-child(19),
 #visitorsTable td:nth-child(14),
 #visitorsTable td:nth-child(15),
 #visitorsTable td:nth-child(16),
 #visitorsTable td:nth-child(17),
 #visitorsTable td:nth-child(18),
-#raidEnemiesTable td:nth-child(13),
+#visitorsTable td:nth-child(19),
 #raidEnemiesTable td:nth-child(14),
 #raidEnemiesTable td:nth-child(15),
 #raidEnemiesTable td:nth-child(16),
 #raidEnemiesTable td:nth-child(17),
-#raidEnemiesTable td:nth-child(18) {
+#raidEnemiesTable td:nth-child(18),
+#raidEnemiesTable td:nth-child(19) {
   background: #faf2d3;
 }
-#villagersTable td:nth-child(19),
+#captivesTable td:nth-child(14),
+#captivesTable td:nth-child(15),
+#captivesTable td:nth-child(16),
+#captivesTable td:nth-child(17),
+#captivesTable td:nth-child(18),
+#captivesTable td:nth-child(19) {
+  background: #faf2d3;
+}
 #villagersTable td:nth-child(20),
 #villagersTable td:nth-child(21),
 #villagersTable td:nth-child(22),
 #villagersTable td:nth-child(23),
 #villagersTable td:nth-child(24),
-#visitorsTable td:nth-child(19),
+#villagersTable td:nth-child(25),
 #visitorsTable td:nth-child(20),
 #visitorsTable td:nth-child(21),
 #visitorsTable td:nth-child(22),
 #visitorsTable td:nth-child(23),
 #visitorsTable td:nth-child(24),
-#raidEnemiesTable td:nth-child(19),
+#visitorsTable td:nth-child(25),
 #raidEnemiesTable td:nth-child(20),
 #raidEnemiesTable td:nth-child(21),
 #raidEnemiesTable td:nth-child(22),
 #raidEnemiesTable td:nth-child(23),
-#raidEnemiesTable td:nth-child(24) {
+#raidEnemiesTable td:nth-child(24),
+#raidEnemiesTable td:nth-child(25) {
+  background: #e2f9d8;
+}
+#captivesTable td:nth-child(20),
+#captivesTable td:nth-child(21),
+#captivesTable td:nth-child(22),
+#captivesTable td:nth-child(23),
+#captivesTable td:nth-child(24),
+#captivesTable td:nth-child(25) {
   background: #e2f9d8;
 }
 
@@ -629,10 +1065,16 @@ table.show-spirit-columns .spirit-column {
 #raidEnemiesTable td.happiness-cell.male-basic {
   background: #d8e9f9;
 }
+#captivesTable td.happiness-cell.male-basic {
+  background: #d8e9f9;
+}
 
 #villagersTable td.happiness-cell.female-basic,
 #visitorsTable td.happiness-cell.female-basic,
 #raidEnemiesTable td.happiness-cell.female-basic {
+  background: #f9d8e9;
+}
+#captivesTable td.happiness-cell.female-basic {
   background: #f9d8e9;
 }
 
@@ -665,15 +1107,15 @@ table.show-spirit-columns .spirit-column {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: #fff;
-  border: 2px solid #aaa;
-  box-shadow: 2px 2px 8px rgba(0,0,0,0.3);
-  width: min(1000px, calc(100vw - 32px));
-  max-width: 1000px;
-  max-height: calc(100vh - 32px);
+  background: #f8f5ed;
+  border: 1px solid #9f8b62;
+  box-shadow: 0 12px 30px rgba(40, 25, 8, 0.34);
+  width: min(1380px, calc(100vw - 16px));
+  max-width: 1380px;
+  max-height: calc(100vh - 24px);
   overflow-y: auto;
   box-sizing: border-box;
-  padding: 10px;
+  padding: 0;
   display: none;
   z-index: 2000;
 }
@@ -687,37 +1129,302 @@ table.show-spirit-columns .spirit-column {
 }
 #raidModal .raid-section {
   margin-bottom: 10px;
-  overflow-x: auto;
 }
-#raidModal h3 {
-  margin: 0.5em 0;
+#raidModal .raid-battle-header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #efe4d0;
+  border-bottom: 1px solid #c8b07c;
+}
+#raidModal .raid-battle-title {
+  min-width: 0;
+}
+#raidModal h2 {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+}
+.raid-status-line {
+  color: #5f4b25;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+.raid-battle-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 10px 12px 0;
+  max-height: calc(100vh - 280px);
+  overflow-y: auto;
+}
+.raid-board {
+  min-width: 0;
+  border: 1px solid #cab98f;
+  background: #fffdf8;
+}
+.raid-board h3,
+.raid-log-section h3 {
+  margin: 0;
+  padding: 7px 9px;
+  background: #e9dcc2;
+  border-bottom: 1px solid #cab98f;
+  color: #3f3018;
+  font-size: 0.9rem;
+}
+.raid-role-section {
+  margin: 0;
+  border-bottom: 1px solid #dfd0ad;
+}
+.raid-role-section:last-child {
+  border-bottom: 0;
+}
+.raid-role-heading {
+  padding: 4px 8px 3px;
+  color: #4a3719;
+  background: #f7f0e3;
+  border-bottom: 1px solid #dfd0ad;
+  font-weight: bold;
+  font-size: 0.78rem;
+}
+.raid-table-scroll {
+  max-height: min(34vh, 330px);
+  overflow: auto;
+}
+.raid-enemy-scroll {
+  max-height: min(56vh, 520px);
 }
 #raidModal table {
   margin-bottom: 0;
+  width: 100%;
+  min-width: 0;
+  border-collapse: collapse;
+  background: #fff;
 }
 #raidModal th,
 #raidModal td {
   white-space: nowrap;
+  padding: 3px 4px;
+  font-size: 0.78rem;
+  line-height: 1.25;
+  vertical-align: middle;
+}
+#raidModal th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f1e6cf;
+}
+#raidModal tr.is-leaving td {
+  background: #e8e8e8;
+  color: #4d4d4d;
+  box-shadow: inset 3px 0 0 #8a8a8a;
+}
+#raidModal tr.is-retreating td {
+  background: #eef7ff;
+  color: #245f87;
+  box-shadow: inset 3px 0 0 #3578a8;
+}
+#raidModal tr.is-acting td,
+#raidModal tr.is-countering td {
+  background: #fff6d8;
+  box-shadow: inset 3px 0 0 #b8801c;
+}
+#raidModal tr.is-hit td {
+  animation: raidHitFlash 0.34s ease-out;
+}
+#raidModal .raid-portrait-cell {
+  width: 34px;
+  min-width: 34px;
+  padding: 2px;
+}
+.raid-portrait-frame {
+  width: 30px;
+  height: 30px;
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid #b7a983;
+  border-radius: 4px;
+  background: #f7f0e3;
+}
+.raid-portrait-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+  display: block;
+  transform: scale(1.28);
+  transform-origin: center 28%;
+}
+.raid-unit-name {
+  position: relative;
+  min-width: 96px;
+  width: auto;
+}
+.raid-unit-title {
+  display: block;
+  font-weight: bold;
+}
+.raid-unit-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 2px;
+}
+.raid-unit-action {
+  display: inline-block;
+  padding: 1px 4px;
+  border: 1px solid #d7c597;
+  border-radius: 4px;
+  background: #f7f0e3;
+  color: #573e15;
+  font-size: 0.7rem;
+  line-height: 1.25;
+}
+.raid-unit-effect {
+  display: inline-block;
+  padding: 1px 4px;
+  border: 1px solid #c2b19a;
+  border-radius: 4px;
+  background: #f1f1ed;
+  color: #4d4638;
+  font-size: 0.7rem;
+  line-height: 1.25;
+}
+.raid-unit-action-note {
+  display: inline-block;
+  padding: 1px 0;
+  color: #6b5b3c;
+  font-size: 0.7rem;
+  line-height: 1.25;
+}
+.raid-unit-hp.is-low,
+.raid-unit-mp.is-low {
+  color: #a3261b;
+  font-weight: bold;
+}
+.raid-unit-hp,
+.raid-unit-mp {
+  position: relative;
+  min-width: 42px;
+  width: 50px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.raid-stat-summary {
+  min-width: 170px;
+  width: 200px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+}
+.raid-stat-line {
+  display: block;
+}
+.raid-stat-line + .raid-stat-line {
+  margin-top: 1px;
+}
+.raid-stat-value.is-high {
+  font-weight: bold;
+}
+.raid-damage-pop {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  pointer-events: none;
+  color: #d82018;
+  font-weight: bold;
+  font-size: 0.82rem;
+  text-shadow: 0 1px 0 #fff, 0 0 4px rgba(255, 255, 255, 0.9);
+  animation: raidDamagePop 0.52s ease-out forwards;
+}
+.raid-action-pop {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  z-index: 3;
+  pointer-events: none;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #5d3d12;
+  color: #fff;
+  font-weight: bold;
+  font-size: 0.9rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 2px 9px rgba(0, 0, 0, 0.26);
+  animation: raidActionPop 0.72s ease-out forwards;
+}
+.raid-action-pop.is-retreat {
+  background: #245f87;
+}
+.raid-action-pop.is-damage {
+  background: #d82018;
+}
+@keyframes raidHitFlash {
+  0% { background-color: #ffe1d5; }
+  100% { background-color: inherit; }
+}
+@keyframes raidActionPop {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.92);
+  }
+  18% {
+    opacity: 1;
+    transform: translateY(-65%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-95%) scale(1.03);
+  }
+}
+@keyframes raidDamagePop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -35%) scale(0.92);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -130%) scale(1.08);
+  }
 }
 #raidLogArea {
-  height: min(250px, 28vh);
-  min-height: 140px;
+  height: min(210px, 24vh);
+  min-height: 130px;
   overflow-y: auto;
-  background: #fdfdfd;
-  border: 1px solid #ccc;
-  padding: 5px;
+  background: #fffefb;
+  border: 0;
+  padding: 8px 10px;
   font-size: 0.85rem;
   line-height: 1.4em;
 }
+.raid-log-section {
+  margin: 10px 12px 12px;
+  border: 1px solid #cab98f;
+  background: #fffdf8;
+}
 .raid-buttons {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: #fff;
-  text-align: left;
-  margin: 0 -10px 10px -10px;
-  padding: 8px 10px;
-  border-bottom: 1px solid #ddd;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-left: auto;
+}
+.raid-buttons button {
+  min-height: 34px;
+  padding: 5px 12px;
+}
+.raid-buttons .raid-retreat-button {
+  border-color: #b35c5c;
+  color: #8d2525;
 }
 
 /* 追加: ヘッダー内の h1 のフォントサイズを指定 */
@@ -739,6 +1446,7 @@ section h2 {
 /* モーダル: 建築・秘宝・村史・個人記録 */
 #buildingOverlay,
 #secretTreasureOverlay,
+#dryadFruitOverlay,
 #historyOverlay,
 #personalHistoryOverlay {
   position: fixed;
@@ -750,6 +1458,7 @@ section h2 {
 }
 #buildingModal,
 #secretTreasureModal,
+#dryadFruitModal,
 #historyModal,
 #personalHistoryModal {
   position: fixed;
@@ -800,7 +1509,7 @@ section h2 {
 }
 .personal-history-summary {
   display: grid;
-  grid-template-columns: 96px minmax(0, 1fr);
+  grid-template-columns: 200px minmax(0, 1fr);
   gap: 14px;
   align-items: start;
   margin: 0 0 16px;
@@ -810,18 +1519,78 @@ section h2 {
   color: #2f2618;
   font-family: "Yu Gothic", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
 }
+.personal-history-portrait-area {
+  display: grid;
+  gap: 6px;
+  width: 200px;
+}
 .personal-history-portrait-frame {
-  width: 96px;
+  display: grid;
+  place-items: center;
+  width: 200px;
   aspect-ratio: 1;
   background: #e8dfcb;
   border: 1px solid #bda978;
   overflow: hidden;
 }
 .personal-history-portrait-frame img {
+  grid-area: 1 / 1;
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+.personal-history-portrait-frame.is-unknown {
+  background: #f4ead6;
+}
+.personal-history-portrait-unknown {
+  grid-area: 1 / 1;
+  color: #6b5432;
+  font-weight: bold;
+  letter-spacing: 0;
+}
+.personal-history-portrait-controls {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+.personal-history-portrait-nav-button {
+  appearance: none;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: #5f4320;
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.personal-history-portrait-nav-button[data-portrait-step="older"] {
+  justify-self: start;
+}
+.personal-history-portrait-nav-button[data-portrait-step="newer"] {
+  justify-self: end;
+}
+.personal-history-portrait-nav-button:hover,
+.personal-history-portrait-nav-button:focus {
+  color: #2f2618;
+}
+.personal-history-portrait-nav-button:disabled {
+  color: #9b8b74;
+  cursor: default;
+  opacity: 0.45;
+  text-decoration: none;
+}
+.personal-history-portrait-caption {
+  justify-self: center;
+  color: #5f4320;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  text-align: center;
+  white-space: nowrap;
 }
 .personal-history-profile {
   min-width: 0;
@@ -838,7 +1607,7 @@ section h2 {
 }
 .personal-history-profile-table {
   display: grid;
-  grid-template-columns: 6em max-content max-content max-content max-content;
+  grid-template-columns: 6em max-content max-content max-content max-content max-content;
   justify-content: start;
   gap: 3px 10px;
   align-items: baseline;
@@ -860,9 +1629,11 @@ section h2 {
 }
 .personal-history-profile-label.is-body,
 .personal-history-profile-label.is-spirit,
+.personal-history-profile-label.is-personality,
 .personal-history-profile-label.is-hobby,
 .personal-history-profile-value.is-body,
 .personal-history-profile-value.is-spirit,
+.personal-history-profile-value.is-personality,
 .personal-history-profile-value.is-hobby {
   margin-left: 10px;
 }
@@ -893,6 +1664,130 @@ section h2 {
 .personal-history-profile-field.is-detail span,
 .personal-history-profile-field.is-detail strong {
   line-height: 1.55;
+}
+.personal-history-relationship-text {
+  display: block;
+}
+.personal-history-detail-row {
+  display: block;
+  margin-top: 5px;
+}
+.personal-history-detail-button {
+  padding: 2px 8px;
+  border: 1px solid #9b875d;
+  background: #f4ead5;
+  color: #2f2618;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  cursor: pointer;
+}
+.personal-history-detail-button:hover,
+.personal-history-detail-button:focus {
+  background: #ead9b8;
+}
+.friendship-detail-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 1200;
+}
+.friendship-detail-modal {
+  box-sizing: border-box;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(880px, calc(100vw - 32px));
+  max-height: min(88vh, 760px);
+  display: flex;
+  flex-direction: column;
+  padding: 18px;
+  background: #f7f0e3;
+  border: 1px solid #9b875d;
+  box-shadow: 0 18px 48px rgba(28, 20, 10, 0.38);
+  color: #2f2618;
+  z-index: 1201;
+}
+.friendship-detail-modal .modal-header {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 3px double #bba575;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+  font-size: 1.12rem;
+  font-weight: bold;
+}
+.friendship-detail-content {
+  overflow: auto;
+  border: 1px solid #e0d1ad;
+  background: #fbf6ea;
+}
+.friendship-detail-table {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-family: "Yu Gothic", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+  font-size: 0.9rem;
+}
+.friendship-detail-col-person {
+  width: 220px;
+}
+.friendship-detail-col-score {
+  width: 108px;
+}
+.friendship-detail-col-relation {
+  width: auto;
+}
+.friendship-detail-table th,
+.friendship-detail-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #e5d8b8;
+  text-align: left;
+  vertical-align: middle;
+}
+.friendship-detail-table th {
+  position: sticky;
+  top: 0;
+  background: #ead9b8;
+  color: #3d321f;
+  white-space: nowrap;
+  z-index: 1;
+}
+.friendship-detail-person {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+.friendship-detail-portrait-button {
+  display: block;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.friendship-detail-portrait-button:hover img,
+.friendship-detail-portrait-button:focus img {
+  border-color: #8b6d31;
+  box-shadow: 0 0 0 2px rgba(139, 109, 49, 0.24);
+}
+.friendship-detail-person img {
+  display: block;
+  width: 42px;
+  height: 42px;
+  object-fit: cover;
+  border: 1px solid #bda978;
+  background: #e8dfcb;
+}
+.friendship-detail-empty {
+  text-align: center;
+  color: #73654b;
+}
+.friendship-detail-modal .modal-buttons {
+  margin-top: 12px;
+  text-align: right;
 }
 .personal-history-note {
   margin: 0 0 14px;
@@ -1011,9 +1906,422 @@ section h2 {
   font-weight: bold;
 }
 
+/* 襲撃結果モーダル。月初イベント等のモーダルより前面に出す。 */
+.raid-result-overlay {
+  z-index: 10050;
+}
+.raid-result-modal {
+  z-index: 10051;
+}
+.raid-result-modal h3 .raid-result-reason {
+  margin-left: 0.6em;
+  color: #777;
+  font-size: 0.75em;
+  font-weight: normal;
+}
+.raid-result-mvp {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 12px;
+  margin: 10px 0 14px;
+  padding: 10px 12px;
+  border: 1px solid #d9c069;
+  border-radius: 6px;
+  background: #fdf6dd;
+}
+.raid-result-mvp-label {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: #b8952e;
+  color: #fff;
+  font-weight: bold;
+  font-size: 0.85rem;
+}
+.raid-result-mvp-person {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: bold;
+}
+.raid-result-mvp-person img {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border: 1px solid #c9ab54;
+  border-radius: 4px;
+}
+.raid-result-mvp-damage {
+  color: #8a6d1d;
+  font-size: 0.9rem;
+}
 .event-modal-buttons {
   margin-top: 14px;
   text-align: right;
+}
+
+.adventurer-quest-modal {
+  width: min(840px, calc(100vw - 32px));
+}
+
+.adventurer-quest-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.adventurer-quest-card {
+  padding: 12px;
+  border: 1px solid #b99a68;
+  border-radius: 5px;
+  background: #fffaf0;
+}
+
+.adventurer-quest-card.is-disabled {
+  color: #777;
+  border-color: #bbb;
+  background: #e7e7e7;
+}
+
+.adventurer-quest-card h4,
+.adventurer-quest-card p {
+  margin: 0 0 8px;
+}
+
+.adventurer-quest-card dl {
+  margin: 8px 0;
+}
+
+.adventurer-quest-card dl div {
+  display: grid;
+  grid-template-columns: 7em minmax(0, 1fr);
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.adventurer-quest-card dt {
+  font-weight: bold;
+}
+
+.adventurer-quest-card dd {
+  margin: 0;
+}
+
+.adventurer-quest-card button {
+  min-height: 36px;
+}
+
+.adventurer-quest-requirement,
+.adventurer-quest-disabled-reason {
+  color: #8a2a2a;
+  font-weight: bold;
+}
+
+.adventurer-quest-result-overlay {
+  z-index: 2800;
+}
+
+.adventurer-quest-result-modal {
+  width: min(560px, calc(100vw - 32px));
+  z-index: 2801;
+}
+
+.adventurer-quest-report-person {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.adventurer-quest-report-person img {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  background: #eee;
+}
+
+.heresy-inquisition-modal {
+  width: min(640px, calc(100vw - 32px));
+  border-color: #5b1f1f;
+}
+
+.heresy-inquisition-body {
+  padding: 18px;
+}
+
+.heresy-inquisition-body h2 {
+  margin: 0 0 14px;
+  color: #7b2020;
+}
+
+.heresy-inquisition-speaker {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.heresy-inquisition-portrait {
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border: 1px solid #a58b74;
+  background: #eee7dd;
+}
+
+.heresy-inquisition-portrait img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.heresy-inquisition-dialogue {
+  min-width: 0;
+}
+
+.heresy-inquisition-dialogue p {
+  margin: 0 0 12px;
+  line-height: 1.65;
+}
+
+.heresy-inquisition-name {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #d8c9bb;
+  font-weight: bold;
+  color: #4b3627;
+}
+
+.heresy-inquisition-cost {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  padding: 10px 12px;
+  border: 1px solid #d8c9bb;
+  background: #f8f3eb;
+}
+
+.heresy-inquisition-cost strong {
+  color: #7b2020;
+}
+
+.heresy-inquisition-cost small {
+  grid-column: 1 / -1;
+  color: #666;
+}
+
+.heresy-inquisition-warning,
+.heresy-inquisition-result {
+  margin-top: 10px !important;
+  font-weight: bold;
+  color: #8b1e1e;
+}
+
+.heresy-inquisition-choices {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  list-style: none;
+  border: 1px solid #d8c9bb;
+  background: #fdfaf5;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.heresy-inquisition-choices li + li {
+  margin-top: 6px;
+}
+
+.heresy-inquisition-choices strong {
+  display: inline-block;
+  min-width: 5.5em;
+  margin-right: 8px;
+  color: #4b3627;
+}
+
+.heresy-inquisition-buttons {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.heresy-inquisition-buttons button {
+  min-width: 112px;
+  padding: 9px 14px;
+  border: 1px solid #b7a897;
+  background: #f0ebe4;
+  cursor: pointer;
+}
+
+.heresy-inquisition-buttons button:hover,
+.heresy-inquisition-buttons button:focus-visible {
+  background: #e4d9cb;
+}
+
+.heresy-inquisition-buttons .heresy-expulsion-button {
+  border-color: #9d5555;
+  color: #7b2020;
+}
+
+.heresy-inquisition-buttons button:disabled {
+  border-color: #d3cabf;
+  background: #efece7;
+  color: #a09589;
+  cursor: not-allowed;
+}
+
+.golden-statue-confirm-modal {
+  width: min(560px, calc(100vw - 32px));
+  border-color: #7b2020;
+}
+
+.golden-statue-confirm-modal .event-modal-body {
+  padding: 18px;
+}
+
+.golden-statue-confirm-modal h3 {
+  margin: 0 0 12px;
+  color: #7b2020;
+}
+
+.golden-statue-confirm-modal p {
+  margin: 0 0 12px;
+  line-height: 1.65;
+}
+
+.golden-statue-confirm-warning {
+  padding: 10px 12px;
+  border: 1px solid #b06a6a;
+  background: #fdf2f0;
+  font-weight: bold;
+  color: #8b1e1e;
+}
+
+.golden-statue-confirm-note {
+  color: #7a5c32;
+  font-size: 0.9rem;
+}
+
+.golden-statue-confirm-buttons {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.golden-statue-confirm-buttons button {
+  min-width: 120px;
+  padding: 9px 14px;
+  border: 1px solid #b7a897;
+  background: #f0ebe4;
+  cursor: pointer;
+}
+
+.golden-statue-confirm-buttons .golden-statue-confirm-button {
+  border-color: #9d5555;
+  color: #7b2020;
+}
+
+.golden-statue-confirm-buttons button:hover,
+.golden-statue-confirm-buttons button:focus-visible {
+  background: #e4d9cb;
+}
+
+.pinecone-staff-intro-modal .event-modal-image {
+  aspect-ratio: 4 / 5;
+  max-height: min(56vh, 520px);
+  object-fit: contain;
+  background: #1f1a14;
+}
+
+.pinecone-staff-effect-list {
+  margin: 0 0 10px;
+  padding-left: 1.4rem;
+  line-height: 1.65;
+}
+.tutorial-completion-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 9998;
+}
+.tutorial-completion-modal {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(560px, calc(100vw - 32px));
+  max-height: min(86vh, 720px);
+  overflow: auto;
+  background: #fff;
+  color: #222;
+  border: 1px solid #7a5c32;
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  z-index: 9999;
+}
+.tutorial-completion-body {
+  padding: 18px 20px 12px;
+}
+.tutorial-completion-body h3 {
+  margin: 0 0 12px;
+  color: #5d3d12;
+}
+.tutorial-completion-current,
+.tutorial-completion-description,
+.tutorial-completion-reward {
+  margin: 0 0 10px;
+  line-height: 1.55;
+}
+.tutorial-completion-current,
+.tutorial-completion-reward {
+  font-weight: bold;
+}
+.tutorial-checklist {
+  margin: 0 20px 14px;
+  padding: 12px;
+  background: #faf6ee;
+  border: 1px solid #d8c7a8;
+  border-radius: 6px;
+}
+.tutorial-checklist-heading {
+  margin-bottom: 8px;
+  font-weight: bold;
+  color: #5d3d12;
+}
+.tutorial-checklist-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+}
+.tutorial-checklist-title {
+  min-width: 0;
+}
+.tutorial-checklist-status {
+  color: #666;
+  font-size: 0.88rem;
+}
+.tutorial-completion-buttons {
+  padding: 12px 20px 16px;
+  text-align: right;
+  border-top: 1px solid #d8c7a8;
+  background: #faf6ee;
+}
+.tutorial-completion-buttons button {
+  padding: 6px 18px;
+}
+@media (max-width: 760px) {
+  .tutorial-checklist-item {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .tutorial-checklist-status {
+    grid-column: 2;
+  }
 }
 .building-item {
   border: 1px solid #ddd;
@@ -1045,6 +2353,20 @@ section h2 {
   border-radius: 3px;
   font-size: 0.8em;
 }
+.damaged-mark {
+  background: #b94a48;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 0.8em;
+}
+.building-request-mark {
+  background: #9c7a39;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 0.8em;
+}
 .building-desc {
   color: #666;
   margin-bottom: 10px;
@@ -1058,9 +2380,36 @@ section h2 {
   color: #555;
   margin-bottom: 10px;
 }
+.building-status,
+.building-repair-cost {
+  font-size: 0.9em;
+  color: #555;
+  margin-bottom: 8px;
+}
+.building-cost-original {
+  text-decoration: line-through;
+  color: #777;
+}
+.building-cost-arrow {
+  margin: 0 4px;
+  color: #9c7a39;
+}
+.building-cost-discounted {
+  color: #8a4b00;
+}
 .building-reason {
   color: #f44336;
   font-size: 0.9em;
+  margin-bottom: 10px;
+}
+.building-winter-warning {
+  color: #8a4b00;
+  background: #fff3cd;
+  border: 1px solid #e3bd65;
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 0.9em;
+  line-height: 1.4;
   margin-bottom: 10px;
 }
 .building-button {
@@ -1086,6 +2435,15 @@ section h2 {
   background: #4CAF50;
   color: white;
 }
+.building-button.repair {
+  margin-top: 8px;
+}
+.building-button.repair:not(:disabled) {
+  background: #9c7a39;
+}
+.building-button.repair:not(:disabled):hover {
+  background: #7a5f2d;
+}
 .built-list {
   display: flex;
   flex-wrap: wrap;
@@ -1098,6 +2456,9 @@ section h2 {
   padding: 5px 10px;
   border-radius: 4px;
   font-size: 0.9em;
+}
+.built-item.damaged {
+  background: #b94a48;
 }
 .building-resources {
   display: flex;
@@ -1159,6 +2520,16 @@ section h2 {
   background: #f7fbff;
 }
 
+.miracle-item.locked {
+  cursor: default;
+  background: #f1f1f1;
+  opacity: 0.82;
+}
+
+.miracle-item.locked:hover {
+  box-shadow: none;
+}
+
 .miracle-header {
   display: flex;
   justify-content: space-between;
@@ -1179,6 +2550,10 @@ section h2 {
   border-radius: 3px;
   font-size: 0.8em;
   white-space: nowrap;
+}
+
+.miracle-mark.locked {
+  background: #777;
 }
 
 .miracle-desc {
@@ -1232,6 +2607,29 @@ section h2 {
   border-top: 1px solid #eee;
 }
 
+.miracle-exchange-preview-description {
+  margin-bottom: 6px;
+}
+
+.miracle-exchange-preview-person {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 6px;
+  align-items: center;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
+.miracle-exchange-preview-portrait {
+  display: block;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  object-fit: cover;
+  object-position: center 30%;
+}
+
 .miracle-button {
   width: 100%;
   padding: 8px;
@@ -1253,6 +2651,60 @@ section h2 {
 .miracle-button:disabled {
   background: #ddd;
   cursor: not-allowed;
+}
+
+.divine-might-level-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 10040;
+}
+
+.divine-might-level-modal {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+  width: min(560px, calc(100vw - 32px));
+  max-height: min(80vh, 720px);
+  overflow: auto;
+  background: #fff;
+  color: #222;
+  border: 1px solid #7a5c32;
+  border-radius: 8px;
+  padding: 18px 20px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  z-index: 10041;
+}
+
+.divine-might-level-modal h2 {
+  margin: 0 0 10px;
+}
+
+.divine-might-level-modal dl {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.divine-might-level-modal dt {
+  font-weight: bold;
+}
+
+.divine-might-level-modal dd {
+  margin: 0;
+  padding: 8px 10px;
+  background: #f7f1e7;
+  border: 1px solid #e1d2bb;
+  border-radius: 4px;
+}
+
+.divine-might-level-modal button {
+  display: block;
+  min-width: 88px;
+  margin-left: auto;
+  padding: 7px 16px;
 }
 
 /* 月末サマリーモーダル用スタイル */
@@ -1410,6 +2862,22 @@ section h2 {
   z-index: 2100;
 }
 
+#buildingRequestOverlay,
+#wishOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 2090;
+}
+
+#buildingRequestCompleteOverlay,
+#wishCompleteOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 2090;
+}
+
 #raidWarningModal {
   position: fixed;
   top: 50%;
@@ -1427,9 +2895,39 @@ section h2 {
   z-index: 2101;
 }
 
+#buildingRequestModal,
+#buildingRequestCompleteModal,
+#wishModal,
+#wishCompleteModal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  border: 2px solid #aaa;
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+  width: 600px;
+  max-width: 90%;
+  max-height: 90vh;
+  box-sizing: border-box;
+  padding: 20px;
+  overflow-y: auto;
+  z-index: 2091;
+}
+
 #raidWarningModal h2 {
   margin: 0 0 12px;
   color: #9d2b22;
+  font-size: 1.2rem;
+  letter-spacing: 0;
+}
+
+#buildingRequestModal h2,
+#buildingRequestCompleteModal h2,
+#wishModal h2,
+#wishCompleteModal h2 {
+  margin: 0 0 12px;
+  color: #6b4d19;
   font-size: 1.2rem;
   letter-spacing: 0;
 }
@@ -1439,7 +2937,27 @@ section h2 {
   line-height: 1.6;
 }
 
+#buildingRequestModal .building-request-text p,
+#buildingRequestCompleteModal .building-request-text p,
+#wishModal .wish-text p,
+#wishCompleteModal .wish-text p {
+  margin: 0 0 12px;
+  line-height: 1.6;
+}
+
 #raidWarningModal .raid-warning-detail {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #ddd;
+  color: #555;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+#buildingRequestModal .building-request-detail,
+#buildingRequestCompleteModal .building-request-detail,
+#wishModal .wish-detail,
+#wishCompleteModal .wish-detail {
   margin-top: 12px;
   padding-top: 8px;
   border-top: 1px solid #ddd;
@@ -1455,7 +2973,28 @@ section h2 {
   margin-top: 15px;
 }
 
+#buildingRequestModal .modal-buttons,
+#buildingRequestCompleteModal .modal-buttons,
+#wishModal .modal-buttons,
+#wishCompleteModal .modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 15px;
+}
+
 #raidWarningModal .modal-buttons button {
+  min-width: 104px;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  background-color: #f0f0f0;
+  cursor: pointer;
+}
+
+#buildingRequestModal .modal-buttons button,
+#buildingRequestCompleteModal .modal-buttons button,
+#wishModal .modal-buttons button,
+#wishCompleteModal .modal-buttons button {
   min-width: 104px;
   padding: 8px 12px;
   border: 1px solid #ccc;
@@ -1467,6 +3006,13 @@ section h2 {
   background-color: #e0e0e0;
 }
 
+#buildingRequestModal .modal-buttons button:hover,
+#buildingRequestCompleteModal .modal-buttons button:hover,
+#wishModal .modal-buttons button:hover,
+#wishCompleteModal .modal-buttons button:hover {
+  background-color: #e0e0e0;
+}
+
 #raidWarningModal .modal-buttons button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
@@ -1474,7 +3020,8 @@ section h2 {
 
 /* 交換モーダル用のスタイル */
 #exchangeOverlay,
-#panFluteExchangeOverlay {
+#panFluteExchangeOverlay,
+#dryadFruitOverlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -1486,7 +3033,8 @@ section h2 {
 }
 
 #exchangeModal,
-#panFluteExchangeModal {
+#panFluteExchangeModal,
+#dryadFruitModal {
   position: fixed;
   top: 50%;
   left: 50%;
@@ -1505,7 +3053,8 @@ section h2 {
 }
 
 .exchange-content,
-.pan-flute-exchange-content {
+.pan-flute-exchange-content,
+.dryad-fruit-content {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1514,6 +3063,46 @@ section h2 {
 .exchange-title {
   text-align: center;
   margin-bottom: 20px;
+}
+
+.dryad-fruit-title {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.dryad-fruit-title h3 {
+  margin: 0;
+  color: #41783f;
+}
+
+.dryad-fruit-person {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 20px;
+  width: min(560px, 100%);
+  align-items: center;
+}
+
+.dryad-fruit-portrait-area {
+  width: 150px;
+  height: 150px;
+  background: #e7f0df;
+}
+
+.dryad-fruit-portrait-area img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dryad-fruit-dialogue-area {
+  display: grid;
+  gap: 8px;
+  min-height: 80px;
+  padding: 14px;
+  border: 1px solid #b8c9aa;
+  border-radius: 5px;
+  background: #f7fbf3;
 }
 
 .exchange-title h3 {
@@ -1912,12 +3501,12 @@ body.mobile-mode #raidEnemiesTable td {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-body.mobile-mode #villagersTable td:nth-child(18),
-body.mobile-mode #villagersTable td:nth-child(24),
-body.mobile-mode #visitorsTable td:nth-child(18),
-body.mobile-mode #visitorsTable td:nth-child(24),
-body.mobile-mode #raidEnemiesTable td:nth-child(18),
-body.mobile-mode #raidEnemiesTable td:nth-child(24) {
+body.mobile-mode #villagersTable td:nth-child(19),
+body.mobile-mode #villagersTable td:nth-child(25),
+body.mobile-mode #visitorsTable td:nth-child(19),
+body.mobile-mode #visitorsTable td:nth-child(25),
+body.mobile-mode #raidEnemiesTable td:nth-child(19),
+body.mobile-mode #raidEnemiesTable td:nth-child(25) {
   overflow: visible;
   text-overflow: clip;
   white-space: normal;
@@ -1975,6 +3564,16 @@ body.mobile-mode #raidEnemiesTable th:nth-child(6),
 body.mobile-mode #raidEnemiesTable td:nth-child(6) {
   width: 2.4%;
 }
+body.mobile-mode #villagersTable td:nth-child(4) .dictionary-term,
+body.mobile-mode #captivesTable td:nth-child(4) .dictionary-term,
+body.mobile-mode #visitorsTable td:nth-child(4) .dictionary-term,
+body.mobile-mode #raidEnemiesTable td:nth-child(4) .dictionary-term {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
 body.mobile-mode #villagersTable th:nth-child(7),
 body.mobile-mode #villagersTable td:nth-child(7),
 body.mobile-mode #villagersTable th:nth-child(8),
@@ -2017,33 +3616,49 @@ body.mobile-mode #raidEnemiesTable th:nth-child(12),
 body.mobile-mode #raidEnemiesTable td:nth-child(12) {
   width: 8.8%;
 }
-body.mobile-mode #villagersTable th:nth-child(n+13):nth-child(-n+17),
-body.mobile-mode #villagersTable td:nth-child(n+13):nth-child(-n+17),
-body.mobile-mode #villagersTable th:nth-child(n+19):nth-child(-n+23),
-body.mobile-mode #villagersTable td:nth-child(n+19):nth-child(-n+23),
-body.mobile-mode #visitorsTable th:nth-child(n+13):nth-child(-n+17),
-body.mobile-mode #visitorsTable td:nth-child(n+13):nth-child(-n+17),
-body.mobile-mode #visitorsTable th:nth-child(n+19):nth-child(-n+23),
-body.mobile-mode #visitorsTable td:nth-child(n+19):nth-child(-n+23),
-body.mobile-mode #raidEnemiesTable th:nth-child(n+13):nth-child(-n+17),
-body.mobile-mode #raidEnemiesTable td:nth-child(n+13):nth-child(-n+17),
-body.mobile-mode #raidEnemiesTable th:nth-child(n+19):nth-child(-n+23),
-body.mobile-mode #raidEnemiesTable td:nth-child(n+19):nth-child(-n+23) {
+body.mobile-mode #villagersTable th:nth-child(13),
+body.mobile-mode #villagersTable td:nth-child(13),
+body.mobile-mode #visitorsTable th:nth-child(13),
+body.mobile-mode #visitorsTable td:nth-child(13),
+body.mobile-mode #raidEnemiesTable th:nth-child(13),
+body.mobile-mode #raidEnemiesTable td:nth-child(13) {
+  width: 3.8%;
+}
+body.mobile-mode #villagersTable th:nth-child(n+14):nth-child(-n+18),
+body.mobile-mode #villagersTable td:nth-child(n+14):nth-child(-n+18),
+body.mobile-mode #villagersTable th:nth-child(n+20):nth-child(-n+24),
+body.mobile-mode #villagersTable td:nth-child(n+20):nth-child(-n+24),
+body.mobile-mode #visitorsTable th:nth-child(n+14):nth-child(-n+18),
+body.mobile-mode #visitorsTable td:nth-child(n+14):nth-child(-n+18),
+body.mobile-mode #visitorsTable th:nth-child(n+20):nth-child(-n+24),
+body.mobile-mode #visitorsTable td:nth-child(n+20):nth-child(-n+24),
+body.mobile-mode #raidEnemiesTable th:nth-child(n+14):nth-child(-n+18),
+body.mobile-mode #raidEnemiesTable td:nth-child(n+14):nth-child(-n+18),
+body.mobile-mode #raidEnemiesTable th:nth-child(n+20):nth-child(-n+24),
+body.mobile-mode #raidEnemiesTable td:nth-child(n+20):nth-child(-n+24) {
   width: 2.2%;
 }
-body.mobile-mode #villagersTable th:nth-child(18),
-body.mobile-mode #villagersTable td:nth-child(18),
-body.mobile-mode #villagersTable th:nth-child(24),
-body.mobile-mode #villagersTable td:nth-child(24),
-body.mobile-mode #visitorsTable th:nth-child(18),
-body.mobile-mode #visitorsTable td:nth-child(18),
-body.mobile-mode #visitorsTable th:nth-child(24),
-body.mobile-mode #visitorsTable td:nth-child(24),
-body.mobile-mode #raidEnemiesTable th:nth-child(18),
-body.mobile-mode #raidEnemiesTable td:nth-child(18),
-body.mobile-mode #raidEnemiesTable th:nth-child(24),
-body.mobile-mode #raidEnemiesTable td:nth-child(24) {
+body.mobile-mode #villagersTable th:nth-child(19),
+body.mobile-mode #villagersTable td:nth-child(19),
+body.mobile-mode #villagersTable th:nth-child(25),
+body.mobile-mode #villagersTable td:nth-child(25),
+body.mobile-mode #visitorsTable th:nth-child(19),
+body.mobile-mode #visitorsTable td:nth-child(19),
+body.mobile-mode #visitorsTable th:nth-child(25),
+body.mobile-mode #visitorsTable td:nth-child(25),
+body.mobile-mode #raidEnemiesTable th:nth-child(19),
+body.mobile-mode #raidEnemiesTable td:nth-child(19),
+body.mobile-mode #raidEnemiesTable th:nth-child(25),
+body.mobile-mode #raidEnemiesTable td:nth-child(25) {
   width: 4.5%;
+}
+body.mobile-mode #villagersTable th:nth-child(27),
+body.mobile-mode #villagersTable td:nth-child(27),
+body.mobile-mode #visitorsTable th:nth-child(27),
+body.mobile-mode #visitorsTable td:nth-child(27),
+body.mobile-mode #raidEnemiesTable th:nth-child(27),
+body.mobile-mode #raidEnemiesTable td:nth-child(27) {
+  width: 3.6%;
 }
 body.mobile-mode #villagersTable th:nth-child(26),
 body.mobile-mode #villagersTable td:nth-child(26),
@@ -2051,14 +3666,6 @@ body.mobile-mode #visitorsTable th:nth-child(26),
 body.mobile-mode #visitorsTable td:nth-child(26),
 body.mobile-mode #raidEnemiesTable th:nth-child(26),
 body.mobile-mode #raidEnemiesTable td:nth-child(26) {
-  width: 3.6%;
-}
-body.mobile-mode #villagersTable th:nth-child(25),
-body.mobile-mode #villagersTable td:nth-child(25),
-body.mobile-mode #visitorsTable th:nth-child(25),
-body.mobile-mode #visitorsTable td:nth-child(25),
-body.mobile-mode #raidEnemiesTable th:nth-child(25),
-body.mobile-mode #raidEnemiesTable td:nth-child(25) {
   width: 3.4%;
 }
 body.mobile-mode select,
@@ -2070,6 +3677,99 @@ body.mobile-mode textarea {
 body.mobile-mode #villagersTable select,
 body.mobile-mode #visitorsTable select,
 body.mobile-mode #raidEnemiesTable select {
+  width: 100%;
+  min-height: 20px;
+  font-size: 0.5rem;
+}
+body.mobile-mode #captivesTable {
+  width: 100%;
+  min-width: 0;
+  margin-bottom: 1px;
+  table-layout: fixed;
+  font-size: 0.48rem;
+}
+body.mobile-mode #captivesTable th,
+body.mobile-mode #captivesTable td {
+  padding: 1px 1px;
+  line-height: 1.05;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+body.mobile-mode #captivesTable td:nth-child(19),
+body.mobile-mode #captivesTable td:nth-child(25) {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.15;
+}
+body.mobile-mode #captivesTable th {
+  font-size: 0.48rem;
+  font-weight: bold;
+}
+body.mobile-mode #captivesTable th:nth-child(1),
+body.mobile-mode #captivesTable td:nth-child(1) {
+  width: 2.2%;
+}
+body.mobile-mode #captivesTable th:nth-child(2),
+body.mobile-mode #captivesTable td:nth-child(2),
+body.mobile-mode #captivesTable th:nth-child(3),
+body.mobile-mode #captivesTable td:nth-child(3) {
+  width: 4.7%;
+}
+body.mobile-mode #captivesTable th:nth-child(4),
+body.mobile-mode #captivesTable td:nth-child(4),
+body.mobile-mode #captivesTable th:nth-child(5),
+body.mobile-mode #captivesTable td:nth-child(5),
+body.mobile-mode #captivesTable th:nth-child(6),
+body.mobile-mode #captivesTable td:nth-child(6) {
+  width: 2.4%;
+}
+body.mobile-mode #captivesTable th:nth-child(7),
+body.mobile-mode #captivesTable td:nth-child(7),
+body.mobile-mode #captivesTable th:nth-child(8),
+body.mobile-mode #captivesTable td:nth-child(8) {
+  width: 3%;
+}
+body.mobile-mode #captivesTable th:nth-child(9),
+body.mobile-mode #captivesTable td:nth-child(9),
+body.mobile-mode #captivesTable th:nth-child(10),
+body.mobile-mode #captivesTable td:nth-child(10),
+body.mobile-mode #captivesTable th:nth-child(11),
+body.mobile-mode #captivesTable td:nth-child(11) {
+  width: 2.7%;
+}
+body.mobile-mode #captivesTable th:nth-child(12),
+body.mobile-mode #captivesTable td:nth-child(12) {
+  width: 8.8%;
+}
+body.mobile-mode #captivesTable th:nth-child(13),
+body.mobile-mode #captivesTable td:nth-child(13) {
+  width: 3.8%;
+}
+body.mobile-mode #captivesTable th:nth-child(n+14):nth-child(-n+18),
+body.mobile-mode #captivesTable td:nth-child(n+14):nth-child(-n+18),
+body.mobile-mode #captivesTable th:nth-child(n+20):nth-child(-n+24),
+body.mobile-mode #captivesTable td:nth-child(n+20):nth-child(-n+24) {
+  width: 2.2%;
+}
+body.mobile-mode #captivesTable th:nth-child(19),
+body.mobile-mode #captivesTable td:nth-child(19),
+body.mobile-mode #captivesTable th:nth-child(25),
+body.mobile-mode #captivesTable td:nth-child(25) {
+  width: 4.5%;
+}
+body.mobile-mode #captivesTable th:nth-child(27),
+body.mobile-mode #captivesTable td:nth-child(27) {
+  width: 3.6%;
+}
+body.mobile-mode #captivesTable th:nth-child(26),
+body.mobile-mode #captivesTable td:nth-child(26) {
+  width: 3.4%;
+}
+body.mobile-mode #captivesTable select {
   width: 100%;
   min-height: 20px;
   font-size: 0.5rem;
@@ -2140,12 +3840,15 @@ body.mobile-mode .person-history-button {
   line-height: 1.2;
 }
 body.mobile-mode .personal-history-summary {
-  grid-template-columns: 64px minmax(0, 1fr);
+  grid-template-columns: 128px minmax(0, 1fr);
   gap: 8px;
   padding: 0;
 }
+body.mobile-mode .personal-history-portrait-area {
+  width: 128px;
+}
 body.mobile-mode .personal-history-portrait-frame {
-  width: 64px;
+  width: 128px;
 }
 body.mobile-mode .personal-history-profile-name {
   margin-bottom: 5px;
@@ -2155,7 +3858,7 @@ body.mobile-mode .personal-history-profile-grid {
   gap: 5px;
 }
 body.mobile-mode .personal-history-profile-table {
-  grid-template-columns: 3.2em max-content max-content max-content max-content;
+  grid-template-columns: 3.2em max-content max-content max-content max-content max-content;
   gap: 2px;
   padding-bottom: 5px;
 }
@@ -2174,9 +3877,11 @@ body.mobile-mode .personal-history-profile-value {
 }
 body.mobile-mode .personal-history-profile-label.is-body,
 body.mobile-mode .personal-history-profile-label.is-spirit,
+body.mobile-mode .personal-history-profile-label.is-personality,
 body.mobile-mode .personal-history-profile-label.is-hobby,
 body.mobile-mode .personal-history-profile-value.is-body,
 body.mobile-mode .personal-history-profile-value.is-spirit,
+body.mobile-mode .personal-history-profile-value.is-personality,
 body.mobile-mode .personal-history-profile-value.is-hobby {
   margin-left: 0;
 }
@@ -2185,6 +3890,42 @@ body.mobile-mode .personal-history-profile-field span {
 }
 body.mobile-mode .personal-history-profile-field strong {
   font-size: 0.75rem;
+}
+body.mobile-mode .personal-history-detail-button {
+  display: inline-block;
+  margin: 4px 0 0;
+  padding: 2px 7px;
+  font-size: 0.7rem;
+}
+body.mobile-mode .friendship-detail-modal {
+  width: calc(100vw - 18px);
+  max-height: 88vh;
+  padding: 12px;
+}
+body.mobile-mode .friendship-detail-table {
+  min-width: 100%;
+  font-size: 0.78rem;
+}
+body.mobile-mode .friendship-detail-col-person {
+  width: 142px;
+}
+body.mobile-mode .friendship-detail-col-score {
+  width: 76px;
+}
+body.mobile-mode .friendship-detail-table th,
+body.mobile-mode .friendship-detail-table td {
+  padding: 7px 8px;
+}
+body.mobile-mode .friendship-detail-person {
+  grid-template-columns: 36px minmax(0, 1fr);
+}
+body.mobile-mode .friendship-detail-portrait-button {
+  width: 36px;
+  height: 36px;
+}
+body.mobile-mode .friendship-detail-person img {
+  width: 36px;
+  height: 36px;
 }
 body.mobile-mode .history-record-line {
   grid-template-columns: 5.8em minmax(0, 1fr);
@@ -2198,8 +3939,13 @@ body.mobile-mode #historyModal,
 body.mobile-mode #personalHistoryModal,
 body.mobile-mode #conversationModal,
 body.mobile-mode #raidWarningModal,
+body.mobile-mode #buildingRequestModal,
+body.mobile-mode #buildingRequestCompleteModal,
+body.mobile-mode #wishModal,
+body.mobile-mode #wishCompleteModal,
 body.mobile-mode #exchangeModal,
 body.mobile-mode #panFluteExchangeModal,
+body.mobile-mode #dryadFruitModal,
 body.mobile-mode #raidModal,
 body.mobile-mode #villageScaleModal,
 body.mobile-mode #monthEndModal,
@@ -2213,6 +3959,36 @@ body.mobile-mode .event-modal {
   overflow-y: auto;
   box-sizing: border-box;
   transform: translateX(-50%);
+}
+body.mobile-mode .apocalypse-event-image {
+  max-height: min(48vh, 220px);
+}
+body.mobile-mode .adventurer-quest-list {
+  gap: 8px;
+}
+body.mobile-mode .adventurer-quest-card {
+  padding: 8px;
+}
+body.mobile-mode .adventurer-quest-card dl div {
+  grid-template-columns: 6.5em minmax(0, 1fr);
+}
+body.mobile-mode .heresy-inquisition-body {
+  padding: 4px;
+}
+body.mobile-mode .heresy-inquisition-speaker {
+  grid-template-columns: 86px minmax(0, 1fr);
+  gap: 10px;
+}
+body.mobile-mode .heresy-inquisition-buttons button {
+  flex: 1 1 120px;
+}
+body.mobile-mode .dryad-fruit-person {
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 8px;
+}
+body.mobile-mode .dryad-fruit-portrait-area {
+  width: 92px;
+  height: 92px;
 }
 body.mobile-mode .modal-header {
   margin-bottom: 4px;
@@ -2323,27 +4099,98 @@ body.mobile-mode .miracle-item {
   padding: 9px;
 }
 body.mobile-mode #raidModal {
+  padding: 0;
+}
+body.mobile-mode #raidModal .raid-battle-header {
+  align-items: stretch;
+  flex-direction: column;
+  gap: 7px;
   padding: 8px;
 }
-body.mobile-mode #raidModal .raid-section {
-  margin-bottom: 7px;
+body.mobile-mode #raidModal h2 {
+  font-size: 0.95rem;
+}
+body.mobile-mode .raid-status-line {
+  font-size: 0.75rem;
+}
+body.mobile-mode .raid-battle-grid {
+  grid-template-columns: 1fr;
+  gap: 8px;
+  padding: 8px 8px 0;
+  max-height: none;
+  overflow-y: visible;
+}
+body.mobile-mode .raid-board h3,
+body.mobile-mode .raid-log-section h3 {
+  padding: 6px 8px;
+  font-size: 0.82rem;
+}
+body.mobile-mode .raid-table-scroll {
+  max-height: 220px;
+}
+body.mobile-mode .raid-enemy-scroll {
+  max-height: 240px;
 }
 body.mobile-mode #raidModal table {
   min-width: 0;
-  font-size: 0.76rem;
+}
+body.mobile-mode #raidModal th,
+body.mobile-mode #raidModal td {
+  padding: 2px;
+  font-size: 0.68rem;
+}
+body.mobile-mode #raidModal .raid-portrait-cell {
+  width: 30px;
+  min-width: 30px;
+}
+body.mobile-mode .raid-portrait-frame {
+  width: 26px;
+  height: 26px;
+}
+body.mobile-mode .raid-unit-name {
+  min-width: 68px;
+  max-width: 82px;
+}
+body.mobile-mode .raid-unit-hp {
+  min-width: 30px;
+  width: 34px;
+}
+body.mobile-mode .raid-unit-mp {
+  min-width: 40px;
+  width: 44px;
+}
+body.mobile-mode .raid-stat-summary {
+  min-width: 132px;
+  width: 144px;
+  font-size: 0.66rem;
+}
+body.mobile-mode .raid-unit-action,
+body.mobile-mode .raid-unit-effect {
+  padding: 0 3px;
+  font-size: 0.62rem;
+}
+body.mobile-mode .raid-unit-action-note {
+  font-size: 0.62rem;
 }
 body.mobile-mode .raid-buttons {
-  margin: 0 -8px 8px;
-  padding: 6px 8px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
 }
 body.mobile-mode .raid-buttons button {
   width: 100%;
   min-height: 44px;
-  font-size: 0.95rem;
+  padding: 4px 6px;
+  font-size: 0.82rem;
 }
 body.mobile-mode #raidLogArea {
   height: 118px;
   font-size: 0.72rem;
+}
+body.mobile-mode .raid-log-section {
+  margin: 8px;
 }
 
 @media (max-width: 720px) {

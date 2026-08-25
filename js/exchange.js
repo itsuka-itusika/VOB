@@ -3,13 +3,27 @@
 import { refreshJobTable } from "./domain/jobTables.js";
 import { PHYSICAL_ABILITY_STATS } from "./domain/personSchema.js";
 import { ensureStatLayers, getPermanentStat, syncEffectiveStats } from "./domain/statLayers.js";
+import { isOriginalBodyPortrait, rememberCurrentPortrait } from "./domain/portraitHistory.js";
 import { recordBodyExchangeHistory } from "./history.js";
 import { evaluateTitles } from "./titles.js";
+import { isCaptive, normalizeCaptive } from "./captives.js";
+import { SALT_PILLAR_TRAIT, isSaltPillar } from "./domain/apocalypseRules.js";
 
 const RAID_JOBS = ["野盗", "ゴブリン", "狼", "キュクロプス", "ハーピー"];
 
+export function canExchangeBody(person) {
+  return !!person && !person.exchangeImmune;
+}
+
 function cloneNullableObject(value) {
   return value == null ? null : { ...value };
+}
+
+function getSaltPillarMonths(person) {
+  const bodyTraits = Array.isArray(person?.bodyTraits) ? person.bodyTraits : [];
+  return bodyTraits.includes(SALT_PILLAR_TRAIT)
+    ? Math.max(0, Number(person?.saltPillarMonths) || 0)
+    : 0;
 }
 
 function isRaidEnemy(person, village) {
@@ -50,8 +64,20 @@ function normalizeRaidEnemyAssignment(person) {
 }
 
 function refreshAssignmentAfterExchange(person, village) {
+  if (isSaltPillar(person)) {
+    if (isCaptive(person, village)) {
+      normalizeCaptive(person);
+    } else {
+      refreshJobTable(person, village);
+    }
+    return;
+  }
   if (isRaidEnemy(person, village)) {
     normalizeRaidEnemyAssignment(person);
+    return;
+  }
+  if (isCaptive(person, village)) {
+    normalizeCaptive(person);
     return;
   }
 
@@ -61,12 +87,47 @@ function refreshAssignmentAfterExchange(person, village) {
   refreshJobTable(person, village);
 }
 
+function markBodyExchangeSourceRace(person, fromRace, toRace) {
+  Object.defineProperties(person, {
+    lastBodyExchangeSourceRace: {
+      configurable: true,
+      value: fromRace || "人間",
+      writable: true
+    },
+    lastBodyExchangeTargetRace: {
+      configurable: true,
+      value: toRace || "人間",
+      writable: true
+    }
+  });
+}
+
 /**
  * Swap body-related parameters between two characters.
  */
-export function doExchange(a, b, v, isLightning = false, historySource = null) {
+export function doExchange(a, b, v, isLightning = false, historySource = null, options = {}) {
+  if (!isLightning && (!canExchangeBody(a) || !canExchangeBody(b))) {
+    v?.log?.("【交換無効】黙示録の四騎士には肉体交換が効きません。");
+    return false;
+  }
   ensureStatLayers(a);
   ensureStatLayers(b);
+  const sourceRaceA = a.race || "人間";
+  const sourceRaceB = b.race || "人間";
+  const saltPillarMonthsB = getSaltPillarMonths(b);
+  const exchangeSource = historySource || (isLightning ? "落雷" : "奇跡");
+  if (a.portraitFile !== b.portraitFile) {
+    const isOriginalBodyA = isOriginalBodyPortrait(a);
+    const isOriginalBodyB = isOriginalBodyPortrait(b);
+    rememberCurrentPortrait(a, exchangeSource, {
+      caption: isOriginalBodyA ? "元の身体" : "過去の姿",
+      isOriginalBody: isOriginalBodyA
+    });
+    rememberCurrentPortrait(b, exchangeSource, {
+      caption: isOriginalBodyB ? "元の身体" : "過去の姿",
+      isOriginalBody: isOriginalBodyB
+    });
+  }
   const exchangeParams = {
     bodySex: a.bodySex,
     bodyAge: a.bodyAge,
@@ -76,6 +137,9 @@ export function doExchange(a, b, v, isLightning = false, historySource = null) {
     raiderPortrait: a.raiderPortrait,
     visitorPortrait: a.visitorPortrait,
     hp: a.hp,
+    saltPillarMonths: getSaltPillarMonths(a),
+    criticalCause: String(a.criticalCause || ""),
+    pendingEpidemicInfection: !!a.pendingEpidemicInfection,
     baseStats: pickStats(a.baseStats, PHYSICAL_ABILITY_STATS),
     acquiredStatMods: pickStats(a.acquiredStatMods, PHYSICAL_ABILITY_STATS),
     bodyTraits: [...a.bodyTraits],
@@ -84,9 +148,7 @@ export function doExchange(a, b, v, isLightning = false, historySource = null) {
     bodyPotentialStats: cloneNullableObject(a.bodyPotentialStats),
     adultBodyTraits: Array.isArray(a.adultBodyTraits) ? [...a.adultBodyTraits] : [],
     adultBodyReached: !!a.adultBodyReached,
-    adultPortraitFile: a.adultPortraitFile || "",
-    toddlerPortraitFile: a.toddlerPortraitFile || "",
-    toddlerPortraitGroup: a.toddlerPortraitGroup || ""
+    adultPortraitFile: a.adultPortraitFile || ""
   };
 
   a.bodySex = b.bodySex;
@@ -97,6 +159,9 @@ export function doExchange(a, b, v, isLightning = false, historySource = null) {
   a.raiderPortrait = b.raiderPortrait;
   a.visitorPortrait = b.visitorPortrait;
   a.hp = b.hp;
+  a.saltPillarMonths = saltPillarMonthsB;
+  a.criticalCause = String(b.criticalCause || "");
+  a.pendingEpidemicInfection = !!b.pendingEpidemicInfection;
   applyStats(a.baseStats, pickStats(b.baseStats, PHYSICAL_ABILITY_STATS));
   applyStats(a.acquiredStatMods, pickStats(b.acquiredStatMods, PHYSICAL_ABILITY_STATS));
   a.bodyTraits = [...b.bodyTraits];
@@ -106,8 +171,6 @@ export function doExchange(a, b, v, isLightning = false, historySource = null) {
   a.adultBodyTraits = Array.isArray(b.adultBodyTraits) ? [...b.adultBodyTraits] : [];
   a.adultBodyReached = !!b.adultBodyReached;
   a.adultPortraitFile = b.adultPortraitFile || "";
-  a.toddlerPortraitFile = b.toddlerPortraitFile || "";
-  a.toddlerPortraitGroup = b.toddlerPortraitGroup || "";
 
   b.bodySex = exchangeParams.bodySex;
   b.bodyAge = exchangeParams.bodyAge;
@@ -117,6 +180,9 @@ export function doExchange(a, b, v, isLightning = false, historySource = null) {
   b.raiderPortrait = exchangeParams.raiderPortrait;
   b.visitorPortrait = exchangeParams.visitorPortrait;
   b.hp = exchangeParams.hp;
+  b.saltPillarMonths = exchangeParams.saltPillarMonths;
+  b.criticalCause = exchangeParams.criticalCause;
+  b.pendingEpidemicInfection = exchangeParams.pendingEpidemicInfection;
   applyStats(b.baseStats, exchangeParams.baseStats);
   applyStats(b.acquiredStatMods, exchangeParams.acquiredStatMods);
   b.bodyTraits = [...exchangeParams.bodyTraits];
@@ -126,8 +192,6 @@ export function doExchange(a, b, v, isLightning = false, historySource = null) {
   b.adultBodyTraits = [...exchangeParams.adultBodyTraits];
   b.adultBodyReached = exchangeParams.adultBodyReached;
   b.adultPortraitFile = exchangeParams.adultPortraitFile;
-  b.toddlerPortraitFile = exchangeParams.toddlerPortraitFile;
-  b.toddlerPortraitGroup = exchangeParams.toddlerPortraitGroup;
 
   syncEffectiveStats(a);
   syncEffectiveStats(b);
@@ -135,9 +199,13 @@ export function doExchange(a, b, v, isLightning = false, historySource = null) {
   evaluateTitles(b, { getPermanentStat });
   refreshAssignmentAfterExchange(a, v);
   refreshAssignmentAfterExchange(b, v);
+  markBodyExchangeSourceRace(a, sourceRaceA, a.race);
+  markBodyExchangeSourceRace(b, sourceRaceB, b.race);
 
   if (!isLightning) {
     v.log(`【交換の奇跡】${a.name}と${b.name}の肉体を交換しました`);
   }
-  recordBodyExchangeHistory(v, a, b, { source: historySource || (isLightning ? "落雷" : "奇跡") });
+  if (options.recordHistory !== false) {
+    recordBodyExchangeHistory(v, a, b, { source: exchangeSource });
+  }
 }

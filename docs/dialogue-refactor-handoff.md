@@ -29,7 +29,8 @@
 
 - `js/miracles.js`
   - 奇跡実行、奇跡結果モーダル、交換の奇跡モーダル。
-  - 現時点では、奇跡結果の口調別セリフをこのファイル内に持つ。
+  - 清拭の奇跡は発話者を村医優先、村医不在時は倫理が最も高い村人1人に絞る。専用セリフは `js/data/dialogue/miracleLines.js` に持つ。
+  - その他の一部の奇跡結果は、口調別セリフをこのファイル内に持つ。
   - 交換の奇跡モーダルの肉体交換反応は `exchangeLines.js` を参照する。
 
 ### 会話エンジン
@@ -50,6 +51,9 @@
 - `condition`
 - `job`
 - `reproduction`
+- `exchangeSituation`
+- `secretTreasure`
+- `miracle`
 - `visitor`
 
 `randomEvent` と `randomEventSecond` は、通常の `getDialogueLines` ではなく `getDialogueLine` 内の専用分岐で処理する。
@@ -68,7 +72,7 @@
   - 春、夏、秋、冬の季節会話。
 
 - `js/data/dialogue/conditionLines.js`
-  - 危篤、負傷、疫病、病気、過労、飢餓、凍え、抑鬱、狂乱、心労など。
+  - 危篤、負傷、疫病、過労、飢餓、凍え、抑鬱、狂乱、心労など。
 
 - `js/data/dialogue/jobLines.js`
   - 警備、踊り子、バニーなど、仕事に応じた通常会話。
@@ -76,8 +80,19 @@
 - `js/data/dialogue/reproductionLines.js`
   - 妊娠、臨月、産褥、成人など、肉体状態や成長に関する会話。
 
+- `js/data/dialogue/secretTreasureLines.js`
+  - 秘宝の専用結果モーダルで使う口調別反応。告天使の絵画、ドライアドの果実、アンブロシア、ネクタル、奇妙な計算機械、蛇の巻き付いた杖、クロノスの秘薬を扱う。
+
+- `js/data/dialogue/miracleLines.js`
+  - 分離済みの奇跡結果モーダル反応。清拭、常春、宴会、狂宴、酒杯、戦神、雷霆、豊穣、マナ、ミダスの各奇跡を扱う。豊穣の角は豊穣の奇跡と同じ反応を使う。
+
+- `js/data/dialogue/exchangeSituationLines.js`
+  - 入れ替わり後の身体状況に応じた通常会話。
+  - 役得、老人の若返り、幼い身体、狼の身体、女性人格が得た強い男性肉体、交換後半年以内の違和感を口調別に持つ。
+
 - `js/data/dialogue/visitorLines.js`
   - 訪問者タイプ別の会話。
+  - `VISITOR_APOCALYPSE_LINES` は黙示録中の訪問者タイプ別会話。災厄の進行段階では分岐せず、第一〜第七のどこでも成立する内容にする。未定義タイプは `VISITOR_APOCALYPSE_GENERIC_LINES` で受ける。
 
 - `js/data/dialogue/randomEventLines.js`
   - ランダムイベントの口調別セリフ、子供向け汎用セリフ、fallback 展開ヘルパー。
@@ -101,11 +116,13 @@
 
 通常会話では `collectConversationCandidates` が候補を集め、候補が持つ最大 priority の中からランダムに1つ選ぶ。同じ scene/key の重複候補は追加されない。また、現在の口調で取得できる行がない候補は追加されない。
 
+ランダムイベントで複数人が話す場合、`getRandomEventLine` は context の `variantIndex` を受け取る。口調に対する値が2つ以上の配列なら `pickLineByVariant` が話者の並び順で候補を選び分け、同じ口調の村人が並んでもセリフが被らないようにする。`variantIndex` が渡らない場合（話者が1人の場合）は従来どおり `pickDialogueLine` がランダムに選ぶ。
+
 現在の候補:
 
 - 村特性 `襲撃中`: `status/raid`, `EMERGENCY`
 - 肉体特性 `危篤`: `condition/critical`, `CRITICAL`
-- 肉体特性 `負傷`, `疫病`, `病気`, `過労`, `飢餓`, `凍え`: `SEVERE`
+- 肉体特性 `負傷`, `疫病`, `過労`, `飢餓`, `凍え`: `SEVERE`
 - 肉体特性 `産褥`: `reproduction/postpartumConversation`, `NORMAL`
 - 肉体特性 `疲労`: `status/tired`, `NORMAL`
 - 精神特性 `抑鬱`: `condition/depression`, `SEVERE`
@@ -119,10 +136,11 @@
 - 勤勉 `ind <= 10`: `lazy/lowDiligence`, `NORMAL`
 - `JOB_LINES` に存在する仕事: `job/<仕事名>`, `NORMAL`
 - 村特性に含まれる `春`, `夏`, `秋`, `冬`: `season/<季節>`, `NORMAL`
+- `bodyOwner` が本人と異なる場合の入れ替わり特殊状況: `exchangeSituation/<状況>`, `NORMAL`
 
 `getConversationLine` では、以下は通常候補選択より前に処理される。
 
-- 精神特性 `訪問者`: `visitor` scene の会話を返す。
+- 精神特性 `訪問者`: `visitor` scene の会話を返す。`isApocalypseActive(village)` が真なら黙示録用の会話を優先する。
 - 精神特性 `襲撃者` かつ `raiderDialogues` がある: 襲撃者専用セリフを返す。
 
 ## 口調キー
@@ -165,6 +183,8 @@
 その他:
 
 - `老人`
+- `狼`
+- `ゴブリン`
 
 注意点:
 
@@ -175,6 +195,8 @@
 - `思春期` は独立口調にしない。原則として成人の性格別 `speechType` を使う。
 - `中性的` はこのゲームでは「中性的な性格の女性」扱い。男性/中立汎用ではなく女性口調側に置く。
 - `老人` は男性の老人として扱う。中立老人・女性老人ではない。
+- `狼` は専用口調として扱う。原則、鳴き声や唸り声だけにし、必要な場合だけ括弧で簡単な行動や状態を補う。
+- `ゴブリン` は専用口調として扱う。粗野な文体で、時折「ゴブ」を語尾に付ける。
 - 肉体年齢より精神特性・精神性別を優先する。肉体交換があるため。
 
 ## 口調解決
@@ -187,6 +209,8 @@
 4. `speechType` がなければ、`spiritSex` が `女` なら `普通Ｆ`、それ以外なら `普通Ｍ`。
 
 `resolveStoredSpeechType(character)` は、保存値としての `speechType` を優先し、なければ性別デフォルトを返す。ランダムイベントの成人向けセリフではこちらを使う。
+
+襲撃者の `speechType` は生成時点で `js/domain/raiderSpeechTypes.js` のタイプ別口調に固定する。捕虜から加入する時も同じ helper を再適用し、生成後の保存・捕虜化・加入経路で口調がずれないようにする。
 
 ## fallback
 
@@ -202,6 +226,8 @@
 8. `default`
 
 ランダムイベントの成人向けセリフは、`SPEECH_TYPE_LINE_FALLBACKS` と性別デフォルトを使う専用ルートで選ばれる。子供口調では、イベント固有の子供向けセリフがあればそれを優先し、なければ `INFANT_EVENT_LINES` または `BUDDING_EVENT_LINES` を使う。
+
+`狼` と `ゴブリン` は専用 fallback を持ち、未定義シーンでは性別デフォルトへ落とさず専用の汎用行を返す。
 
 fallback キーは便利だが、男女差や当事者性が混線しやすい。妊娠、仕事、身体変化など、読む人格によって自然な反応が変わる場面では、`丁寧Ｍ` と `丁寧Ｆ` のように実口調キーを分ける。
 
