@@ -3112,12 +3112,28 @@ section h2 {
   width: 200px;
 }
 
+/* 個人史・人間関係の小ボタン。羊皮紙風の紙目を薄く敷く。 */
 .conversation-profile-buttons button {
-  flex: 1 1 0;
+  flex: 0 0 auto;
   min-width: 0;
   margin: 0;
-  padding: 5px 0;
-  font-size: 0.85rem;
+  padding: 2px 10px;
+  font-size: 0.78rem;
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2290%22%20height%3D%2290%22%3E%3Cfilter%20id%3D%22n%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.8%22%20numOctaves%3D%223%22%20stitchTiles%3D%22stitch%22%2F%3E%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%2290%22%20height%3D%2290%22%20filter%3D%22url%28%23n%29%22%20opacity%3D%220.10%22%2F%3E%3C%2Fsvg%3E"),
+    linear-gradient(180deg, #f6efdd, #eadfc4);
+  background-size: 90px 90px, auto;
+  border: 1px solid;
+  border-color: #fbf6ea #b7a276 #a8946a #ead9b8;
+  border-radius: 2px;
+  color: #4a3a1c;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+}
+
+.conversation-profile-buttons button:hover,
+.conversation-profile-buttons button:focus {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2290%22%20height%3D%2290%22%3E%3Cfilter%20id%3D%22n%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.8%22%20numOctaves%3D%223%22%20stitchTiles%3D%22stitch%22%2F%3E%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%2290%22%20height%3D%2290%22%20filter%3D%22url%28%23n%29%22%20opacity%3D%220.10%22%2F%3E%3C%2Fsvg%3E"),
+    linear-gradient(180deg, #fbf5e6, #f0e6cf);
 }
 
 /* display 指定が hidden 属性の既定値に勝つため、非表示を明示する。 */
