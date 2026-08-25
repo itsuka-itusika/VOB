@@ -62,15 +62,34 @@ export function tryTriggerHeresyInquisition(village, options = {}) {
   return true;
 }
 
+// 村の発展モーダルなどは閉じても display:none で残るため、存在ではなく見えているかで判定する。
+function isVisibleElement(element) {
+  if (!element || !element.isConnected || typeof window === "undefined") return false;
+  let current = element;
+  while (current && current !== document.body) {
+    const style = window.getComputedStyle(current);
+    if (style.display === "none" || style.visibility === "hidden") return false;
+    current = current.parentElement;
+  }
+  return element.getClientRects().length > 0;
+}
+
 function isPriorityModalOpen() {
   return isHeadmanElectionModalPendingOrOpen()
-    || PRIORITY_MODAL_SELECTORS.some(selector => document.querySelector(selector));
+    || PRIORITY_MODAL_SELECTORS.some(selector =>
+      Array.from(document.querySelectorAll(selector)).some(isVisibleElement));
 }
 
 function waitForPriorityModalsToClose() {
   if (priorityModalObserver) return;
   priorityModalObserver = new MutationObserver(showInquisitionWhenReady);
-  priorityModalObserver.observe(document.body, { childList: true, subtree: true });
+  // display の切り替えだけで閉じるモーダルもあるため、属性の変化も監視する。
+  priorityModalObserver.observe(document.body, {
+    attributes: true,
+    attributeFilter: ["class", "style", "hidden", "aria-hidden"],
+    childList: true,
+    subtree: true
+  });
 }
 
 function stopWaitingForPriorityModals() {
