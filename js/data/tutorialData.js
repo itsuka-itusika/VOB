@@ -48,7 +48,7 @@ export const TUTORIAL_TASKS = [
     title: "奇跡の行使",
     warningText: "チュートリアル: 奇跡の行使∶奇跡コマンドから奇跡を使いましょう",
     conditionText: "奇跡コマンドから奇跡を使う",
-    descriptionText: "奇跡は魔素を糧に神の力を振るう業だ。実りを呼ぶのも傷を癒すのも思うがまま。出し惜しみするなよ。",
+    descriptionText: "奇跡は魔素を糧に神の力を振るう業だ。実りを呼ぶも、傷を癒すも、人の身を入れ替えることだってできる。出し惜しみするなよ。",
     rewardText: "魔素+50",
     reward: { resource: "mana", amount: 50 }
   }
