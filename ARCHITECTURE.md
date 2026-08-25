@@ -66,7 +66,7 @@
 - js/apocalypse.js / js/domain/apocalypseRules.js
   - 黄金像完成後の黙示録状態、七災厄の月初進行、塩の柱、専用襲撃開始、黄金像破壊・敗北中断・七災厄の完了処理を扱う。第七の災厄を越えた時は塩の柱を解除し、村人へ専用称号を付与して、クリア済みフラグと神威Lv6を解放する。
 - `js/reproduction.js`
-  - 妊娠、出産、産褥、成人化、成長段階を扱う。黄金の雨と告天使の絵画による翌月の神秘的な妊娠予約も、保存互換性のため `pendingGoldenRainPregnancies` 上で種別を分けて処理する。予約は `targetBodyOwner` で肉体に紐づけ、肉体交換ではその身体を得た人物へ移る。旧保存データの `targetName` も読み替える。
+  - 妊娠、出産、産褥、成人化、成長段階を扱う。`giveBirth` は赤子を作って出産モーダルを出すだけで、名前・関係・村史・村人への追加は命名確定後の `finalizeBirth` で行う。黄金の雨と告天使の絵画による翌月の神秘的な妊娠予約も、保存互換性のため `pendingGoldenRainPregnancies` 上で種別を分けて処理する。予約は `targetBodyOwner` で肉体に紐づけ、肉体交換ではその身体を得た人物へ移る。旧保存データの `targetName` も読み替える。
 - `js/relationships.js`
   - 恋人・配偶者・親子などの関係を正規化し、追加・削除・表示する。
 - `js/miracles.js`

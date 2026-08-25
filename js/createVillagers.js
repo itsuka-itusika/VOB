@@ -323,6 +323,11 @@ export function registerUsedName(name) {
   if (normalized) usedNames.add(normalized);
 }
 
+/** 命名済みの名前かどうか。プレイヤー命名の重複確認に使う。 */
+export function isNameReserved(name) {
+  return usedNames.has(String(name || "").trim());
+}
+
 function getReservedNames(extraNames = []) {
   return new Set([
     ...usedNames,
@@ -666,16 +671,18 @@ export function generateRandomName(sex, options = {}) {
   const reservedNames = getReservedNames(options.existingNames);
   const availableNames = nameList.filter(name => !reservedNames.has(name));
 
+  const shouldRegister = options.register !== false;
+
   if (availableNames.length === 0) {
     const baseName = options.fallbackParentName || randChoice(nameList);
     const fallbackName = buildFallbackChildName(baseName, reservedNames);
-    registerUsedName(fallbackName);
+    if (shouldRegister) registerUsedName(fallbackName);
     return fallbackName;
   }
 
   // ランダムに名前を選択して使用済みとしてマーク
   const chosenName = randChoice(availableNames);
-  registerUsedName(chosenName);
+  if (shouldRegister) registerUsedName(chosenName);
   return chosenName;
 }
 

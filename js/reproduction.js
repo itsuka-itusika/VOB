@@ -3,6 +3,8 @@ import { randChoice, randInt, clampValue, randFloat } from "./util.js";
 import { getPortraitSpriteHtml } from "./data/portraitAtlas.js";
 import {
   generateRandomName,
+  registerUsedName,
+  isNameReserved,
   createRandomVillager,
   assignBodyMindTraits,
   assignHobby,
@@ -843,15 +845,16 @@ function giveBirth(village, mother) {
   const data = mother.pregnancy;
   if (!data) return;
 
-  mother.bodyTraits = mother.bodyTraits.filter(trait => trait !== "妊娠" && trait !== "臨月");
-  syncEffectiveStats(mother);
-
-  const birthParentName = mother.name;
-  const childName = generateRandomName(data.childSex, {
-    existingNames: village.villagers.map(person => person.name),
-    fallbackParentName: birthParentName
+  // 命名が決まるまで村へは加えない。母側の出産処理も finalizeBirth へまとめる。
+  const child = createNewbornChild(village, data);
+  showBirthModal(village, mother, getSpouse(mother, village), child, childName => {
+    finalizeBirth(village, mother, data, child, childName);
   });
-  const child = new Villager(childName, data.childSex, 0);
+}
+
+/** 赤子を名前なしで生成する。名前と bodyOwner は命名確定時に入れる。 */
+function createNewbornChild(village, data) {
+  const child = new Villager("", data.childSex, 0);
   child.race = normalizeChildRace(data.childRace);
   child.spiritAge = 0;
   child.spiritSex = data.childSex;
@@ -876,7 +879,19 @@ function giveBirth(village, mother) {
   child.adultHobby = adult.hobby;
   child.adultPortraitFile = adult.portraitFile;
   updateChildGrowthStage(child, village);
+  return child;
+}
 
+/** 命名確定後の出産処理。ここで初めて子が村へ加わる。 */
+function finalizeBirth(village, mother, data, child, childName) {
+  child.name = childName;
+  child.bodyOwner = childName;
+  registerUsedName(childName);
+
+  mother.bodyTraits = mother.bodyTraits.filter(trait => trait !== "妊娠" && trait !== "臨月");
+  syncEffectiveStats(mother);
+
+  const birthParentName = mother.name;
   addRelationship(child, `母:${birthParentName}`);
   addRelationship(mother, `子:${child.name}`);
   addRelationship(child, `遺伝母:${data.motherSnapshot?.bodyOwner || data.motherSnapshot?.name || "不明"}`);
@@ -909,7 +924,6 @@ function giveBirth(village, mother) {
     geneticFatherUnknown: !!data.geneticFatherUnknown
   });
   village.log(`${mother.name}が${child.name}を出産しました。人口上限+1`);
-  showBirthModal(village, mother, spouse, child);
 }
 
 export function getReproductiveStatusLine(character) {
@@ -1024,7 +1038,39 @@ function getBirthLine(character, role) {
   }) || "";
 }
 
-function showBirthModal(village, mother, father, child) {
+const CHILD_NAME_MAX_LENGTH = 8;
+// 関係文字列とログが名前をそのまま埋め込むため、使える文字を絞る。
+const CHILD_NAME_PATTERN = /^[0-9A-Za-z\u3041-\u3096\u30A1-\u30FA\u30FC\u4E00-\u9FFF々・]+$/;
+
+/** 未命名の赤子の呼び名 */
+function getUnnamedChildLabel(child) {
+  return child.bodySex === "男" ? "男の子" : "女の子";
+}
+
+/** オートネームの候補。確定するまで使用済みには登録しない。 */
+function rollChildName(village, mother, child, excludedName = "") {
+  return generateRandomName(child.bodySex, {
+    existingNames: [...village.villagers.map(person => person.name), excludedName].filter(Boolean),
+    fallbackParentName: mother.name,
+    register: false
+  });
+}
+
+/** プレイヤーが入力した名前の可否。使えない場合は理由を返す。 */
+function getChildNameError(name, village) {
+  const trimmed = String(name || "").trim();
+  if (!trimmed) return "名を入力してください。";
+  if ([...trimmed].length > CHILD_NAME_MAX_LENGTH) return `名は${CHILD_NAME_MAX_LENGTH}文字までです。`;
+  if (!CHILD_NAME_PATTERN.test(trimmed)) return "使えるのは かな・カタカナ・漢字・英数字・「ー」「・」だけです。";
+  if (/の(母|父|息子|娘)$/.test(trimmed)) return "「〜の母」「〜の娘」などで終わる名は、続柄と紛れるため使えません。";
+  if (trimmed === "既婚") return "その名は使えません。";
+  const taken = isNameReserved(trimmed) ||
+    village.villagers.some(person => person.name === trimmed);
+  if (taken) return "同じ名の者がすでにいます。";
+  return "";
+}
+
+function showBirthModal(village, mother, father, child, onNamed) {
   enqueueReproductionModal(onClosed => {
     const overlay = document.createElement("div");
     overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;";
@@ -1032,25 +1078,68 @@ function showBirthModal(village, mother, father, child) {
     modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;max-width:520px;width:calc(100% - 32px);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
     modal.innerHTML = `
       <h2>出産</h2>
-      <p>${mother.name}が${child.name}を出産しました。</p>
+      <p>${mother.name}が${child.bodySex === "男" ? "男児" : "女児"}を産みました。</p>
       ${renderPortraitLine(mother, getBirthLine(mother, "母"))}
       ${father ? renderPortraitLine(father, getBirthLine(father, "父")) : ""}
-      ${renderPortraitLine(child, "……すやすや眠っている。")}
-      <button type="button" data-close-reproduction-modal>閉じる</button>
+      ${renderPortraitLine(child, "……すやすや眠っている。", getUnnamedChildLabel(child))}
+      <div data-birth-choice>
+        <button type="button" data-name-child>バッカスが命名する</button>
+        <button type="button" data-leave-name>村人に任せる</button>
+      </div>
+      <div data-birth-naming hidden>
+        <input type="text" data-child-name maxlength="${CHILD_NAME_MAX_LENGTH}" style="width:12em;">
+        <button type="button" data-reroll-name>別の名を授ける</button>
+        <button type="button" data-confirm-name>この名を授ける</button>
+        <p data-name-error style="color:#b3261e;margin:6px 0 0;" hidden></p>
+      </div>
     `;
     document.body.appendChild(overlay);
     document.body.appendChild(modal);
-    modal.querySelector("[data-close-reproduction-modal]").onclick = () => {
+
+    const choiceArea = modal.querySelector("[data-birth-choice]");
+    const namingArea = modal.querySelector("[data-birth-naming]");
+    const nameInput = modal.querySelector("[data-child-name]");
+    const errorText = modal.querySelector("[data-name-error]");
+
+    const decideName = name => {
+      // 先に村へ加えてから閉じる。次の出産モーダルが同じ名前を候補に出さないため。
+      onNamed(name);
       closeQueuedReproductionModal(village, overlay, modal, onClosed);
+    };
+
+    modal.querySelector("[data-leave-name]").onclick = () => {
+      decideName(rollChildName(village, mother, child));
+    };
+    modal.querySelector("[data-name-child]").onclick = () => {
+      choiceArea.hidden = true;
+      namingArea.hidden = false;
+      nameInput.value = rollChildName(village, mother, child);
+      nameInput.focus();
+    };
+    modal.querySelector("[data-reroll-name]").onclick = () => {
+      nameInput.value = rollChildName(village, mother, child, nameInput.value.trim());
+      errorText.hidden = true;
+      nameInput.focus();
+    };
+    modal.querySelector("[data-confirm-name]").onclick = () => {
+      const name = nameInput.value.trim();
+      const error = getChildNameError(name, village);
+      if (error) {
+        errorText.textContent = error;
+        errorText.hidden = false;
+        nameInput.focus();
+        return;
+      }
+      decideName(name);
     };
   });
 }
 
-function renderPortraitLine(character, line) {
+function renderPortraitLine(character, line, displayName = "") {
   return `
     <div style="display:grid;grid-template-columns:72px 1fr;gap:12px;margin:12px 0;align-items:center;">
-      ${getPortraitSpriteHtml(character, { size: 72, alt: character.name, extraStyle: "border:1px solid #ddd;background-color:#f6f0e6;" })}
-      <p><strong>${character.name}</strong>: ${line}</p>
+      ${getPortraitSpriteHtml(character, { size: 72, alt: displayName || character.name, extraStyle: "border:1px solid #ddd;background-color:#f6f0e6;" })}
+      <p><strong>${displayName || character.name}</strong>: ${line}</p>
     </div>
   `;
 }
