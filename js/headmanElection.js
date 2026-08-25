@@ -32,6 +32,7 @@ const PRIORITY_MODAL_SELECTORS = [
 ];
 
 let pendingElectionMessage = null;
+let electionModalOpen = false;
 let modalObserver = null;
 
 function hasAssemblyHall(village) {
@@ -213,9 +214,8 @@ function markElectionFailed(village) {
 }
 
 export function isHeadmanElectionModalPendingOrOpen() {
-  if (pendingElectionMessage) return true;
-  if (typeof document === "undefined") return false;
-  return !!document.getElementById(MODAL_ID);
+  // DOMの存在ではなく自前の状態で判定する。表示結果のDOMへゲーム進行の判定を依存させない。
+  return !!pendingElectionMessage || electionModalOpen;
 }
 
 function isPriorityModalOpen() {
@@ -273,6 +273,7 @@ function showElectionModalWhenReady() {
   stopWaitingForPriorityModals();
   const message = pendingElectionMessage;
   pendingElectionMessage = null;
+  electionModalOpen = true;
 
   const overlay = document.createElement("div");
   overlay.id = MODAL_OVERLAY_ID;
@@ -360,6 +361,7 @@ function showElectionModalWhenReady() {
 }
 
 export function closeHeadmanElectionModal() {
+  electionModalOpen = false;
   const overlay = document.getElementById(MODAL_OVERLAY_ID);
   const modal = document.getElementById(MODAL_ID);
   if (overlay) overlay.remove();

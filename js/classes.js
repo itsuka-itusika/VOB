@@ -29,6 +29,7 @@ export class Village {
     this.apocalypseStarted = false;
     this.apocalypseStage = 0;
     this.apocalypseCleared = false;
+    this.pendingHeresyInquisition = false;
     this.apocalypseLocustMonths = null;
     this.cleanlinessMonths = null;
     this.bacchusProtectionMonths = 0;

@@ -224,6 +224,7 @@ function convertVillageToObject(village) {
     apocalypseStarted: !!village.apocalypseStarted,
     apocalypseStage: Math.max(0, Math.min(7, Math.floor(normalizeFiniteNumber(village.apocalypseStage, 0)))),
     apocalypseCleared: !!village.apocalypseCleared,
+    pendingHeresyInquisition: !!village.pendingHeresyInquisition,
     apocalypseLocustMonths: village.apocalypseLocustMonths == null
       ? null
       : Math.max(0, Math.floor(normalizeFiniteNumber(village.apocalypseLocustMonths, 0))),
@@ -464,6 +465,7 @@ function convertObjectToVillage(dataObj) {
     return event.title === "四騎士の退却" ||
       (event.tags.includes("四騎士") && event.tags.includes("仮エンディング"));
   });
+  v.pendingHeresyInquisition = !!dataObj.pendingHeresyInquisition;
   v.gameOver = !!dataObj.gameOver;
   v.hasDonePreEvent = !!dataObj.hasDonePreEvent;
   v.hasDonePostEvent = !!dataObj.hasDonePostEvent;

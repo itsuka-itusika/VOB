@@ -168,6 +168,8 @@
 
 `tutorial` を持たない既存セーブデータは、読み込み時に未達成状態として初期化します。警告欄には通常警告の後に、食料生産、資材生産、納屋建築、奇跡使用の順で最初の未達成項目だけを表示します。全項目達成後は `tutorial.complete` が true になり、警告欄には表示されません。
 
+異端審問は、抽選に当選した時点で発生の事実を `pendingHeresyInquisition` としてゲーム状態へ保存し、プレイヤーが「もてなす／追い払う」を選択した時点で解除します。モーダルの競合や再読込で表示が失われても、セーブ読込後に未処理の審問を提示し直します。
+
 人物IDは各人物の `id` と採番カウンタ `nextPersonId` に保存します。IDを持たない旧セーブは読込時に採番し直し、人間関係の文字列（「【家族関係】夫：名前」形式）はエントリへ変換して相手IDを名前から解決し、`bodyOwnerId` も名前から補完します。名前をキーにした旧 `friendships` / `friendshipStats` は変換できないため読込時に破棄され、好感度は初期値から再構築されます。
 
 黄金像建立イベントの解放状態は buildingFlags.canBuildBacchusGoldenStatue、建築済み状態は建築物配列と buildingFlags.hasBacchusGoldenStatue、黙示録突入状態と進行段階は apocalypseStarted / apocalypseStage、四騎士撃退済み状態は apocalypseCleared に保存します。塩の柱の経過は村人ごとの saltPillarMonths、四騎士の交換耐性・捕縛不可は exchangeImmune / uncapturable に保存します。清浄の経過は cleanlinessMonths、疫病の感染予約は村人ごとの pendingEpidemicInfection に保存します。危篤経験と原因は村人ごとの hasBeenCritical / criticalCause に保存し、旧セーブでは村史から補完します。これらを持たない既存セーブデータは、四騎士撃退の村史がある場合を除いて未発生状態として読み込みます。

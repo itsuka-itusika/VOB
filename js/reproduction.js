@@ -975,6 +975,11 @@ function getPregnancyNoticeLine(character, role, partner) {
 const reproductionModalQueue = [];
 let isShowingReproductionModal = false;
 
+/** 妊娠・出産・成人モーダルの表示中か。月初イベントの待機判定に使う。 */
+export function isReproductionModalOpen() {
+  return isShowingReproductionModal;
+}
+
 function enqueueReproductionModal(renderModal) {
   if (typeof document === "undefined") return;
   reproductionModalQueue.push(renderModal);

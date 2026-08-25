@@ -3,6 +3,7 @@ import { getPortraitAssetPath, INQUISITOR_PORTRAIT_FILES } from "./data/portrait
 import { getPortraitSpriteHtml } from "./data/portraitAtlas.js";
 import { pickInquisitorSpeechSet } from "./data/dialogue/inquisitorLines.js";
 import { isHeadmanElectionModalPendingOrOpen } from "./headmanElection.js";
+import { isReproductionModalOpen } from "./reproduction.js";
 import { updateUI } from "./ui.js";
 import { getVillageScaleStage } from "./villageScale.js";
 
@@ -24,11 +25,14 @@ const PRIORITY_MODAL_SELECTORS = [
   "#secretTreasureEventModal",
   ".effect-result-modal",
   "#villageScaleModal",
-  "#divineMightLevelUpModal"
+  "#divineMightLevelUpModal",
+  "#adventurerQuestResultModal",
+  "[data-close-relationship-modal]"
 ];
 
 let pendingVillage = null;
 let priorityModalObserver = null;
+let priorityRetryTimer = null;
 
 export function getHeresyInquisitionHospitalityCost(village) {
   const scale = Math.max(0, Number(village?.building) || 0);
@@ -48,6 +52,13 @@ export function canTriggerHeresyInquisition(village) {
 export function tryTriggerHeresyInquisition(village, options = {}) {
   if (!canTriggerHeresyInquisition(village)) return false;
 
+  // 前回の抽選で発生が確定したまま未処理なら、再抽選せずに提示し直す。
+  if (village.pendingHeresyInquisition) {
+    pendingVillage = village;
+    showInquisitionWhenReady();
+    return true;
+  }
+
   if (!options.skipDivineMightDelay && runAfterPendingDivineMightLevelUp(village, () => {
     tryTriggerHeresyInquisition(village, { ...options, skipDivineMightDelay: true });
   })) {
@@ -57,6 +68,16 @@ export function tryTriggerHeresyInquisition(village, options = {}) {
   const random = typeof options.random === "function" ? options.random : Math.random;
   if (!options.force && random() >= HERESY_INQUISITION_CHANCE) return false;
 
+  // 発生の事実はUIではなくゲーム状態へ保存し、プレイヤーの選択完了まで保持する。
+  village.pendingHeresyInquisition = true;
+  pendingVillage = village;
+  showInquisitionWhenReady();
+  return true;
+}
+
+/** セーブ読込後に、未処理の異端審問があれば提示し直す。 */
+export function resumePendingHeresyInquisition(village) {
+  if (!village?.pendingHeresyInquisition) return false;
   pendingVillage = village;
   showInquisitionWhenReady();
   return true;
@@ -76,30 +97,47 @@ function isVisibleElement(element) {
 
 function isPriorityModalOpen() {
   return isHeadmanElectionModalPendingOrOpen()
+    || isReproductionModalOpen()
     || PRIORITY_MODAL_SELECTORS.some(selector =>
       Array.from(document.querySelectorAll(selector)).some(isVisibleElement));
 }
 
 function waitForPriorityModalsToClose() {
-  if (priorityModalObserver) return;
-  priorityModalObserver = new MutationObserver(showInquisitionWhenReady);
-  // display の切り替えだけで閉じるモーダルもあるため、属性の変化も監視する。
-  priorityModalObserver.observe(document.body, {
-    attributes: true,
-    attributeFilter: ["class", "style", "hidden", "aria-hidden"],
-    childList: true,
-    subtree: true
-  });
+  if (!priorityModalObserver) {
+    priorityModalObserver = new MutationObserver(showInquisitionWhenReady);
+    // display の切り替えだけで閉じるモーダルもあるため、属性の変化も監視する。
+    priorityModalObserver.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["class", "style", "hidden", "aria-hidden"],
+      childList: true,
+      subtree: true
+    });
+  }
+  // MutationObserverが通知を取りこぼしても待機が止まらないよう、定期再確認も併用する。
+  if (!priorityRetryTimer) {
+    priorityRetryTimer = setInterval(showInquisitionWhenReady, 500);
+  }
 }
 
 function stopWaitingForPriorityModals() {
-  if (!priorityModalObserver) return;
-  priorityModalObserver.disconnect();
-  priorityModalObserver = null;
+  if (priorityModalObserver) {
+    priorityModalObserver.disconnect();
+    priorityModalObserver = null;
+  }
+  if (priorityRetryTimer) {
+    clearInterval(priorityRetryTimer);
+    priorityRetryTimer = null;
+  }
 }
 
 function showInquisitionWhenReady() {
   if (!pendingVillage || typeof document === "undefined") {
+    stopWaitingForPriorityModals();
+    return;
+  }
+  // 既に審問の選択モーダルを提示中なら二重表示しない。
+  if (document.getElementById("heresyInquisitionModal")) {
+    pendingVillage = null;
     stopWaitingForPriorityModals();
     return;
   }
@@ -220,6 +258,7 @@ function confirmExpulsion(village, portraitPath, speech) {
 }
 
 function handleHospitality(village, cost, portraitPath, speech) {
+  village.pendingHeresyInquisition = false;
   village.funds = Math.max(0, (Number(village.funds) || 0) - cost);
   village.log(`【異端審問】異端審問官をもてなし、資金${cost}を支払って調査を切り抜けた。`);
   updateUI(village);
@@ -228,6 +267,7 @@ function handleHospitality(village, cost, portraitPath, speech) {
 }
 
 function handleExpulsion(village, portraitPath, speech) {
+  village.pendingHeresyInquisition = false;
   const villageTraits = Array.isArray(village.villageTraits)
     ? village.villageTraits
     : (village.villageTraits = []);

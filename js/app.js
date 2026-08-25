@@ -30,6 +30,7 @@ import { setBalanceSimulationOptions } from "./balance/simulationOptions.js";
 import { enterGame, initOpeningScreen, replayOpeningStory } from "./openingScreen.js";
 import { getVillageScaleStage, getVillageScaleTitle, VILLAGE_SCALE_STAGES } from "./villageScale.js";
 import { DIVINE_MIGHT_LEVELS } from "./divineMight.js";
+import { resumePendingHeresyInquisition } from "./heresyInquisition.js";
 
 const APOCALYPSE_DEBUG_VILLAGER_COUNT = 15;
 const APOCALYPSE_DEBUG_RESOURCE_AMOUNT = 10000;
@@ -46,6 +47,8 @@ function replaceVillageState(nextVillage, loadedMessage) {
   if (theVillage.battleDebugMode) debugTitleActionsEnabled = true;
   theVillage.log(loadedMessage);
   updateUI(theVillage);
+  // 未処理のまま保存された異端審問があれば提示し直す。
+  resumePendingHeresyInquisition(theVillage);
 }
 
 async function loadFromSelectedJsonFile(file) {
