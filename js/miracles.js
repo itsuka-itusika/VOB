@@ -262,8 +262,8 @@ function isMiracleMultiMode(mid) {
   return Boolean(document.getElementById("miracleMultiToggle")?.checked);
 }
 
-/** 複数選択で選ばれている名前。単数モードなら空配列。 */
-function getMiracleMultiTargetNames(mid) {
+/** 複数選択で選ばれている人物ID。単数モードなら空配列。 */
+function getMiracleMultiTargetIds(mid) {
   if (!isMiracleMultiMode(mid)) return [];
   const list = document.getElementById("miracleMultiList");
   if (!list) return [];
@@ -400,12 +400,13 @@ function getMiracleTargetOptions(mid) {
   return {};
 }
 
-function findMiracleTargetByName(name, village) {
-  if (!name) return null;
-  return village.villagers.find(x => x.name === name) ||
-    getCaptives(village).find(x => x.name === name) ||
-    village.visitors.find(x => x.name === name) ||
-    village.raidEnemies.find(x => x.name === name) ||
+function findMiracleTargetById(value, village) {
+  const id = Number(value);
+  if (!value || !Number.isFinite(id)) return null;
+  return village.villagers.find(x => x.id === id) ||
+    getCaptives(village).find(x => x.id === id) ||
+    village.visitors.find(x => x.id === id) ||
+    village.raidEnemies.find(x => x.id === id) ||
     null;
 }
 
@@ -413,7 +414,7 @@ function areMiracleTargetsReady(mid) {
   if (mid === "18") {
     return Boolean(document.getElementById("riotRaidTable")?.value);
   }
-  if (isMiracleMultiMode(mid)) return getMiracleMultiTargetNames(mid).length > 0;
+  if (isMiracleMultiMode(mid)) return getMiracleMultiTargetIds(mid).length > 0;
   const count = getMiracleTargetCount(mid);
   if (count === 0) return true;
   const targetA = document.getElementById("targetA");
@@ -487,15 +488,15 @@ function updateMiraclePreview(mid, village, preview) {
 
   // 複数選択では一覧側に各自の状態が出ているため、ここは人数だけを添える。
   if (isMiracleMultiMode(mid)) {
-    const chosen = getMiracleMultiTargetNames(mid).length;
+    const chosen = getMiracleMultiTargetIds(mid).length;
     preview.textContent = chosen === 0 ? "対象を選択してください。" : `${chosen}人を選択中。`;
     return;
   }
 
-  const personA = findMiracleTargetByName(document.getElementById("targetA")?.value, village);
+  const personA = findMiracleTargetById(document.getElementById("targetA")?.value, village);
 
   if (targetCount === 2) {
-    const personB = findMiracleTargetByName(document.getElementById("targetB")?.value, village);
+    const personB = findMiracleTargetById(document.getElementById("targetB")?.value, village);
     if (!personA || !personB || personA === personB) {
       preview.textContent = "2人を選ぶと、対象の情報を表示します。";
       return;
@@ -520,7 +521,7 @@ function updateMiraclePreview(mid, village, preview) {
 }
 
 function updateMiracleActionButton(mid, button, village, costInfo, preview) {
-  const chosenCount = getMiracleMultiTargetNames(mid).length;
+  const chosenCount = getMiracleMultiTargetIds(mid).length;
   const totalCost = costInfo.mana * Math.max(1, chosenCount);
   const multiCostInfo = chosenCount > 1 ? { ...costInfo, mana: totalCost } : costInfo;
   const reason = getMiracleBlockReason(multiCostInfo, village, mid);
@@ -820,7 +821,7 @@ function createVillagerSelect(id, village, options = {}) {
   const detailKind = MIRACLE_TARGET_DETAIL_KINDS[options.miracleId] || "";
   const addOption = (person) => {
     const opp = document.createElement("option");
-    opp.value = person.name;
+    opp.value = person.id;
     opp.textContent = formatMiracleOptionLabel(person, detailKind);
     sel.appendChild(opp);
   };
@@ -946,8 +947,8 @@ export function performMiracle(village) {
   // コスト計算
   let cost = getMiracleCostInfo(info, village).mana;
   // まとめて行使するときは、1人ぶんの費用を人数分そのまま掛ける。
-  const multiTargets = getMiracleMultiTargetNames(mid)
-    .map(name => findMiracleTargetByName(name, village))
+  const multiTargets = getMiracleMultiTargetIds(mid)
+    .map(id => findMiracleTargetById(id, village))
     .filter(Boolean);
   if (multiTargets.length > 0) cost *= multiTargets.length;
   let vc = village.villagers.length;
@@ -978,17 +979,11 @@ export function performMiracle(village) {
   let vB=null;
   if (ta && ta.value) {
     // 村人、捕虜、訪問者、襲撃者から対象を検索
-    vA = village.villagers.find(x=>x.name===ta.value) ||
-         getCaptives(village).find(x=>x.name===ta.value) ||
-         village.visitors.find(x=>x.name===ta.value) ||
-         village.raidEnemies.find(x=>x.name===ta.value);
+    vA = findMiracleTargetById(ta.value, village);
   }
   if (tb && tb.value) {
     // 村人、捕虜、訪問者、襲撃者から対象を検索
-    vB = village.villagers.find(x=>x.name===tb.value) ||
-         getCaptives(village).find(x=>x.name===tb.value) ||
-         village.visitors.find(x=>x.name===tb.value) ||
-         village.raidEnemies.find(x=>x.name===tb.value);
+    vB = findMiracleTargetById(tb.value, village);
   }
 
   if (mid === "8" && !hasHearthMiracleTarget(village)) {

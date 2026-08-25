@@ -529,7 +529,7 @@ function openRecruitmentModal(visitor) {
     <select id="recruiterSelect" style="width:100%;padding:5px;margin-bottom:15px;">
       <option value="">${hasCandidates ? "勧誘する村人を選択してください" : "今月、勧誘・誘惑できる村人はいません"}</option>
       ${candidates.map(v => `
-        <option value="${v.name}">${v.name} (魅力:${Math.floor(v.chr)} 知力:${Math.floor(v.int)} 成功率:${Math.floor(calculateRecruitmentSuccessRate(visitor, v))}%)</option>
+        <option value="${v.id}">${v.name} (魅力:${Math.floor(v.chr)} 知力:${Math.floor(v.int)} 成功率:${Math.floor(calculateRecruitmentSuccessRate(visitor, v))}%)</option>
       `).join('')}
     </select>
     <div id="recruitmentSuccessRate" style="margin:-5px 0 15px 0;color:#555;">成功率: -</div>
@@ -546,20 +546,20 @@ function openRecruitmentModal(visitor) {
   const recruiterSelect = document.getElementById("recruiterSelect");
   const recruitmentSuccessRate = document.getElementById("recruitmentSuccessRate");
   recruiterSelect.addEventListener("change", () => {
-    const recruiter = theVillage.villagers.find(v => v.name === recruiterSelect.value);
+    const recruiter = theVillage.villagers.find(v => v.id === Number(recruiterSelect.value));
     recruitmentSuccessRate.textContent = recruiter
       ? `成功率: ${Math.floor(calculateRecruitmentSuccessRate(visitor, recruiter))}%`
       : "成功率: -";
   });
 
   document.getElementById("doRecruitment").addEventListener("click", () => {
-    const recruiterName = document.getElementById("recruiterSelect").value;
-    if (!recruiterName) {
+    const recruiterId = document.getElementById("recruiterSelect").value;
+    if (!recruiterId) {
       alert("勧誘する村人を選択してください。");
       return;
     }
 
-    const recruiter = theVillage.villagers.find(v => v.name === recruiterName);
+    const recruiter = theVillage.villagers.find(v => v.id === Number(recruiterId));
     if (!recruiter) return;
     if (hasUsedVisitorSocialAttempt(recruiter)) {
       alert(`${recruiter.name}は今月すでに勧誘または誘惑を試みています。`);
@@ -637,7 +637,7 @@ function openSeductionModal(visitor) {
         const check = canAttemptSeduction(visitor, v);
         const rate = Math.floor(calculateSeductionSuccessRate(visitor, v));
         const rateText = check.ok ? `成功率:${rate}%` : `不可:${check.reason}`;
-        return `<option value="${v.name}">${v.name} (魅力:${Math.floor(v.chr)} 好色:${Math.floor(v.sexdr)} ${rateText})</option>`;
+        return `<option value="${v.id}">${v.name} (魅力:${Math.floor(v.chr)} 好色:${Math.floor(v.sexdr)} ${rateText})</option>`;
       }).join('')}
     </select>
     <div id="seductionSuccessRate" style="margin:-5px 0 15px 0;color:#555;">成功率: -</div>
@@ -654,7 +654,7 @@ function openSeductionModal(visitor) {
   const seducerSelect = document.getElementById("seducerSelect");
   const seductionSuccessRate = document.getElementById("seductionSuccessRate");
   seducerSelect.addEventListener("change", () => {
-    const seducer = theVillage.villagers.find(v => v.name === seducerSelect.value);
+    const seducer = theVillage.villagers.find(v => v.id === Number(seducerSelect.value));
     if (!seducer) {
       seductionSuccessRate.textContent = "成功率: -";
       return;
@@ -666,13 +666,13 @@ function openSeductionModal(visitor) {
   });
 
   document.getElementById("doSeduction").addEventListener("click", () => {
-    const seducerName = document.getElementById("seducerSelect").value;
-    if (!seducerName) {
+    const seducerId = document.getElementById("seducerSelect").value;
+    if (!seducerId) {
       alert("誘惑する村人を選択してください。");
       return;
     }
 
-    const seducer = theVillage.villagers.find(v => v.name === seducerName);
+    const seducer = theVillage.villagers.find(v => v.id === Number(seducerId));
     if (!seducer) return;
     if (hasUsedVisitorSocialAttempt(seducer)) {
       alert(`${seducer.name}は今月すでに勧誘または誘惑を試みています。`);
@@ -841,7 +841,7 @@ function openCaptiveSocialModal(captive, source) {
     <select id="${selectId}" style="width:100%;padding:5px;margin-bottom:15px;">
       <option value="">${hasCandidates ? `${source}する村人を選択してください` : `今月、${source}できる村人はいません`}</option>
       ${candidates.map(actor => `
-        <option value="${actor.name}">${getCaptiveSocialOptionText(captive, actor, source)}</option>
+        <option value="${actor.id}">${getCaptiveSocialOptionText(captive, actor, source)}</option>
       `).join('')}
     </select>
     <div id="${rateId}" style="margin:-5px 0 15px 0;color:#555;">成功率: -</div>
@@ -857,18 +857,18 @@ function openCaptiveSocialModal(captive, source) {
   const actorSelect = document.getElementById(selectId);
   const successRateText = document.getElementById(rateId);
   actorSelect.addEventListener("change", () => {
-    const actor = theVillage.villagers.find(v => v.name === actorSelect.value);
+    const actor = theVillage.villagers.find(v => v.id === Number(actorSelect.value));
     successRateText.textContent = getCaptiveSocialRateText(captive, actor, source);
   });
 
   document.getElementById(buttonId).addEventListener("click", () => {
-    const actorName = document.getElementById(selectId).value;
-    if (!actorName) {
+    const actorId = document.getElementById(selectId).value;
+    if (!actorId) {
       alert(`${source}する村人を選択してください。`);
       return;
     }
 
-    const actor = theVillage.villagers.find(v => v.name === actorName);
+    const actor = theVillage.villagers.find(v => v.id === Number(actorId));
     if (!actor) return;
     if (hasUsedVisitorSocialAttempt(actor)) {
       alert(`${actor.name}は今月すでに勧誘または誘惑を試みています。`);
