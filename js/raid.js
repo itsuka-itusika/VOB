@@ -287,11 +287,17 @@ async function playRearDepartureAnimations(village) {
   await waitRaidAnimation(RAID_ACTOR_FOCUS_DELAY_MS + RAID_DAMAGE_EFFECT_DELAY_MS);
 }
 
+/** 行がスクロール窓の外にあると演出が見えないため、行動のたびに窓内へ寄せる。 */
+function scrollRaidRowIntoView(row) {
+  row?.scrollIntoView?.({ block: "nearest" });
+}
+
 async function playRaidAnimationStep(step) {
   const actorRow = getRaidUnitRow(step?.actor);
   const targetRow = getRaidUnitRow(step?.target);
 
   if (actorRow) {
+    scrollRaidRowIntoView(actorRow);
     if (step.isDeparture) {
       actorRow.classList.add("is-leaving");
       if (isRaidRetreatLabel(step.actionLabel)) actorRow.classList.add("is-retreating");
@@ -303,6 +309,7 @@ async function playRaidAnimationStep(step) {
   await waitRaidAnimation(RAID_ACTOR_FOCUS_DELAY_MS);
 
   if (targetRow) {
+    scrollRaidRowIntoView(targetRow);
     targetRow.classList.add("is-hit");
     showRaidDamagePop(targetRow, step.damage);
     showRaidDamageActionPop(targetRow, step.damage);
