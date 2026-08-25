@@ -159,7 +159,14 @@ function scheduleDivineMightLevelUpModal(village) {
   if (!village || typeof document === "undefined" || scheduledLevelUpVillages.has(village)) return;
   scheduledLevelUpVillages.add(village);
   const attempt = () => {
-    if (!village.pendingDivineMightLevelUp || showPendingDivineMightLevelUpModal(village)) {
+    if (!village.pendingDivineMightLevelUp) {
+      scheduledLevelUpVillages.delete(village);
+      // 表示待ちの間に神威消費でレベルアップが取り消された場合も、
+      // 繰延中の処理（異端審問・襲撃予約チェックなど）を漏らさず実行する。
+      runDivineMightLevelUpAfterClose(village, null);
+      return;
+    }
+    if (showPendingDivineMightLevelUpModal(village)) {
       scheduledLevelUpVillages.delete(village);
       return;
     }
@@ -317,7 +324,11 @@ export function showPendingDivineMightLevelUpModal(village, afterClose = null) {
     overlay.remove();
     modal.remove();
     if (village.pendingDivineMightLevelUp) {
-      showPendingDivineMightLevelUpModal(village, afterClose);
+      // 直後に表示できない場合も、繰延コールバックを失わないよう再スケジュールする。
+      if (!showPendingDivineMightLevelUpModal(village, afterClose)) {
+        queueDivineMightLevelUpAfterClose(village, afterClose);
+        scheduleDivineMightLevelUpModal(village);
+      }
       return;
     }
     runDivineMightLevelUpAfterClose(village, afterClose);
