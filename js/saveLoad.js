@@ -16,6 +16,7 @@ import { normalizeBuildingRequestState } from "./buildingRequests.js";
 import { normalizeWishState } from "./wishes.js";
 import { normalizeDamagedBuildings, recalculateBuildingDerivedState } from "./domain/buildingState.js";
 import { normalizeVillageRoleForPerson, normalizeVillageRoles } from "./domain/villageRoles.js";
+import { ensurePersonId, normalizePersonId, peekNextPersonId, syncNextPersonId } from "./domain/personId.js";
 
 const BODY_TRAIT_RENAMES = {
   "子供": "幼児",
@@ -273,6 +274,9 @@ function convertVillageToObject(village) {
     // raidEnemies (Villager互換配列)
     raidEnemies: village.raidEnemies.map(vill => convertVillagerToObject(vill)),
 
+    // 人物ID採番カウンタ。読込時にIDの重複採番を防ぐ。
+    nextPersonId: peekNextPersonId(),
+
     // villagers
     villagers: village.villagers.map(vill => convertVillagerToObject(vill)),
     pendingGoldenRainPregnancies: Array.isArray(village.pendingGoldenRainPregnancies)
@@ -306,6 +310,7 @@ function convertVillagerToObject(vill) {
     }
   }
   return {
+    id: ensurePersonId(vill),
     name: vill.name,
     bodySex: vill.bodySex,
     bodyAge: vill.bodyAge,
@@ -357,6 +362,7 @@ function convertVillagerToObject(vill) {
     actionTable: [...vill.actionTable],
     villageRole: normalizeVillageRoleForPerson(vill),
     bodyOwner: vill.bodyOwner,
+    bodyOwnerId: normalizePersonId(vill.bodyOwnerId),
 
     // 口調タイプと顔グラフィック情報を追加
     speechType: vill.speechType,
@@ -573,8 +579,51 @@ function convertObjectToVillage(dataObj) {
     evaluateTitles(person, { getPermanentStat });
   });
   normalizeVillageRoles(v);
+  finalizePersonIds(v, dataObj);
 
   return v;
+}
+
+/**
+ * 読込後の全人物のIDを確定する。
+ * 旧セーブのID欠落・重複を採番し直し、採番カウンタを既存IDより先へ進める。
+ */
+function finalizePersonIds(village, dataObj) {
+  const questAdventurers = (village.activeAdventurerQuests || []).map(quest => quest.adventurer).filter(Boolean);
+  const activePersons = [
+    ...village.villagers,
+    ...village.visitors,
+    ...(village.captives || []),
+    ...village.raidEnemies,
+    ...questAdventurers
+  ];
+  const allPersons = [...activePersons, ...(village.departedVillagers || [])];
+
+  const usedIds = new Set();
+  let maxId = 0;
+  allPersons.forEach(person => {
+    const id = normalizePersonId(person.id);
+    if (id == null || usedIds.has(id)) {
+      person.id = null;
+      return;
+    }
+    usedIds.add(id);
+    maxId = Math.max(maxId, id);
+  });
+  syncNextPersonId(Math.max(maxId + 1, Math.floor(Number(dataObj?.nextPersonId) || 0)));
+  allPersons.forEach(person => ensurePersonId(person));
+
+  // 旧セーブ向けの読み替え: bodyOwnerId が無い人物は、名前からベストエフォートで解決する。
+  const idByName = new Map();
+  allPersons.forEach(person => {
+    if (person.name && !idByName.has(person.name)) idByName.set(person.name, person.id);
+  });
+  allPersons.forEach(person => {
+    if (normalizePersonId(person.bodyOwnerId) != null) return;
+    person.bodyOwnerId = person.bodyOwner === person.name
+      ? person.id
+      : (idByName.get(person.bodyOwner) ?? null);
+  });
 }
 
 /**
@@ -582,6 +631,8 @@ function convertObjectToVillage(dataObj) {
  */
 function convertObjectToVillager(obj) {
   let vill = new Villager(obj.name, obj.bodySex, obj.bodyAge);
+  // 保存済みIDを復元する。旧セーブでIDが無い場合はコンストラクタの採番を使う。
+  vill.id = normalizePersonId(obj.id) ?? vill.id;
   vill.hp = obj.hp;
   vill.mp = obj.mp;
   vill.happiness = obj.happiness;
@@ -646,6 +697,7 @@ function convertObjectToVillager(obj) {
   vill.action = obj.action || ACTION_NONE;
   vill.actionTable = Array.isArray(obj.actionTable) ? [...obj.actionTable] : [];
   vill.bodyOwner = obj.bodyOwner || obj.name;
+  vill.bodyOwnerId = normalizePersonId(obj.bodyOwnerId);
 
   // 口調タイプを保存・復元するように追加
   vill.speechType = obj.speechType || determineSpeechType(vill);

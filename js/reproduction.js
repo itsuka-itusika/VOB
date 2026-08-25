@@ -96,6 +96,7 @@ const GENETIC_EXCLUDED_BODY_TRAITS = new Set([
 const VIRTUAL_THUNDER_FATHER = {
   name: "不明",
   bodyOwner: "不明",
+  bodyOwnerId: null,
   race: "半神",
   bodySex: "男",
   bodyTraits: [],
@@ -113,6 +114,7 @@ const VIRTUAL_THUNDER_FATHER = {
 const VIRTUAL_ANNUNCIATION_FATHER = {
   name: "不明",
   bodyOwner: "不明",
+  bodyOwnerId: null,
   race: "人間",
   bodySex: "男",
   bodyTraits: [],
@@ -164,7 +166,9 @@ function isLongLivedRace(race) {
 function snapshotParent(person) {
   const snap = {
     name: person.name,
+    id: person.id ?? null,
     bodyOwner: person.bodyOwner || person.name,
+    bodyOwnerId: person.bodyOwnerId ?? person.id ?? null,
     race: person.race || "人間",
     bodySex: person.bodySex,
     bodyTraits: Array.isArray(person.bodyTraits)
@@ -306,8 +310,14 @@ function getBodyIdentity(person) {
   return person?.bodyOwner || person?.name || "";
 }
 
+function getBodyIdentityId(person) {
+  return person?.bodyOwnerId ?? person?.id ?? null;
+}
+
 function matchesPendingMysticTarget(entry, person) {
-  // targetName は肉体紐づけ以前の保存データ向けの読み替え。
+  const targetId = entry?.targetBodyOwnerId;
+  if (targetId != null) return targetId === getBodyIdentityId(person);
+  // ID導入前の保存データ向けの名前ベースの読み替え。
   const target = entry?.targetBodyOwner || entry?.targetName;
   return !!target && target === getBodyIdentity(person);
 }
@@ -342,6 +352,7 @@ export function scheduleGoldenRainPregnancy(village, mother) {
   }
   const due = getNextMonthDate(village);
   village.pendingGoldenRainPregnancies.push({
+    targetBodyOwnerId: getBodyIdentityId(mother),
     targetBodyOwner: getBodyIdentity(mother),
     dueYear: due.year,
     dueMonth: due.month,
@@ -358,6 +369,7 @@ export function scheduleAnnunciationPaintingPregnancy(village, mother) {
   }
   const due = getNextMonthDate(village);
   village.pendingGoldenRainPregnancies.push({
+    targetBodyOwnerId: getBodyIdentityId(mother),
     targetBodyOwner: getBodyIdentity(mother),
     dueYear: due.year,
     dueMonth: due.month,
@@ -886,6 +898,7 @@ function createNewbornChild(village, data) {
 function finalizeBirth(village, mother, data, child, childName) {
   child.name = childName;
   child.bodyOwner = childName;
+  child.bodyOwnerId = child.id;
   registerUsedName(childName);
 
   mother.bodyTraits = mother.bodyTraits.filter(trait => trait !== "妊娠" && trait !== "臨月");

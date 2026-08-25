@@ -301,6 +301,7 @@ export function closeDryadFruitModal() {
 function applyDryadFruit(village, target) {
   const previousRace = target.race || "人間";
   const previousBodyOwner = target.bodyOwner;
+  const previousBodyOwnerId = target.bodyOwnerId;
   const dryad = createRandomVisitorOfType(
     "ドライアド",
     getVillagers(village).map(person => person.name)
@@ -309,6 +310,7 @@ function applyDryadFruit(village, target) {
 
   doExchange(target, dryad, village, true, "ドライアドの果実", { recordHistory: false });
   target.bodyOwner = previousBodyOwner;
+  target.bodyOwnerId = previousBodyOwnerId;
   recordDryadFruitHistory(village, target, { previousRace });
   village.log(`【秘宝】${target.name}がドライアドの果実を食べ、ドライアドの身体になりました`);
   showDryadFruitModal(target, getDialogueLine({

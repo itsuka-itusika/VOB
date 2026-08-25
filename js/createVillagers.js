@@ -1276,6 +1276,7 @@ function exchangeGeneratedVisitorBodies(a, b) {
     bodySex: a.bodySex,
     bodyAge: a.bodyAge,
     bodyOwner: a.bodyOwner,
+    bodyOwnerId: a.bodyOwnerId,
     race: a.race,
     portraitFile: a.portraitFile,
     raiderPortrait: a.raiderPortrait,
@@ -1295,6 +1296,7 @@ function exchangeGeneratedVisitorBodies(a, b) {
   a.bodySex = b.bodySex;
   a.bodyAge = b.bodyAge;
   a.bodyOwner = b.bodyOwner;
+  a.bodyOwnerId = b.bodyOwnerId;
   a.race = b.race;
   a.portraitFile = b.portraitFile;
   a.raiderPortrait = b.raiderPortrait;
@@ -1313,6 +1315,7 @@ function exchangeGeneratedVisitorBodies(a, b) {
   b.bodySex = body.bodySex;
   b.bodyAge = body.bodyAge;
   b.bodyOwner = body.bodyOwner;
+  b.bodyOwnerId = body.bodyOwnerId;
   b.race = body.race;
   b.portraitFile = body.portraitFile;
   b.raiderPortrait = body.raiderPortrait;

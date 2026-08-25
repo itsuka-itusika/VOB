@@ -132,6 +132,7 @@ export function doExchange(a, b, v, isLightning = false, historySource = null, o
     bodySex: a.bodySex,
     bodyAge: a.bodyAge,
     bodyOwner: a.bodyOwner,
+    bodyOwnerId: a.bodyOwnerId,
     race: a.race,
     portraitFile: a.portraitFile,
     raiderPortrait: a.raiderPortrait,
@@ -154,6 +155,7 @@ export function doExchange(a, b, v, isLightning = false, historySource = null, o
   a.bodySex = b.bodySex;
   a.bodyAge = b.bodyAge;
   a.bodyOwner = b.bodyOwner;
+  a.bodyOwnerId = b.bodyOwnerId;
   a.race = b.race;
   a.portraitFile = b.portraitFile;
   a.raiderPortrait = b.raiderPortrait;
@@ -175,6 +177,7 @@ export function doExchange(a, b, v, isLightning = false, historySource = null, o
   b.bodySex = exchangeParams.bodySex;
   b.bodyAge = exchangeParams.bodyAge;
   b.bodyOwner = exchangeParams.bodyOwner;
+  b.bodyOwnerId = exchangeParams.bodyOwnerId;
   b.race = exchangeParams.race;
   b.portraitFile = exchangeParams.portraitFile;
   b.raiderPortrait = exchangeParams.raiderPortrait;

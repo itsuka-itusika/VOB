@@ -324,6 +324,9 @@ function getCurrentSeason(village) {
 }
 
 function hasDifferentBodyOwner(character) {
+  if (character?.id != null && character?.bodyOwnerId != null) {
+    return character.bodyOwnerId !== character.id;
+  }
   const name = String(character?.name || "").trim();
   const bodyOwner = String(character?.bodyOwner || "").trim();
   return name !== "" && bodyOwner !== "" && name !== bodyOwner;

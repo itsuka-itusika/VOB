@@ -1,6 +1,7 @@
 // classes.js
 
 import { createStatMap, STAT_LAYER_VERSION } from "./domain/statLayers.js";
+import { allocatePersonId } from "./domain/personId.js";
 
 /**
  * VillageクラスとVillagerクラス
@@ -120,6 +121,8 @@ export class Village {
 export class Villager {
   constructor(name, bodySex, bodyAge) {
     /** 基本情報 */
+    // 人物の一意ID。精神（人物そのもの）に紐づき、肉体交換や改名でも変わらない。
+    this.id = allocatePersonId();
     this.name = name;
     // 肉体側の識別子。精神側の spiritSex/spiritAge とは統合しない。
     this.bodySex = bodySex;
@@ -184,8 +187,9 @@ export class Villager {
     this.actionTable = [];
     this.villageRole = "なし";
 
-    /** この肉体の元の持ち主 */
+    /** この肉体の元の持ち主（bodyOwnerは表示用の名前、bodyOwnerIdが同一性判定用） */
     this.bodyOwner = name;
+    this.bodyOwnerId = this.id;
     // アレス変数を初期化（戦神の加護効果期間管理用）
     this.ares = 0;
     // ニケ効果期間管理用
