@@ -344,12 +344,12 @@ export const BUILDINGS = [
     materials: 300,
     funds: 1500,
     tech: 300,
-    desc: "黄金像建立イベントで解放。交換の奇跡と交換の奇跡・強の消費魔素を半分にする。建設すると次月から七つの災厄が始まる。建設後は破壊可能。",
+    desc: "黄金像建立イベントで解放。交換の奇跡と交換の奇跡・強の消費魔素を4分の1にする。建設すると次月から七つの災厄が始まる。建設後は破壊可能。",
     isUnlocked: (village) => !!village?.buildingFlags?.[BACCHUS_GOLDEN_STATUE_UNLOCK_FLAG],
     confirmWith: confirmBacchusGoldenStatueBuild,
     effect: (village) => {
       ensureBuildingFlags(village)[BACCHUS_GOLDEN_STATUE_BUILT_FLAG] = true;
-      village.log("バッカスの黄金像建設完了: 交換の奇跡と交換の奇跡・強の消費魔素が半分になりました");
+      village.log("バッカスの黄金像建設完了: 交換の奇跡と交換の奇跡・強の消費魔素が4分の1になりました");
     },
     onConstructed: startApocalypseFromGoldenStatue
   }
@@ -588,7 +588,7 @@ function createBuildingItem(building, village) {
     destroyButton.className = "building-button destroy";
     destroyButton.textContent = "黄金像を破壊";
     destroyButton.onclick = () => {
-      const message = "バッカスの黄金像を破壊しますか？\n黙示録は中断され、交換の奇跡の消費魔素半減効果も失われます。\nこの後もう一度建築できます。";
+      const message = "バッカスの黄金像を破壊しますか？\n黙示録は中断され、交換の奇跡の消費魔素軽減効果も失われます。\nこの後もう一度建築できます。";
       if (!confirm(message)) return;
       if (destroyBacchusGoldenStatue(village)) openBuildingModal(village);
     };
