@@ -938,7 +938,7 @@ function renderPersonalHistorySummary(person, options = {}) {
     { label: "称号", valueHtml: renderPersonalTitleSummary(person) },
     ...(person.departure ? [{
       label: "離村",
-      value: `${person.departure.year}年${person.departure.month}月・${person.departure.reason}`
+      value: formatDepartureSentence(person.departure)
     }] : [])
   ];
   return `
@@ -997,6 +997,21 @@ export function openPersonalHistoryModal(village, person, options = {}) {
   modal.style.display = "block";
 }
 
+// 過去帳と個人史に載せる、去り方の一文。
+const DEPARTURE_SENTENCES = {
+  "出立の奇跡": "出立の奇跡で村を発った",
+  "絶望": "絶望して村を離れた",
+  "老衰": "老衰により死亡した",
+  "重体の悪化": "重体の悪化により死亡した",
+  "光の柱への曝露": "光の柱への曝露により死亡した"
+};
+
+function formatDepartureSentence(departure) {
+  const reason = departure?.reason || "離村";
+  const body = DEPARTURE_SENTENCES[reason] || `${reason}により村を去った`;
+  return `${departure?.year ?? "?"}年${departure?.month ?? "?"}月に${body}`;
+}
+
 /**
  * 離村・死亡した村人を過去帳へ記す。姿や特性は去った時点のまま残す。
  */
@@ -1026,8 +1041,7 @@ export function openPastBookModal(village) {
         </button>
         <span>${escapeHtml(person.name)}</span>
       </td>
-      <td>${escapeHtml(`${person.departure?.year ?? "?"}年${person.departure?.month ?? "?"}月`)}</td>
-      <td>${escapeHtml(person.departure?.reason || "離村")}</td>
+      <td>${escapeHtml(formatDepartureSentence(person.departure))}</td>
     </tr>
   `).join("");
 
@@ -1043,18 +1057,16 @@ export function openPastBookModal(village) {
       <table class="friendship-detail-table">
         <colgroup>
           <col class="friendship-detail-col-person">
-          <col class="friendship-detail-col-score">
           <col class="friendship-detail-col-relation">
         </colgroup>
         <thead>
           <tr>
             <th>人物</th>
-            <th>去った時期</th>
-            <th>事由</th>
+            <th>記録</th>
           </tr>
         </thead>
         <tbody>
-          ${rows || `<tr><td colspan="3" class="friendship-detail-empty">村を去った者は、まだ帳面に記されていない。</td></tr>`}
+          ${rows || `<tr><td colspan="2" class="friendship-detail-empty">村を去った者は、まだ帳面に記されていない。</td></tr>`}
         </tbody>
       </table>
     </div>
