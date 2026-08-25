@@ -92,7 +92,7 @@ export const RAIDER_TYPES = [
     maxCount: 1,
     race: "人間",
     forcedSex: "男",
-    ageRange: { min: 18, max: 42 },
+    ageRange: { min: 18, max: 39 },
     params: {
       job: "傭兵射手",
       action: "襲撃"
@@ -552,7 +552,7 @@ export const RAIDER_TYPES = [
     maxCount: 3,
     race: "人間",
     forcedSex: "男",
-    ageRange: { min: 18, max: 40 },
+    ageRange: { min: 18, max: 35 },
     params: {
       job: "下級騎士",
       action: "襲撃"
@@ -585,7 +585,7 @@ export const RAIDER_TYPES = [
     maxCount: 2,
     race: "人間",
     forcedSex: "男",
-    ageRange: { min: 22, max: 45 },
+    ageRange: { min: 22, max: 35 },
     params: {
       job: "重装兵",
       action: "襲撃"
@@ -653,7 +653,7 @@ export const RAIDER_TYPES = [
     maxCount: 1,
     race: "人間",
     forcedSex: "男",
-    ageRange: { min: 24, max: 45 },
+    ageRange: { min: 24, max: 39 },
     params: {
       job: "聖騎士",
       action: "襲撃"
@@ -687,7 +687,7 @@ export const RAIDER_TYPES = [
     maxCount: 1,
     race: "人間",
     forcedSex: "女",
-    ageRange: { min: 18, max: 30 },
+    ageRange: { min: 18, max: 25 },
     params: {
       job: "聖女",
       action: "襲撃"
