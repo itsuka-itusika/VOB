@@ -21,6 +21,8 @@
 
 中心状態は `js/main.js` の `theVillage` です。`Village` は年月、資源、村人、訪問者、襲撃、建築、ログ、村史、モーダル状態などを持ちます。`Villager` は肉体情報、精神情報、能力値、特性、行動、人間関係、妊娠・成長関連の情報を持ちます。
 
+すべての人物（村人・訪問者・捕虜・襲撃者）は生成時に一意の人物ID `id` を持ちます。IDは精神（人物そのもの）に紐づき、肉体交換や改名でも変わりません。人物どうしの参照（人間関係、好感度、願望、村史の登場人物、肉体の元の持ち主 `bodyOwnerId` など）は名前ではなくIDで行い、名前は表示用に使います。IDの採番と横断検索は `js/domain/personId.js` に集約しています。
+
 状態更新は各機能モジュールで直接行われます。専用の状態管理ライブラリはありません。そのため、変更後は必要なタイミングで `updateUI(theVillage)` を呼び、画面と状態を同期します。
 
 ## 起動時の流れ
@@ -65,9 +67,9 @@
 - js/apocalypse.js / js/domain/apocalypseRules.js
   - 黄金像完成後の黙示録状態、七災厄の月初進行、塩の柱、専用襲撃開始、黄金像破壊・敗北中断・七災厄の完了処理を扱う。第七の災厄を越えた時は塩の柱を解除し、村人へ専用称号を付与して、クリア済みフラグと神威Lv6を解放する。
 - `js/reproduction.js`
-  - 妊娠、出産、産褥、成人化、成長段階を扱う。`giveBirth` は赤子を作って出産モーダルを出すだけで、名前・関係・村史・村人への追加は命名確定後の `finalizeBirth` で行う。黄金の雨と告天使の絵画による翌月の神秘的な妊娠予約も、保存互換性のため `pendingGoldenRainPregnancies` 上で種別を分けて処理する。予約は `targetBodyOwner` で肉体に紐づけ、肉体交換ではその身体を得た人物へ移る。旧保存データの `targetName` も読み替える。
+  - 妊娠、出産、産褥、成人化、成長段階を扱う。`giveBirth` は赤子を作って出産モーダルを出すだけで、名前・関係・村史・村人への追加は命名確定後の `finalizeBirth` で行う。黄金の雨と告天使の絵画による翌月の神秘的な妊娠予約も、保存互換性のため `pendingGoldenRainPregnancies` 上で種別を分けて処理する。予約は `targetBodyOwnerId`（肉体の元の持ち主のID）で肉体に紐づけ、肉体交換ではその身体を得た人物へ移る。IDを持たない旧保存データは `targetBodyOwner` / `targetName` の名前で読み替える。
 - `js/relationships.js`
-  - 恋人・配偶者・親子などの関係を正規化し、追加・削除・表示する。
+  - 恋人・配偶者・親子などの関係を正規化し、追加・削除・表示する。関係は `{ prefix, targetId, targetName }` のエントリで保存し、判定は相手ID、表示は記録時の名前スナップショットで行う。好感度 `friendships` と共働き回数 `friendshipStats` のキーも人物ID。
 - `js/miracles.js`
   - 奇跡モーダル、奇跡の実行、交換の奇跡、奇跡結果を扱う。
 - `js/secretTreasures.js`
@@ -159,11 +161,14 @@
 - 新規フィールドに安全な初期値があるか。
 - 古い保存データに存在しないフィールドを読んでも壊れないか。
 - 人間関係や口調など、読込時に正規化している処理を通しているか。
+- 人物IDが必要な参照を名前で行っていないか。新しい人物参照を保存する場合はIDを保存し、表示用に名前スナップショットを添える。
 - JSON 保存と localStorage 保存の両方で同じ結果になるか。
 
-`historyEvents` を持たない既存セーブデータを読み込んだ場合は、読込時点の年月に「古い村史の欠落」イベントを1件追加し、それ以降の出来事だけを村史に記録します。個人記録は同じ `historyEvents` を人物名で絞り込んで表示し、村史に出さない個人向けイベントは `scope: "person"` として保存します。
+`historyEvents` を持たない既存セーブデータを読み込んだ場合は、読込時点の年月に「古い村史の欠落」イベントを1件追加し、それ以降の出来事だけを村史に記録します。個人記録は同じ `historyEvents` を人物ID（`peopleIds`。IDを持たない旧村史は人物名）で絞り込んで表示し、村史に出さない個人向けイベントは `scope: "person"` として保存します。`people` は表示用の名前スナップショットです。
 
 `tutorial` を持たない既存セーブデータは、読み込み時に未達成状態として初期化します。警告欄には通常警告の後に、食料生産、資材生産、納屋建築、奇跡使用の順で最初の未達成項目だけを表示します。全項目達成後は `tutorial.complete` が true になり、警告欄には表示されません。
+
+人物IDは各人物の `id` と採番カウンタ `nextPersonId` に保存します。IDを持たない旧セーブは読込時に採番し直し、人間関係の文字列（「【家族関係】夫：名前」形式）はエントリへ変換して相手IDを名前から解決し、`bodyOwnerId` も名前から補完します。名前をキーにした旧 `friendships` / `friendshipStats` は変換できないため読込時に破棄され、好感度は初期値から再構築されます。
 
 黄金像建立イベントの解放状態は buildingFlags.canBuildBacchusGoldenStatue、建築済み状態は建築物配列と buildingFlags.hasBacchusGoldenStatue、黙示録突入状態と進行段階は apocalypseStarted / apocalypseStage、四騎士撃退済み状態は apocalypseCleared に保存します。塩の柱の経過は村人ごとの saltPillarMonths、四騎士の交換耐性・捕縛不可は exchangeImmune / uncapturable に保存します。清浄の経過は cleanlinessMonths、疫病の感染予約は村人ごとの pendingEpidemicInfection に保存します。危篤経験と原因は村人ごとの hasBeenCritical / criticalCause に保存し、旧セーブでは村史から補完します。これらを持たない既存セーブデータは、四騎士撃退の村史がある場合を除いて未発生状態として読み込みます。
 

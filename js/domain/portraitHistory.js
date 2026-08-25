@@ -12,6 +12,9 @@ export function isOriginalBodyOwner(personName, bodyOwner) {
 }
 
 export function isOriginalBodyPortrait(person) {
+  if (person?.id != null && person?.bodyOwnerId != null) {
+    return person.bodyOwnerId === person.id;
+  }
   return isOriginalBodyOwner(person?.name, person?.bodyOwner);
 }
 
