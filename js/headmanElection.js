@@ -1,7 +1,7 @@
 import { getPermanentStat, syncEffectiveStats } from "./domain/statLayers.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { HISTORY_EVENT_TYPES, recordHeadmanElectionHistory } from "./history.js";
-import { parseRelationship, normalizeRelationships } from "./relationships.js";
+import { getRelationshipEntries } from "./relationships.js";
 import { grantTitle, incrementTitleCounter, TITLE_COUNTER_KEYS } from "./titles.js";
 import {
   VILLAGE_ROLE_HEADMAN,
@@ -101,14 +101,14 @@ function buildRankMaps(candidates) {
 }
 
 function relationshipScore(voter, candidate) {
-  normalizeRelationships(voter);
-  const relations = Array.isArray(voter.relationships) ? voter.relationships : [];
   let hasPositive = false;
 
-  for (const rel of relations) {
-    const parsed = parseRelationship(rel);
-    if (!parsed || parsed.target !== candidate.name) continue;
-    const prefix = parsed.prefix;
+  for (const entry of getRelationshipEntries(voter)) {
+    const matches = entry.targetId != null
+      ? entry.targetId === candidate.id
+      : (!!entry.targetName && entry.targetName === candidate.name);
+    if (!matches) continue;
+    const prefix = entry.prefix;
     if (prefix === "天敵") return -99;
     if (
       prefix === "恋人" ||

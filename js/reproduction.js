@@ -35,7 +35,7 @@ import { getBaseStat, setBaseStat, setBaseStatsFromEffective, syncEffectiveStats
 import { IMMATURE_MIND_TRAIT, OLD_WOLF_TRAIT, syncWolfSpeciesTraits, WILD_MIND_TRAIT, YOUNG_WOLF_TRAIT } from "./domain/speciesTraits.js";
 import { getRaiderSpeechType } from "./domain/raiderSpeechTypes.js";
 import { recordAdulthoodHistory, recordBirthHistory, recordPregnancyHistory } from "./history.js";
-import { addRelationship, checkHasRelationship, getRelationshipTargetName, normalizeRelationship } from "./relationships.js";
+import { addRelationship, checkHasRelationship, getRelationshipEntries, getRelationshipTargetId } from "./relationships.js";
 import { getDialogueLine } from "./dialogue/dialogueEngine.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
 
@@ -246,14 +246,13 @@ function selectAdultPortraitForChild(child, adult) {
 }
 
 function hasOwnChildInVillage(village, parent) {
-  if (!Array.isArray(parent?.relationships)) return false;
-  return parent.relationships.some(rel => normalizeRelationship(rel).startsWith("【家族関係】子："));
+  return getRelationshipEntries(parent).some(entry => entry.prefix === "子");
 }
 
 function getSpouse(person, village) {
-  const spouseName = getRelationshipTargetName(person, "夫") || getRelationshipTargetName(person, "妻");
-  if (!spouseName) return null;
-  return village.villagers.find(candidate => candidate.name === spouseName) || null;
+  const spouseId = getRelationshipTargetId(person, "夫") ?? getRelationshipTargetId(person, "妻");
+  if (spouseId == null) return null;
+  return village.villagers.find(candidate => candidate.id === spouseId) || null;
 }
 
 function getBuddingStatusLine(character) {
@@ -904,17 +903,25 @@ function finalizeBirth(village, mother, data, child, childName) {
   mother.bodyTraits = mother.bodyTraits.filter(trait => trait !== "妊娠" && trait !== "臨月");
   syncEffectiveStats(mother);
 
-  const birthParentName = mother.name;
-  addRelationship(child, `母:${birthParentName}`);
-  addRelationship(mother, `子:${child.name}`);
-  addRelationship(child, `遺伝母:${data.motherSnapshot?.bodyOwner || data.motherSnapshot?.name || "不明"}`);
-  addRelationship(child, `遺伝父:${data.geneticFatherUnknown ? "不明" : (data.fatherSnapshot?.bodyOwner || data.fatherSnapshot?.name || "不明")}`);
+  addRelationship(child, "母", mother);
+  addRelationship(mother, "子", child);
+  // 遺伝上の親は妊娠時点の肉体の持ち主。既に村を去っていることもあるためスナップショットで持つ。
+  addRelationship(child, "遺伝母", {
+    id: data.motherSnapshot?.bodyOwnerId ?? null,
+    name: data.motherSnapshot?.bodyOwner || data.motherSnapshot?.name || "不明"
+  });
+  addRelationship(child, "遺伝父", data.geneticFatherUnknown
+    ? { id: null, name: "不明" }
+    : {
+      id: data.fatherSnapshot?.bodyOwnerId ?? null,
+      name: data.fatherSnapshot?.bodyOwner || data.fatherSnapshot?.name || "不明"
+    });
 
   const spouse = getSpouse(mother, village);
   if (spouse) {
     const spouseParentPrefix = spouse.bodySex === "女" ? "母" : "父";
-    addRelationship(child, `${spouseParentPrefix}:${spouse.name}`);
-    addRelationship(spouse, `子:${child.name}`);
+    addRelationship(child, spouseParentPrefix, spouse);
+    addRelationship(spouse, "子", child);
   }
 
   mother.happiness = clampValue(mother.happiness + 50, 0, 100);

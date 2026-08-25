@@ -11,8 +11,8 @@ import { getActiveVillagers } from "./domain/apocalypseRules.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import {
   getFriendshipScore,
-  getRelationshipTargetName,
-  parseRelationship
+  getRelationshipEntries,
+  getRelationshipTargetId
 } from "./relationships.js";
 import { clampValue, randChoice } from "./util.js";
 
@@ -289,13 +289,13 @@ function getWishCompletionReason(wish, requester, villagers, context = {}) {
   switch (wish.id) {
     case "avoid_enemy":
       if (!target) return "targetGone";
-      return hasTargetRelationship(requester, "天敵", target.name) ? null : "rivalryResolved";
+      return hasTargetRelationship(requester, "天敵", target) ? null : "rivalryResolved";
     case "be_popular":
       if (hasPartner(requester)) return "partner";
       return Number(requester.chr) >= 20 ? "charm" : null;
     case "get_closer":
-      if (hasPartnerWith(requester, wish.targetName)) return "partner";
-      return requester.bodyOwner === wish.targetName ? "exchangedBody" : null;
+      if (hasPartnerWith(requester, getWishTarget(wish))) return "partner";
+      return isWishTargetBody(requester, wish) ? "exchangedBody" : null;
     case "be_healthy":
       return Number(requester.vit) >= 20 ? "healthy" : null;
     case "be_strong":
@@ -335,31 +335,34 @@ function getVillageResidents(village) {
   return Array.isArray(village?.villagers) ? village.villagers : [];
 }
 
-function getRelationshipTargets(person, prefix) {
-  if (!Array.isArray(person?.relationships)) return [];
-  return person.relationships
-    .map(parseRelationship)
-    .filter(relationship => relationship?.prefix === prefix && relationship.target)
-    .map(relationship => relationship.target);
+// 願望の相手参照。ID優先で、旧セーブは名前で読み替える。
+function getWishTarget(wish) {
+  return { id: wish?.targetId ?? null, name: wish?.targetName || "" };
 }
 
-function hasTargetRelationship(person, prefix, targetName) {
-  return getRelationshipTargets(person, prefix).includes(targetName);
+function isWishTargetBody(requester, wish) {
+  if (wish?.targetId != null) return requester.bodyOwnerId === wish.targetId;
+  return !!wish?.targetName && requester.bodyOwner === wish.targetName;
+}
+
+function hasTargetRelationship(person, prefix, target) {
+  return getRelationshipEntries(person).some(entry =>
+    entry.prefix === prefix &&
+    (entry.targetId != null ? entry.targetId === target?.id : (!!entry.targetName && entry.targetName === target?.name))
+  );
 }
 
 function hasPartner(person) {
-  return getRelationshipTargets(person, "恋人").length > 0 ||
-    !!getRelationshipTargetName(person, "夫") ||
-    !!getRelationshipTargetName(person, "妻");
+  return getRelationshipEntries(person).some(entry => ["恋人", "夫", "妻"].includes(entry.prefix));
 }
 
-function hasPartnerWith(person, targetName) {
-  return ["恋人", "夫", "妻"].some(prefix => hasTargetRelationship(person, prefix, targetName));
+function hasPartnerWith(person, target) {
+  return ["恋人", "夫", "妻"].some(prefix => hasTargetRelationship(person, prefix, target));
 }
 
 function getSpouse(person, villagers) {
-  const spouseName = getRelationshipTargetName(person, "夫") || getRelationshipTargetName(person, "妻");
-  return spouseName ? villagers.find(candidate => candidate.name === spouseName) || null : null;
+  const spouseId = getRelationshipTargetId(person, "夫") ?? getRelationshipTargetId(person, "妻");
+  return spouseId != null ? villagers.find(candidate => candidate.id === spouseId) || null : null;
 }
 
 function isOneSidedAffection(requester, target) {

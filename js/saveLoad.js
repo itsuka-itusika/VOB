@@ -341,7 +341,7 @@ function convertVillagerToObject(vill) {
     bodyTraits,
     mindTraits,
     hobby: vill.hobby,
-    relationships: [...normalizeRelationships(vill)],
+    relationships: normalizeRelationships(vill).map(entry => ({ ...entry })),
     friendships: { ...vill.friendships },
     friendshipStats: {
       workTogether: { ...vill.friendshipStats.workTogether },
@@ -613,16 +613,24 @@ function finalizePersonIds(village, dataObj) {
   syncNextPersonId(Math.max(maxId + 1, Math.floor(Number(dataObj?.nextPersonId) || 0)));
   allPersons.forEach(person => ensurePersonId(person));
 
-  // 旧セーブ向けの読み替え: bodyOwnerId が無い人物は、名前からベストエフォートで解決する。
+  // 旧セーブ向けの読み替え: bodyOwnerId や関係の相手IDが無い場合は、名前からベストエフォートで解決する。
   const idByName = new Map();
   allPersons.forEach(person => {
     if (person.name && !idByName.has(person.name)) idByName.set(person.name, person.id);
   });
   allPersons.forEach(person => {
-    if (normalizePersonId(person.bodyOwnerId) != null) return;
-    person.bodyOwnerId = person.bodyOwner === person.name
-      ? person.id
-      : (idByName.get(person.bodyOwner) ?? null);
+    if (normalizePersonId(person.bodyOwnerId) == null) {
+      person.bodyOwnerId = person.bodyOwner === person.name
+        ? person.id
+        : (idByName.get(person.bodyOwner) ?? null);
+    }
+    if (Array.isArray(person.relationships)) {
+      person.relationships.forEach(entry => {
+        if (entry && typeof entry === "object" && entry.targetId == null && entry.targetName) {
+          entry.targetId = idByName.get(entry.targetName) ?? null;
+        }
+      });
+    }
   });
 }
 

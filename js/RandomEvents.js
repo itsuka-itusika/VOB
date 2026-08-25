@@ -1,7 +1,7 @@
 // RandomEvents.js
 
 import { randInt, clampValue, round3 } from "./util.js";
-import { adjustMutualFriendship, areSiblings, doHitItOffEvent, doLoverCheck, addRelationship as addCategorizedRelationship, getFriendshipScore, getPairFriendshipMaximum, getPairFriendshipMinimum, isSingle, normalizeRelationship, parseRelationship, setFriendshipScore } from "./relationships.js";
+import { adjustMutualFriendship, areSiblings, doHitItOffEvent, doLoverCheck, addRelationship as addCategorizedRelationship, getFriendshipScore, getPairFriendshipMaximum, getPairFriendshipMinimum, getRelationshipEntries, isSingle, setFriendshipScore } from "./relationships.js";
 import { canExchangeBody, doExchange } from "./exchange.js";
 import { showRandomEventModal } from "./randomEventModal.js";
 import { HobbyEffects } from "./HobbyEffects.js";
@@ -482,11 +482,9 @@ export class RandomEvents {
           if (!a.hobby) return;
           getActiveVillagers(v).slice(i + 1).forEach(b => {
             if (a.hobby !== b.hobby) return;
-            const relA = `${a.hobby}仲間:${b.name}`;
-            const relB = `${b.hobby}仲間:${a.name}`;
             if (getPairFriendshipMinimum(a, b) < 0) return;
             if (this.hasPairRelationship(a, b, ["天敵", `${a.hobby}仲間`])) return;
-            pairs.push({ a, b, hobby: a.hobby, relA, relB });
+            pairs.push({ a, b, hobby: a.hobby });
           });
         });
 
@@ -495,8 +493,8 @@ export class RandomEvents {
           pair.a.happiness = clampValue(pair.a.happiness + 10, 0, 100);
           pair.b.happiness = clampValue(pair.b.happiness + 10, 0, 100);
           adjustMutualFriendship(pair.a, pair.b, 30);
-          this.addRelationship(pair.a, pair.relA);
-          this.addRelationship(pair.b, pair.relB);
+          this.addRelationship(pair.a, `${pair.hobby}仲間`, pair.b);
+          this.addRelationship(pair.b, `${pair.hobby}仲間`, pair.a);
           recordSocialRelationHistory(v, pair.a, pair.b, "趣味仲間", { hobby: pair.hobby });
           v.log(`趣味仲間:${pair.a.name}と${pair.b.name}は${pair.hobby}の話で盛り上がった。幸福+10、好感度+30、${pair.hobby}の余暇メンタル回復1.5倍`);
         } else {
@@ -538,8 +536,8 @@ export class RandomEvents {
           m2.happiness = clampValue(m2.happiness + incc, 0, 100);
           const friendship = adjustMutualFriendship(m1, m2, 30);
           if (friendship >= 50) {
-            this.addRelationship(m1, `親友:${m2.name}`);
-            this.addRelationship(m2, `親友:${m1.name}`);
+            this.addRelationship(m1, "親友", m2);
+            this.addRelationship(m2, "親友", m1);
             recordSocialRelationHistory(v, m1, m2, "親友");
           }
           v.log(`男の友情:${m1.name}と${m2.name}は夜通し語り合い、友情を深めた。幸福+${incc},好感度+30`);
@@ -588,8 +586,8 @@ export class RandomEvents {
           b.happiness = clampValue(b.happiness + 50, 0, 100);
           adjustMutualFriendship(a, b, 30);
 
-          this.addRelationship(a, `恋人:${b.name}`);
-          this.addRelationship(b, `恋人:${a.name}`);
+          this.addRelationship(a, "恋人", b);
+          this.addRelationship(b, "恋人", a);
           recordLoverHistory(v, a, b, { source: "百合の恋" });
 
           v.log(`百合イベント:${a.name}と${b.name}は互いに惹かれ合い、恋人になった。幸福+50`);
@@ -899,8 +897,8 @@ export class RandomEvents {
           const friendship = adjustMutualFriendship(a, b, -30);
           let friendshipLoss = 30;
           if (friendship <= -1) {
-            this.addRelationship(a, `天敵:${b.name}`);
-            this.addRelationship(b, `天敵:${a.name}`);
+            this.addRelationship(a, "天敵", b);
+            this.addRelationship(b, "天敵", a);
             adjustMutualFriendship(a, b, -30);
             friendshipLoss += 30;
             recordSocialRelationHistory(v, a, b, "天敵");
@@ -948,8 +946,8 @@ export class RandomEvents {
         const friendship = adjustMutualFriendship(a, b, -20);
         let friendshipLoss = 20;
         if (friendship <= -1 && !this.hasMutualRelationship(a, b, "天敵")) {
-          this.addRelationship(a, `天敵:${b.name}`);
-          this.addRelationship(b, `天敵:${a.name}`);
+          this.addRelationship(a, "天敵", b);
+          this.addRelationship(b, "天敵", a);
           adjustMutualFriendship(a, b, -30);
           friendshipLoss += 30;
           recordSocialRelationHistory(v, a, b, "天敵");
@@ -1019,23 +1017,17 @@ export class RandomEvents {
     return arr[Math.floor(Math.random() * arr.length)];
   }
 
-  static hasRelationship(person, rel) {
-    if (!person || !Array.isArray(person.relationships)) return false;
-    const normalized = normalizeRelationship(rel);
-    return person.relationships.some(existing => normalizeRelationship(existing) === normalized);
-  }
-
   static hasMutualRelationship(a, b, prefix) {
-    return this.hasRelationship(a, `${prefix}:${b.name}`) &&
-      this.hasRelationship(b, `${prefix}:${a.name}`);
+    return this.hasRelationshipTo(a, b, [prefix]) &&
+      this.hasRelationshipTo(b, a, [prefix]);
   }
 
   static hasRelationshipTo(person, target, prefixes) {
-    if (!person || !target?.name || !Array.isArray(person.relationships)) return false;
-    return person.relationships.some(existing => {
-      const parsed = parseRelationship(normalizeRelationship(existing));
-      return parsed?.target === target.name && prefixes.includes(parsed.prefix);
-    });
+    if (!person || !target) return false;
+    return getRelationshipEntries(person).some(entry =>
+      prefixes.includes(entry.prefix) &&
+      (entry.targetId != null ? entry.targetId === target.id : (!!entry.targetName && entry.targetName === target.name))
+    );
   }
 
   static hasPairRelationship(a, b, prefixes) {
@@ -1049,10 +1041,12 @@ export class RandomEvents {
       [a, b],
       [b, a]
     ].forEach(([person, target]) => {
-      if (!person || !target?.name || !Array.isArray(person.relationships)) return;
-      person.relationships.forEach(existing => {
-        const parsed = parseRelationship(normalizeRelationship(existing));
-        if (parsed?.target === target.name) prefixes.push(parsed.prefix);
+      if (!person || !target) return;
+      getRelationshipEntries(person).forEach(entry => {
+        const matches = entry.targetId != null
+          ? entry.targetId === target.id
+          : (!!entry.targetName && entry.targetName === target.name);
+        if (matches) prefixes.push(entry.prefix);
       });
     });
     return [...new Set(prefixes)];
@@ -1079,7 +1073,7 @@ export class RandomEvents {
   /**
    * 人間関係を追加
    */
-  static addRelationship(person, rel) {
-    addCategorizedRelationship(person, rel);
+  static addRelationship(person, prefix, target = null) {
+    addCategorizedRelationship(person, prefix, target);
   }
 }

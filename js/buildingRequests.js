@@ -10,6 +10,7 @@ import { applyPortraitToElement } from "./data/portraitAtlas.js";
 import { DEFAULT_PORTRAIT_KEY } from "./data/portraitPaths.js";
 import { addDivineMight } from "./divineMight.js";
 import { getCaptives } from "./captives.js";
+import { getRelationshipEntries } from "./relationships.js";
 import { getActiveVillagers } from "./domain/apocalypseRules.js";
 import { clampValue, getVillagerFoodConsumption, getVillagerWinterMaterialConsumption, randChoice } from "./util.js";
 
@@ -376,9 +377,8 @@ function hasHobby(person, hobbies) {
   return hobbies.includes(String(person?.hobby || ""));
 }
 
-function hasRelationship(person, keyword) {
-  const relationships = Array.isArray(person?.relationships) ? person.relationships : [];
-  return relationships.some(relationship => String(relationship || "").includes(keyword));
+function hasRelationship(person, prefix) {
+  return getRelationshipEntries(person).some(entry => entry.prefix === prefix);
 }
 
 function isDoingAction(person, actions) {

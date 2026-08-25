@@ -5,6 +5,7 @@ import { getPersonTitles } from "./titles.js";
 import { SPEECH_TYPE_MAPPING } from "./data/villagerData.js";
 import { showDictionaryEntry } from "./dictionary.js";
 import { combinedDictionaryData } from "./data/dictionaryData.js";
+import { getRelationshipEntries } from "./relationships.js";
 
 export const HISTORY_EVENT_TYPES = Object.freeze({
   ARCHIVE_GAP: "archiveGap",
@@ -698,41 +699,25 @@ function hasArchiveGap(village) {
   return normalizeHistoryEvents(village?.historyEvents).some(event => event.type === HISTORY_EVENT_TYPES.ARCHIVE_GAP);
 }
 
-function parsePersonalRelationship(rawRelationship) {
-  const raw = String(rawRelationship || "").trim();
-  if (!raw) return null;
-  if (raw === "既婚") return { category: "family", label: "既婚" };
+function parsePersonalRelationship(entry) {
+  const prefix = String(entry?.prefix || "").trim();
+  if (!prefix) return null;
+  if (prefix === "既婚") return { category: "family", label: "既婚" };
 
-  const oldParent = raw.match(/^(.+)の(母|父)$/);
-  if (oldParent) return { category: "family", label: `子：${oldParent[1]}` };
-
-  const oldChild = raw.match(/^(.+)の(息子|娘)$/);
-  if (oldChild) return { category: "family", label: `母：${oldChild[1]}` };
-
-  const categorized = raw.match(/^【([^】]+)】(.+)$/);
-  const categoryText = categorized ? categorized[1] : "";
-  const body = categorized ? categorized[2] : raw;
-  const separator = body.includes("：") ? "：" : ":";
-  const separatorIndex = body.indexOf(separator);
-  const prefix = separatorIndex >= 0 ? body.slice(0, separatorIndex).trim() : body;
-  const target = separatorIndex >= 0 ? body.slice(separatorIndex + 1).trim() : "";
+  const target = String(entry?.targetName || "").trim();
   const label = target ? `${prefix}：${target}` : prefix;
 
-  if (categoryText === "家族関係" || ["夫", "妻", "母", "父", "子"].includes(prefix)) {
+  if (["夫", "妻", "母", "父", "子"].includes(prefix)) {
     return { category: "family", label };
   }
-  if (categoryText === "遺伝関係" || ["遺伝母", "遺伝父"].includes(prefix)) {
+  if (["遺伝母", "遺伝父"].includes(prefix)) {
     return { category: "genetic", label };
-  }
-  if (categoryText === "交友関係" || ["恋人", "親友", "天敵"].includes(prefix) || prefix.endsWith("仲間")) {
-    return { category: "social", label };
   }
   return { category: "social", label };
 }
 
 function formatRelationshipCategory(person, category) {
-  const relationships = Array.isArray(person.relationships) ? person.relationships : [];
-  const labels = relationships
+  const labels = getRelationshipEntries(person)
     .map(parsePersonalRelationship)
     .filter(item => item?.category === category && !item.label.startsWith("村設立の同志："))
     .map(item => item.label);

@@ -119,8 +119,8 @@ function pickPanFlutePairs(village) {
 }
 
 function forceMarriage(a, b, village) {
-  removeRelationship(a, `恋人:${b.name}`);
-  removeRelationship(b, `恋人:${a.name}`);
+  removeRelationship(a, "恋人", b);
+  removeRelationship(b, "恋人", a);
   addRelationship(a, "既婚");
   addRelationship(b, "既婚");
   addSpouseRelationships(a, b);

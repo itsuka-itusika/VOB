@@ -366,8 +366,8 @@ export class HobbyEffects {
 
     let loverText = "";
     if (isSingle(a) && getFriendshipScore(a, b) >= 40) {
-      addRelationship(a, `恋人:${b.name}`);
-      addRelationship(b, `恋人:${a.name}`);
+      addRelationship(a, "恋人", b);
+      addRelationship(b, "恋人", a);
       a.happiness = clampValue(a.happiness + 20, 0, 100);
       b.happiness = clampValue(b.happiness + 20, 0, 100);
       recordLoverHistory(v, a, b, { source: rules.label });

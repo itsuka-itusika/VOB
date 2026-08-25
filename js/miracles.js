@@ -2,7 +2,7 @@
 
 import { clampValue, shuffleArray } from "./util.js";
 import { applyPortraitToElement, getPortraitSpriteHtml } from "./data/portraitAtlas.js";
-import { addRelationship, removeRelationship, checkHasRelationship, hasLoverRelationship, getRelationshipTargetName, clearRelationshipsForDepartedVillager, addSpouseRelationships, raiseMutualFriendshipTo } from "./relationships.js";
+import { addRelationship, removeRelationship, checkHasRelationship, hasLoverRelationship, getRelationshipTargetId, clearRelationshipsForDepartedVillager, addSpouseRelationships, raiseMutualFriendshipTo } from "./relationships.js";
 import { updateUI } from "./ui.js";  // 実行後にUIを更新する
 import { canExchangeBody, doExchange } from "./exchange.js";
 import { createRandomVisitor, createRandomVisitorOfType, determineSpeechType, isRareVisitorTypeAvailable, EXCLUSIVE_BODY_TRAITS, EXCLUSIVE_MIND_TRAITS } from "./createVillagers.js";
@@ -233,8 +233,8 @@ function getHearthMiraclePairs(village) {
   const done = new Set();
   village.villagers.forEach(a => {
     if (done.has(a) || isSaltPillar(a) || !hasLoverRelationship(a) || checkHasRelationship(a, "既婚")) return;
-    const bName = getRelationshipTargetName(a, "恋人");
-    const b = bName ? village.villagers.find(person => person.name === bName) : null;
+    const bId = getRelationshipTargetId(a, "恋人");
+    const b = bId != null ? village.villagers.find(person => person.id === bId) : null;
     if (!b || done.has(b) || isSaltPillar(b) || checkHasRelationship(b, "既婚")) return;
     pairs.push([a, b]);
     done.add(a);
@@ -1237,8 +1237,8 @@ export function performMiracle(village) {
 
 /** クピド: 強制結婚 */
 function forceMarriage(a,b,v) {
-  removeRelationship(a,`恋人:${b.name}`);
-  removeRelationship(b,`恋人:${a.name}`);
+  removeRelationship(a, "恋人", b);
+  removeRelationship(b, "恋人", a);
   addRelationship(a,"既婚");
   addRelationship(b,"既婚");
   a.happiness=clampValue(a.happiness+50,0,100);
@@ -1337,8 +1337,8 @@ function hearthMiracle(v) {
     return;
   }
   pairs.forEach(([a, b]) => {
-    removeRelationship(a,`恋人:${b.name}`);
-    removeRelationship(b,`恋人:${a.name}`);
+    removeRelationship(a, "恋人", b);
+    removeRelationship(b, "恋人", a);
     addRelationship(a,"既婚");
     addRelationship(b,"既婚");
     a.happiness=clampValue(a.happiness+50,0,100);
