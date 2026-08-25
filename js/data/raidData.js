@@ -1300,14 +1300,23 @@ export const RAID_MODULES = [
       minAmount: 500
     },
     representative: [
-      { raiderType: "聖女" },
-      { raiderType: "上級騎士" }
+      { raiderType: "上級騎士" },
+      { raiderType: "重装兵" }
     ],
     enemyGroupVariants: [
       {
-        weight: 80,
+        weight: 60,
         enemyGroups: [
+          { raiderType: "傭兵射手", minCount: 1, maxCount: 1 },
           { raiderType: "下級騎士", minCount: 3, maxCount: 3 },
+          { raiderType: "重装兵", minCount: 1, maxCount: 1, mindTraits: [] }
+        ]
+      },
+      {
+        weight: 20,
+        enemyGroups: [
+          { raiderType: "傭兵射手", minCount: 1, maxCount: 1 },
+          { raiderType: "下級騎士", minCount: 2, maxCount: 2 },
           { raiderType: "重装兵", minCount: 1, maxCount: 1, mindTraits: [] },
           { raiderType: "上級騎士", minCount: 1, maxCount: 1, mindTraits: ["戦慣れ"] }
         ]
@@ -1315,9 +1324,9 @@ export const RAID_MODULES = [
       {
         weight: 20,
         enemyGroups: [
+          { raiderType: "傭兵射手", minCount: 1, maxCount: 1 },
           { raiderType: "下級騎士", minCount: 2, maxCount: 2 },
           { raiderType: "重装兵", minCount: 1, maxCount: 1, mindTraits: [] },
-          { raiderType: "上級騎士", minCount: 1, maxCount: 1, mindTraits: ["戦慣れ"] },
           { raiderType: "聖女", minCount: 1, maxCount: 1, mindTraits: [] }
         ]
       }
