@@ -37,7 +37,7 @@ let priorityRetryTimer = null;
 export function getHeresyInquisitionHospitalityCost(village) {
   const scale = Math.max(0, Number(village?.building) || 0);
   const divineMight = Math.max(0, Number(village?.divineMight) || 0);
-  return Math.ceil(600 * (scale / 250) * (divineMight / 180));
+  return Math.ceil(300 * (scale / 250) * (divineMight / 180));
 }
 
 export function canTriggerHeresyInquisition(village) {
