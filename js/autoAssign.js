@@ -421,7 +421,7 @@ function canUseAction(person, action) {
   return Array.isArray(person.actionTable) && person.actionTable.includes(action);
 }
 
-/** 手で火砲に就けた村人か。火砲は自動では選ばないため、割り振りの対象外にする。 */
+/** 手で火砲に就けた村人か。手動の配置を尊重し、割り振りで動かさない。 */
 function isManualCannoneer(person, village) {
   return person?.action === ACTION_CANNON && canCannonInRaid(person, village);
 }
