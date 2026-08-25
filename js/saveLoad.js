@@ -3,7 +3,7 @@ import { Village, Villager } from "./classes.js";
 import { determineSpeechType, registerUsedName } from "./createVillagers.js";
 import { ACTION_NONE, isPreferredActionCandidate, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
 import { getPermanentStat, hydrateStatLayersFromObject, syncEffectiveStats } from "./domain/statLayers.js";
-import { syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
+import { syncGoblinSpeciesTraits, syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
 import { normalizePastPortraitFiles } from "./domain/portraitHistory.js";
 import { createArchiveGapHistoryEvent, HISTORY_EVENT_TYPES, normalizeHistoryEvents } from "./history.js";
 import { normalizePortraitKey } from "./data/portraitPaths.js";
@@ -299,6 +299,7 @@ function convertVillageToObject(village) {
  */
 function convertVillagerToObject(vill) {
   syncWolfSpeciesTraits(vill);
+  syncGoblinSpeciesTraits(vill);
   normalizeVillageRoleForPerson(vill);
   syncEffectiveStats(vill);
   const bodyTraits = normalizeBodyTraitList(vill.bodyTraits);
@@ -833,7 +834,8 @@ function convertObjectToVillager(obj) {
   vill.adultModalShown = !!obj.adultModalShown;
 
   hydrateStatLayersFromObject(vill, obj);
-  if (syncWolfSpeciesTraits(vill)) {
+  // 短躯を持たない旧セーブのゴブリンは、読込時に付与して消費量の根拠を揃える。
+  if (syncWolfSpeciesTraits(vill) || syncGoblinSpeciesTraits(vill)) {
     syncEffectiveStats(vill);
   }
   if (migrateBodyAresToMind && !vill.mindTraits.includes("火星の加護")) {

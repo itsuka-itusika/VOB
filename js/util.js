@@ -1,6 +1,6 @@
 // util.js
 
-import { isGoblin, isWolf, YOUNG_WOLF_TRAIT } from "./domain/speciesTraits.js";
+import { FOUR_LEGGED_TRAIT, SHORT_BODY_TRAIT, YOUNG_WOLF_TRAIT } from "./domain/speciesTraits.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
 
 /** 乱数系/Clamp/シャッフルなどのユーティリティ */
@@ -90,8 +90,8 @@ export function getVillagerFoodConsumption(character) {
   const bodyTraits = Array.isArray(character?.bodyTraits) ? character.bodyTraits : [];
   const mindTraits = Array.isArray(character?.mindTraits) ? character.mindTraits : [];
   if (bodyTraits.includes(YOUNG_WOLF_TRAIT)) return 2;
-  if (isWolf(character)) return 4;
-  if (isGoblin(character)) return 4;
+  if (bodyTraits.includes(FOUR_LEGGED_TRAIT)) return 4;
+  if (bodyTraits.includes(SHORT_BODY_TRAIT)) return 4;
   if (bodyTraits.includes("光合成")) return 0;
   let cost = 10;
   if (bodyTraits.includes("赤子")) cost = 2;
@@ -108,8 +108,8 @@ export function getVillagerFoodConsumption(character) {
 export function getVillagerWinterMaterialConsumption(character) {
   if (isSaltPillar(character)) return 0;
   const bodyTraits = Array.isArray(character?.bodyTraits) ? character.bodyTraits : [];
-  if (isWolf(character)) return 0;
-  if (isGoblin(character)) return 4;
+  if (bodyTraits.includes(FOUR_LEGGED_TRAIT)) return 0;
+  if (bodyTraits.includes(SHORT_BODY_TRAIT)) return 4;
   if (bodyTraits.includes("赤子")) return 2;
   if (bodyTraits.includes("幼児")) return 6;
   if (bodyTraits.includes("少年") || bodyTraits.includes("少女")) return 8;

@@ -125,6 +125,7 @@ export const RAIDER_TYPES = [
     minCount: 4,
     maxCount: 5,
     race: "ゴブリン",
+    forcedBodyTraits: ["短躯"],
     forcedSex: "男",
     ageRange: { min: 16, max: 30 },  // 若いゴブリン
     params: {
@@ -165,6 +166,7 @@ export const RAIDER_TYPES = [
     minCount: 1,
     maxCount: 1,
     race: "ゴブリン",
+    forcedBodyTraits: ["短躯"],
     forcedSex: "男",
     ageRange: { min: 24, max: 38 },
     params: {
@@ -200,6 +202,7 @@ export const RAIDER_TYPES = [
     minCount: 2,
     maxCount: 3,
     race: "ゴブリン",
+    forcedBodyTraits: ["短躯"],
     forcedSex: "男",
     ageRange: { min: 16, max: 32 },
     params: {

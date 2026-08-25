@@ -6,6 +6,7 @@ export const WILD_MIND_TRAIT = "野生";
 export const YOUNG_WOLF_TRAIT = "幼狼";
 export const IMMATURE_MIND_TRAIT = "未成熟";
 export const OLD_WOLF_TRAIT = "老狼";
+export const SHORT_BODY_TRAIT = "短躯";
 
 function ensureTraitArray(person, key) {
   if (!Array.isArray(person[key])) person[key] = [];
@@ -36,19 +37,32 @@ export function countsTowardPopulation(person) {
   return !isWolf(person);
 }
 
-export function getPopulationCount(villageOrVillagers) {
+function toVillagerList(villageOrVillagers) {
   const villagers = Array.isArray(villageOrVillagers)
     ? villageOrVillagers
     : villageOrVillagers?.villagers;
-  return Array.isArray(villagers)
-    ? villagers.filter(countsTowardPopulation).length
-    : 0;
+  return Array.isArray(villagers) ? villagers : [];
+}
+
+export function getPopulationCount(villageOrVillagers) {
+  return toVillagerList(villageOrVillagers).filter(countsTowardPopulation).length;
+}
+
+/** 人口上限に数えない村人（狼）の頭数。人口表示の括弧内に出す。 */
+export function getUncountedPopulationCount(villageOrVillagers) {
+  return toVillagerList(villageOrVillagers).filter(person => !countsTowardPopulation(person)).length;
 }
 
 export function isAtPopulationLimit(village, incomingPerson = null) {
   if (incomingPerson && !countsTowardPopulation(incomingPerson)) return false;
   const popLimit = Number(village?.popLimit);
   return Number.isFinite(popLimit) && getPopulationCount(village) >= popLimit;
+}
+
+/** ゴブリンへ肉体特性「短躯」を付与する。食料・冬資材の消費はこの特性が担う。 */
+export function syncGoblinSpeciesTraits(person) {
+  if (!isGoblin(person)) return false;
+  return addUniqueTrait(ensureTraitArray(person, "bodyTraits"), SHORT_BODY_TRAIT);
 }
 
 export function syncWolfSpeciesTraits(person, { includeWildMindTrait = false } = {}) {

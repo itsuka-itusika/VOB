@@ -46,7 +46,7 @@ import {
 import { getResourceStorageStatus, getResourceStorageWarningRatio } from "./domain/resourceLimits.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { getWinterMaterialRequirement } from "./domain/winterMaterials.js";
-import { getPopulationCount } from "./domain/speciesTraits.js";
+import { getPopulationCount, getUncountedPopulationCount } from "./domain/speciesTraits.js";
 import { isUnassignedActionVillager } from "./domain/rules.js";
 import { showDictionaryEntry } from "./dictionary.js";
 import { combinedDictionaryData } from "./data/dictionaryData.js";
@@ -425,6 +425,14 @@ function formatEstimate(parts) {
     .filter(Boolean)
     .filter(part => !/^体力-\d+/.test(part) && !/^メンタル-\d+/.test(part))
     .join(", ");
+}
+
+// 人口表示。人口上限に数えない村人（狼）がいる場合は「10(+2)/10」と括弧で添える。
+function formatPopulationValue(village) {
+  const counted = getPopulationCount(village);
+  const uncounted = getUncountedPopulationCount(village);
+  const countedText = uncounted > 0 ? `${counted}(+${uncounted})` : `${counted}`;
+  return `${countedText}/${village.popLimit}`;
 }
 
 function getStorageClass(status, warningRatio) {
@@ -1102,7 +1110,7 @@ export function updateUI(v) {
     <div class="resource-box"><span class="resource-label">技術</span><span class="resource-value">${v.tech}</span></div>
     <div class="resource-box"><span class="resource-label">治安</span><span class="resource-value">${v.security}</span></div>
     <div class="resource-box"><span class="resource-label">規模</span><span class="resource-value">${v.building}</span></div>
-    <div class="resource-box"><span class="resource-label">人口/上限</span><span class="resource-value">${getPopulationCount(v)}/${v.popLimit}</span></div>
+    <div class="resource-box"><span class="resource-label">人口/上限</span><span class="resource-value">${formatPopulationValue(v)}</span></div>
     <div class="resource-box resource-traits"><span class="resource-label">村特性</span><span class="resource-value" id="villageTraitsTerms"></span></div>
   `;
   const villageTraitsTerms = document.getElementById("villageTraitsTerms");

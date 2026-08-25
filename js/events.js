@@ -37,7 +37,7 @@ import { addStoredResource } from "./domain/resourceLimits.js";
 import { getVisitorLimit, hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
 import { getBalanceSimulationOptions } from "./balance/simulationOptions.js";
-import { isWolf, OLD_WOLF_TRAIT, syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
+import { FOUR_LEGGED_TRAIT, isWolf, OLD_WOLF_TRAIT, syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
 import {
   addDisappointmentState,
   clearDisappointmentIfHappinessRecovered,
@@ -817,8 +817,8 @@ export function doMonthStartProcess(v, simulationOptions = {}) {
     v.log("冬なのに資材0→凍え");
     getPeopleForFoodAndWinterMaterials(v).forEach(p=>{
       if (isSaltPillar(p)) return;
-      if (isWolf(p)) {
-        v.log(`${p.name}は狼の耐寒性で凍えを免れた`);
+      if (Array.isArray(p.bodyTraits) && p.bodyTraits.includes(FOUR_LEGGED_TRAIT)) {
+        v.log(`${p.name}は四足の身体の耐寒性で凍えを免れた`);
         return;
       }
 

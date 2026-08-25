@@ -43,6 +43,7 @@ const HUMANOID_RACES = new Set(["人間", "ゴブリン", "ハーピー", "半�
 const FEMALE_FIXED_RACES = new Set(["ハーピー", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド", "エクイナ", "メナド"]);
 const LONG_LIVED_RACES = new Set(["ドライアド", "ネレイド", "アルセイド", "翼人"]);
 const RACE_BODY_TRAITS = {
+  "ゴブリン": ["短躯"],
   "翼人": ["飛行", "光輪"],
   "アルセイド": ["緑の指", "不老"],
   "ネレイド": ["水中呼吸", "不老"],
