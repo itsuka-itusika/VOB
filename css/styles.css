@@ -1078,27 +1078,6 @@ table.show-spirit-columns .spirit-column {
   background: #f9d8e9;
 }
 
-.foldable-info {
-  text-align: center;
-}
-
-.person-history-button {
-  min-width: 0;
-  padding: 2px 4px;
-  border: 0;
-  border-radius: 3px;
-  background: transparent;
-  color: #6d5b34;
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.82rem;
-}
-.person-history-button:hover,
-.person-history-button:focus {
-  background: #f4ead0;
-  color: #3d2b13;
-}
-
 /* ---------------------
    ▼ 迎撃モーダル (襲撃イベント)
 ---------------------- */

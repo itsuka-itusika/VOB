@@ -52,8 +52,7 @@ import { showDictionaryEntry } from "./dictionary.js";
 import { combinedDictionaryData } from "./data/dictionaryData.js";
 import { getVillagerFoodConsumption } from "./util.js";
 import { applyPortraitToElement } from "./data/portraitAtlas.js";
-import { openPersonalHistoryModal } from "./history.js";
-import { formatRelationshipsForDisplay, hasHobbyMateRelationship } from "./relationships.js";
+import { hasHobbyMateRelationship } from "./relationships.js";
 import { getCaptives } from "./captives.js";
 import { getTutorialWarnings } from "./tutorial.js";
 import { applyVillageScaleArtClass, getVillageScaleProgressLabel, getVillageScaleTitle } from "./villageScale.js";
@@ -1002,28 +1001,7 @@ function appendVillageRoleCell(row, person, village, editable) {
   row.appendChild(cell);
 }
 
-function appendPersonalHistoryCell(row, person, village, showPersonalHistory = true) {
-  const cell = document.createElement("td");
-  cell.classList.add("foldable-info");
-  if (!showPersonalHistory) {
-    row.appendChild(cell);
-    return;
-  }
-
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "person-history-button";
-  button.textContent = "記録";
-  button.title = `${person.name}の記録を見る`;
-  button.onclick = () => openPersonalHistoryModal(village, person, {
-    relationships: formatRelationshipsForDisplay(person)
-  });
-
-  cell.appendChild(button);
-  row.appendChild(cell);
-}
-
-function appendStatCells(row, person, village, { showPersonalHistory = true } = {}) {
+function appendStatCells(row, person, village) {
   ["str", "vit", "dex", "mag", "chr"].forEach(stat => appendNumberCell(row, person[stat]));
   appendDictionaryCell(row, person.bodyTraits, { category: "trait" });
   ["int", "ind", "eth", "cou", "sexdr"].forEach(stat => appendNumberCell(row, person[stat]));
@@ -1032,7 +1010,6 @@ function appendStatCells(row, person, village, { showPersonalHistory = true } = 
     : person.mindTraits;
   appendDictionaryCell(row, displayedMindTraits, { category: "trait" });
   appendDictionaryCell(row, [person.hobby], { category: "hobby" });
-  appendPersonalHistoryCell(row, person, village, showPersonalHistory);
 }
 
 function applyPersonRowStyle(row, person) {
@@ -1057,7 +1034,7 @@ function applyPersonRowStyle(row, person) {
   applyStatusHighlights(row, person);
 }
 
-function createPersonRow(person, village, { editable = false, showPersonalHistory = true } = {}) {
+function createPersonRow(person, village, { editable = false } = {}) {
   const row = document.createElement("tr");
   if (editable) {
     refreshJobTable(person, village);
@@ -1065,7 +1042,7 @@ function createPersonRow(person, village, { editable = false, showPersonalHistor
   appendIdentityCells(row, person);
   appendActionCell(row, person, village, editable);
   appendVillageRoleCell(row, person, village, editable);
-  appendStatCells(row, person, village, { showPersonalHistory });
+  appendStatCells(row, person, village);
   applyPersonRowStyle(row, person);
   return row;
 }
@@ -1157,16 +1134,16 @@ export function updateUI(v) {
 
   const captives = getCaptives(v);
   setSectionVisible(document.getElementById("captivesSection"), captives.length > 0);
-  renderPeopleTable(document.querySelector("#captivesTable tbody"), captives, v, { showPersonalHistory: false });
+  renderPeopleTable(document.querySelector("#captivesTable tbody"), captives, v);
 
   const visitors = Array.isArray(v.visitors) ? v.visitors : [];
   setSectionVisible(document.getElementById("visitorsSection"), visitors.length > 0);
-  renderPeopleTable(document.querySelector("#visitorsTable tbody"), visitors, v, { showPersonalHistory: false });
+  renderPeopleTable(document.querySelector("#visitorsTable tbody"), visitors, v);
 
   const raidEnemies = Array.isArray(v.raidEnemies) ? v.raidEnemies : [];
   const showRaidEnemies = v.villageTraits.includes("襲撃中") && raidEnemies.length > 0;
   setSectionVisible(document.getElementById("raidEnemiesSection"), showRaidEnemies);
-  renderPeopleTable(document.querySelector("#raidEnemiesTable tbody"), showRaidEnemies ? raidEnemies : [], v, { showPersonalHistory: false });
+  renderPeopleTable(document.querySelector("#raidEnemiesTable tbody"), showRaidEnemies ? raidEnemies : [], v);
 
   // テーブル更新後にソート機能をセットアップ
   setupTableSort();
