@@ -70,7 +70,7 @@ function getAlcoholMiracleRecoveryAmount(person, baseAmount) {
  */
 export const MIRACLES = [
   {id:"12", name:"交換の奇跡(20)", cost:20, desc:"2人の肉体を交換"},
-  {id:"13", name:"交換の奇跡・強(100)", cost:100, desc:"村外含む2人交換"},
+  {id:"13", name:"交換の奇跡・強(200)", cost:200, desc:"村外含む2人交換"},
   {id:"1",  name:"豊穣の奇跡(100)", cost:100, desc:"今月のみ、農作業・伐採・狩猟・漁・採集の成果と醸造の食料獲得2倍"},
   {id:"2",  name:"マナの奇跡(40)",  cost:40,  desc:"食料+80"},
   {id:"3",  name:"クピドの奇跡(80)", cost:80, desc:"2人を強制結婚(条件無視)"},
@@ -184,7 +184,7 @@ function getMiracleCostInfo(miracle, village) {
   }
   const hasGoldenStatue = hasActiveBuildingFlag(village, "hasBacchusGoldenStatue", "bacchusGoldenStatue");
   const mana = hasGoldenStatue && ["12", "13"].includes(miracle.id)
-    ? Math.ceil(miracle.cost / 2)
+    ? Math.ceil(miracle.cost / 4)
     : miracle.cost;
   return { mana, funds: 0, label: `魔素: ${mana}` };
 }
