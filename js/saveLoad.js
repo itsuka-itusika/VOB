@@ -249,6 +249,7 @@ function convertVillageToObject(village) {
     tutorial: normalizeTutorialState(village.tutorial),
     logs: [...village.logs],
     historyEvents: normalizeHistoryEvents(village.historyEvents),
+    departedVillagers: Array.isArray(village.departedVillagers) ? JSON.parse(JSON.stringify(village.departedVillagers)) : [],
     gameOver: village.gameOver,
     hasDonePreEvent: village.hasDonePreEvent,
     hasDonePostEvent: village.hasDonePostEvent,
@@ -445,6 +446,9 @@ function convertObjectToVillage(dataObj) {
   v.festivalFlags = normalizeFestivalFlags(dataObj.festivalFlags);
   v.tutorial = normalizeTutorialState(dataObj.tutorial);
   v.logs = Array.isArray(dataObj.logs) ? [...dataObj.logs] : [];
+  v.departedVillagers = Array.isArray(dataObj.departedVillagers)
+    ? JSON.parse(JSON.stringify(dataObj.departedVillagers))
+    : [];
   if (hasOwn(dataObj, "historyEvents")) {
     v.historyEvents = normalizeHistoryEvents(dataObj.historyEvents);
   } else {

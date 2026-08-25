@@ -9,7 +9,7 @@ import { createRandomVisitor, createRandomVisitorOfType, determineSpeechType, is
 import { refreshJobTable } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
-import { recordMarriageHistory, recordVillagerLeaveHistory } from "./history.js";
+import { recordDepartedVillager, recordMarriageHistory, recordVillagerLeaveHistory } from "./history.js";
 import { clearHopeLossTraits, DESPAIR_TRAIT, DISAPPOINTMENT_TRAIT } from "./domain/despair.js";
 import { resolveDialogueTone } from "./data/dialogue/toneProfiles.js";
 import { getDialogueLine } from "./dialogue/dialogueEngine.js";
@@ -1430,6 +1430,7 @@ function departureMiracle(p,v,{ showModal = true } = {}) {
   let bonus = p.happiness;
   v.mana=clampValue(v.mana+bonus,0,99999);
   recordVillagerLeaveHistory(v, p, { source: "出立の奇跡" });
+  recordDepartedVillager(v, p, "出立の奇跡");
   v.log(`【出立の奇跡】${p.name}離脱,魔素+${bonus}`);
   let idx=v.villagers.indexOf(p);
   if (idx>=0) {

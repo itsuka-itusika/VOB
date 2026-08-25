@@ -7,6 +7,7 @@ import { processRaidScheduleAtMonthStart } from "./raidSchedule.js";
 import { RandomEvents } from "./RandomEvents.js";
 import {
   recordCriticalHistory,
+  recordDepartedVillager,
   recordEpidemicHistory,
   recordVillagerDeathHistory,
   recordVillagerLeaveHistory
@@ -508,6 +509,7 @@ function leaveVillageByDespair(village, person) {
     });
   }
   recordVillagerLeaveHistory(village, person, { source: "絶望" });
+  recordDepartedVillager(village, person, "絶望");
   village.log(`${person.name}は絶望のまま村を去りました`);
   const index = village.villagers.indexOf(person);
   if (index >= 0) {
@@ -610,6 +612,7 @@ export function endOfMonthProcess(v) {
   // 危篤者の死亡処理（危篤者は必ず死亡）
   let deadPeople = getPeopleForFoodAndWinterMaterials(v).filter(p => !isSaltPillar(p) && p.bodyTraits.includes("危篤"));
   deadPeople.forEach(p => {
+    const wasVillager = v.villagers.includes(p);
     if (removeResidentOrCaptive(v, p)) {
       const deathReason = p.criticalCause === TRAIT_SERIOUS_INJURY
         ? "重体の悪化"
@@ -617,6 +620,7 @@ export function endOfMonthProcess(v) {
           ? "光の柱への曝露"
           : "老衰";
       recordVillagerDeathHistory(v, p, { reason: deathReason });
+      if (wasVillager) recordDepartedVillager(v, p, deathReason);
       clearRelationshipsForDepartedVillager(v, p);
       v.log(`${p.name}は${deathReason}により死亡した...`);
     }

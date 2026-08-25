@@ -51,6 +51,7 @@ export class Village {
 
     this.logs = [];
     this.historyEvents = [];
+    this.departedVillagers = [];
     this.gameOver = false;
     this.hasDonePreEvent = false;
     this.hasDonePostEvent = false;

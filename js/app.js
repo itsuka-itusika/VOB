@@ -3,7 +3,7 @@ import { openBuildingModal, closeBuildingModal, unlockAllBuildings } from "./bui
 import { createRandomVillager, createRandomVisitor, getVisitorTypeChoices } from "./createVillagers.js";
 import "./dictionary.js";
 import { addNonHousePopLimitBonus } from "./domain/buildingState.js";
-import { closeHistoryModal, closePersonalHistoryModal, openHistoryModal } from "./history.js";
+import { closeHistoryModal, closePersonalHistoryModal, openHistoryModal, openPastBookModal } from "./history.js";
 import { theVillage, onNextTurn } from "./main.js";
 import {
   closeExchangeModal,
@@ -294,6 +294,8 @@ function runUtilityAction() {
     if (window.confirm("ローカル保存を読み込み、現在の状態を置き換えますか？")) {
       loadFromLocalStorage();
     }
+  } else if (action === "pastbook") {
+    openPastBookModal(theVillage);
   } else if (action === "opening") {
     replayOpeningStory();
   } else if (action === "readme") {

@@ -1,4 +1,4 @@
-import { applyPortraitToElement } from "./data/portraitAtlas.js";
+import { applyPortraitToElement, getPortraitSpriteHtml } from "./data/portraitAtlas.js";
 import { getPastPortraitFiles, isOriginalBodyOwner } from "./domain/portraitHistory.js";
 import { DEFAULT_PORTRAIT_KEY, isKnownPortraitKey, normalizePortraitKey } from "./data/portraitPaths.js";
 import { getPersonTitles } from "./titles.js";
@@ -908,7 +908,7 @@ function bindPastPortraitControls(content) {
   renderPortraitStep();
 }
 
-function renderPersonalHistorySummary(person) {
+function renderPersonalHistorySummary(person, options = {}) {
   const profileFields = [
     { label: "名前", value: person.name || "不明", className: "is-name" },
     { label: "種族", valueHtml: renderDictionaryTerm(person.race || "人間"), className: "is-race" },
@@ -919,21 +919,27 @@ function renderPersonalHistorySummary(person) {
   ];
   const familyRelations = formatRelationshipCategory(person, "family");
   const socialRelations = formatRelationshipCategory(person, "social");
+  // 過去帳の人物は好感度が残っていないため、詳細ボタンを出さない。
+  const detailButtonHtml = options.archived ? "" : `
+        <span class="personal-history-detail-row">
+          <button type="button" class="personal-history-detail-button" data-open-friendship-detail>詳細</button>
+        </span>`;
   const relationshipFields = [
     { label: "家族関係", value: familyRelations },
     {
       label: "人間関係",
       valueHtml: `
-        <span class="personal-history-relationship-text">${escapeHtml(socialRelations)}</span>
-        <span class="personal-history-detail-row">
-          <button type="button" class="personal-history-detail-button" data-open-friendship-detail>詳細</button>
-        </span>
+        <span class="personal-history-relationship-text">${escapeHtml(socialRelations)}</span>${detailButtonHtml}
       `
     }
   ];
   const detailFields = [
     ...relationshipFields,
-    { label: "称号", valueHtml: renderPersonalTitleSummary(person) }
+    { label: "称号", valueHtml: renderPersonalTitleSummary(person) },
+    ...(person.departure ? [{
+      label: "離村",
+      value: `${person.departure.year}年${person.departure.month}月・${person.departure.reason}`
+    }] : [])
   ];
   return `
     <section class="personal-history-summary">
@@ -989,6 +995,90 @@ export function openPersonalHistoryModal(village, person, options = {}) {
 
   overlay.style.display = "block";
   modal.style.display = "block";
+}
+
+/**
+ * 離村・死亡した村人を過去帳へ記す。姿や特性は去った時点のまま残す。
+ */
+export function recordDepartedVillager(village, person, reason) {
+  if (!village || !person) return;
+  if (!Array.isArray(village.departedVillagers)) village.departedVillagers = [];
+  const snapshot = JSON.parse(JSON.stringify(person));
+  snapshot.departure = {
+    year: normalizeHistoryYear(village.year),
+    month: normalizeHistoryMonth(village.month),
+    reason: String(reason || "離村")
+  };
+  village.departedVillagers.push(snapshot);
+}
+
+export function openPastBookModal(village) {
+  if (typeof document === "undefined" || !village) return;
+  document.getElementById("pastBookOverlay")?.remove();
+  document.getElementById("pastBookModal")?.remove();
+
+  const departed = Array.isArray(village.departedVillagers) ? [...village.departedVillagers].reverse() : [];
+  const rows = departed.map((person, index) => `
+    <tr>
+      <td class="friendship-detail-person">
+        <button type="button" class="friendship-detail-portrait-button" data-open-past-person="${index}" aria-label="${escapeHtml(person.name)}の個人史を見る">
+          ${getPortraitSpriteHtml(person, { alt: person.name })}
+        </button>
+        <span>${escapeHtml(person.name)}</span>
+      </td>
+      <td>${escapeHtml(`${person.departure?.year ?? "?"}年${person.departure?.month ?? "?"}月`)}</td>
+      <td>${escapeHtml(person.departure?.reason || "離村")}</td>
+    </tr>
+  `).join("");
+
+  const overlay = document.createElement("div");
+  overlay.id = "pastBookOverlay";
+  overlay.className = "friendship-detail-overlay";
+  const modal = document.createElement("div");
+  modal.id = "pastBookModal";
+  modal.className = "friendship-detail-modal";
+  modal.innerHTML = `
+    <div class="modal-header">過去帳</div>
+    <div class="friendship-detail-content">
+      <table class="friendship-detail-table">
+        <colgroup>
+          <col class="friendship-detail-col-person">
+          <col class="friendship-detail-col-score">
+          <col class="friendship-detail-col-relation">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>人物</th>
+            <th>去った時期</th>
+            <th>事由</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows || `<tr><td colspan="3" class="friendship-detail-empty">村を去った者は、まだ帳面に記されていない。</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-buttons">
+      <button type="button" data-close-past-book>閉じる</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  document.body.appendChild(modal);
+
+  const close = () => {
+    overlay.remove();
+    modal.remove();
+  };
+  modal.querySelectorAll("[data-open-past-person]").forEach(button => {
+    button.addEventListener("click", () => {
+      const person = departed[Number(button.dataset.openPastPerson)];
+      if (!person) return;
+      close();
+      openPersonalHistoryModal(village, person, { archived: true });
+    });
+  });
+  modal.querySelector("[data-close-past-book]").addEventListener("click", close);
+  overlay.addEventListener("click", close);
 }
 
 export function openHistoryModal(village) {
