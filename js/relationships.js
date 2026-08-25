@@ -1079,10 +1079,13 @@ export function processFriendshipRelationChanges(village) {
       removePairRelationshipsWhere(a, b, entry => entry.prefix === "戦友" || (entry.prefix.endsWith("仲間") && entry.prefix !== "仕事仲間"));
       removePairRelationshipsWhere(b, a, entry => entry.prefix === "戦友" || (entry.prefix.endsWith("仲間") && entry.prefix !== "仕事仲間"));
     }
-    if (getPairFriendshipMinimum(a, b) >= 0 && removePairRelationshipByPrefix(a, b, "天敵")) {
-      addRelationship(a, "かつての天敵", b);
-      addRelationship(b, "かつての天敵", a);
-    }
+    // 天敵は向きごとに解ける。相手を許した側だけが「かつての天敵」へ変わり、
+    // まだ許していない側は天敵のまま残る。
+    [[a, b], [b, a]].forEach(([person, other]) => {
+      if (getFriendshipScore(person, other) < 0) return;
+      if (!removePairRelationshipsWhere(person, other, entry => entry.prefix === "天敵")) return;
+      addRelationship(person, "かつての天敵", other);
+    });
   });
 }
 
