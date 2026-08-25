@@ -428,10 +428,6 @@ function formatEstimate(parts) {
     .join(", ");
 }
 
-function isMobileViewMode() {
-  return document.body && document.body.classList.contains("mobile-mode");
-}
-
 function getStorageClass(status, warningRatio) {
   if (status.current >= status.limit) return " resource-at-limit";
   if (status.ratio >= warningRatio) return " resource-near-limit";
@@ -653,9 +649,7 @@ function getTaskCostEstimate(person, task, village) {
 function getTaskEstimate(person, task, village) {
   const estimate = getTaskRewardEstimate(person, task, village);
   if (!estimate) return task;
-  return isMobileViewMode()
-    ? `${task}(${compactEstimateText(estimate)})`
-    : `${task} (${estimate})`;
+  return `${task} (${estimate})`;
 }
 
 const ACTION_DESCRIPTIONS = {
@@ -1104,9 +1098,6 @@ export function updateUI(v) {
   if (villageInfoHeading) {
     villageInfoHeading.textContent = `${scaleLabel}　${divineLabel}`;
   }
-  const mobileScaleTitleBox = isMobileViewMode()
-    ? `<div class="resource-box village-scale-title"><span class="resource-value">${scaleLabel} / ${divineLabel}</span></div>`
-    : "";
   const foodStorage = getResourceStorageStatus(v, "food");
   const materialStorage = getResourceStorageStatus(v, "materials");
   const storageWarningRatio = getResourceStorageWarningRatio(v);
@@ -1126,7 +1117,6 @@ export function updateUI(v) {
   rp.style.backgroundColor = apocalypseActive ? "" : seasonColor;
 
   rp.innerHTML = `
-    ${mobileScaleTitleBox}
     <div class="resource-box"><span class="resource-label">年/月</span><span class="resource-value">${v.year}年${v.month}月</span></div>
     <div class="resource-box${getStorageClass(foodStorage, storageWarningRatio)}"><span class="resource-label">食料</span><span class="resource-value">${foodStorage.current}/${foodStorage.limit}</span></div>
     <div class="resource-box${getStorageClass(materialStorage, storageWarningRatio)}"><span class="resource-label">資材</span><span class="resource-value">${materialStorage.current}/${materialStorage.limit}</span></div>

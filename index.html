@@ -12,7 +12,7 @@
     gtag('config', 'G-TR05T5GRB4');
   </script>
   <title>ヴィレッジオブバッカス</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260824-building-wall">
+  <link rel="stylesheet" href="css/styles.css?v=20260825-drop-mobile">
   <style>
     .action-buttons {
       display: flex;
@@ -22,9 +22,6 @@
     }
     .action-buttons > button {
       margin-right: 0;
-    }
-    .view-mode-toggle {
-      margin: 0 0 0 auto;
     }
   </style>
 
@@ -76,14 +73,14 @@
     <div class="top-actions">
       <div class="action-buttons">
         <!-- 保存/読込/説明メニュー -->
-        <button id="autoAssignButton" onclick="onAutoAssignJobs()" data-mobile-label="自動">自動割り振り</button>
-        <button id="raidAssignButton" onclick="onAutoAssignRaidActions()" style="display:none;" data-mobile-label="防衛割当">防衛割り振り</button>
+        <button id="autoAssignButton" onclick="onAutoAssignJobs()">自動割り振り</button>
+        <button id="raidAssignButton" onclick="onAutoAssignRaidActions()" style="display:none;">防衛割り振り</button>
         <button id="nextTurnButton" onclick="onNextTurn()">次の月へ</button>
         <div class="special-action-buttons">
-          <button onclick="openMiracleModal()" data-mobile-label="奇跡">奇跡の行使</button>
-          <button onclick="openBuildingModal()" data-mobile-label="建築">建築</button>
-          <button onclick="openSecretTreasureModal()" data-mobile-label="秘宝">秘宝</button>
-          <button class="pc-history-button" onclick="openHistoryModal()" data-mobile-label="村史">村史</button>
+          <button onclick="openMiracleModal()">奇跡の行使</button>
+          <button onclick="openBuildingModal()">建築</button>
+          <button onclick="openSecretTreasureModal()">秘宝</button>
+          <button onclick="openHistoryModal()">村史</button>
         </div>
         <div class="utility-actions">
           <select id="utilityActionSelect" aria-label="保存・読込操作">
@@ -97,16 +94,6 @@
             <option value="debug">デバッグ用</option>
           </select>
           <button type="button" onclick="runUtilityAction()">実行</button>
-        </div>
-        <div class="view-mode-toggle" role="group" aria-label="表示モード">
-          <button type="button" id="pcModeButton" class="view-mode-button is-active" onclick="setViewMode('pc')" aria-pressed="true">PC</button>
-          <button type="button" id="mobileModeButton" class="view-mode-button" onclick="setViewMode('mobile')" aria-pressed="false">スマホ仮</button>
-        </div>
-        <div class="mobile-history-spirit-actions">
-          <label class="mobile-spirit-toggle">
-            <input type="checkbox" id="mobileSpiritColumnsToggle" onchange="toggleSpiritColumns(this.checked)">精神
-          </label>
-          <button type="button" class="mobile-history-button" onclick="openHistoryModal()">村史</button>
         </div>
       </div>
       <div class="message-window" id="messageWindow">

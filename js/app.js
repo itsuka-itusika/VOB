@@ -31,7 +31,6 @@ import { enterGame, initOpeningScreen, replayOpeningStory } from "./openingScree
 import { getVillageScaleStage, getVillageScaleTitle, VILLAGE_SCALE_STAGES } from "./villageScale.js";
 import { DIVINE_MIGHT_LEVELS } from "./divineMight.js";
 
-const VIEW_MODE_STORAGE_KEY = "vob.viewMode";
 const APOCALYPSE_DEBUG_VILLAGER_COUNT = 15;
 const APOCALYPSE_DEBUG_RESOURCE_AMOUNT = 10000;
 // 黙示録踏破が要る神威Lvは除く。踏破前に開けても意味がないため。
@@ -311,52 +310,8 @@ function setSpiritColumnsVisibility(visible) {
     const table = document.getElementById(id);
     if (table) table.classList.toggle("show-spirit-columns", Boolean(visible));
   });
-  ["spiritColumnsToggle", "mobileSpiritColumnsToggle"].forEach(id => {
-    const checkbox = document.getElementById(id);
-    if (checkbox) checkbox.checked = Boolean(visible);
-  });
-}
-
-function readSavedViewMode() {
-  try {
-    return localStorage.getItem(VIEW_MODE_STORAGE_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function saveViewMode(mode) {
-  try {
-    localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode);
-  } catch {
-    // 保存できない環境でも表示切替自体は動かす。
-  }
-}
-
-function setViewMode(mode) {
-  const normalizedMode = mode === "mobile" ? "mobile" : "pc";
-  const isMobileMode = normalizedMode === "mobile";
-
-  document.body.classList.toggle("mobile-mode", isMobileMode);
-  document.body.dataset.viewMode = normalizedMode;
-
-  const pcButton = document.getElementById("pcModeButton");
-  const mobileButton = document.getElementById("mobileModeButton");
-  if (pcButton) {
-    pcButton.classList.toggle("is-active", !isMobileMode);
-    pcButton.setAttribute("aria-pressed", String(!isMobileMode));
-  }
-  if (mobileButton) {
-    mobileButton.classList.toggle("is-active", isMobileMode);
-    mobileButton.setAttribute("aria-pressed", String(isMobileMode));
-  }
-
-  saveViewMode(normalizedMode);
-  updateUI(theVillage);
-}
-
-function initViewMode() {
-  setViewMode(readSavedViewMode() === "mobile" ? "mobile" : "pc");
+  const checkbox = document.getElementById("spiritColumnsToggle");
+  if (checkbox) checkbox.checked = Boolean(visible);
 }
 
 function bindGlobalHandlers() {
@@ -390,7 +345,6 @@ function bindGlobalHandlers() {
       updateUI(theVillage);
     },
     toggleSpiritColumns: setSpiritColumnsVisibility,
-    setViewMode,
     closeConversationModal: async () => {
       const { closeConversationModal } = await import("./conversation.js");
       closeConversationModal();
@@ -466,7 +420,6 @@ bindGlobalHandlers();
 exposeBalanceApi();
 bindModalOverlayClickClose();
 bindDebugTitleActions();
-initViewMode();
 initOpeningScreen({
   onLoadLocal: loadFromLocalStorage,
   onLoadJson: openJsonLoadDialog,
