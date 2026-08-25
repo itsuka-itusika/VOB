@@ -114,6 +114,11 @@ const SUPPLY_STAGE_MULTIPLIER = {
   low: 2,
   enough: 1
 };
+// 食料と資材の両方が不足気味のときは資材を少し優先する。食料は狩猟・漁など
+// 担い手が多く回復しやすいのに対し、資材は伐採頼みで後手に回りやすいため。
+// 乗算のため絶対ではなく、産出がこの倍率を超えて食料へ偏る村人は食料側の仕事に就く。
+// 段階差（scarce×4 と low×2）はこの倍率より大きく、食料だけが枯渇寸前なら食料が勝つ。
+const MATERIALS_DUAL_SHORTAGE_MULTIPLIER = 1.3;
 // 村全体へ効く職。同じ月に重ねても不足分を食い合うだけなので、2人目からは評価を薄める。
 const WHOLE_VILLAGE_JOBS = new Set(["警備", "神官", "シスター", "踊り子", "詩人", "バニー"]);
 // 同じ不足を埋める職は、薄めと枠を共有する。神官とシスターはどちらもメンタルを癒す。
@@ -202,6 +207,9 @@ function buildVillagePriorityContext(village) {
       food: getSupplyStage(village.food, Math.max(20, monthlyFoodCost)),
       materials: getSupplyStage(village.materials, materialMonthlyUnit)
     },
+    materialsPreferred:
+      getSupplyStage(village.food, Math.max(20, monthlyFoodCost)) !== "enough" &&
+      getSupplyStage(village.materials, materialMonthlyUnit) !== "enough",
     supportAssignCounts: new Map(),
     wholeVillageJobLimit: Math.max(1, Math.floor(population / WHOLE_VILLAGE_JOB_POPULATION_PER_SLOT)),
     recoverySeverity,
@@ -309,7 +317,12 @@ function getAxisWeight(axis, context) {
   if (!context) return base;
 
   const stage = context.supplyStageByAxis?.[axis];
-  if (stage) return base * SUPPLY_STAGE_MULTIPLIER[stage];
+  if (stage) {
+    const dualShortageBoost = axis === "materials" && context.materialsPreferred
+      ? MATERIALS_DUAL_SHORTAGE_MULTIPLIER
+      : 1;
+    return base * SUPPLY_STAGE_MULTIPLIER[stage] * dualShortageBoost;
+  }
 
   const urgency = AXIS_URGENCY[axis];
   if (!urgency) return base;
