@@ -1,0 +1,2 @@
+# tools/package_itch.py が作る配布用 zip の出力先
+output/
