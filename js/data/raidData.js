@@ -653,7 +653,7 @@ export const RAIDER_TYPES = [
     maxCount: 1,
     race: "人間",
     forcedSex: "男",
-    ageRange: { min: 24, max: 39 },
+    ageRange: { min: 24, max: 35 },
     params: {
       job: "聖騎士",
       action: "襲撃"
