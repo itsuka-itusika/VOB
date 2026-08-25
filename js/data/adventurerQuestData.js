@@ -1,4 +1,5 @@
 // 冒険者へ依頼できるクエストの固定データ。
+import { MESSENGER_PASS_SECRET_TREASURE_ID } from "./tutorialData.js";
 
 export const ADVENTURER_QUEST_COST = 100;
 export const ADVENTURER_QUEST_DURATION_MONTHS = 6;
@@ -109,5 +110,6 @@ export const ADVENTURER_QUEST_BASE_SUCCESS_RATES = {
   dryad_fruit: 32.5,
   old_priest_statue: 37.5,
   pan_flute: 32.5,
-  golden_mask: 20
+  golden_mask: 20,
+  [MESSENGER_PASS_SECRET_TREASURE_ID]: 30
 };
