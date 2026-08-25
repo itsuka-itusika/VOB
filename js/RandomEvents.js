@@ -994,11 +994,6 @@ export class RandomEvents {
           recordEpidemicHistory(v, person, { source: "疫病の流行" });
           this.addForcedSpeaker(person);
 
-          const villageTraits = Array.isArray(v.villageTraits) ? v.villageTraits : (v.villageTraits = []);
-          if (!villageTraits.includes("疫病流行")) {
-            villageTraits.push("疫病流行");
-          }
-
           v.log(`疫病の流行:${person.name}が疫病に倒れた。体力・筋力・耐久・器用0.5倍`);
         } else {
           return null;

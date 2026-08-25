@@ -30,7 +30,7 @@ import { getDialogueLine } from "./dialogue/dialogueEngine.js";
 import { getActiveVillagers, getVillagersIncludingSaltPillar } from "./domain/apocalypseRules.js";
 import { FOUR_LEGGED_TRAIT, syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
 
-const SEASON_TRAITS_TO_REMOVE = ["夏", "秋", "冬", "冷夏", "飛蝗", "厳冬", "疫病流行"];
+const SEASON_TRAITS_TO_REMOVE = ["夏", "秋", "冬", "冷夏", "飛蝗", "厳冬"];
 const BAD_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "凍え", "疫病", "産褥", "危篤"];
 const BAD_MIND_TRAITS = ["心労", "抑鬱"];
 export const PINECONE_STAFF_SECRET_TREASURE_ID = "pinecone_staff";

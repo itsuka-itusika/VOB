@@ -444,7 +444,8 @@ function convertObjectToVillage(dataObj) {
     : null;
   v.popLimit = dataObj.popLimit;
   if (Array.isArray(dataObj.villageTraits)) {
-    v.villageTraits = [...dataObj.villageTraits];
+    // 「疫病流行」は仕様撤廃済みの村特性。旧セーブから読み込んだ場合は取り除く。
+    v.villageTraits = dataObj.villageTraits.filter(trait => trait !== "疫病流行");
   }
   v.secretTreasures = normalizeSecretTreasures(dataObj);
   v.buildingRequest = normalizeBuildingRequestState(dataObj.buildingRequest);
