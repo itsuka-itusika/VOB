@@ -1088,8 +1088,8 @@ function showBirthModal(village, mother, father, child, onNamed) {
       </div>
       <div data-birth-naming hidden>
         <input type="text" data-child-name maxlength="${CHILD_NAME_MAX_LENGTH}" style="width:12em;">
-        <button type="button" data-reroll-name>別の名を授ける</button>
-        <button type="button" data-confirm-name>この名を授ける</button>
+        <button type="button" data-auto-name>自動命名</button>
+        <button type="button" data-confirm-name>決定</button>
         <p data-name-error style="color:#b3261e;margin:6px 0 0;" hidden></p>
       </div>
     `;
@@ -1113,10 +1113,10 @@ function showBirthModal(village, mother, father, child, onNamed) {
     modal.querySelector("[data-name-child]").onclick = () => {
       choiceArea.hidden = true;
       namingArea.hidden = false;
-      nameInput.value = rollChildName(village, mother, child);
       nameInput.focus();
     };
-    modal.querySelector("[data-reroll-name]").onclick = () => {
+    // 押すたびに、今入っている名前とは別の候補を入れる。
+    modal.querySelector("[data-auto-name]").onclick = () => {
       nameInput.value = rollChildName(village, mother, child, nameInput.value.trim());
       errorText.hidden = true;
       nameInput.focus();
