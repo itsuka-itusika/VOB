@@ -564,17 +564,29 @@ function convertObjectToVillage(dataObj) {
   const criticalEvents = v.historyEvents.filter(event => {
     return event.type === HISTORY_EVENT_TYPES.CRITICAL || event.tags.includes("危篤");
   });
-  const criticalNames = new Set(criticalEvents.flatMap(event => event.people));
+  // 危篤記録の照合はID優先。IDを持たない旧村史は名前で読み替える。
+  const criticalIds = new Set();
+  const criticalNames = new Set();
+  const criticalCauseById = new Map();
   const criticalCauseByName = new Map();
   criticalEvents.forEach(event => {
     const cause = event.tags.find(tag => tag === "重体" || tag === "老衰") || "";
-    event.people.forEach(name => criticalCauseByName.set(name, cause));
+    event.people.forEach((name, index) => {
+      const id = Array.isArray(event.peopleIds) ? event.peopleIds[index] : null;
+      if (id != null) {
+        criticalIds.add(id);
+        criticalCauseById.set(id, cause);
+      } else {
+        criticalNames.add(name);
+        criticalCauseByName.set(name, cause);
+      }
+    });
   });
   const questAdventurers = v.activeAdventurerQuests.map(quest => quest.adventurer).filter(Boolean);
   [...v.villagers, ...v.visitors, ...v.captives, ...v.raidEnemies, ...questAdventurers].forEach(person => {
-    if (criticalNames.has(person.name)) person.hasBeenCritical = true;
+    if (criticalIds.has(person.id) || criticalNames.has(person.name)) person.hasBeenCritical = true;
     if (!person.criticalCause && person.bodyTraits.includes("危篤")) {
-      person.criticalCause = criticalCauseByName.get(person.name) || "";
+      person.criticalCause = criticalCauseById.get(person.id) || criticalCauseByName.get(person.name) || "";
     }
     evaluateTitles(person, { getPermanentStat });
   });

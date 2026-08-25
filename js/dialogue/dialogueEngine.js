@@ -347,7 +347,9 @@ function hasRecentBodyExchange(character, village) {
   const currentMonth = getAbsoluteMonth(village?.year, village?.month);
   if (currentMonth === null || !Array.isArray(village?.historyEvents)) return false;
   return village.historyEvents.some(event => {
-    if (event?.type !== "bodyExchange" || !Array.isArray(event.people) || !event.people.includes(character?.name)) return false;
+    if (event?.type !== "bodyExchange" || !Array.isArray(event.people)) return false;
+    const matchesById = character?.id != null && Array.isArray(event.peopleIds) && event.peopleIds.includes(character.id);
+    if (!matchesById && !event.people.includes(character?.name)) return false;
     const eventMonth = getAbsoluteMonth(event.year, event.month);
     if (eventMonth === null) return false;
     const elapsedMonths = currentMonth - eventMonth;

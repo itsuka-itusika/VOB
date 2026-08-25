@@ -74,14 +74,23 @@ function ensureHistoryEvents(village) {
   return village.historyEvents;
 }
 
-function normalizePeople(people) {
-  if (!Array.isArray(people)) return [];
-  return people
-    .map(person => {
-      if (typeof person === "string") return person;
-      return person?.name || "";
-    })
-    .filter(Boolean);
+// people は表示用の名前スナップショット、peopleIds は同順の人物ID（不明は null）。
+function normalizePeopleData(people, ids) {
+  const names = [];
+  const outIds = [];
+  if (Array.isArray(people)) {
+    people.forEach((person, index) => {
+      const name = typeof person === "string" ? person : (person?.name || "");
+      if (!name) return;
+      const idFromPerson = person && typeof person === "object" && Number.isInteger(person.id) && person.id > 0
+        ? person.id
+        : null;
+      const idFromList = Array.isArray(ids) && Number.isInteger(ids[index]) && ids[index] > 0 ? ids[index] : null;
+      names.push(name);
+      outIds.push(idFromPerson ?? idFromList);
+    });
+  }
+  return { people: names, peopleIds: outIds };
 }
 
 function normalizeTags(tags) {
@@ -120,7 +129,7 @@ export function normalizeHistoryEvents(events) {
       type,
       title: String(event?.title || HISTORY_TYPE_LABELS[type] || "村史"),
       text: String(event?.text || ""),
-      people: normalizePeople(event?.people),
+      ...normalizePeopleData(event?.people, event?.peopleIds),
       importance: event?.importance || "major",
       scope: normalizeHistoryScope(event?.scope),
       tags: normalizeTags(event?.tags),
@@ -145,7 +154,7 @@ export function addHistoryEvent(village, entry) {
     type,
     title: String(entry.title || HISTORY_TYPE_LABELS[type] || "村史"),
     text: String(entry.text || ""),
-    people: normalizePeople(entry.people),
+    ...normalizePeopleData(entry.people, entry.peopleIds),
     importance: entry.importance || "major",
     scope: normalizeHistoryScope(entry.scope),
     tags: normalizeTags(entry.tags)
@@ -498,8 +507,21 @@ function cleanRecordText(text) {
     .trim();
 }
 
-function getOtherPersonName(event, personName) {
+function getOtherPersonName(event, personName, personId = null) {
+  if (personId != null && Array.isArray(event.peopleIds)) {
+    const index = event.people.findIndex((_, i) => event.peopleIds[i] != null && event.peopleIds[i] !== personId);
+    if (index >= 0) return event.people[index];
+  }
   return event.people.find(name => name !== personName) || "";
+}
+
+// 指定位置の登場人物が本人か。ID優先で、旧データは名前で照合する。
+function eventPersonAtIs(event, index, personName, personId = null) {
+  const normalizedIndex = index < 0 ? event.people.length + index : index;
+  if (personId != null && Array.isArray(event.peopleIds) && event.peopleIds[normalizedIndex] != null) {
+    return event.peopleIds[normalizedIndex] === personId;
+  }
+  return event.people[normalizedIndex] === personName;
 }
 
 function getEventSource(event) {
@@ -609,8 +631,8 @@ function getVillageHistoryText(event) {
   return cleanRecordText(event.text || event.title);
 }
 
-function getPersonalHistoryText(event, personName) {
-  const otherName = getOtherPersonName(event, personName);
+function getPersonalHistoryText(event, personName, personId = null) {
+  const otherName = getOtherPersonName(event, personName, personId);
   switch (event.type) {
     case HISTORY_EVENT_TYPES.BODY_EXCHANGE:
       return getBodyExchangePersonalText(event, otherName);
@@ -636,19 +658,19 @@ function getPersonalHistoryText(event, personName) {
     }
     case HISTORY_EVENT_TYPES.PREGNANCY: {
       const motherName = event.people[0] || personName;
-      if (motherName !== personName) return `${motherName}が子を身ごもった。`;
+      if (!eventPersonAtIs(event, 0, personName, personId) && event.people[0]) return `${motherName}が子を身ごもった。`;
       return event.text.includes("神秘") ? "神秘の子を身ごもった。" : otherName ? `${otherName}との子を身ごもった。` : "子を身ごもった。";
     }
     case HISTORY_EVENT_TYPES.BIRTH: {
       const motherName = event.people[0] || "";
       const childName = event.people[event.people.length - 1] || "";
-      if (childName === personName && motherName) return `${motherName}の子として生まれた。`;
-      if (motherName === personName && childName) return `${childName}を産んだ。`;
+      if (eventPersonAtIs(event, -1, personName, personId) && motherName) return `${motherName}の子として生まれた。`;
+      if (eventPersonAtIs(event, 0, personName, personId) && childName) return `${childName}を産んだ。`;
       return cleanRecordText(event.text);
     }
     case HISTORY_EVENT_TYPES.VILLAGER_JOIN: {
       const source = normalizeJoinSource(getEventSource(event));
-      if (event.people[0] === personName) {
+      if (eventPersonAtIs(event, 0, personName, personId)) {
         return otherName ? `${otherName}に${source}され村に加わった。` : "村に加わった。";
       }
       return event.people[0] ? `${event.people[0]}を${source}し、村に迎えた。` : cleanRecordText(event.text);
@@ -674,7 +696,7 @@ function getPersonalHistoryText(event, personName) {
 
 function renderHistoryEntry(event, options = {}) {
   const text = options.personName
-    ? getPersonalHistoryText(event, options.personName)
+    ? getPersonalHistoryText(event, options.personName, options.personId ?? null)
     : getVillageHistoryText(event);
   return `
     <article class="history-entry history-entry-${escapeHtml(event.type)}">
@@ -686,13 +708,16 @@ function renderHistoryEntry(event, options = {}) {
   `;
 }
 
-function includesPerson(event, personName) {
+function includesPerson(event, personName, personId = null) {
+  const eventHasIds = Array.isArray(event.peopleIds) && event.peopleIds.some(id => id != null);
+  if (personId != null && eventHasIds) return event.peopleIds.includes(personId);
   return Boolean(personName) && event.people.includes(personName);
 }
 
 export function getPersonalHistoryEvents(village, person) {
   const personName = typeof person === "string" ? person : person?.name;
-  return normalizeHistoryEvents(village?.historyEvents).filter(event => includesPerson(event, personName));
+  const personId = typeof person === "object" && Number.isInteger(person?.id) && person.id > 0 ? person.id : null;
+  return normalizeHistoryEvents(village?.historyEvents).filter(event => includesPerson(event, personName, personId));
 }
 
 function hasArchiveGap(village) {
@@ -967,7 +992,7 @@ export function openPersonalHistoryModal(village, person, options = {}) {
     ${renderPersonalHistorySummary(person, options)}
     ${archiveGapNote}
     ${events.length > 0
-      ? `<div class="history-list">${events.map(event => renderHistoryEntry(event, { personName: person.name })).join("")}</div>`
+      ? `<div class="history-list">${events.map(event => renderHistoryEntry(event, { personName: person.name, personId: person.id ?? null })).join("")}</div>`
       : `<div class="history-empty">この人物の歩みは、まだ村の帳面には記されていない。</div>`}
   `;
   bindPersonalHistoryPortrait(content, person);

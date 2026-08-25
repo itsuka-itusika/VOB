@@ -103,6 +103,8 @@ export function normalizeWishState(source = null) {
   const requesterName = String(source.requesterName || "").trim();
   if (!definition || !requesterName || !Number.isFinite(monthsLeft) || monthsLeft <= 0) return null;
 
+  const requesterId = Number.isInteger(source.requesterId) && source.requesterId > 0 ? source.requesterId : null;
+  const targetId = Number.isInteger(source.targetId) && source.targetId > 0 ? source.targetId : null;
   const targetName = String(source.targetName || "").trim();
   const context = { targetName };
   const defaultName = id === "get_closer" && targetName
@@ -111,11 +113,13 @@ export function normalizeWishState(source = null) {
   return {
     id,
     name: String(source.name || defaultName),
+    requesterId,
     requesterName,
     requesterRace: String(source.requesterRace || "人間"),
     requesterBodySex: String(source.requesterBodySex || ""),
     requesterBodyAge: normalizeOptionalNumber(source.requesterBodyAge),
     requesterPortraitFile: String(source.requesterPortraitFile || DEFAULT_PORTRAIT_KEY),
+    targetId,
     targetName,
     line: String(source.line || resolveWishLine(definition.startLine, context)),
     monthsLeft
@@ -149,15 +153,18 @@ export function tryStartWish(village) {
   const candidate = randChoice(candidates);
   const definition = WISH_DEFINITION_BY_ID.get(candidate.id);
   const requester = candidate.requester;
-  const targetName = candidate.targetName || "";
+  const target = candidate.target || null;
+  const targetName = target?.name || "";
   const wish = {
     id: definition.id,
     name: definition.id === "get_closer" ? `${targetName}と近づきたい` : definition.name,
+    requesterId: requester.id,
     requesterName: requester.name,
     requesterRace: requester.race || "人間",
     requesterBodySex: requester.bodySex || "",
     requesterBodyAge: normalizeOptionalNumber(requester.bodyAge),
     requesterPortraitFile: requester.portraitFile || DEFAULT_PORTRAIT_KEY,
+    targetId: target?.id ?? null,
     targetName,
     line: resolveWishLine(definition.startLine, { requester, targetName }, requester, "start"),
     monthsLeft: WISH_DURATION_MONTHS
@@ -174,7 +181,7 @@ export function advanceWishMonth(village) {
   if (!wish) return null;
   if (checkWishCompletion(village)) return null;
 
-  const requester = getVillageResidents(village).find(person => person.name === wish.requesterName);
+  const requester = findWishRequester(getVillageResidents(village), wish);
   if (!requester) {
     village.wish = null;
     village.log(`願望消失: ${wish.requesterName}が村にいないため「${wish.name}」は消失しました。`);
@@ -197,7 +204,7 @@ export function checkWishCompletion(village, context = {}) {
   if (!wish) return null;
 
   const villagers = getVillageResidents(village);
-  const requester = villagers.find(person => person.name === wish.requesterName);
+  const requester = findWishRequester(villagers, wish);
   if (!requester) {
     village.wish = null;
     village.log(`願望消失: ${wish.requesterName}が村にいないため「${wish.name}」は消失しました。`);
@@ -234,9 +241,12 @@ function getWishCandidates(village) {
   villagers.forEach(requester => {
     if (hasAnyMindTrait(requester, WISH_REQUESTER_EXCLUDED_MIND_TRAITS)) return;
 
-    getRelationshipTargets(requester, "天敵")
-      .filter(targetName => villagers.some(person => person.name === targetName))
-      .forEach(targetName => candidates.push({ id: "avoid_enemy", requester, targetName }));
+    getRelationshipEntries(requester)
+      .filter(entry => entry.prefix === "天敵")
+      .map(entry => villagers.find(person =>
+        entry.targetId != null ? person.id === entry.targetId : person.name === entry.targetName))
+      .filter(Boolean)
+      .forEach(target => candidates.push({ id: "avoid_enemy", requester, target }));
 
     if (requester.spiritSex === "男" && Number(requester.sexdr) >= 20 && Number(requester.chr) <= 14) {
       candidates.push({ id: "be_popular", requester });
@@ -244,7 +254,7 @@ function getWishCandidates(village) {
 
     villagers.forEach(target => {
       if (target !== requester && isOneSidedAffection(requester, target)) {
-        candidates.push({ id: "get_closer", requester, targetName: target.name });
+        candidates.push({ id: "get_closer", requester, target });
       }
     });
 
@@ -277,7 +287,7 @@ function getWishCandidates(village) {
 
     const spouse = getSpouse(requester, villagers);
     if (spouse && cannotHaveChildByBody(requester, spouse) && !hasPregnancy(requester) && !hasPregnancy(spouse)) {
-      candidates.push({ id: "want_child", requester, targetName: spouse.name });
+      candidates.push({ id: "want_child", requester, target: spouse });
     }
   });
 
@@ -285,7 +295,8 @@ function getWishCandidates(village) {
 }
 
 function getWishCompletionReason(wish, requester, villagers, context = {}) {
-  const target = villagers.find(person => person.name === wish.targetName);
+  const target = villagers.find(person =>
+    wish.targetId != null ? person.id === wish.targetId : person.name === wish.targetName);
   switch (wish.id) {
     case "avoid_enemy":
       if (!target) return "targetGone";
@@ -333,6 +344,12 @@ function normalizeOptionalNumber(value) {
 
 function getVillageResidents(village) {
   return Array.isArray(village?.villagers) ? village.villagers : [];
+}
+
+// 願望者の解決。ID優先で、旧セーブは名前で読み替える。
+function findWishRequester(villagers, wish) {
+  return villagers.find(person =>
+    wish.requesterId != null ? person.id === wish.requesterId : person.name === wish.requesterName) || null;
 }
 
 // 願望の相手参照。ID優先で、旧セーブは名前で読み替える。

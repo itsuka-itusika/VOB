@@ -71,6 +71,7 @@ export function normalizeBuildingRequestState(source = null) {
   return {
     buildingId,
     buildingName: String(source.buildingName || definition?.name || buildingId),
+    requesterId: Number.isInteger(source.requesterId) && source.requesterId > 0 ? source.requesterId : null,
     requesterName: String(source.requesterName || ""),
     requesterRace: String(source.requesterRace || ""),
     requesterBodySex: String(source.requesterBodySex || ""),
@@ -124,6 +125,7 @@ export function tryStartBuildingRequest(village, buildings) {
   const request = {
     buildingId: candidate.definition.buildingId,
     buildingName: candidate.definition.name,
+    requesterId: match.person.id,
     requesterName: match.person.name,
     requesterRace: match.person.race || "人間",
     requesterBodySex: match.person.bodySex || "",
@@ -178,7 +180,8 @@ export function fulfillBuildingRequest(village, buildingId) {
   const request = getActiveBuildingRequest(village);
   if (!request || request.buildingId !== buildingId) return null;
 
-  const requester = getActiveVillagers(village).find(person => person.name === request.requesterName);
+  const requester = getActiveVillagers(village).find(person =>
+    request.requesterId != null ? person.id === request.requesterId : person.name === request.requesterName);
   if (requester) {
     requester.happiness = clampValue((Number(requester.happiness) || 0) + 30, 0, 100);
   }
