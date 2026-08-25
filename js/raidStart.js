@@ -690,7 +690,9 @@ export function startRaidEvent(village, options = {}) {
     return;
   }
 
-  village.log(pendingRaid
+  // 「予兆のあった」は、占い・天体観測・太陽の巫女の予知が実際に出ていた時だけ。
+  // 通常襲撃は常に内部予約を経由するため、予約の有無では判定できない。
+  village.log(pendingRaid?.prophecyNotified
     ? `【襲撃発生】予兆のあった${raidDefinition.name}が村へ押し寄せました。`
     : `【襲撃発生】${raidDefinition.name}が村へ押し寄せました。`);
   if (!village.villageTraits.includes("襲撃中")) {
