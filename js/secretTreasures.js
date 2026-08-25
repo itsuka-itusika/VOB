@@ -402,7 +402,7 @@ export const SECRET_TREASURES = [
   {
     id: MESSENGER_PASS_SECRET_TREASURE_ID,
     name: "伝令神の手形",
-    desc: "襲撃発生時に使用できる。使用すると、その襲撃をなかったことにする。黙示録の第六・第七の災厄では使用不可。",
+    desc: "襲撃発生時に使用できる。使用すると、その襲撃をなかったことにする。",
     sellPrice: SECRET_TREASURE_SELL_PRICES[MESSENGER_PASS_SECRET_TREASURE_ID],
     canUse: canAvoidCurrentRaidWithMessengerPass,
     blockedReason: (village) => isMessengerPassBlockedByApocalypse(village)
