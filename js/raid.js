@@ -29,6 +29,7 @@ import {
   getFortifyDamageMultiplier,
   getRaidActionBlockReason,
   getRaidActionSkipMessage,
+  getShootingTraitMultiplier,
   getRaiderIncomingDamageMultiplier,
   hasRaidStunEffect,
   getActiveRaidFrontliners,
@@ -759,6 +760,8 @@ function doOneTrapAction(action, village) {
   }
   let dmg = Math.max(0, Math.floor((p.dex*p.int/400)*25));
   dmg = applyIncomingDamageModifiers(dmg, e, village);
+  // 飛行を持つ相手は地上の罠にかかりにくい
+  if (hasTrait(e, "飛行")) dmg = Math.floor(dmg * 0.5);
   const saltPillarShattered = applyRaidDamage(e, dmg);
   recordRaidFriendshipDamage(village, p, dmg);
   addRaidDamageAnimation(result, p, e, dmg, false, "罠発動");
@@ -992,9 +995,9 @@ function calcRangedDamage(atk, def) {
       attackText: "遠距離魔法"
     };
   }
-  const damage = Math.floor(((atk.dex * atk.cou) / 400) * 40 - def.vit * 1.2);
+  const damage = Math.max(0, Math.floor(((atk.dex * atk.cou) / 400) * 40 - def.vit * 1.2));
   return {
-    damage: Math.max(0, damage),
+    damage: Math.floor(damage * getShootingTraitMultiplier(atk)),
     isMagic: false,
     attackText: "射撃"
   };

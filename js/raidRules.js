@@ -165,6 +165,15 @@ export function applyOffensiveTraitDamage(person, damage) {
   return base;
 }
 
+/** 月の巫女・月の加護は射撃の与ダメージを伸ばす。想定表示と実戦闘で同じ値を使う。 */
+export function getShootingTraitMultiplier(person) {
+  const bodyTraits = traitList(person, "bodyTraits");
+  let multiplier = 1;
+  if (bodyTraits.includes("月の巫女")) multiplier *= 1.5;
+  if (bodyTraits.includes("月の加護")) multiplier *= 1.2;
+  return multiplier;
+}
+
 /** 生存中の襲撃者の平均耐久。想定ダメージの見積もりに使う。 */
 export function getAverageEnemyVitality(village) {
   const enemies = Array.isArray(village?.raidEnemies)
@@ -195,6 +204,7 @@ export function estimateRaidActionDamage(person, action, village = null) {
     base = Math.max(physical, magical);
   } else if (action === ACTION_SHOOT) {
     base = Math.max(0, Math.floor((stat("dex") * stat("cou") / 400) * 40 - averageVitality * 1.2));
+    base = Math.floor(base * getShootingTraitMultiplier(person));
   } else if (action === ACTION_CANNON) {
     base = Math.max(0, Math.floor((stat("mag") * stat("int") / 400) * 20));
   } else {
