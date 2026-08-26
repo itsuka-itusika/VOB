@@ -420,10 +420,10 @@ export function openWarCouncilModal(village, { onStart = null, onAutoAssign = nu
     <div class="wc-header">
       <h2 id="${MODAL_ID}Title">作戦会議</h2>
       <div class="wc-header-buttons">
-        <button type="button" class="wc-start" data-wc-start>迎撃開始</button>
         <button type="button" data-wc-auto>防衛割り振り</button>
         <button type="button" data-wc-miracle>奇跡の行使</button>
         <button type="button" data-wc-close>戻る</button>
+        <button type="button" class="wc-start" data-wc-start>迎撃開始</button>
       </div>
     </div>
     <p class="wc-lead">

@@ -3769,7 +3769,7 @@ section h2 {
 
 /* 作戦会議。上部の呼び出しボタンは危急を示す赤字にする。 */
 .action-buttons > button.war-council-button {
-  color: #a3261b;
+  color: #d81b10;
   font-weight: bold;
 }
 .wc-overlay {
@@ -3825,7 +3825,7 @@ section h2 {
   padding: 5px 12px;
 }
 .wc-header-buttons .wc-start {
-  color: #a3261b;
+  color: #d81b10;
   font-weight: bold;
 }
 .wc-lead {

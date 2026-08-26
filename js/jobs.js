@@ -345,14 +345,12 @@ function doJobAction(p, v, secretTreasureFlags = null) {
       doBrewing(p, v);
       if (secretTreasureFlags) secretTreasureFlags.field = true;
       break;
-    // "罠作成", "射撃", "火砲", "迎撃" は襲撃専用(raid.js)で処理するので、ここはログだけ
+    // "罠作成", "射撃", "火砲", "迎撃", "籠城" は襲撃専用(raid.js)で処理するので、
+    // 行動フェーズではログも出さない
     case "罠作成":
     case "射撃":
     case "火砲":
     case "迎撃":
-      v.log(`${p.name}は${p.action}(襲撃専用フェーズで実行)`);
-      break;
-    // 籠城は受け身の構えなので、行動フェーズにはログを出さない
     case "籠城":
       break;
 

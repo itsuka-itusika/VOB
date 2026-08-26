@@ -320,7 +320,13 @@ async function playRaidAnimationStep(step) {
 
 async function playRaidActionAnimations(result) {
   const animations = Array.isArray(result?.animations) ? result.animations : [];
+  // まとめ演出（籠城など）は1人ずつではなく全員同時に見せる
+  const grouped = animations.filter(animation => animation.simultaneous);
+  if (grouped.length > 0) {
+    await Promise.all(grouped.map(animation => playRaidAnimationStep(animation)));
+  }
   for (const animation of animations) {
+    if (animation.simultaneous) continue;
     await playRaidAnimationStep(animation);
   }
 }
@@ -812,9 +818,11 @@ export function setupCombatPhase(village) {
 /** 行動順: 籠城のまとめ表示 -> 中衛の勇気降順 -> 前衛の勇気降順 -> 火砲の勇気降順 */
 function createCombatActions(village) {
   const allUnits = getVillageCombatants(village).concat(getAliveEnemies(village));
-  // 籠城は自分の手番を持たず、ターン冒頭に全員まとめて構えを見せる。
+  // 籠城は自分の手番を持たず、1ターン目の冒頭にだけ全員まとめて構えを見せる。
   const isVillageFortify = unit => !isEnemyUnit(unit, village) && unit?.action === ACTION_FORTIFY;
-  const fortifyUnits = sortByCourage(allUnits.filter(isVillageFortify));
+  const fortifyUnits = (Number(village.raidTurnCount) || 1) === 1
+    ? sortByCourage(allUnits.filter(isVillageFortify))
+    : [];
   const middleUnits = sortByCourage(allUnits.filter(unit =>
     getCombatPosition(unit, village) === RAID_POSITION_MIDDLE && !isCannonUnit(unit, village)
   ));
@@ -904,7 +912,8 @@ function doFortifyGroupAction(action, village) {
   const result = createRaidActionResult();
   const actors = (action.actors || []).filter(actor => canActInCombat(actor, village));
   if (actors.length === 0) return result;
-  actors.forEach(actor => addRaidActionAnimation(result, actor, "籠城"));
+  // 全員の「籠城」ポップを同時に出す
+  actors.forEach(actor => result.animations.push({ actor, actionLabel: "籠城", simultaneous: true }));
   const label = actors.length === 1 ? actors[0].name : "村人たち";
   addRaidActionLog(result, `【籠城】${label}は木柵に身を寄せ、攻撃に備えた`);
   return result;
