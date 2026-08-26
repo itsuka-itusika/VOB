@@ -1324,13 +1324,11 @@ table.show-spirit-columns .spirit-column {
   font-size: 0.7rem;
   line-height: 1.25;
 }
-.raid-unit-hp.is-low,
-.raid-unit-mp.is-low {
+.raid-unit-hp.is-low {
   color: #a3261b;
   font-weight: bold;
 }
-.raid-unit-hp,
-.raid-unit-mp {
+.raid-unit-hp {
   position: relative;
   min-width: 42px;
   width: 50px;

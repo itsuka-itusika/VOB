@@ -1600,7 +1600,6 @@ function createRaidUnitRow(unit, village = null) {
   appendRaidPortraitCell(row, unit);
   appendRaidNameCell(row, unit, village);
   appendRaidValueCell(row, unit?.hp, "raid-unit-hp", Number(unit?.hp) <= 33);
-  appendRaidValueCell(row, unit?.mp, "raid-unit-mp", Number(unit?.mp) <= 33);
   appendRaidStatSummaryCell(row, unit);
   return row;
 }
