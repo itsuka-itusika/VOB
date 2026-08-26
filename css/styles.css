@@ -3885,7 +3885,7 @@ body:has(#warCouncilModal) #conversationModal { z-index: 2201; }
   font-variant-numeric: tabular-nums;
 }
 .wc-check-cell.is-blocked {
-  background: #ececec;
+  background: #e9e4d8;
 }
 .wc-check-cell input {
   cursor: pointer;
