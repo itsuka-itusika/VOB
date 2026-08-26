@@ -112,14 +112,17 @@ export function getCouncilActionEstimate(person, action, village) {
     ? getFortifyDamageMultiplier(village)
     : getRaidIncomingDamageMultiplier(action, village);
 
+  // 被弾倍率は等倍から外れている時だけ出す。
+  const incomingLabel = incoming > 0 && incoming !== 1 ? `被弾${incoming}倍` : "";
+
   // 不殺・非戦主義は前衛に立っても攻撃も反撃もしない。
   if (isPacifistFighter(person) && (action === ACTION_DEFEND || action === ACTION_FORTIFY)) {
-    return [`攻撃なし　被弾${incoming}倍`, "攻撃も反撃も行わない"].join("\n");
+    return [["攻撃なし", incomingLabel].filter(Boolean).join("　"), "攻撃も反撃も行わない"].join("\n");
   }
 
   const damage = estimateRaidActionDamage(person, action, village);
   const statLabel = getRaidActionStatLabel(person, action, village);
-  const head = [meta.order, incoming > 0 ? `被弾${incoming}倍` : ""].filter(Boolean).join("　");
+  const head = [meta.order, incomingLabel].filter(Boolean).join("　");
   const damageLabel = meta.counterOnly ? "予想反撃ダメージ" : "予想ダメージ";
   const body = [`${damageLabel}${damage}${statLabel ? `（${statLabel}）` : ""}`, meta.note]
     .filter(Boolean).join("　");
