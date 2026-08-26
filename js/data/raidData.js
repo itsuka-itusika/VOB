@@ -748,7 +748,7 @@ export const RAIDER_TYPES = [
       cou: [20, 32],
       sexdr: [5, 12]
     },
-    forcedBodyTraits: ["人面獣身"],
+    forcedBodyTraits: ["人面獣身", "飛行"],
     mindTraits: ["古代知識"],
     hobbies: ["月光浴", "読書", "詩作", "祈り", "謎掛け", "瞑想", "人間観察", "自由研究", "天体観測", "占い"],
     dialogues: [
