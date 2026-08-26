@@ -181,6 +181,16 @@ function getCheckboxBlockReason(person, entry, line, village) {
   return "";
 }
 
+/** 常に見える場所に出す枠の使用状況。超過した戦列は赤字にする。 */
+function renderSlotSummary(village) {
+  return COUNCIL_LINES.map(line => {
+    const assigned = countLineAssigned(village, line);
+    const slots = getLineSlots(village, line);
+    const text = `${line.label} ${assigned}/${slots}`;
+    return assigned > slots ? `<span class="is-over">${escapeHtml(text)}</span>` : escapeHtml(text);
+  }).join("　");
+}
+
 /** 枠を超えている戦列。空配列なら迎撃を始められる。 */
 function getOverCapacityLines(village) {
   return COUNCIL_LINES
@@ -312,6 +322,8 @@ function refreshCouncilBody() {
   const content = document.querySelector(`#${MODAL_ID} .wc-content`);
   if (!content || !councilVillage) return;
   content.innerHTML = renderBody(councilVillage);
+  const summary = document.querySelector(`#${MODAL_ID} [data-wc-summary]`);
+  if (summary) summary.innerHTML = renderSlotSummary(councilVillage);
   bindCouncilInputs();
 }
 
@@ -386,11 +398,15 @@ export function openWarCouncilModal(village, { onStart = null, onAutoAssign = nu
       <div class="wc-header-buttons">
         <button type="button" class="wc-start" data-wc-start>迎撃開始</button>
         <button type="button" data-wc-auto>防衛割り振り</button>
+        <button type="button" data-wc-clear>全員解除</button>
         <button type="button" data-wc-miracle>奇跡の行使</button>
         <button type="button" data-wc-close>戻る</button>
       </div>
     </div>
-    <p class="wc-lead">チェックで配置を決めます。チェック欄にマウスを合わせると、予想ダメージと被弾のしやすさが出ます。</p>
+    <p class="wc-lead">
+      <span>チェックで配置を決めます。チェック欄にマウスを合わせると、予想ダメージと被弾のしやすさが出ます。</span>
+      <span class="wc-slot-summary" data-wc-summary>${renderSlotSummary(village)}</span>
+    </p>
     <div class="wc-content">${renderBody(village)}</div>
   `;
 
@@ -401,6 +417,12 @@ export function openWarCouncilModal(village, { onStart = null, onAutoAssign = nu
   modal.querySelector("[data-wc-close]").onclick = closeWarCouncilModal;
   modal.querySelector("[data-wc-auto]").onclick = () => {
     if (typeof onAutoAssign === "function") onAutoAssign();
+    refreshCouncilBody();
+  };
+  modal.querySelector("[data-wc-clear]").onclick = () => {
+    getCouncilVillagers(councilVillage)
+      .filter(person => ALL_COUNCIL_ACTIONS.includes(person.action))
+      .forEach(person => setPersonAction(person, "", councilVillage));
     refreshCouncilBody();
   };
   modal.querySelector("[data-wc-miracle]").onclick = () => {

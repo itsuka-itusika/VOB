@@ -3776,7 +3776,8 @@ section h2 {
   position: fixed;
   inset: 0;
   background: rgba(18, 13, 8, 0.55);
-  z-index: 2100;
+  /* 作戦会議は「画面」なので、奇跡・会話などのモーダル(z>=998)より下の層に置く */
+  z-index: 900;
 }
 .wc-modal {
   position: fixed;
@@ -3786,13 +3787,15 @@ section h2 {
   box-sizing: border-box;
   width: min(1180px, calc(100vw - 24px));
   max-height: 90vh;
-  overflow-y: auto;
   background: #fffdf7;
   border: 1px solid #b8a36d;
   border-radius: 6px;
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.42);
-  z-index: 2101;
+  z-index: 901;
   padding: 0 14px 14px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 .wc-header {
   position: sticky;
@@ -3829,6 +3832,23 @@ section h2 {
   margin: 8px 2px;
   font-size: 0.8rem;
   color: #6d6355;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.wc-slot-summary {
+  color: #4a4034;
+  font-weight: bold;
+  white-space: nowrap;
+}
+.wc-slot-summary .is-over {
+  color: #a3261b;
+}
+.wc-content {
+  overflow-y: auto;
+  min-height: 0;
 }
 .wc-table {
   width: 100%;
@@ -3841,6 +3861,11 @@ section h2 {
   padding: 3px 5px;
   text-align: center;
   font-size: 0.8rem;
+}
+.wc-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 .wc-table thead th {
   background: linear-gradient(180deg, #f6f8f9 0%, #e7ebef 55%, #d9dfe4 100%);
@@ -3856,9 +3881,6 @@ section h2 {
 .wc-col-estimate { width: 240px; }
 .wc-action-head { width: 54px; }
 .wc-portrait-cell { padding: 2px; cursor: pointer; }
-/* 作戦会議から開いた会話モーダルが、作戦会議より手前に出るようにする */
-body:has(#warCouncilModal) #conversationOverlay { z-index: 2200; }
-body:has(#warCouncilModal) #conversationModal { z-index: 2201; }
 .wc-name-cell { text-align: left; }
 .wc-name { font-weight: bold; }
 .wc-traits {
