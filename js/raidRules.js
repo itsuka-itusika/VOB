@@ -167,7 +167,7 @@ export function applyOffensiveTraitDamage(person, damage) {
 
 /**
  * 反撃1回あたりの想定ダメージ。
- * 実処理(doCounterAttack)に合わせ、通常攻撃の半分で、歴戦などの攻撃特性補正は乗らない。
+ * 実処理(doCounterAttack)に合わせ、通常攻撃の半分に歴戦・戦慣れの補正を乗せる。
  */
 export function estimateRaidCounterDamage(person, village = null) {
   if (!person || isPacifistFighter(person)) return 0;
@@ -175,7 +175,7 @@ export function estimateRaidCounterDamage(person, village = null) {
   const averageVitality = getAverageEnemyVitality(village);
   const physical = Math.max(0, Math.floor((stat("str") * stat("cou") / 400) * 50 - averageVitality));
   const magical = Math.max(0, Math.floor((stat("mag") * stat("cou") / 400) * 25));
-  return Math.floor(Math.max(physical, magical) * 0.5);
+  return applyOffensiveTraitDamage(person, Math.floor(Math.max(physical, magical) * 0.5));
 }
 
 /** 月の巫女・月の加護は射撃の与ダメージを伸ばす。想定表示と実戦闘で同じ値を使う。 */

@@ -1062,7 +1062,8 @@ function doCounterAttack(counterActor, target, village, result) {
     return;
   }
   let ret=calcAttackDamage(counterActor, target, true);
-  let rdmg=Math.floor(ret.damage*0.5);
+  // 反撃にも歴戦・戦慣れの補正を乗せる
+  let rdmg=applyOffensiveTraitDamage(counterActor, Math.floor(ret.damage*0.5));
   rdmg = applyIncomingDamageModifiers(rdmg, target, village);
   let retTypeText=ret.isMagic? "魔法攻撃":"物理攻撃";
   const saltPillarShattered = applyRaidDamage(target, rdmg);
@@ -1651,8 +1652,8 @@ const RAID_BADGE_TRAITS = [
   { trait: "飛行", label: "飛行", title: "罠作成による被ダメージ0.5倍" },
   { trait: "月の巫女", label: "月の巫女", title: "射撃のダメージ1.5倍" },
   { trait: "月の加護", label: "月の加護", title: "射撃のダメージ1.2倍" },
-  { trait: "歴戦", label: "歴戦", title: "与ダメージ1.2倍（反撃には乗らない）" },
-  { trait: "戦慣れ", label: "戦慣れ", title: "与ダメージ1.1倍（反撃には乗らない）" },
+  { trait: "歴戦", label: "歴戦", title: "与ダメージ1.2倍" },
+  { trait: "戦慣れ", label: "戦慣れ", title: "与ダメージ1.1倍" },
   { trait: "非戦主義", label: "非戦", title: "攻撃も反撃も行わない" },
   { trait: "不殺", label: "不殺", title: "攻撃も反撃も行わない" },
   { trait: "光輪", label: "光輪", title: "聖なる攻撃（裁きの光など）を無効化する" }
