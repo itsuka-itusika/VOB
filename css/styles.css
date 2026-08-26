@@ -1317,6 +1317,16 @@ table.show-spirit-columns .spirit-column {
   font-size: 0.7rem;
   line-height: 1.25;
 }
+.raid-unit-trait {
+  display: inline-block;
+  padding: 1px 4px;
+  border: 1px solid #9fbb9f;
+  border-radius: 4px;
+  background: #edf5ec;
+  color: #2e5d34;
+  font-size: 0.7rem;
+  line-height: 1.25;
+}
 .raid-unit-action-note {
   display: inline-block;
   padding: 1px 0;

@@ -1646,6 +1646,9 @@ function appendRaidPortraitCell(row, unit) {
   row.appendChild(cell);
 }
 
+// 迎撃モーダルの名前欄にバッジで出す、戦闘へ影響する特性。
+const RAID_BADGE_TRAITS = ["飛行", "月の巫女", "月の加護", "歴戦", "戦慣れ"];
+
 function appendRaidUnitNote(meta, text) {
   const note = document.createElement("span");
   note.className = "raid-unit-action-note";
@@ -1695,11 +1698,19 @@ function appendRaidNameCell(row, unit, village = null) {
     action.className = "raid-unit-action";
     action.textContent = cannon
       ? ACTION_CANNON
-      : (unit?.raidAttackType === RAID_ATTACK_RANGED_MAGIC ? "遠距離魔法" : ACTION_SHOOT);
+      : (unit?.raidAttackType === RAID_ATTACK_RANGED_MAGIC ? "遠魔" : ACTION_SHOOT);
     meta.appendChild(action);
     appendRaidUnitNote(meta, cannon ? "前衛より後攻" : "前衛に先制");
     appendRaidUnitNote(meta, `被弾${cannon ? RAID_CANNON_INCOMING_DAMAGE_MULTIPLIER : RAID_MIDDLE_INCOMING_DAMAGE_MULTIPLIER}倍`);
   }
+
+  // 戦闘に効く特性はバッジで見せる。行動バッジと区別できる配色にする。
+  RAID_BADGE_TRAITS.filter(trait => hasTrait(unit, trait)).forEach(trait => {
+    const badge = document.createElement("span");
+    badge.className = "raid-unit-trait";
+    badge.textContent = trait;
+    meta.appendChild(badge);
+  });
 
   getRaidVisibleEffects(unit).forEach(effectName => {
     const effect = document.createElement("span");
