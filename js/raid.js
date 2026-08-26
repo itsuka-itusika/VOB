@@ -674,6 +674,9 @@ export function proceedRaidAction(village) {
     case "COMBAT":
       actionResult = doOneCombatAction(action, village);
       break;
+    case "FORTIFY_GROUP":
+      actionResult = doFortifyGroupAction(action, village);
+      break;
     case "WAR_LIGHT_PILLAR":
       actionResult = doWarLightPillarAction(action, village);
       break;
@@ -806,15 +809,21 @@ export function setupCombatPhase(village) {
   updateRaidTables(village);
 }
 
-/** 行動順: 中衛の勇気降順 -> 前衛の勇気降順 -> 火砲の勇気降順 */
+/** 行動順: 籠城のまとめ表示 -> 中衛の勇気降順 -> 前衛の勇気降順 -> 火砲の勇気降順 */
 function createCombatActions(village) {
   const allUnits = getVillageCombatants(village).concat(getAliveEnemies(village));
+  // 籠城は自分の手番を持たず、ターン冒頭に全員まとめて構えを見せる。
+  const isVillageFortify = unit => !isEnemyUnit(unit, village) && unit?.action === ACTION_FORTIFY;
+  const fortifyUnits = sortByCourage(allUnits.filter(isVillageFortify));
   const middleUnits = sortByCourage(allUnits.filter(unit =>
     getCombatPosition(unit, village) === RAID_POSITION_MIDDLE && !isCannonUnit(unit, village)
   ));
-  const frontUnits = sortByCourage(allUnits.filter(unit => getCombatPosition(unit, village) === RAID_POSITION_FRONT));
+  const frontUnits = sortByCourage(allUnits.filter(unit =>
+    getCombatPosition(unit, village) === RAID_POSITION_FRONT && !isVillageFortify(unit)
+  ));
   const cannonUnits = sortByCourage(allUnits.filter(unit => isCannonUnit(unit, village)));
-  return middleUnits.concat(frontUnits, cannonUnits).map(unit => {
+  const actions = fortifyUnits.length > 0 ? [{ type: "FORTIFY_GROUP", actors: fortifyUnits }] : [];
+  return actions.concat(middleUnits.concat(frontUnits, cannonUnits).map(unit => {
     const isWarLightPillar = village.currentRaid?.id === APOCALYPSE_GRAND_CRUSADE_ID &&
       village.raidTurnCount === WAR_LIGHT_PILLAR_TURN &&
       unit?.raiderType === APOCALYPSE_WAR_RAIDER_TYPE;
@@ -825,7 +834,7 @@ function createCombatActions(village) {
       ? "WAR_LIGHT_PILLAR"
       : (isConquestJudgmentLight ? "CONQUEST_JUDGMENT_LIGHT" : "COMBAT");
     return { type, actor:unit };
-  });
+  }));
 }
 
 /** 第六の災厄・6ターン目の《戦争》専用行動 */
@@ -890,6 +899,17 @@ function doConquestJudgmentLightAction(action, village) {
   return result;
 }
 
+/** ターン冒頭の籠城まとめ表示。籠城の村人は個別の手番を持たない。 */
+function doFortifyGroupAction(action, village) {
+  const result = createRaidActionResult();
+  const actors = (action.actors || []).filter(actor => canActInCombat(actor, village));
+  if (actors.length === 0) return result;
+  actors.forEach(actor => addRaidActionAnimation(result, actor, "籠城"));
+  const label = actors.length === 1 ? actors[0].name : "村人たち";
+  addRaidActionLog(result, `【籠城】${label}は木柵に身を寄せ、攻撃に備えた`);
+  return result;
+}
+
 /** 1件のCOMBAT行動 */
 function doOneCombatAction(action, village) {
   let actor=action.actor;
@@ -902,12 +922,6 @@ function doOneCombatAction(action, village) {
     addRaidActionLog(result, getRaidActionSkipMessage(actor, actionLabel, {
       ignoreRoleTraits: isEnemyUnit(actor, village)
     }));
-    return result;
-  }
-
-  if (!isEnemyUnit(actor, village) && actor.action === ACTION_FORTIFY) {
-    addRaidActionAnimation(result, actor, "籠城");
-    addRaidActionLog(result, `【籠城】${actor.name}は木柵に身を寄せ、攻撃に備えた`);
     return result;
   }
 
