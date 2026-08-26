@@ -1300,7 +1300,7 @@ export const RAID_MODULES = [
       resource: "funds",
       label: "巡礼の寄付を払う",
       rate: 0.5,
-      minAmount: 500
+      minAmount: 200
     },
     representative: [
       { raiderType: "上級騎士" },
