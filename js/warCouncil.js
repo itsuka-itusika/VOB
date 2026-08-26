@@ -190,6 +190,13 @@ function getOverCapacityLines(village) {
 
 function renderVillagerRow(person, village) {
   const cells = COUNCIL_LINES.flatMap(line => line.actions.map(entry => {
+    // 未解放の行動はネタバレ防止のため、名称をツールチップ等にも出さない。
+    if (entry.unlocked && !entry.unlocked(village)) {
+      return `
+      <td class="wc-check-cell is-blocked">
+        <input type="checkbox" disabled aria-label="未解放の行動">
+      </td>`;
+    }
     const checked = person.action === entry.action;
     const reason = getCheckboxBlockReason(person, entry, line, village);
     const title = reason || getCouncilActionEstimate(person, entry.action, village);
@@ -257,7 +264,7 @@ function renderBody(village) {
     .flatMap(line => line.actions.map(entry => {
       const locked = entry.unlocked && !entry.unlocked(village);
       return locked
-        ? `<th class="wc-action-head is-locked" title="${escapeHtml(`${entry.label}は未解放です`)}">-</th>`
+        ? '<th class="wc-action-head is-locked">-</th>'
         : `<th class="wc-action-head">${escapeHtml(entry.label)}</th>`;
     }))
     .join("");
