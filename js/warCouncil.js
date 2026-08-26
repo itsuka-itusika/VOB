@@ -18,6 +18,7 @@ import {
   canMakeTrapInRaid,
   canShootInRaid,
   estimateRaidActionDamage,
+  estimateRaidCounterDamage,
   getFortifyDamageMultiplier,
   getRaidActionBlockReason,
   getRaidActionStatLabel,
@@ -131,7 +132,10 @@ export function getCouncilActionEstimate(person, action, village) {
     return [["攻撃なし", incomingLabel].filter(Boolean).join("　"), "攻撃も反撃も行わない"].join("\n");
   }
 
-  const damage = estimateRaidActionDamage(person, action, village);
+  // 反撃は実戦闘で通常攻撃の半分になるため、専用の見積もりを使う。
+  const damage = meta.counterOnly
+    ? estimateRaidCounterDamage(person, village)
+    : estimateRaidActionDamage(person, action, village);
   const statLabel = getRaidActionStatLabel(person, action, village);
   const head = [meta.order, incomingLabel].filter(Boolean).join("　");
   const damageLabel = meta.counterOnly ? "予想反撃ダメージ" : "予想ダメージ";

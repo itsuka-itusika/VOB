@@ -67,6 +67,7 @@ import {
   ACTION_SHOOT,
   ACTION_TRAP,
   estimateRaidActionDamage,
+  estimateRaidCounterDamage,
   getFortifyDamageMultiplier,
   getRaidSlotLimitMessage,
   isRaidActionSlotAvailable
@@ -627,7 +628,7 @@ function getTaskEstimateParts(person, task, village) {
       parts = [`想定ダメージ${estimateRaidActionDamage(person, ACTION_DEFEND, village)}`, "反撃あり"];
       break;
     case "籠城":
-      parts = [`想定ダメージ${estimateRaidActionDamage(person, ACTION_FORTIFY, village)}`, `被弾${getFortifyDamageMultiplier(village)}倍`, "反撃あり"];
+      parts = [`想定反撃ダメージ${estimateRaidCounterDamage(person, village)}`, `被弾${getFortifyDamageMultiplier(village)}倍`, "攻撃なし"];
       break;
     case "射撃":
       parts = [`想定ダメージ${estimateRaidActionDamage(person, ACTION_SHOOT, village)}`, "先制", `被弾${RAID_MIDDLE_INCOMING_DAMAGE_MULTIPLIER}倍`, "反撃なし"];
