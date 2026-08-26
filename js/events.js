@@ -68,7 +68,7 @@ import { showRandomEventModal } from "./randomEventModal.js";
 
 const OPENING_RAID_GRACE_YEAR = 1195;
 const OPENING_RAID_GRACE_LAST_MONTH = 6;
-const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成"]);
+const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成", "人面獣身"]);
 
 const TRAIT_INJURED = "負傷";
 const TRAIT_SERIOUS_INJURY = "重体";

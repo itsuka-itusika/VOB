@@ -725,7 +725,7 @@ export const RAIDER_TYPES = [
     minCount: 1,
     maxCount: 1,
     race: "スフィンクス",
-    ageRange: { min: 30, max: 120 },
+    ageRange: { min: 80, max: 150 },
     params: {
       job: "スフィンクス",
       action: "襲撃"
@@ -800,7 +800,7 @@ export const RAIDER_TYPES = [
     maxCount: 1,
     race: "翼人",
     forcedSex: "女",
-    ageRange: { min: 25, max: 60 },
+    ageRange: { min: 100, max: 300 },
     params: {
       job: "上位翼人",
       action: "襲撃"

@@ -13,7 +13,7 @@ import {
 export const STAT_LAYER_VERSION = 2;
 
 const ZERO_STAT_MAP = Object.freeze(Object.fromEntries(ABILITY_STATS.map(stat => [stat, 0])));
-const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成"]);
+const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成", "人面獣身"]);
 
 const PERMANENT_BODY_TRAIT_ADDS = Object.freeze({
   "巨躯": { str: 10 },
