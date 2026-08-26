@@ -3885,7 +3885,7 @@ body:has(#warCouncilModal) #conversationModal { z-index: 2201; }
   font-variant-numeric: tabular-nums;
 }
 .wc-check-cell.is-blocked {
-  background: #e9e4d8;
+  background: #ececec;
 }
 .wc-check-cell input {
   cursor: pointer;
@@ -3901,7 +3901,7 @@ body:has(#warCouncilModal) #conversationModal { z-index: 2201; }
 }
 /* 迎撃系に就いている間は通常行動を休むため、セルの背景だけ薄く見せる */
 .wc-task.is-suspended {
-  background: #e9e4d8;
+  background: #ececec;
 }
 .wc-estimate {
   text-align: left;
