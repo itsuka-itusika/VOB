@@ -1293,14 +1293,15 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
     if (btn) {
       btn.textContent="次の月へ";
       btn.disabled = false;
+      btn.title = "";
     }
     let autoAssignBtn = document.getElementById("autoAssignButton");
     if (autoAssignBtn) {
       autoAssignBtn.textContent = "自動割り振り";
     }
-    const raidAssignBtn = document.getElementById("raidAssignButton");
-    if (raidAssignBtn) {
-      raidAssignBtn.style.display = "none";
+    const warCouncilBtn = document.getElementById("warCouncilButton");
+    if (warCouncilBtn) {
+      warCouncilBtn.style.display = "none";
     }
 
     // 襲撃終了後、その月の残り処理を実行→次月へ

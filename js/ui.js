@@ -1131,9 +1131,15 @@ export function updateUI(v) {
       actionButtons.classList.toggle("is-raid-mode", raidMode);
     }
     autoAssignButton.textContent = "自動割り振り";
-    const raidAssignButton = document.getElementById("raidAssignButton");
-    if (raidAssignButton) {
-      raidAssignButton.style.display = raidMode ? "" : "none";
+    const warCouncilButton = document.getElementById("warCouncilButton");
+    if (warCouncilButton) {
+      warCouncilButton.style.display = raidMode ? "" : "none";
+    }
+    // 襲撃中に月を進める操作は作戦会議の「迎撃開始」へ寄せる。
+    const nextTurnButton = document.getElementById("nextTurnButton");
+    if (nextTurnButton && !v.isRaidFinalizing) {
+      nextTurnButton.disabled = raidMode;
+      nextTurnButton.title = raidMode ? "襲撃中は作戦会議から迎撃を始めます" : "";
     }
   }
 

@@ -32,6 +32,7 @@ import { getVillageScaleStage, getVillageScaleTitle, VILLAGE_SCALE_STAGES } from
 import { DIVINE_MIGHT_LEVELS } from "./divineMight.js";
 import { resumePendingHeresyInquisition } from "./heresyInquisition.js";
 import { openAutoAssignSettingsModal } from "./autoAssignSettings.js";
+import { closeWarCouncilModal, isWarCouncilOpen, openWarCouncilModal, refreshWarCouncil } from "./warCouncil.js";
 
 const APOCALYPSE_DEBUG_VILLAGER_COUNT = 15;
 const APOCALYPSE_DEBUG_RESOURCE_AMOUNT = 10000;
@@ -351,7 +352,18 @@ function bindGlobalHandlers() {
     onAutoAssignRaidActions: () => {
       autoAssignRaidActions(theVillage);
       updateUI(theVillage);
+      // 作戦会議を開いたまま押された場合は、その場の表も引き直す。
+      if (isWarCouncilOpen()) refreshWarCouncil();
     },
+    openWarCouncil: () => openWarCouncilModal(theVillage, {
+      onStart: onNextTurn,
+      onAutoAssign: () => {
+        autoAssignRaidActions(theVillage);
+        updateUI(theVillage);
+      },
+      onMiracle: () => openMiracleModal(theVillage)
+    }),
+    closeWarCouncil: closeWarCouncilModal,
     toggleSpiritColumns: setSpiritColumnsVisibility,
     closeConversationModal: async () => {
       const { closeConversationModal } = await import("./conversation.js");

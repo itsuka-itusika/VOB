@@ -1,0 +1,342 @@
+// warCouncil.js
+// 襲撃中の「作戦会議」画面。前衛・中衛・後衛の配置をチェックで決め、
+// 想定ダメージと被弾のしやすさを見比べてから迎撃を始めるための画面。
+
+import { getPortraitSpriteHtml } from "./data/portraitAtlas.js";
+import { ACTION_NONE, refreshJobTable } from "./domain/jobTables.js";
+import { isSaltPillar } from "./domain/apocalypseRules.js";
+import {
+  ACTION_CANNON,
+  ACTION_DEFEND,
+  ACTION_FORTIFY,
+  ACTION_SHOOT,
+  ACTION_TRAP,
+  canCannonInRaid,
+  canDefendInRaid,
+  canFortifyInRaid,
+  canMakeTrapInRaid,
+  canShootInRaid,
+  estimateRaidActionDamage,
+  getFortifyDamageMultiplier,
+  getRaidActionBlockReason,
+  getRaidFrontlinerSlotCount,
+  getRaidMiddleSlotCount,
+  getRaidTrapMakerSlotCount,
+  getRaidIncomingDamageMultiplier
+} from "./raidRules.js";
+
+const OVERLAY_ID = "warCouncilOverlay";
+const MODAL_ID = "warCouncilModal";
+
+// 列の並びは戦列順。1人が就けるのは1つだけで、外すと通常業務へ戻る。
+const COUNCIL_LINES = [
+  {
+    id: "front",
+    label: "前衛",
+    slots: getRaidFrontlinerSlotCount,
+    actions: [
+      { action: ACTION_DEFEND, label: "迎撃", can: canDefendInRaid },
+      { action: ACTION_FORTIFY, label: "籠城", can: canFortifyInRaid }
+    ]
+  },
+  {
+    id: "middle",
+    label: "中衛",
+    slots: getRaidMiddleSlotCount,
+    actions: [
+      { action: ACTION_SHOOT, label: "射撃", can: canShootInRaid },
+      { action: ACTION_CANNON, label: "火砲", can: canCannonInRaid }
+    ]
+  },
+  {
+    id: "rear",
+    label: "後衛",
+    slots: getRaidTrapMakerSlotCount,
+    actions: [
+      { action: ACTION_TRAP, label: "罠作成", can: (person) => canMakeTrapInRaid(person) }
+    ]
+  }
+];
+
+const ALL_COUNCIL_ACTIONS = COUNCIL_LINES.flatMap(line => line.actions.map(entry => entry.action));
+
+let councilVillage = null;
+let onCouncilStart = null;
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function getCouncilVillagers(village) {
+  const villagers = Array.isArray(village?.villagers) ? village.villagers : [];
+  return villagers.filter(person => !isSaltPillar(person));
+}
+
+/** その戦列に今何人就いているか。枠と突き合わせて表示する。 */
+function countLineAssigned(village, line) {
+  const actions = new Set(line.actions.map(entry => entry.action));
+  return getCouncilVillagers(village).filter(person => actions.has(person.action)).length;
+}
+
+function getLineSlots(village, line) {
+  const slots = line.slots(village);
+  return Number.isFinite(slots) ? slots : 0;
+}
+
+/** 想定ダメージと被弾のしやすさ。行の右端とホバーの両方で同じ文言を使う。 */
+export function getCouncilActionEstimate(person, action, village) {
+  if (!person || !action) return "";
+  const damage = estimateRaidActionDamage(person, action, village);
+  const incoming = getRaidIncomingDamageMultiplier(action, village);
+  const parts = [];
+  if (action === ACTION_SHOOT) parts.push("先制");
+  if (action === ACTION_CANNON) parts.push("後攻");
+  if (action === ACTION_TRAP) parts.push("狙われない");
+  if (action === ACTION_FORTIFY) parts.push(`被弾${getFortifyDamageMultiplier(village)}倍`);
+  if (action === ACTION_SHOOT || action === ACTION_CANNON) parts.push(`被弾${incoming}倍`);
+  parts.push(`予想ダメージ${damage}`);
+  if (action === ACTION_DEFEND || action === ACTION_FORTIFY) parts.push("反撃あり");
+  if (action === ACTION_SHOOT || action === ACTION_CANNON) parts.push("反撃なし");
+  return parts.join("　");
+}
+
+function getNormalTask(person) {
+  const preferred = String(person?.preferredAction || person?.job || ACTION_NONE).trim();
+  return preferred && preferred !== ACTION_NONE ? preferred : "なし";
+}
+
+function renderStatSummary(person) {
+  const body = [["筋", "str"], ["耐", "vit"], ["器", "dex"], ["魔", "mag"], ["魅", "chr"]];
+  const mind = [["知", "int"], ["勤", "ind"], ["倫", "eth"], ["勇", "cou"], ["色", "sexdr"]];
+  const line = pairs => pairs
+    .map(([label, key]) => `${label}${Math.floor(Number(person?.[key]) || 0)}`)
+    .join(" ");
+  return `<span class="wc-stat-line">${escapeHtml(line(body))}</span><span class="wc-stat-line">${escapeHtml(line(mind))}</span>`;
+}
+
+function renderTraits(person) {
+  const traits = [
+    ...(Array.isArray(person?.bodyTraits) ? person.bodyTraits : []),
+    ...(Array.isArray(person?.mindTraits) ? person.mindTraits : [])
+  ];
+  return traits.length > 0 ? traits.join("/") : "—";
+}
+
+/** チェックを入れられない理由。空文字なら選べる。 */
+function getCheckboxBlockReason(person, entry, line, village) {
+  if (person.action === entry.action) return "";
+  if (!entry.can(person, village)) {
+    return getRaidActionBlockReason(person, entry.action) || `${entry.label}を選べません`;
+  }
+  const slots = getLineSlots(village, line);
+  if (slots <= 0) return `${line.label}の枠がありません`;
+  const actions = new Set(line.actions.map(item => item.action));
+  const assigned = getCouncilVillagers(village)
+    .filter(other => other !== person && actions.has(other.action)).length;
+  if (assigned >= slots) return `${line.label}枠が上限です（${assigned}/${slots}）`;
+  return "";
+}
+
+function renderVillagerRow(person, village) {
+  const cells = COUNCIL_LINES.flatMap(line => line.actions.map(entry => {
+    const checked = person.action === entry.action;
+    const reason = getCheckboxBlockReason(person, entry, line, village);
+    const title = reason || getCouncilActionEstimate(person, entry.action, village);
+    return `
+      <td class="wc-check-cell${reason ? " is-blocked" : ""}" title="${escapeHtml(title)}">
+        <input type="checkbox" data-wc-person="${person.id}" data-wc-action="${escapeHtml(entry.action)}"
+          ${checked ? "checked" : ""} ${reason ? "disabled" : ""}
+          aria-label="${escapeHtml(`${person.name}を${entry.label}に就ける`)}">
+      </td>`;
+  })).join("");
+
+  const estimate = ALL_COUNCIL_ACTIONS.includes(person.action)
+    ? getCouncilActionEstimate(person, person.action, village)
+    : "";
+
+  return `
+    <tr data-wc-row="${person.id}">
+      <td class="wc-portrait-cell">${getPortraitSpriteHtml(person, { size: 40, alt: person.name })}</td>
+      <td class="wc-name-cell">
+        <div class="wc-name">${escapeHtml(person.name)}</div>
+        <div class="wc-traits">${escapeHtml(renderTraits(person))}</div>
+      </td>
+      <td class="wc-hp">${Math.floor(Number(person.hp) || 0)}</td>
+      <td class="wc-stats">${renderStatSummary(person)}</td>
+      ${cells}
+      <td class="wc-task">${escapeHtml(getNormalTask(person))}</td>
+      <td class="wc-estimate">${escapeHtml(estimate)}</td>
+    </tr>`;
+}
+
+function renderSlotRow(village) {
+  const cells = COUNCIL_LINES.map(line => {
+    const assigned = countLineAssigned(village, line);
+    const slots = getLineSlots(village, line);
+    const over = assigned > slots;
+    return `
+      <td class="wc-slot-cell${over ? " is-over" : ""}" colspan="${line.actions.length}">
+        <span class="wc-slot-count">${assigned}/${slots}</span>
+        ${over ? '<span class="wc-slot-over">出撃枠超過</span>' : ""}
+      </td>`;
+  }).join("");
+  return `<tr class="wc-slot-row"><td colspan="4"></td>${cells}<td colspan="2"></td></tr>`;
+}
+
+function renderEnemyRow(enemy) {
+  return `
+    <tr>
+      <td class="wc-portrait-cell">${getPortraitSpriteHtml(enemy, { size: 40, alt: enemy.name })}</td>
+      <td class="wc-name-cell">
+        <div class="wc-name">${escapeHtml(enemy.name)}</div>
+        <div class="wc-traits">${escapeHtml(renderTraits(enemy))}</div>
+      </td>
+      <td class="wc-hp">${Math.floor(Number(enemy.hp) || 0)}</td>
+      <td class="wc-stats">${renderStatSummary(enemy)}</td>
+    </tr>`;
+}
+
+function renderBody(village) {
+  const lineHeaders = COUNCIL_LINES
+    .map(line => `<th colspan="${line.actions.length}" class="wc-line-head">${escapeHtml(line.label)}</th>`)
+    .join("");
+  const actionHeaders = COUNCIL_LINES
+    .flatMap(line => line.actions.map(entry => `<th class="wc-action-head">${escapeHtml(entry.label)}</th>`))
+    .join("");
+  const rows = getCouncilVillagers(village).map(person => renderVillagerRow(person, village)).join("");
+  const enemies = Array.isArray(village.raidEnemies) ? village.raidEnemies : [];
+
+  return `
+    <table class="wc-table">
+      <thead>
+        <tr>
+          <th rowspan="2" class="wc-col-portrait">顔</th>
+          <th rowspan="2" class="wc-col-name">名前<br>特性</th>
+          <th rowspan="2" class="wc-col-hp">体力</th>
+          <th rowspan="2" class="wc-col-stats">能力</th>
+          ${lineHeaders}
+          <th rowspan="2" class="wc-col-task">通常業務</th>
+          <th rowspan="2" class="wc-col-estimate">予想</th>
+        </tr>
+        <tr>${actionHeaders}</tr>
+      </thead>
+      <tbody>
+        ${rows || '<tr><td colspan="11" class="wc-empty">配置できる村人がいません。</td></tr>'}
+        ${renderSlotRow(village)}
+      </tbody>
+    </table>
+
+    <h3 class="wc-enemy-heading">襲撃者</h3>
+    <table class="wc-table wc-enemy-table">
+      <thead>
+        <tr>
+          <th class="wc-col-portrait">顔</th>
+          <th class="wc-col-name">名前<br>特性</th>
+          <th class="wc-col-hp">体力</th>
+          <th class="wc-col-stats">能力</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${enemies.map(renderEnemyRow).join("") || '<tr><td colspan="4" class="wc-empty">襲撃者はいません。</td></tr>'}
+      </tbody>
+    </table>
+  `;
+}
+
+function refreshCouncilBody() {
+  const content = document.querySelector(`#${MODAL_ID} .wc-content`);
+  if (!content || !councilVillage) return;
+  content.innerHTML = renderBody(councilVillage);
+  bindCouncilInputs();
+}
+
+function setPersonAction(person, action, village) {
+  // 1人が就けるのは1つだけ。外した場合は通常業務へ戻す。
+  person.action = action || getNormalTask(person);
+  if (!action) refreshJobTable(person, village);
+}
+
+function bindCouncilInputs() {
+  const content = document.querySelector(`#${MODAL_ID} .wc-content`);
+  if (!content || !councilVillage) return;
+  content.querySelectorAll("[data-wc-person]").forEach(box => {
+    box.addEventListener("change", () => {
+      const person = getCouncilVillagers(councilVillage)
+        .find(item => String(item.id) === box.dataset.wcPerson);
+      if (!person) return;
+      setPersonAction(person, box.checked ? box.dataset.wcAction : "", councilVillage);
+      refreshCouncilBody();
+    });
+  });
+}
+
+export function closeWarCouncilModal() {
+  document.getElementById(OVERLAY_ID)?.remove();
+  document.getElementById(MODAL_ID)?.remove();
+  councilVillage = null;
+  onCouncilStart = null;
+}
+
+export function isWarCouncilOpen() {
+  return typeof document !== "undefined" && !!document.getElementById(MODAL_ID);
+}
+
+/** 画面を開いたまま配置だけ引き直す。防衛割り振りボタンから使う。 */
+export function refreshWarCouncil() {
+  refreshCouncilBody();
+}
+
+export function openWarCouncilModal(village, { onStart = null, onAutoAssign = null, onMiracle = null } = {}) {
+  if (typeof document === "undefined" || !village) return;
+  closeWarCouncilModal();
+  councilVillage = village;
+  onCouncilStart = onStart;
+
+  const overlay = document.createElement("div");
+  overlay.id = OVERLAY_ID;
+  overlay.className = "wc-overlay";
+
+  const modal = document.createElement("div");
+  modal.id = MODAL_ID;
+  modal.className = "wc-modal";
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-modal", "true");
+  modal.setAttribute("aria-labelledby", `${MODAL_ID}Title`);
+  modal.innerHTML = `
+    <div class="wc-header">
+      <h2 id="${MODAL_ID}Title">作戦会議</h2>
+      <div class="wc-header-buttons">
+        <button type="button" class="wc-start" data-wc-start>迎撃開始</button>
+        <button type="button" data-wc-auto>防衛割り振り</button>
+        <button type="button" data-wc-miracle>奇跡の行使</button>
+        <button type="button" data-wc-close>戻る</button>
+      </div>
+    </div>
+    <p class="wc-lead">チェックで配置を決めます。チェック欄にマウスを合わせると、予想ダメージと被弾のしやすさが出ます。</p>
+    <div class="wc-content">${renderBody(village)}</div>
+  `;
+
+  document.body.appendChild(overlay);
+  document.body.appendChild(modal);
+  bindCouncilInputs();
+
+  modal.querySelector("[data-wc-close]").onclick = closeWarCouncilModal;
+  modal.querySelector("[data-wc-auto]").onclick = () => {
+    if (typeof onAutoAssign === "function") onAutoAssign();
+    refreshCouncilBody();
+  };
+  modal.querySelector("[data-wc-miracle]").onclick = () => {
+    if (typeof onMiracle === "function") onMiracle();
+  };
+  modal.querySelector("[data-wc-start]").onclick = () => {
+    const start = onCouncilStart;
+    closeWarCouncilModal();
+    if (typeof start === "function") start();
+  };
+  modal.querySelector("[data-wc-start]")?.focus();
+}

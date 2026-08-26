@@ -542,6 +542,7 @@ export function resetRaidUiAfterAvoidance() {
   if (nextBtn) {
     nextBtn.textContent = "次の月へ";
     nextBtn.disabled = false;
+    nextBtn.title = "";
   }
 
   const autoAssignBtn = document.getElementById("autoAssignButton");
@@ -549,9 +550,9 @@ export function resetRaidUiAfterAvoidance() {
     autoAssignBtn.textContent = "自動割り振り";
   }
 
-  const raidAssignBtn = document.getElementById("raidAssignButton");
-  if (raidAssignBtn) {
-    raidAssignBtn.style.display = "none";
+  const warCouncilBtn = document.getElementById("warCouncilButton");
+  if (warCouncilBtn) {
+    warCouncilBtn.style.display = "none";
   }
 }
 
@@ -749,17 +750,20 @@ export function startRaidEvent(village, options = {}) {
   }
 
   if (typeof document !== "undefined") {
+    // 襲撃中の配置と開始は作戦会議へ集約する。
     let nextBtn = document.getElementById("nextTurnButton");
     if (nextBtn) {
-      nextBtn.innerHTML = `<b style="color:red;">防衛開始</b>`;
+      nextBtn.textContent = "次の月へ";
+      nextBtn.disabled = true;
+      nextBtn.title = "襲撃中は作戦会議から迎撃を始めます";
     }
     let autoAssignBtn = document.getElementById("autoAssignButton");
     if (autoAssignBtn) {
       autoAssignBtn.textContent = "自動割り振り";
     }
-    const raidAssignBtn = document.getElementById("raidAssignButton");
-    if (raidAssignBtn) {
-      raidAssignBtn.style.display = "";
+    const warCouncilBtn = document.getElementById("warCouncilButton");
+    if (warCouncilBtn) {
+      warCouncilBtn.style.display = "";
     }
   }
 
