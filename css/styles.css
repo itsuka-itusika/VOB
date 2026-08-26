@@ -3893,7 +3893,7 @@ body:has(#warCouncilModal) #conversationModal { z-index: 2201; }
 .wc-check-cell.is-blocked input {
   cursor: default;
 }
-.wc-check-cell.is-locked {
+.wc-action-head.is-locked {
   color: #8b8478;
 }
 .wc-task {

@@ -190,10 +190,6 @@ function getOverCapacityLines(village) {
 
 function renderVillagerRow(person, village) {
   const cells = COUNCIL_LINES.flatMap(line => line.actions.map(entry => {
-    // 建築で解放されていない行動は、チェック欄を出さず「-」で示す。
-    if (entry.unlocked && !entry.unlocked(village)) {
-      return `<td class="wc-check-cell is-locked" title="${escapeHtml(`${entry.label}は未解放です`)}">-</td>`;
-    }
     const checked = person.action === entry.action;
     const reason = getCheckboxBlockReason(person, entry, line, village);
     const title = reason || getCouncilActionEstimate(person, entry.action, village);
@@ -256,8 +252,14 @@ function renderBody(village) {
   const lineHeaders = COUNCIL_LINES
     .map(line => `<th colspan="${line.actions.length}" class="wc-line-head">${escapeHtml(line.label)}</th>`)
     .join("");
+  // 建築で解放されていない行動は、列名を「-」にして未解放であることを示す。
   const actionHeaders = COUNCIL_LINES
-    .flatMap(line => line.actions.map(entry => `<th class="wc-action-head">${escapeHtml(entry.label)}</th>`))
+    .flatMap(line => line.actions.map(entry => {
+      const locked = entry.unlocked && !entry.unlocked(village);
+      return locked
+        ? `<th class="wc-action-head is-locked" title="${escapeHtml(`${entry.label}は未解放です`)}">-</th>`
+        : `<th class="wc-action-head">${escapeHtml(entry.label)}</th>`;
+    }))
     .join("");
   const rows = getCouncilVillagers(village).map(person => renderVillagerRow(person, village)).join("");
   const enemies = Array.isArray(village.raidEnemies) ? village.raidEnemies : [];
