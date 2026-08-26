@@ -187,7 +187,8 @@ function renderVillagerRow(person, village) {
       </td>`;
   })).join("");
 
-  const estimate = ALL_COUNCIL_ACTIONS.includes(person.action)
+  const onCouncilDuty = ALL_COUNCIL_ACTIONS.includes(person.action);
+  const estimate = onCouncilDuty
     ? getCouncilActionEstimate(person, person.action, village)
     : "";
 
@@ -201,7 +202,7 @@ function renderVillagerRow(person, village) {
       <td class="wc-hp">${Math.floor(Number(person.hp) || 0)}</td>
       <td class="wc-stats">${renderStatSummary(person)}</td>
       ${cells}
-      <td class="wc-task">${escapeHtml(getNormalTask(person))}</td>
+      <td class="wc-task${onCouncilDuty ? " is-suspended" : ""}">${escapeHtml(getNormalTask(person))}</td>
       <td class="wc-estimate">${escapeHtml(estimate).replace(/\n/g, "<br>")}</td>
     </tr>`;
 }
@@ -252,7 +253,7 @@ function renderBody(village) {
           <th rowspan="2" class="wc-col-hp">体力</th>
           <th rowspan="2" class="wc-col-stats">能力</th>
           ${lineHeaders}
-          <th rowspan="2" class="wc-col-task">通常業務</th>
+          <th rowspan="2" class="wc-col-task">通常行動</th>
           <th rowspan="2" class="wc-col-estimate">予想</th>
         </tr>
         <tr>${actionHeaders}</tr>

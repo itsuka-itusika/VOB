@@ -3896,6 +3896,10 @@ body:has(#warCouncilModal) #conversationModal { z-index: 2201; }
 .wc-task {
   font-size: 0.74rem;
 }
+/* 迎撃系に就いている間は通常行動を休むため、薄く見せる */
+.wc-task.is-suspended {
+  color: #b0a793;
+}
 .wc-estimate {
   text-align: left;
   font-size: 0.72rem;
