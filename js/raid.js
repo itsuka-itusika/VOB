@@ -1674,6 +1674,21 @@ function appendRaidNameCell(row, unit, village = null) {
     appendRaidUnitNote(meta, `被弾${RAID_CANNON_INCOMING_DAMAGE_MULTIPLIER}倍`);
   }
 
+  // 敵の中衛にも攻撃手段のラベルと同じ注記を出す。
+  const isEnemyMiddle = Boolean(village) && isEnemyUnit(unit, village) &&
+    getCombatPosition(unit, village) === RAID_POSITION_MIDDLE;
+  if (isEnemyMiddle) {
+    const cannon = isCannonUnit(unit, village);
+    const action = document.createElement("span");
+    action.className = "raid-unit-action";
+    action.textContent = cannon
+      ? ACTION_CANNON
+      : (unit?.raidAttackType === RAID_ATTACK_RANGED_MAGIC ? "遠距離魔法" : ACTION_SHOOT);
+    meta.appendChild(action);
+    appendRaidUnitNote(meta, cannon ? "前衛より後攻" : "前衛に先制");
+    appendRaidUnitNote(meta, `被弾${cannon ? RAID_CANNON_INCOMING_DAMAGE_MULTIPLIER : RAID_MIDDLE_INCOMING_DAMAGE_MULTIPLIER}倍`);
+  }
+
   getRaidVisibleEffects(unit).forEach(effectName => {
     const effect = document.createElement("span");
     effect.className = "raid-unit-effect";
