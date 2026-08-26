@@ -203,6 +203,31 @@ export function estimateRaidActionDamage(person, action, village = null) {
   return applyOffensiveTraitDamage(person, base);
 }
 
+// 予想ダメージがどの能力から出ているか。作戦会議の表示に使う。
+const RAID_ACTION_STAT_LABELS = Object.freeze({
+  physical: "筋＊勇",
+  magical: "魔＊勇",
+  [ACTION_SHOOT]: "器＊勇",
+  [ACTION_CANNON]: "魔＊知",
+  [ACTION_TRAP]: "器＊知"
+});
+
+/**
+ * その行動の予想ダメージが参照する能力の組。
+ * 迎撃・籠城は物理と魔法の高い方を採るため、実際に採用される側を返す。
+ */
+export function getRaidActionStatLabel(person, action, village = null) {
+  if (!person) return "";
+  if (action === ACTION_DEFEND || action === ACTION_FORTIFY) {
+    const stat = key => Number(person[key]) || 0;
+    const averageVitality = getAverageEnemyVitality(village);
+    const physical = Math.max(0, Math.floor((stat("str") * stat("cou") / 400) * 50 - averageVitality));
+    const magical = Math.max(0, Math.floor((stat("mag") * stat("cou") / 400) * 25));
+    return physical >= magical ? RAID_ACTION_STAT_LABELS.physical : RAID_ACTION_STAT_LABELS.magical;
+  }
+  return RAID_ACTION_STAT_LABELS[action] || "";
+}
+
 /** 生存中の襲撃者の総体力。防衛の勝ち目を測るのに使う。 */
 export function getEnemyTotalHp(village) {
   const enemies = Array.isArray(village?.raidEnemies) ? village.raidEnemies : [];

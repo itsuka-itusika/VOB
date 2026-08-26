@@ -3853,15 +3853,25 @@ section h2 {
 .wc-col-hp { width: 52px; }
 .wc-col-stats { width: 190px; }
 .wc-col-task { width: 84px; }
-.wc-col-estimate { width: 210px; }
+.wc-col-estimate { width: 240px; }
 .wc-action-head { width: 54px; }
 .wc-portrait-cell { padding: 2px; }
 .wc-name-cell { text-align: left; }
 .wc-name { font-weight: bold; }
 .wc-traits {
   font-size: 0.7rem;
-  color: #6d6355;
   line-height: 1.25;
+}
+/* 肉体特性は濃いオレンジ、精神特性は緑。区切りは地の色で目立たせない。 */
+.wc-body-trait {
+  color: #b45309;
+}
+.wc-mind-trait {
+  color: #2e7d32;
+}
+.wc-trait-sep {
+  margin: 0 3px;
+  color: #8b8478;
 }
 .wc-hp { font-variant-numeric: tabular-nums; }
 .wc-stats { text-align: left; }
@@ -3919,5 +3929,5 @@ section h2 {
     padding: 2px 3px;
   }
   .wc-col-stats { width: 150px; }
-  .wc-col-estimate { width: 150px; }
+  .wc-col-estimate { width: 170px; }
 }

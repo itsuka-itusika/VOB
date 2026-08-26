@@ -19,11 +19,22 @@ import {
   estimateRaidActionDamage,
   getFortifyDamageMultiplier,
   getRaidActionBlockReason,
+  getRaidActionStatLabel,
   getRaidFrontlinerSlotCount,
   getRaidMiddleSlotCount,
   getRaidTrapMakerSlotCount,
   getRaidIncomingDamageMultiplier
 } from "./raidRules.js";
+
+// 予想欄に出す、行動そのものの性質。参照ステと予想値は村人ごとに算出する。
+const COUNCIL_ACTION_NOTES = {
+  [ACTION_DEFEND]: { order: "", counterOnly: false, note: "反撃あり" },
+  // 籠城は自分から攻撃せず、前衛として反撃だけを返す。
+  [ACTION_FORTIFY]: { order: "攻撃なし", counterOnly: true, note: "" },
+  [ACTION_SHOOT]: { order: "先制", counterOnly: false, note: "反撃なし" },
+  [ACTION_CANNON]: { order: "後攻", counterOnly: false, note: "反撃なし" },
+  [ACTION_TRAP]: { order: "0ターン目に攻撃して離脱", counterOnly: false, note: "狙われない" }
+};
 
 const OVERLAY_ID = "warCouncilOverlay";
 const MODAL_ID = "warCouncilModal";
@@ -88,21 +99,25 @@ function getLineSlots(village, line) {
   return Number.isFinite(slots) ? slots : 0;
 }
 
-/** 想定ダメージと被弾のしやすさ。行の右端とホバーの両方で同じ文言を使う。 */
+/**
+ * 予想ダメージ、参照する能力、被弾倍率、行動順。
+ * 行の右端とホバーで同じ文言を使う。
+ */
 export function getCouncilActionEstimate(person, action, village) {
   if (!person || !action) return "";
+  const meta = COUNCIL_ACTION_NOTES[action];
+  if (!meta) return "";
   const damage = estimateRaidActionDamage(person, action, village);
-  const incoming = getRaidIncomingDamageMultiplier(action, village);
-  const parts = [];
-  if (action === ACTION_SHOOT) parts.push("先制");
-  if (action === ACTION_CANNON) parts.push("後攻");
-  if (action === ACTION_TRAP) parts.push("狙われない");
-  if (action === ACTION_FORTIFY) parts.push(`被弾${getFortifyDamageMultiplier(village)}倍`);
-  if (action === ACTION_SHOOT || action === ACTION_CANNON) parts.push(`被弾${incoming}倍`);
-  parts.push(`予想ダメージ${damage}`);
-  if (action === ACTION_DEFEND || action === ACTION_FORTIFY) parts.push("反撃あり");
-  if (action === ACTION_SHOOT || action === ACTION_CANNON) parts.push("反撃なし");
-  return parts.join("　");
+  const statLabel = getRaidActionStatLabel(person, action, village);
+  const incoming = action === ACTION_FORTIFY
+    ? getFortifyDamageMultiplier(village)
+    : getRaidIncomingDamageMultiplier(action, village);
+
+  const head = [meta.order, incoming > 0 ? `被弾${incoming}倍` : ""].filter(Boolean).join("　");
+  const damageLabel = meta.counterOnly ? "予想反撃ダメージ" : "予想ダメージ";
+  const body = [`${damageLabel}${damage}${statLabel ? `（${statLabel}）` : ""}`, meta.note]
+    .filter(Boolean).join("　");
+  return [head, body].filter(Boolean).join("\n");
 }
 
 function getNormalTask(person) {
@@ -119,12 +134,18 @@ function renderStatSummary(person) {
   return `<span class="wc-stat-line">${escapeHtml(line(body))}</span><span class="wc-stat-line">${escapeHtml(line(mind))}</span>`;
 }
 
+// 肉体特性と精神特性は色で分け、同じ側は「・」、肉体と精神の間は「/」で区切る。
 function renderTraits(person) {
-  const traits = [
-    ...(Array.isArray(person?.bodyTraits) ? person.bodyTraits : []),
-    ...(Array.isArray(person?.mindTraits) ? person.mindTraits : [])
-  ];
-  return traits.length > 0 ? traits.join("/") : "—";
+  const body = Array.isArray(person?.bodyTraits) ? person.bodyTraits : [];
+  const mind = Array.isArray(person?.mindTraits) ? person.mindTraits : [];
+  const groups = [];
+  if (body.length > 0) {
+    groups.push(`<span class="wc-body-trait">${escapeHtml(body.join("・"))}</span>`);
+  }
+  if (mind.length > 0) {
+    groups.push(`<span class="wc-mind-trait">${escapeHtml(mind.join("・"))}</span>`);
+  }
+  return groups.length > 0 ? groups.join('<span class="wc-trait-sep">/</span>') : "—";
 }
 
 /** チェックを入れられない理由。空文字なら選べる。 */
@@ -164,13 +185,13 @@ function renderVillagerRow(person, village) {
       <td class="wc-portrait-cell">${getPortraitSpriteHtml(person, { size: 40, alt: person.name })}</td>
       <td class="wc-name-cell">
         <div class="wc-name">${escapeHtml(person.name)}</div>
-        <div class="wc-traits">${escapeHtml(renderTraits(person))}</div>
+        <div class="wc-traits">${renderTraits(person)}</div>
       </td>
       <td class="wc-hp">${Math.floor(Number(person.hp) || 0)}</td>
       <td class="wc-stats">${renderStatSummary(person)}</td>
       ${cells}
       <td class="wc-task">${escapeHtml(getNormalTask(person))}</td>
-      <td class="wc-estimate">${escapeHtml(estimate)}</td>
+      <td class="wc-estimate">${escapeHtml(estimate).replace(/\n/g, "<br>")}</td>
     </tr>`;
 }
 
@@ -194,7 +215,7 @@ function renderEnemyRow(enemy) {
       <td class="wc-portrait-cell">${getPortraitSpriteHtml(enemy, { size: 40, alt: enemy.name })}</td>
       <td class="wc-name-cell">
         <div class="wc-name">${escapeHtml(enemy.name)}</div>
-        <div class="wc-traits">${escapeHtml(renderTraits(enemy))}</div>
+        <div class="wc-traits">${renderTraits(enemy)}</div>
       </td>
       <td class="wc-hp">${Math.floor(Number(enemy.hp) || 0)}</td>
       <td class="wc-stats">${renderStatSummary(enemy)}</td>
