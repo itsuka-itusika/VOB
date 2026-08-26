@@ -84,23 +84,25 @@ export function resolveStageKey(sectionId, value, settings) {
   return matched || section.stageKeys[section.stageKeys.length - 1];
 }
 
-/** 段階に対応する倍率。段階を持たない設定（資金・技術の既定）は1倍。 */
-export function getStageMultiplier(sectionId, stageKey, settings) {
-  const section = AUTO_ASSIGN_SECTION_BY_ID.get(sectionId);
-  if (!section || !stageKey) return 1;
-  const values = getSectionValues(section, settings);
-  // 資金・技術は手動設定を入れるまで段階を作らず、基本重みのまま扱う。
-  if (section.optionalStages && !values.manualMultipliers) return 1;
-  const multiplier = values.multipliers[stageKey];
-  return Number.isFinite(Number(multiplier)) ? Number(multiplier) : 1;
-}
-
-/** その軸が段階を持つか。持たない場合、呼び出し側は段階判定そのものを省ける。 */
+/**
+ * その軸が段階を持つか。資金・技術は倍率か区切りのどちらかを手動にするまで
+ * 段階を作らず、所持量によらず基本重みのまま扱う。
+ */
 export function hasStagedStock(sectionId, settings) {
   const section = AUTO_ASSIGN_SECTION_BY_ID.get(sectionId);
   if (!section) return false;
   if (!section.optionalStages) return true;
-  return getSectionValues(section, settings).manualMultipliers;
+  const values = getSectionValues(section, settings);
+  return values.manualMultipliers || values.manualThresholds;
+}
+
+/** 段階に対応する倍率。段階を持たない設定（資金・技術の既定）は1倍。 */
+export function getStageMultiplier(sectionId, stageKey, settings) {
+  const section = AUTO_ASSIGN_SECTION_BY_ID.get(sectionId);
+  if (!section || !stageKey) return 1;
+  if (!hasStagedStock(sectionId, settings)) return 1;
+  const multiplier = getSectionValues(section, settings).multipliers[stageKey];
+  return Number.isFinite(Number(multiplier)) ? Number(multiplier) : 1;
 }
 
 /* -------------------------------------------
@@ -130,8 +132,9 @@ function formatThresholdCell(section, stageKey, thresholds, index) {
 function renderSectionRows(section, settings) {
   const values = getSectionValues(section, settings);
   const entry = settings[section.id];
+  const staged = hasStagedStock(section.id, settings);
   const headers = section.stageKeys.map(key => {
-    const multiplier = values.multipliers[key];
+    const multiplier = staged ? values.multipliers[key] : 1;
     return `<th><span class="aas-stage-name">${escapeHtml(section.stageLabels[key])}</span><span class="aas-stage-mul">×${multiplier}</span></th>`;
   }).join("");
 
@@ -151,9 +154,11 @@ function renderSectionRows(section, settings) {
       value="${entry.thresholds[key]}" ${values.manualThresholds ? "" : "disabled"}></td>`;
   }).join("");
 
-  const currentRow = section.stageKeys.map((key, index) => (
-    `<td class="aas-current">${escapeHtml(formatThresholdCell(section, key, values.thresholds, index))}</td>`
-  )).join("");
+  const currentRow = staged
+    ? section.stageKeys.map((key, index) => (
+      `<td class="aas-current">${escapeHtml(formatThresholdCell(section, key, values.thresholds, index))}</td>`
+    )).join("")
+    : `<td class="aas-current aas-unstaged" colspan="${section.stageKeys.length}">段階を作らず、所持量によらず一律に扱う（×1）</td>`;
 
   return `
     <section class="aas-section">

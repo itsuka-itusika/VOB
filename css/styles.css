@@ -3736,6 +3736,9 @@ section h2 {
 .aas-current-row td.aas-current {
   background: #fbf6e8;
 }
+.aas-current-row td.aas-unstaged {
+  color: #7a7263;
+}
 .aas-buttons {
   display: flex;
   justify-content: flex-end;
