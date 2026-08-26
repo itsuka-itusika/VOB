@@ -1646,8 +1646,17 @@ function appendRaidPortraitCell(row, unit) {
   row.appendChild(cell);
 }
 
-// 迎撃モーダルの名前欄にバッジで出す、戦闘へ影響する特性。
-const RAID_BADGE_TRAITS = ["飛行", "月の巫女", "月の加護", "歴戦", "戦慣れ"];
+// 迎撃モーダルの名前欄にバッジで出す、戦闘へ影響する特性。labelは表示名。
+const RAID_BADGE_TRAITS = [
+  { trait: "飛行", label: "飛行" },
+  { trait: "月の巫女", label: "月の巫女" },
+  { trait: "月の加護", label: "月の加護" },
+  { trait: "歴戦", label: "歴戦" },
+  { trait: "戦慣れ", label: "戦慣れ" },
+  { trait: "非戦主義", label: "非戦" },
+  { trait: "不殺", label: "不殺" },
+  { trait: "神聖", label: "神聖" }
+];
 
 function appendRaidUnitNote(meta, text) {
   const note = document.createElement("span");
@@ -1705,10 +1714,10 @@ function appendRaidNameCell(row, unit, village = null) {
   }
 
   // 戦闘に効く特性はバッジで見せる。行動バッジと区別できる配色にする。
-  RAID_BADGE_TRAITS.filter(trait => hasTrait(unit, trait)).forEach(trait => {
+  RAID_BADGE_TRAITS.filter(entry => hasTrait(unit, entry.trait)).forEach(entry => {
     const badge = document.createElement("span");
     badge.className = "raid-unit-trait";
-    badge.textContent = trait;
+    badge.textContent = entry.label;
     meta.appendChild(badge);
   });
 
