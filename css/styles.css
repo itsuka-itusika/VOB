@@ -3855,7 +3855,10 @@ section h2 {
 .wc-col-task { width: 84px; }
 .wc-col-estimate { width: 240px; }
 .wc-action-head { width: 54px; }
-.wc-portrait-cell { padding: 2px; }
+.wc-portrait-cell { padding: 2px; cursor: pointer; }
+/* 作戦会議から開いた会話モーダルが、作戦会議より手前に出るようにする */
+body:has(#warCouncilModal) #conversationOverlay { z-index: 2200; }
+body:has(#warCouncilModal) #conversationModal { z-index: 2201; }
 .wc-name-cell { text-align: left; }
 .wc-name { font-weight: bold; }
 .wc-traits {

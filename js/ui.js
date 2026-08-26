@@ -872,6 +872,8 @@ function appendActionCell(row, person, village, editable) {
 
   actionTable.forEach(action => {
     if (action === ACTION_NONE) return;
+    // 迎撃系の行動は作戦会議からだけ選ぶ。今就いている行動だけ表示用に残す。
+    if (RAID_ACTIONS.includes(action) && action !== currentAction) return;
     const option = document.createElement("option");
     const label = getActionOptionLabel(person, action, village);
     option.value = action;

@@ -23,7 +23,8 @@ import {
   getRaidFrontlinerSlotCount,
   getRaidMiddleSlotCount,
   getRaidTrapMakerSlotCount,
-  getRaidIncomingDamageMultiplier
+  getRaidIncomingDamageMultiplier,
+  isPacifistFighter
 } from "./raidRules.js";
 
 // 予想欄に出す、行動そのものの性質。参照ステと予想値は村人ごとに算出する。
@@ -32,8 +33,8 @@ const COUNCIL_ACTION_NOTES = {
   // 籠城は自分から攻撃せず、前衛として反撃だけを返す。
   [ACTION_FORTIFY]: { order: "攻撃なし", counterOnly: true, note: "" },
   [ACTION_SHOOT]: { order: "先制", counterOnly: false, note: "反撃なし" },
-  [ACTION_CANNON]: { order: "後攻", counterOnly: false, note: "反撃なし" },
-  [ACTION_TRAP]: { order: "0ターン目に攻撃して離脱", counterOnly: false, note: "狙われない" }
+  [ACTION_CANNON]: { order: "後手", counterOnly: false, note: "反撃なし" },
+  [ACTION_TRAP]: { order: "0ターン目に攻撃して離脱", counterOnly: false, note: "" }
 };
 
 const OVERLAY_ID = "warCouncilOverlay";
@@ -107,12 +108,17 @@ export function getCouncilActionEstimate(person, action, village) {
   if (!person || !action) return "";
   const meta = COUNCIL_ACTION_NOTES[action];
   if (!meta) return "";
-  const damage = estimateRaidActionDamage(person, action, village);
-  const statLabel = getRaidActionStatLabel(person, action, village);
   const incoming = action === ACTION_FORTIFY
     ? getFortifyDamageMultiplier(village)
     : getRaidIncomingDamageMultiplier(action, village);
 
+  // 不殺・非戦主義は前衛に立っても攻撃も反撃もしない。
+  if (isPacifistFighter(person) && (action === ACTION_DEFEND || action === ACTION_FORTIFY)) {
+    return [`攻撃なし　被弾${incoming}倍`, "攻撃も反撃も行わない"].join("\n");
+  }
+
+  const damage = estimateRaidActionDamage(person, action, village);
+  const statLabel = getRaidActionStatLabel(person, action, village);
   const head = [meta.order, incoming > 0 ? `被弾${incoming}倍` : ""].filter(Boolean).join("　");
   const damageLabel = meta.counterOnly ? "予想反撃ダメージ" : "予想ダメージ";
   const body = [`${damageLabel}${damage}${statLabel ? `（${statLabel}）` : ""}`, meta.note]
@@ -148,19 +154,24 @@ function renderTraits(person) {
   return groups.length > 0 ? groups.join('<span class="wc-trait-sep">/</span>') : "—";
 }
 
-/** チェックを入れられない理由。空文字なら選べる。 */
+/**
+ * チェックを入れられない理由。空文字なら選べる。
+ * 枠の埋まり具合ではグレーアウトせず、超過は枠行の警告と迎撃開始時の判定で扱う。
+ */
 function getCheckboxBlockReason(person, entry, line, village) {
   if (person.action === entry.action) return "";
   if (!entry.can(person, village)) {
     return getRaidActionBlockReason(person, entry.action) || `${entry.label}を選べません`;
   }
-  const slots = getLineSlots(village, line);
-  if (slots <= 0) return `${line.label}の枠がありません`;
-  const actions = new Set(line.actions.map(item => item.action));
-  const assigned = getCouncilVillagers(village)
-    .filter(other => other !== person && actions.has(other.action)).length;
-  if (assigned >= slots) return `${line.label}枠が上限です（${assigned}/${slots}）`;
+  if (getLineSlots(village, line) <= 0) return `${line.label}の枠がありません`;
   return "";
+}
+
+/** 枠を超えている戦列。空配列なら迎撃を始められる。 */
+function getOverCapacityLines(village) {
+  return COUNCIL_LINES
+    .map(line => ({ label: line.label, assigned: countLineAssigned(village, line), slots: getLineSlots(village, line) }))
+    .filter(item => item.assigned > item.slots);
 }
 
 function renderVillagerRow(person, village) {
@@ -182,7 +193,7 @@ function renderVillagerRow(person, village) {
 
   return `
     <tr data-wc-row="${person.id}">
-      <td class="wc-portrait-cell">${getPortraitSpriteHtml(person, { size: 40, alt: person.name })}</td>
+      <td class="wc-portrait-cell" data-wc-face="${person.id}" title="クリックで会話">${getPortraitSpriteHtml(person, { size: 40, alt: person.name })}</td>
       <td class="wc-name-cell">
         <div class="wc-name">${escapeHtml(person.name)}</div>
         <div class="wc-traits">${renderTraits(person)}</div>
@@ -212,7 +223,7 @@ function renderSlotRow(village) {
 function renderEnemyRow(enemy) {
   return `
     <tr>
-      <td class="wc-portrait-cell">${getPortraitSpriteHtml(enemy, { size: 40, alt: enemy.name })}</td>
+      <td class="wc-portrait-cell" data-wc-face="${enemy.id}" title="クリックで会話">${getPortraitSpriteHtml(enemy, { size: 40, alt: enemy.name })}</td>
       <td class="wc-name-cell">
         <div class="wc-name">${escapeHtml(enemy.name)}</div>
         <div class="wc-traits">${renderTraits(enemy)}</div>
@@ -294,6 +305,19 @@ function bindCouncilInputs() {
       refreshCouncilBody();
     });
   });
+
+  content.querySelectorAll("[data-wc-face]").forEach(cell => {
+    cell.addEventListener("click", () => {
+      const enemies = Array.isArray(councilVillage?.raidEnemies) ? councilVillage.raidEnemies : [];
+      const person = [...getCouncilVillagers(councilVillage), ...enemies]
+        .find(item => String(item.id) === cell.dataset.wcFace);
+      if (!person) return;
+      // 循環importを避けるため、会話モーダルは使う時にだけ読み込む。
+      import("./conversation.js").then(({ openConversationModal }) => {
+        openConversationModal(person);
+      });
+    });
+  });
 }
 
 export function closeWarCouncilModal() {
@@ -355,6 +379,18 @@ export function openWarCouncilModal(village, { onStart = null, onAutoAssign = nu
     if (typeof onMiracle === "function") onMiracle();
   };
   modal.querySelector("[data-wc-start]").onclick = () => {
+    const over = getOverCapacityLines(councilVillage);
+    if (over.length > 0) {
+      window.alert(`出撃枠を超えています。\n${over.map(item => `${item.label} ${item.assigned}/${item.slots}`).join("\n")}\n配置を減らしてから迎撃を始めてください。`);
+      return;
+    }
+    const fighters = COUNCIL_LINES
+      .filter(line => line.id !== "rear")
+      .reduce((sum, line) => sum + countLineAssigned(councilVillage, line), 0);
+    if (fighters === 0 &&
+      !window.confirm("前衛・中衛に誰も配置されていません。このまま迎撃を開始しますか？")) {
+      return;
+    }
     const start = onCouncilStart;
     closeWarCouncilModal();
     if (typeof start === "function") start();
