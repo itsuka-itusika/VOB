@@ -14,6 +14,7 @@ import { getInitialScaleStageIndex } from "./villageScale.js";
 import { ensureCaptiveReleaseDeadline, normalizeCaptive } from "./captives.js";
 import { normalizeBuildingRequestState } from "./buildingRequests.js";
 import { normalizeWishState } from "./wishes.js";
+import { normalizeAutoAssignSettings } from "./autoAssignSettings.js";
 import { normalizeDamagedBuildings, recalculateBuildingDerivedState } from "./domain/buildingState.js";
 import { normalizeVillageRoleForPerson, normalizeVillageRoles } from "./domain/villageRoles.js";
 import { ensurePersonId, normalizePersonId, peekNextPersonId, syncNextPersonId } from "./domain/personId.js";
@@ -249,6 +250,7 @@ function convertVillageToObject(village) {
     wish: normalizeWishState(village.wish),
     festivalFlags: normalizeFestivalFlags(village.festivalFlags),
     tutorial: normalizeTutorialState(village.tutorial),
+    autoAssignSettings: normalizeAutoAssignSettings(village.autoAssignSettings),
     logs: [...village.logs],
     historyEvents: normalizeHistoryEvents(village.historyEvents),
     departedVillagers: Array.isArray(village.departedVillagers) ? JSON.parse(JSON.stringify(village.departedVillagers)) : [],
@@ -454,6 +456,7 @@ function convertObjectToVillage(dataObj) {
   v.wish = normalizeWishState(dataObj.wish);
   v.festivalFlags = normalizeFestivalFlags(dataObj.festivalFlags);
   v.tutorial = normalizeTutorialState(dataObj.tutorial);
+  v.autoAssignSettings = normalizeAutoAssignSettings(dataObj.autoAssignSettings);
   v.logs = Array.isArray(dataObj.logs) ? [...dataObj.logs] : [];
   v.departedVillagers = Array.isArray(dataObj.departedVillagers)
     ? JSON.parse(JSON.stringify(dataObj.departedVillagers))

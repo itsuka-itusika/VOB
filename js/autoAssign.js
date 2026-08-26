@@ -60,6 +60,7 @@ import {
 } from "./raidRules.js";
 import { getCaptives } from "./captives.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
+import { getAutoAssignSettings, getStageMultiplier, hasStagedStock, resolveStageKey } from "./autoAssignSettings.js";
 
 // 勝ち目を測るときの想定戦闘ターン数。
 const RAID_WIN_ESTIMATE_TURNS = 3;
@@ -72,9 +73,6 @@ const RAID_JOIN_HP_ADVANTAGE = 65;
 // この種族が混じる襲撃は一撃が重く、耐えられる者がほとんど出ないため常に緩い基準を使う。
 const RAID_HEAVY_HITTER_RACES = new Set(["キュクロプス", "スフィンクス"]);
 
-// 食料・資材の備蓄が何か月ぶんあれば「当面は足りている」とみなすか。
-// 資材の3か月は、冬の12月・1月・2月を越えるのに要る量にあたる。
-const SUPPLY_SUFFICIENT_MONTHS = 3;
 
 const JOB_NONE = ACTION_NONE;
 const JOB_REST = ACTION_REST;
@@ -106,24 +104,10 @@ const AXIS_URGENCY = {
   recovery: 2.5,
   happiness: 3
 };
-// 治安は段階で見る。治安は平均倫理から決まる基礎値へ向かってしか下がらないため、
-// 基礎値を上回っている安全域では警備の効果が流れて薄い。危険な側にだけ人を割く。
-const SECURITY_STAGE_MULTIPLIER = {
-  ruined: 3.5,
-  danger: 2.5,
-  caution: 1.5,
-  safe: 0.6
-};
-// 荒廃の境目と同じ30を下限、村の警告と同じ40を危険域の上限、60から安全域とする。
-const SECURITY_RUINED_MAX = 30;
-const SECURITY_DANGER_MAX = 40;
-const SECURITY_SAFE_MIN = 60;
-// 食料・資材は3段階だけで見る。当面足りているなら押し上げず、得意な者が就く。
-const SUPPLY_STAGE_MULTIPLIER = {
-  scarce: 4,
-  low: 2,
-  enough: 1
-};
+// 食料・資材・治安・資金・技術の段階（倍率と区切り）は autoAssignSettings.js が持つ。
+// 既定値のままなら、village.autoAssignSettings が無くても従来と同じ重みになる。
+// 資材の充足を測る「当面は足りている」段階のキー。
+const SUPPLY_ENOUGH_STAGES = new Set(["enough", "excess"]);
 // 食料と資材の両方が不足気味のときは資材を少し優先する。食料は狩猟・漁など
 // 担い手が多く回復しやすいのに対し、資材は伐採頼みで後手に回りやすいため。
 // 乗算のため絶対ではなく、産出がこの倍率を超えて食料へ偏る村人は食料側の仕事に就く。
@@ -177,25 +161,21 @@ function normalizeSeverity(value) {
   return Math.max(0, Math.min(1.35, value));
 }
 
-// 治安の段階。荒廃は解消されるまで最優先、危険域は高く、安全域は低く抑える。
-function getSecurityStage(village) {
-  const security = Number(village?.security) || 0;
+// 治安の段階。荒廃の間は治安値によらず最も危険な段階として扱う。
+function getSecurityStage(village, settings) {
   const isRuined = Array.isArray(village?.villageTraits) && village.villageTraits.includes("荒廃");
-  if (isRuined || security <= SECURITY_RUINED_MAX) return "ruined";
-  if (security <= SECURITY_DANGER_MAX) return "danger";
-  if (security < SECURITY_SAFE_MIN) return "caution";
-  return "safe";
+  if (isRuined) return "danger";
+  return resolveStageKey("security", Number(village?.security) || 0, settings);
 }
 
-// 備蓄が何か月ぶんあるかで、すごく少ない/やや不足気味/当面は足りている、の3段階に分ける。
-function getSupplyStage(amount, monthlyUnit) {
+// 備蓄が何か月ぶんあるかで段階を決める。1か月ぶんの目安は軸ごとに呼び出し側が渡す。
+function getSupplyStage(sectionId, amount, monthlyUnit, settings) {
   const months = (Number(amount) || 0) / Math.max(1, monthlyUnit);
-  if (months < 1) return "scarce";
-  if (months < SUPPLY_SUFFICIENT_MONTHS) return "low";
-  return "enough";
+  return resolveStageKey(sectionId, months, settings);
 }
 
 function buildVillagePriorityContext(village) {
+  const settings = getAutoAssignSettings(village);
   const villagers = Array.isArray(village.villagers) ? village.villagers : [];
   const population = villagers.length || 1;
   const monthlyFoodCost = estimateMonthlyFoodCost(village);
@@ -211,20 +191,28 @@ function buildVillagePriorityContext(village) {
   const avgHappiness = villagers.reduce((sum, person) => sum + (Number(person.happiness) || 0), 0) / population;
   const happinessSeverity = normalizeSeverity((65 - avgHappiness) / 45);
   const materialMonthlyUnit = Math.max(20, monthlyMaterialCost);
+  const foodStage = getSupplyStage("food", village.food, Math.max(20, monthlyFoodCost), settings);
+  const materialStage = getSupplyStage("materials", village.materials, materialMonthlyUnit, settings);
 
   return {
+    settings,
     severityByAxis: {
       recovery: recoverySeverity,
       happiness: happinessSeverity
     },
-    securityStage: getSecurityStage(village),
-    supplyStageByAxis: {
-      food: getSupplyStage(village.food, Math.max(20, monthlyFoodCost)),
-      materials: getSupplyStage(village.materials, materialMonthlyUnit)
+    stageByAxis: {
+      food: foodStage,
+      materials: materialStage,
+      security: getSecurityStage(village, settings),
+      funds: hasStagedStock("funds", settings)
+        ? resolveStageKey("funds", Number(village.funds) || 0, settings)
+        : null,
+      tech: hasStagedStock("tech", settings)
+        ? resolveStageKey("tech", Number(village.tech) || 0, settings)
+        : null
     },
     materialsPreferred:
-      getSupplyStage(village.food, Math.max(20, monthlyFoodCost)) !== "enough" &&
-      getSupplyStage(village.materials, materialMonthlyUnit) !== "enough",
+      !SUPPLY_ENOUGH_STAGES.has(foodStage) && !SUPPLY_ENOUGH_STAGES.has(materialStage),
     supportAssignCounts: new Map(),
     wholeVillageJobLimit: Math.max(1, Math.floor(population / WHOLE_VILLAGE_JOB_POPULATION_PER_SLOT)),
     recoverySeverity,
@@ -331,16 +319,12 @@ function getAxisWeight(axis, context) {
   const base = AXIS_BASE_WEIGHTS[axis] || 0;
   if (!context) return base;
 
-  if (axis === "security") {
-    return base * (SECURITY_STAGE_MULTIPLIER[context.securityStage] ?? 1);
-  }
-
-  const stage = context.supplyStageByAxis?.[axis];
+  const stage = context.stageByAxis?.[axis];
   if (stage) {
     const dualShortageBoost = axis === "materials" && context.materialsPreferred
       ? MATERIALS_DUAL_SHORTAGE_MULTIPLIER
       : 1;
-    return base * SUPPLY_STAGE_MULTIPLIER[stage] * dualShortageBoost;
+    return base * getStageMultiplier(axis, stage, context.settings) * dualShortageBoost;
   }
 
   const urgency = AXIS_URGENCY[axis];

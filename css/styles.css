@@ -3621,3 +3621,146 @@ section h2 {
 .character-details span {
   white-space: nowrap;
 }
+
+
+/* 自動割り振り詳細設定。帳簿の上に金属の銘板を並べたような見た目に揃える。 */
+.aas-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(18, 13, 8, 0.52);
+  z-index: 2000;
+}
+.aas-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+  width: min(940px, calc(100vw - 24px));
+  max-height: 88vh;
+  overflow-y: auto;
+  background: #fffdf7;
+  border: 1px solid #b8a36d;
+  border-radius: 6px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.4);
+  z-index: 2001;
+  padding: 0 16px 14px;
+}
+.aas-lead {
+  margin: 10px 2px 12px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #4a4034;
+}
+.aas-content {
+  /* 追従するボタン列に最後の表が隠れないよう余白を置く。 */
+  padding-bottom: 6px;
+}
+.aas-section {
+  margin-bottom: 14px;
+}
+.aas-section:last-child {
+  margin-bottom: 0;
+}
+.aas-section h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 2px;
+  font-size: 1rem;
+}
+.aas-base {
+  font-size: 0.75rem;
+  font-weight: normal;
+  color: #6d6355;
+}
+.aas-hint {
+  margin: 0 0 5px;
+  font-size: 0.76rem;
+  color: #6d6355;
+}
+.aas-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.aas-table th,
+.aas-table td {
+  border: 1px solid #ccc;
+  padding: 3px 5px;
+  text-align: center;
+  font-size: 0.82rem;
+}
+.aas-table thead th {
+  background: linear-gradient(180deg, #f6f8f9 0%, #e7ebef 55%, #d9dfe4 100%);
+  border-color: #f5f7f8 #b7bdc3 #a8aeb4 #eef1f3;
+  color: #2b3036;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+.aas-stage-name {
+  font-weight: bold;
+}
+.aas-stage-mul {
+  margin-left: 6px;
+  font-size: 0.78rem;
+  color: #4d5560;
+}
+.aas-table th.aas-row-label {
+  width: 130px;
+  background: #f5ead7;
+  text-align: left;
+  font-weight: normal;
+  white-space: nowrap;
+}
+.aas-table th.aas-row-label label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+.aas-table input[type="number"] {
+  width: 100%;
+  box-sizing: border-box;
+  text-align: right;
+  padding: 2px 4px;
+}
+.aas-table input[type="number"]:disabled {
+  background: #f1efe9;
+  color: #8b8478;
+}
+.aas-table td.aas-readonly,
+.aas-table td.aas-current {
+  color: #5b5346;
+  font-size: 0.76rem;
+}
+.aas-current-row td.aas-current {
+  background: #fbf6e8;
+}
+.aas-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  position: sticky;
+  bottom: 0;
+  padding: 8px 0 4px;
+  background: #fffdf7;
+  border-top: 1px solid #e3d8bd;
+}
+.aas-modal .aas-buttons button {
+  min-width: 116px;
+  padding: 5px 12px;
+}
+.aas-modal .aas-buttons .aas-apply {
+  font-weight: bold;
+}
+@media (max-width: 720px) {
+  .aas-table th.aas-row-label {
+    width: 96px;
+    font-size: 0.72rem;
+  }
+  .aas-table th,
+  .aas-table td {
+    font-size: 0.72rem;
+    padding: 2px 3px;
+  }
+}

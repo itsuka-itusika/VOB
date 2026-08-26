@@ -46,6 +46,8 @@ export class Village {
     this.festivalFlags = {
       pineconeStaffIntroShown: false
     };
+    // 自動割り振り詳細設定。null のままなら既定値で動く。
+    this.autoAssignSettings = null;
     this.tutorial = {
       completed: {},
       complete: false

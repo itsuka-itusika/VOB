@@ -31,6 +31,7 @@ import { enterGame, initOpeningScreen, replayOpeningStory } from "./openingScree
 import { getVillageScaleStage, getVillageScaleTitle, VILLAGE_SCALE_STAGES } from "./villageScale.js";
 import { DIVINE_MIGHT_LEVELS } from "./divineMight.js";
 import { resumePendingHeresyInquisition } from "./heresyInquisition.js";
+import { openAutoAssignSettingsModal } from "./autoAssignSettings.js";
 
 const APOCALYPSE_DEBUG_VILLAGER_COUNT = 15;
 const APOCALYPSE_DEBUG_RESOURCE_AMOUNT = 10000;
@@ -297,6 +298,8 @@ function runUtilityAction() {
     if (window.confirm("ローカル保存を読み込み、現在の状態を置き換えますか？")) {
       loadFromLocalStorage();
     }
+  } else if (action === "auto-assign-settings") {
+    openAutoAssignSettingsModal(theVillage, { onApplied: () => updateUI(theVillage) });
   } else if (action === "pastbook") {
     openPastBookModal(theVillage);
   } else if (action === "opening") {
