@@ -1655,7 +1655,7 @@ const RAID_BADGE_TRAITS = [
   { trait: "戦慣れ", label: "戦慣れ" },
   { trait: "非戦主義", label: "非戦" },
   { trait: "不殺", label: "不殺" },
-  { trait: "神聖", label: "神聖" }
+  { trait: "光輪", label: "光輪" }
 ];
 
 function appendRaidUnitNote(meta, text) {
