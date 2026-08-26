@@ -353,7 +353,7 @@ export const SECRET_TREASURES = [
   {
     id: "armless_angel",
     name: "腕の無い天使像",
-    desc: "村人全員に1ヶ月の間、精神特性「ニケ」を付与する。ニケ: 勇気+10。",
+    desc: "村人全員に1ヶ月の間、精神特性「ニケ」を付与する。ニケ: 勇気+5。",
     sellPrice: SECRET_TREASURE_SELL_PRICES.armless_angel,
     canUse: (village) => getVillagers(village).length > 0,
     blockedReason: "村人がいません",

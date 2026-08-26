@@ -4,6 +4,7 @@ import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { getRaiderSpeechType } from "./domain/raiderSpeechTypes.js";
 import { ACTION_SALT_PILLAR } from "./domain/jobTables.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
+import { MAGIC_BARRIER_MIND_TRAIT } from "./raidRules.js";
 
 export const ACTION_CAPTIVE = "虜囚";
 export const CAPTIVE_TRAIT = "捕虜";
@@ -36,13 +37,14 @@ export const CAPTIVE_SOCIAL_COEFFICIENTS = Object.freeze({
 });
 // エクイナがセントールの捕虜を懐柔・誘惑する時の基礎係数倍率。
 export const CAPTIVE_EQUINA_CENTAUR_MULTIPLIER = 2;
-// 捕虜になった時点で失われる精神特性。群れを率いる立場も神の加護も、囚われた身では保てない。
+// 捕虜になった時点で失われる精神特性。群れを率いる立場も神の加護も魔力の護りも、囚われた身では保てない。
 const CAPTIVITY_LOST_MIND_TRAITS = Object.freeze([
   "餓狼",
   "首長",
   "秘蹟：剣",
   "秘蹟：盾",
-  "秘蹟：光"
+  "秘蹟：光",
+  MAGIC_BARRIER_MIND_TRAIT
 ]);
 export const MAX_CAPTIVES = 3;
 export const HOLDING_CELL_MAX_CAPTIVES = 1;

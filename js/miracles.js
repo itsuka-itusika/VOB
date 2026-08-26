@@ -1321,7 +1321,7 @@ function warMiracle(p, v) {
 
 function thunderboltMiracle(target, village) {
   const beforeHp = Number(target.hp) || 0;
-  const damage = THUNDERBOLT_MIRACLE_DAMAGE * getRaiderIncomingDamageMultiplier(target);
+  const damage = Math.floor(THUNDERBOLT_MIRACLE_DAMAGE * getRaiderIncomingDamageMultiplier(target));
   target.hp = beforeHp <= 1 ? beforeHp : Math.max(1, beforeHp - damage);
   village.lastThunderboltMiracleMonth = getVillageMonthKey(village);
   const actualDamage = Math.max(0, beforeHp - target.hp);

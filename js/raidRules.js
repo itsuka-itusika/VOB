@@ -36,6 +36,9 @@ const RAID_BODY_BLOCK_REASONS = [
 ];
 const RAID_TRIPLE_DAMAGE_BODY_TRAITS = ["赤子", YOUNG_WOLF_TRAIT, "危篤", "重体"];
 const RAID_DOUBLE_DAMAGE_BODY_TRAITS = ["疫病", "負傷", "過労", "産褥"];
+// 魔力の膜で身を守る精神特性。受けるダメージを減らす。
+export const MAGIC_BARRIER_MIND_TRAIT = "魔法障壁";
+export const MAGIC_BARRIER_INCOMING_DAMAGE_MULTIPLIER = 0.8;
 const HUMAN_BEAST_TRAIT = "人面獣身";
 const RAID_LINE_LABELS = {
   [ACTION_DEFEND]: "前衛",
@@ -145,9 +148,13 @@ export function getRaidActionSkipMessage(person, action = "戦闘", options = {}
 
 export function getRaiderIncomingDamageMultiplier(person) {
   const bodyTraits = traitList(person, "bodyTraits");
-  if (hasAnyTrait(bodyTraits, RAID_TRIPLE_DAMAGE_BODY_TRAITS)) return 3;
-  if (hasAnyTrait(bodyTraits, RAID_DOUBLE_DAMAGE_BODY_TRAITS)) return 2;
-  return 1;
+  let multiplier = 1;
+  if (hasAnyTrait(bodyTraits, RAID_TRIPLE_DAMAGE_BODY_TRAITS)) multiplier = 3;
+  else if (hasAnyTrait(bodyTraits, RAID_DOUBLE_DAMAGE_BODY_TRAITS)) multiplier = 2;
+  if (traitList(person, "mindTraits").includes(MAGIC_BARRIER_MIND_TRAIT)) {
+    multiplier *= MAGIC_BARRIER_INCOMING_DAMAGE_MULTIPLIER;
+  }
+  return multiplier;
 }
 
 /** 戦いを拒む精神特性を持つか。籠城以外の襲撃行動を選べない。 */
