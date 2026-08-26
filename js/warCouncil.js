@@ -5,6 +5,7 @@
 import { getPortraitSpriteHtml } from "./data/portraitAtlas.js";
 import { ACTION_NONE, refreshJobTable } from "./domain/jobTables.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
+import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import {
   ACTION_CANNON,
   ACTION_DEFEND,
@@ -48,7 +49,10 @@ const COUNCIL_LINES = [
     slots: getRaidFrontlinerSlotCount,
     actions: [
       { action: ACTION_DEFEND, label: "迎撃", can: canDefendInRaid },
-      { action: ACTION_FORTIFY, label: "籠城", can: canFortifyInRaid }
+      {
+        action: ACTION_FORTIFY, label: "籠城", can: canFortifyInRaid,
+        unlocked: village => hasActiveBuildingFlag(village, "hasWoodenFence", "woodenFence")
+      }
     ]
   },
   {
@@ -56,8 +60,15 @@ const COUNCIL_LINES = [
     label: "中衛",
     slots: getRaidMiddleSlotCount,
     actions: [
-      { action: ACTION_SHOOT, label: "射撃", can: canShootInRaid },
-      { action: ACTION_CANNON, label: "火砲", can: canCannonInRaid }
+      {
+        action: ACTION_SHOOT, label: "射撃", can: canShootInRaid,
+        unlocked: village => getRaidMiddleSlotCount(village) > 0
+      },
+      {
+        action: ACTION_CANNON, label: "火砲", can: canCannonInRaid,
+        unlocked: village => getRaidMiddleSlotCount(village) > 0 &&
+          hasActiveBuildingFlag(village, "hasArcaneFoundry", "arcaneFoundry")
+      }
     ]
   },
   {
@@ -179,6 +190,10 @@ function getOverCapacityLines(village) {
 
 function renderVillagerRow(person, village) {
   const cells = COUNCIL_LINES.flatMap(line => line.actions.map(entry => {
+    // 建築で解放されていない行動は、チェック欄を出さず「-」で示す。
+    if (entry.unlocked && !entry.unlocked(village)) {
+      return `<td class="wc-check-cell is-locked" title="${escapeHtml(`${entry.label}は未解放です`)}">-</td>`;
+    }
     const checked = person.action === entry.action;
     const reason = getCheckboxBlockReason(person, entry, line, village);
     const title = reason || getCouncilActionEstimate(person, entry.action, village);
