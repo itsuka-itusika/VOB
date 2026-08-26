@@ -901,8 +901,8 @@ function doConquestJudgmentLightAction(action, village) {
 
   applyRaidDamage(target, damage);
   addRaidDamageAnimation(result, actor, target, damage, false, "裁きの光");
-  addRaidActionLog(result, `【裁きの光】「${rule.cry}」`);
-  addRaidActionLog(result, rule.note);
+  addRaidActionLog(result, `【裁きの光】${rule.note}`);
+  addRaidActionLog(result, `「${rule.cry}」`);
   addRaidActionLog(result, hasHolyAttackImmunity
     ? `　　→ ${target.name}の光輪が聖なる攻撃を退け、ダメージを0にした`
     : `　　→ ${target.name}に固定${CONQUEST_JUDGMENT_LIGHT_DAMAGE}ダメージ`);
@@ -1646,16 +1646,16 @@ function appendRaidPortraitCell(row, unit) {
   row.appendChild(cell);
 }
 
-// 迎撃モーダルの名前欄にバッジで出す、戦闘へ影響する特性。labelは表示名。
+// 迎撃モーダルの名前欄にバッジで出す、戦闘へ影響する特性。labelは表示名、titleはツールチップ。
 const RAID_BADGE_TRAITS = [
-  { trait: "飛行", label: "飛行" },
-  { trait: "月の巫女", label: "月の巫女" },
-  { trait: "月の加護", label: "月の加護" },
-  { trait: "歴戦", label: "歴戦" },
-  { trait: "戦慣れ", label: "戦慣れ" },
-  { trait: "非戦主義", label: "非戦" },
-  { trait: "不殺", label: "不殺" },
-  { trait: "光輪", label: "光輪" }
+  { trait: "飛行", label: "飛行", title: "罠作成による被ダメージ0.5倍" },
+  { trait: "月の巫女", label: "月の巫女", title: "射撃のダメージ1.5倍" },
+  { trait: "月の加護", label: "月の加護", title: "射撃のダメージ1.2倍" },
+  { trait: "歴戦", label: "歴戦", title: "与ダメージ1.2倍（反撃には乗らない）" },
+  { trait: "戦慣れ", label: "戦慣れ", title: "与ダメージ1.1倍（反撃には乗らない）" },
+  { trait: "非戦主義", label: "非戦", title: "攻撃も反撃も行わない" },
+  { trait: "不殺", label: "不殺", title: "攻撃も反撃も行わない" },
+  { trait: "光輪", label: "光輪", title: "聖なる攻撃（裁きの光など）を無効化する" }
 ];
 
 function appendRaidUnitNote(meta, text) {
@@ -1677,7 +1677,10 @@ function appendRaidNameCell(row, unit, village = null) {
   const meta = document.createElement("div");
   meta.className = "raid-unit-meta";
 
-  if (unit?.action) {
+  // 敵の中衛は攻撃手段のバッジを出すため、「襲撃」のバッジは省略する。
+  const isEnemyMiddleUnit = Boolean(village) && isEnemyUnit(unit, village) &&
+    getCombatPosition(unit, village) === RAID_POSITION_MIDDLE;
+  if (unit?.action && !isEnemyMiddleUnit) {
     const action = document.createElement("span");
     action.className = "raid-unit-action";
     action.textContent = unit.action;
@@ -1699,9 +1702,7 @@ function appendRaidNameCell(row, unit, village = null) {
   }
 
   // 敵の中衛にも攻撃手段のラベルと同じ注記を出す。
-  const isEnemyMiddle = Boolean(village) && isEnemyUnit(unit, village) &&
-    getCombatPosition(unit, village) === RAID_POSITION_MIDDLE;
-  if (isEnemyMiddle) {
+  if (isEnemyMiddleUnit) {
     const cannon = isCannonUnit(unit, village);
     const action = document.createElement("span");
     action.className = "raid-unit-action";
@@ -1718,6 +1719,7 @@ function appendRaidNameCell(row, unit, village = null) {
     const badge = document.createElement("span");
     badge.className = "raid-unit-trait";
     badge.textContent = entry.label;
+    badge.title = entry.title;
     meta.appendChild(badge);
   });
 
