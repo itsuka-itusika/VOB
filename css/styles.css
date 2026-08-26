@@ -3931,14 +3931,19 @@ section h2 {
 .wc-task {
   font-size: 0.74rem;
 }
-/* 迎撃系に就いている間は通常行動を休むため、セルの背景だけ薄く見せる */
+/* 迎撃系に就いている間は通常行動を休むため、セルごと薄く見せる */
 .wc-task.is-suspended {
   background: #ececec;
+  color: #999;
 }
 .wc-estimate {
   text-align: left;
   font-size: 0.72rem;
   line-height: 1.3;
+}
+/* ホバー中のプレビューは、確定した予想と区別できるよう薄く出す */
+.wc-estimate.is-preview {
+  color: #8b8478;
   color: #4a4034;
 }
 .wc-slot-row td {

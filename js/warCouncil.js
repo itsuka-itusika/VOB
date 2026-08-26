@@ -346,6 +346,30 @@ function bindCouncilInputs() {
     });
   });
 
+  // チェック欄にマウスを合わせただけで、その行動の予想を行右端の予想欄に出す。
+  content.querySelectorAll(".wc-check-cell").forEach(cell => {
+    const box = cell.querySelector("input[data-wc-person]");
+    if (!box || box.disabled) return;
+    const estimateCell = cell.closest("tr[data-wc-row]")?.querySelector(".wc-estimate");
+    if (!estimateCell) return;
+    cell.addEventListener("mouseenter", () => {
+      const person = getCouncilVillagers(councilVillage)
+        .find(item => String(item.id) === box.dataset.wcPerson);
+      if (!person || person.action === box.dataset.wcAction) return;
+      const estimate = getCouncilActionEstimate(person, box.dataset.wcAction, councilVillage);
+      if (!estimate) return;
+      estimateCell.dataset.wcCommitted = estimateCell.innerHTML;
+      estimateCell.classList.add("is-preview");
+      estimateCell.innerHTML = escapeHtml(estimate).replace(/\n/g, "<br>");
+    });
+    cell.addEventListener("mouseleave", () => {
+      if (estimateCell.dataset.wcCommitted === undefined) return;
+      estimateCell.innerHTML = estimateCell.dataset.wcCommitted;
+      delete estimateCell.dataset.wcCommitted;
+      estimateCell.classList.remove("is-preview");
+    });
+  });
+
   content.querySelectorAll("[data-wc-face]").forEach(cell => {
     cell.addEventListener("click", () => {
       const enemies = Array.isArray(councilVillage?.raidEnemies) ? councilVillage.raidEnemies : [];
