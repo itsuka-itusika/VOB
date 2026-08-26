@@ -398,14 +398,16 @@ export function openWarCouncilModal(village, { onStart = null, onAutoAssign = nu
       <div class="wc-header-buttons">
         <button type="button" class="wc-start" data-wc-start>迎撃開始</button>
         <button type="button" data-wc-auto>防衛割り振り</button>
-        <button type="button" data-wc-clear>全員解除</button>
         <button type="button" data-wc-miracle>奇跡の行使</button>
         <button type="button" data-wc-close>戻る</button>
       </div>
     </div>
     <p class="wc-lead">
       <span>チェックで配置を決めます。チェック欄にマウスを合わせると、予想ダメージと被弾のしやすさが出ます。</span>
-      <span class="wc-slot-summary" data-wc-summary>${renderSlotSummary(village)}</span>
+      <span class="wc-summary-area">
+        <span class="wc-slot-summary" data-wc-summary>${renderSlotSummary(village)}</span>
+        <button type="button" class="wc-clear" data-wc-clear>全員解除</button>
+      </span>
     </p>
     <div class="wc-content">${renderBody(village)}</div>
   `;
