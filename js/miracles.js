@@ -79,7 +79,7 @@ export const MIRACLES = [
   {id:"2",  name:"マナの奇跡(40)",  cost:40,  desc:"食料+80"},
   {id:"3",  name:"クピドの奇跡(80)", cost:80, desc:"2人を強制結婚(条件無視)"},
   {id:"4",  name:`宴会の奇跡(人数×${FEAST_COST_PER_PERSON})`, cost:-1, desc:"全員体力/メンタル+20,幸福+20,失望/絶望解除 (資金×人数分も要)"},
-  {id:"5",  name:`狂宴の奇跡(人数×${REVEL_COST_PER_PERSON})`, cost:-2, desc:"全員体力/メンタル+60,幸福+50,失望/絶望解除,倫理↓,好色+15"},
+  {id:"5",  name:`狂宴の奇跡(人数×${REVEL_COST_PER_PERSON})`, cost:-2, desc:"全員体力/メンタル全回復,幸福+50,失望/絶望解除,倫理↓,好色+15"},
   {id:"6",  name:"癒しの奇跡(80)", cost:80, desc:"1人の負傷/重体/疫病/疲労等回復,体力+50"},
   {id:"20", name:"清拭の奇跡(60)", cost:60, desc:"3ヶ月間、村特性「清浄」を付与し、疫病の感染と重体の危篤化を防ぐ"},
   {id:"16", name:"酒杯の奇跡(50)", cost:50, desc:"1人の心労/抑鬱/失望/絶望回復,メンタル+50,幸福+30,酩酊付与"},
@@ -1043,13 +1043,12 @@ export function performMiracle(village) {
       let revelHeavyDrinkerCount = 0;
       village.villagers.forEach(p=>{
         if (isSaltPillar(p)) return;
-        const hpRecovery = getAlcoholMiracleRecoveryAmount(p, 60);
-        const mpRecovery = getAlcoholMiracleRecoveryAmount(p, 60);
+        // 体力とメンタルは全回復するため、酒豪の倍率は幸福度にだけ効く。
         const happinessRecovery = getAlcoholMiracleRecoveryAmount(p, 50);
-        p.hp=clampValue(p.hp+hpRecovery,0,100);
-        p.mp=clampValue(p.mp+mpRecovery,0,100);
+        p.hp=100;
+        p.mp=100;
         p.happiness=clampValue(p.happiness+happinessRecovery,0,100);
-        if (hpRecovery > 60) revelHeavyDrinkerCount++;
+        if (happinessRecovery > 50) revelHeavyDrinkerCount++;
         if (clearHopeLossByMiracle(p, village).length > 0) revelRecoveredCount++;
         // 狂乱特性を付与（まだ持っていない場合のみ）
         if (!p.mindTraits.includes("狂乱")) {
@@ -1057,7 +1056,7 @@ export function performMiracle(village) {
           syncEffectiveStats(p);
         }
       });
-      village.log(`【狂宴】全員体力/メンタル+60,幸福+50,狂乱付与(倫理*0.2,好色+15)${revelHeavyDrinkerCount > 0 ? `,酒豪${revelHeavyDrinkerCount}人は回復量1.5倍` : ""}${revelRecoveredCount > 0 ? `,失望・絶望${revelRecoveredCount}人解除` : ""}`);
+      village.log(`【狂宴】全員体力/メンタル全回復,幸福+50,狂乱付与(倫理*0.2,好色+15)${revelHeavyDrinkerCount > 0 ? `,酒豪${revelHeavyDrinkerCount}人は幸福度の回復量1.5倍` : ""}${revelRecoveredCount > 0 ? `,失望・絶望${revelRecoveredCount}人解除` : ""}`);
       showMiracleResultModal(village, "狂宴の奇跡", "理性を揺らす熱気が村を満たしました。", getActiveVillagers(village));
       break;
 
