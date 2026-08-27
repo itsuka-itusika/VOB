@@ -43,13 +43,14 @@ const OVERLAY_ID = "warCouncilOverlay";
 const MODAL_ID = "warCouncilModal";
 
 // 体力の右に並べる簡易能力。見出しをクリックすると、その値で並び替える。
+// group は村人一覧と同じ色分け（肉体側は薄黄、精神側は薄緑）に使う。
 const SIMPLE_STAT_COLUMNS = [
-  { key: "hp", label: "体力" },
-  { key: "str", label: "筋力" },
-  { key: "dex", label: "器用" },
-  { key: "mag", label: "魔力" },
-  { key: "int", label: "知力" },
-  { key: "cou", label: "勇気" }
+  { key: "hp", label: "体力", group: "" },
+  { key: "str", label: "筋力", group: "body" },
+  { key: "dex", label: "器用", group: "body" },
+  { key: "mag", label: "魔力", group: "body" },
+  { key: "int", label: "知力", group: "mind" },
+  { key: "cou", label: "勇気", group: "mind" }
 ];
 
 // 列の並びは戦列順。1人が就けるのは1つだけで、外すと通常業務へ戻る。
@@ -176,7 +177,7 @@ function renderStatSummary(person) {
 /** 体力と主要能力の数値セル。 */
 function renderSimpleStatCells(person) {
   return SIMPLE_STAT_COLUMNS
-    .map(col => `<td class="wc-stat-value">${Math.floor(Number(person?.[col.key]) || 0)}</td>`)
+    .map(col => `<td class="wc-stat-value${col.group ? ` is-${col.group}` : ""}">${Math.floor(Number(person?.[col.key]) || 0)}</td>`)
     .join("");
 }
 

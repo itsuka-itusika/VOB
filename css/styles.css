@@ -3996,6 +3996,9 @@ section h2 {
   color: #8b8478;
 }
 .wc-stat-value { font-variant-numeric: tabular-nums; }
+/* 村人一覧と同じ色分け。肉体側の能力は薄黄、精神側の能力は薄緑。 */
+.wc-stat-value.is-body { background: #faf2d3; }
+.wc-stat-value.is-mind { background: #e2f9d8; }
 /* 並び替えできる見出し。今の基準は矢印で示す。 */
 .wc-sortable { cursor: pointer; }
 .wc-sortable.is-sorted { color: #1f4f8b; }
