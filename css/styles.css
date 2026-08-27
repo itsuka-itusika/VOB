@@ -1478,7 +1478,11 @@ section h2 {
 #secretTreasureOverlay,
 #dryadFruitOverlay,
 #historyOverlay,
-#personalHistoryOverlay {
+#personalHistoryOverlay,
+#ledgerOverlay,
+#electionRecordOverlay,
+#wishLedgerOverlay,
+#managementGoalsOverlay {
   position: fixed;
   top:0; left:0;
   width:100%; height:100%;
@@ -1490,7 +1494,11 @@ section h2 {
 #secretTreasureModal,
 #dryadFruitModal,
 #historyModal,
-#personalHistoryModal {
+#personalHistoryModal,
+#ledgerModal,
+#electionRecordModal,
+#wishLedgerModal,
+#managementGoalsModal {
   position: fixed;
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
@@ -1522,11 +1530,19 @@ section h2 {
 #buildingContent,
 #secretTreasureContent,
 #historyContent,
-#personalHistoryContent {
+#personalHistoryContent,
+#ledgerContent,
+#electionRecordContent,
+#wishLedgerContent,
+#managementGoalsContent {
   margin-top: 5px;
 }
 #historyModal,
-#personalHistoryModal {
+#personalHistoryModal,
+#ledgerModal,
+#electionRecordModal,
+#wishLedgerModal,
+#managementGoalsModal {
   background: #f7f0e3;
   border: 1px solid #9b875d;
   box-shadow: 0 18px 48px rgba(28, 20, 10, 0.38);
@@ -1534,7 +1550,11 @@ section h2 {
   font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", "Times New Roman", serif;
 }
 #historyModal .modal-header,
-#personalHistoryModal .modal-header {
+#personalHistoryModal .modal-header,
+#ledgerModal .modal-header,
+#electionRecordModal .modal-header,
+#wishLedgerModal .modal-header,
+#managementGoalsModal .modal-header {
   margin-bottom: 10px;
   padding-bottom: 8px;
   border-bottom: 3px double #bba575;
@@ -4033,4 +4053,146 @@ section h2 {
   }
   .wc-col-stats { width: 150px; }
   .wc-col-estimate { width: 170px; }
+}
+
+/* ---------------- 台帳 ---------------- */
+.ledger-lead {
+  margin: 0 0 12px;
+  color: #6b5a3a;
+  font-size: 0.95rem;
+}
+.ledger-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+/* 羊皮紙のカード。1枚ずつ切り出した帳面の見立て。 */
+.ledger-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+  border: 1px solid #c3ad7d;
+  border-radius: 4px;
+  background:
+    url("data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20width='160'%20height='160'><filter%20id='n'><feTurbulence%20type='fractalNoise'%20baseFrequency='0.9'%20numOctaves='3'%20stitchTiles='stitch'/><feColorMatrix%20type='saturate'%20values='0'/></filter><rect%20width='160'%20height='160'%20filter='url(%23n)'%20opacity='0.08'/></svg>"),
+    linear-gradient(180deg, #f6edd6, #ecdfc2);
+  background-size: 160px 160px, auto;
+  box-shadow: 0 2px 6px rgba(60, 44, 18, 0.18);
+  color: #3b2f19;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+  text-align: left;
+  cursor: pointer;
+}
+.ledger-card:hover {
+  border-color: #a98c50;
+  background-image:
+    url("data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20width='160'%20height='160'><filter%20id='n'><feTurbulence%20type='fractalNoise'%20baseFrequency='0.9'%20numOctaves='3'%20stitchTiles='stitch'/><feColorMatrix%20type='saturate'%20values='0'/></filter><rect%20width='160'%20height='160'%20filter='url(%23n)'%20opacity='0.08'/></svg>"),
+    linear-gradient(180deg, #fbf4e2, #f0e5cb);
+}
+.ledger-card-title {
+  font-size: 1.15rem;
+  font-weight: bold;
+}
+.ledger-card-note {
+  color: #6d5c3c;
+  font-size: 0.82rem;
+}
+.ledger-back-row {
+  margin-top: 14px;
+  text-align: right;
+}
+.ledger-section + .ledger-section {
+  margin-top: 16px;
+}
+.ledger-section-title {
+  margin: 0 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #cbb98a;
+  color: #3b2f19;
+  font-size: 1rem;
+}
+/* 願望の一覧 */
+.ledger-wish-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+  border-bottom: 1px solid #e0d3b4;
+}
+.ledger-wish-row:last-child {
+  border-bottom: none;
+}
+.ledger-wish-row .portrait-sprite {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border: 1px solid #c9b98a;
+  border-radius: 3px;
+}
+.ledger-wish-body {
+  min-width: 0;
+}
+.ledger-wish-name {
+  margin-left: 4px;
+}
+.ledger-wish-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 2px;
+  color: #6d5c3c;
+  font-size: 0.85rem;
+}
+.ledger-wish-status.is-active { color: #8a6d1d; font-weight: bold; }
+.ledger-wish-status.is-achieved { color: #2f6b3a; font-weight: bold; }
+.ledger-wish-status.is-expired,
+.ledger-wish-status.is-lost { color: #8a5a4a; }
+/* 経営目標 */
+.ledger-goal-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.ledger-goal-table th,
+.ledger-goal-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #e0d3b4;
+  text-align: left;
+}
+.ledger-goal-table thead th {
+  color: #6d5c3c;
+  font-size: 0.85rem;
+}
+.ledger-goal-input {
+  width: 7em;
+  padding: 3px 6px;
+  border: 1px solid #bda772;
+  border-radius: 3px;
+  background: #fffdf6;
+  text-align: right;
+}
+.ledger-goal-suffix {
+  margin-left: 4px;
+  color: #6d5c3c;
+  font-size: 0.85rem;
+}
+.ledger-goal-current {
+  color: #6d5c3c;
+  text-align: right;
+}
+.ledger-goal-actions {
+  margin-top: 12px;
+  text-align: right;
+}
+.ledger-goal-note {
+  margin: 10px 0 0;
+  color: #6d5c3c;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+.ledger-goal-status {
+  margin: 6px 0 0;
+  color: #8a6d1d;
+  font-size: 0.85rem;
+  min-height: 1.2em;
 }

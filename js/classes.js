@@ -43,6 +43,9 @@ export class Village {
     this.buildingRequest = null;
     this.hasStartedBuildingRequest = false;
     this.wish = null;
+    this.wishes = [];
+    this.wishLog = [];
+    this.managementGoals = null;
     this.festivalFlags = {
       pineconeStaffIntroShown: false
     };

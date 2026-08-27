@@ -704,7 +704,7 @@ function getPersonalHistoryText(event, personName, personId = null) {
   }
 }
 
-function renderHistoryEntry(event, options = {}) {
+export function renderHistoryEntry(event, options = {}) {
   const text = options.personName
     ? getPersonalHistoryText(event, options.personName, options.personId ?? null)
     : getVillageHistoryText(event);
@@ -805,9 +805,13 @@ function makePortraitStep(portraitFile, caption) {
   };
 }
 
-function makeCurrentPortraitStep(person) {
+// 過去帳の人物はもう村にいないため、今の姿ではなく去った時点の姿として見せる。
+const CURRENT_PORTRAIT_CAPTION = "現在の姿";
+const ARCHIVED_PORTRAIT_CAPTION = "往時の姿";
+
+function makeCurrentPortraitStep(person, { archived = false } = {}) {
   return {
-    ...makePortraitStep(person?.portraitFile, "現在の姿"),
+    ...makePortraitStep(person?.portraitFile, archived ? ARCHIVED_PORTRAIT_CAPTION : CURRENT_PORTRAIT_CAPTION),
     character: {
       name: person?.name,
       portraitFile: person?.portraitFile,
@@ -829,8 +833,8 @@ function getPastPortraitSequence(person) {
   return pastPortraits.some(step => step.portraitFile !== currentKey) ? pastPortraits.reverse() : [];
 }
 
-function renderPastPortraitControls(person) {
-  const currentPortrait = makeCurrentPortraitStep(person);
+function renderPastPortraitControls(person, options = {}) {
+  const currentPortrait = makeCurrentPortraitStep(person, options);
   const pastPortraits = getPastPortraitSequence(person);
   if (pastPortraits.length === 0) return "";
 
@@ -848,8 +852,8 @@ function renderPastPortraitControls(person) {
   `;
 }
 
-function renderPortraitFrame(person) {
-  const currentPortrait = makeCurrentPortraitStep(person);
+function renderPortraitFrame(person, options = {}) {
+  const currentPortrait = makeCurrentPortraitStep(person, options);
   const hiddenAttr = currentPortrait.hasImage ? "" : " hidden";
   const unknownHiddenAttr = currentPortrait.hasImage ? " hidden" : "";
   const unknownClass = currentPortrait.hasImage ? "" : " is-unknown";
@@ -910,7 +914,8 @@ function bindPastPortraitControls(content) {
   const renderPortraitStep = () => {
     const step = portraitSteps[portraitIndex];
     setPersonalHistoryPortrait(frame, portrait, unknown, step);
-    caption.textContent = step.caption || (portraitIndex === 0 ? "現在の姿" : "過去の姿");
+    caption.textContent = step.caption ||
+      (portraitIndex === 0 ? currentPortrait.caption || CURRENT_PORTRAIT_CAPTION : "過去の姿");
     olderButton.disabled = portraitIndex >= portraitSteps.length - 1;
     newerButton.disabled = portraitIndex <= 0;
   };
@@ -964,8 +969,8 @@ function renderPersonalHistorySummary(person, options = {}) {
   return `
     <section class="personal-history-summary">
       <div class="personal-history-portrait-area">
-        ${renderPortraitFrame(person)}
-        ${renderPastPortraitControls(person)}
+        ${renderPortraitFrame(person, options)}
+        ${renderPastPortraitControls(person, options)}
       </div>
       <div class="personal-history-profile">
         <div class="personal-history-profile-grid">

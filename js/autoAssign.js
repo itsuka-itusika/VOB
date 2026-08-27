@@ -61,6 +61,7 @@ import {
 import { getCaptives } from "./captives.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
 import { getAutoAssignSettings, getStageMultiplier, hasStagedStock, resolveStageKey } from "./autoAssignSettings.js";
+import { getManagementGoalMultiplier, getManagementGoals } from "./managementGoals.js";
 
 // 勝ち目を測るときの想定戦闘ターン数。
 const RAID_WIN_ESTIMATE_TURNS = 3;
@@ -207,6 +208,7 @@ function buildVillagePriorityContext(village) {
 
   return {
     settings,
+    managementGoals: getManagementGoals(village),
     severityByAxis: {
       recovery: recoverySeverity,
       happiness: happinessSeverity
@@ -330,17 +332,24 @@ function getAxisWeight(axis, context) {
   const base = AXIS_BASE_WEIGHTS[axis] || 0;
   if (!context) return base;
 
+  // 経営目標は段階や困窮度とは別に、目標未達を押し上げ過剰を抑える。
+  const goalMultiplier = getManagementGoalMultiplier(
+    axis,
+    context.village?.[axis],
+    context.managementGoals
+  );
+
   const stage = context.stageByAxis?.[axis];
   if (stage) {
     const dualShortageBoost = axis === "materials" && context.materialsPreferred
       ? MATERIALS_DUAL_SHORTAGE_MULTIPLIER
       : 1;
-    return base * getStageMultiplier(axis, stage, context.settings) * dualShortageBoost;
+    return base * getStageMultiplier(axis, stage, context.settings) * dualShortageBoost * goalMultiplier;
   }
 
   const urgency = AXIS_URGENCY[axis];
-  if (!urgency) return base;
-  return base * (1 + (context.severityByAxis[axis] || 0) * urgency);
+  if (!urgency) return base * goalMultiplier;
+  return base * (1 + (context.severityByAxis[axis] || 0) * urgency) * goalMultiplier;
 }
 
 function scoreJob(person, job, context) {

@@ -80,7 +80,7 @@
           <button onclick="openMiracleModal()">奇跡の行使</button>
           <button onclick="openBuildingModal()">建築</button>
           <button onclick="openSecretTreasureModal()">秘宝</button>
-          <button onclick="openHistoryModal()">村史</button>
+          <button onclick="openLedgerModal()">台帳</button>
         </div>
         <div class="utility-actions">
           <select id="utilityActionSelect" aria-label="保存・読込操作">
@@ -436,6 +436,46 @@
   </div>
   <div class="modal-buttons">
     <button onclick="closeDryadFruitModal()">閉じる</button>
+  </div>
+</div>
+
+<!-- モーダル: 台帳 -->
+<div id="ledgerOverlay"></div>
+<div id="ledgerModal">
+  <div class="modal-header">台帳</div>
+  <div id="ledgerContent" class="modal-content"></div>
+  <div class="modal-buttons">
+    <button onclick="closeLedgerModal()">閉じる</button>
+  </div>
+</div>
+
+<!-- モーダル: 選挙記録 -->
+<div id="electionRecordOverlay"></div>
+<div id="electionRecordModal">
+  <div class="modal-header">選挙記録</div>
+  <div id="electionRecordContent" class="modal-content"></div>
+  <div class="modal-buttons">
+    <button onclick="closeElectionRecordModal()">閉じる</button>
+  </div>
+</div>
+
+<!-- モーダル: 願望 -->
+<div id="wishLedgerOverlay"></div>
+<div id="wishLedgerModal">
+  <div class="modal-header">願望</div>
+  <div id="wishLedgerContent" class="modal-content"></div>
+  <div class="modal-buttons">
+    <button onclick="closeWishLedgerModal()">閉じる</button>
+  </div>
+</div>
+
+<!-- モーダル: 経営目標 -->
+<div id="managementGoalsOverlay"></div>
+<div id="managementGoalsModal">
+  <div class="modal-header">経営目標</div>
+  <div id="managementGoalsContent" class="modal-content"></div>
+  <div class="modal-buttons">
+    <button onclick="closeManagementGoalsModal()">閉じる</button>
   </div>
 </div>
 

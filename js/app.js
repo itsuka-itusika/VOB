@@ -4,6 +4,13 @@ import { createRandomVillager, createRandomVisitor, getVisitorTypeChoices } from
 import "./dictionary.js";
 import { addNonHousePopLimitBonus } from "./domain/buildingState.js";
 import { closeHistoryModal, closePersonalHistoryModal, openHistoryModal, openPastBookModal } from "./history.js";
+import {
+  closeElectionRecordModal,
+  closeLedgerModal,
+  closeManagementGoalsModal,
+  closeWishLedgerModal,
+  openLedgerModal
+} from "./ledger.js";
 import { theVillage, onNextTurn } from "./main.js";
 import {
   closeExchangeModal,
@@ -345,6 +352,11 @@ function bindGlobalHandlers() {
     openHistoryModal: () => openHistoryModal(theVillage),
     closeHistoryModal,
     closePersonalHistoryModal,
+    openLedgerModal: () => openLedgerModal(theVillage),
+    closeLedgerModal,
+    closeElectionRecordModal,
+    closeWishLedgerModal,
+    closeManagementGoalsModal,
     onAutoAssignJobs: () => {
       autoAssignJobs(theVillage);
       updateUI(theVillage);
@@ -434,6 +446,10 @@ function bindModalOverlayClickClose() {
   bindOverlayClickClose("dryadFruitOverlay", closeDryadFruitModal);
   bindOverlayClickClose("historyOverlay", closeHistoryModal);
   bindOverlayClickClose("personalHistoryOverlay", closePersonalHistoryModal);
+  bindOverlayClickClose("ledgerOverlay", closeLedgerModal);
+  bindOverlayClickClose("electionRecordOverlay", closeElectionRecordModal);
+  bindOverlayClickClose("wishLedgerOverlay", closeWishLedgerModal);
+  bindOverlayClickClose("managementGoalsOverlay", closeManagementGoalsModal);
 }
 
 bindGlobalHandlers();

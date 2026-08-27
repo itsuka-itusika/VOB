@@ -128,28 +128,116 @@ export function normalizeWishState(source = null) {
   };
 }
 
+/** 同時に抱えられる願望の数。 */
+export const MAX_ACTIVE_WISHES = 3;
+/** 台帳に残す、決着した願望の最大件数。 */
+const WISH_LOG_LIMIT = 60;
+
+/** 保存データの願望を配列へ揃える。古い保存の単数フィールドも取り込む。 */
+export function normalizeWishListState(source, legacySingle = null) {
+  const raw = Array.isArray(source)
+    ? source
+    : (source && typeof source === "object" ? [source] : []);
+  const list = raw.length > 0 ? raw : (legacySingle ? [legacySingle] : []);
+  const seen = new Set();
+  return list
+    .map(entry => normalizeWishState(entry))
+    .filter(Boolean)
+    .filter(wish => {
+      const key = `${wish.id}:${wish.requesterId ?? wish.requesterName}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, MAX_ACTIVE_WISHES);
+}
+
+export function getActiveWishes(village) {
+  if (!village) return [];
+  const list = normalizeWishListState(village.wishes, village.wish);
+  village.wishes = list;
+  // 古い保存形式でも読めるよう、単数フィールドは先頭の願望を映しておく。
+  village.wish = list[0] || null;
+  return list;
+}
+
 export function getActiveWish(village) {
-  if (!village) return null;
-  const wish = normalizeWishState(village.wish);
-  village.wish = wish;
-  return wish;
+  return getActiveWishes(village)[0] || null;
+}
+
+function setActiveWishes(village, list) {
+  village.wishes = list.slice(0, MAX_ACTIVE_WISHES);
+  village.wish = village.wishes[0] || null;
+}
+
+/** 決着した願望の記録。台帳の願望画面で振り返る。 */
+export function getWishLog(village) {
+  if (!Array.isArray(village?.wishLog)) return [];
+  return village.wishLog;
+}
+
+export function normalizeWishLog(source) {
+  if (!Array.isArray(source)) return [];
+  return source
+    .map(entry => {
+      const name = String(entry?.name || "").trim();
+      const requesterName = String(entry?.requesterName || "").trim();
+      if (!name || !requesterName) return null;
+      return {
+        id: String(entry?.id || ""),
+        name,
+        requesterName,
+        requesterId: Number.isInteger(entry?.requesterId) && entry.requesterId > 0 ? entry.requesterId : null,
+        requesterPortraitFile: String(entry?.requesterPortraitFile || DEFAULT_PORTRAIT_KEY),
+        targetName: String(entry?.targetName || ""),
+        outcome: ["achieved", "expired", "lost"].includes(entry?.outcome) ? entry.outcome : "expired",
+        year: normalizeOptionalNumber(entry?.year) ?? 0,
+        month: normalizeOptionalNumber(entry?.month) ?? 1
+      };
+    })
+    .filter(Boolean)
+    .slice(-WISH_LOG_LIMIT);
+}
+
+function recordWishOutcome(village, wish, outcome) {
+  if (!village || !wish) return;
+  if (!Array.isArray(village.wishLog)) village.wishLog = [];
+  village.wishLog.push({
+    id: wish.id,
+    name: wish.name,
+    requesterName: wish.requesterName,
+    requesterId: wish.requesterId ?? null,
+    requesterPortraitFile: wish.requesterPortraitFile || DEFAULT_PORTRAIT_KEY,
+    targetName: wish.targetName || "",
+    outcome,
+    year: Number(village.year) || 0,
+    month: Number(village.month) || 1
+  });
+  if (village.wishLog.length > WISH_LOG_LIMIT) {
+    village.wishLog = village.wishLog.slice(-WISH_LOG_LIMIT);
+  }
 }
 
 export function getWishWarnings(village) {
-  const wish = getActiveWish(village);
-  if (!wish) return [];
-  const targetText = wish.targetName && wish.id !== "get_closer" ? `（対象: ${wish.targetName}）` : "";
-  return [{
-    level: "request",
-    text: `願望: ${wish.requesterName}「${wish.name}」${targetText} 残り${wish.monthsLeft}か月。`
-  }];
+  return getActiveWishes(village).map(wish => {
+    const targetText = wish.targetName && wish.id !== "get_closer" ? `（対象: ${wish.targetName}）` : "";
+    return {
+      level: "request",
+      text: `願望: ${wish.requesterName}「${wish.name}」${targetText} 残り${wish.monthsLeft}か月。`
+    };
+  });
 }
 
 export function tryStartWish(village) {
-  if (!village || getActiveWish(village)) return null;
+  if (!village) return null;
+  const active = getActiveWishes(village);
+  if (active.length >= MAX_ACTIVE_WISHES) return null;
   if (!hasActiveBuildingFlag(village, "hasChurch", "church")) return null;
 
-  const candidates = getWishCandidates(village);
+  // 1人が複数の願望を抱えると台帳が偏るため、願望者は1人1件までにする。
+  const busyRequesters = new Set(active.map(wish => wish.requesterId ?? wish.requesterName));
+  const candidates = getWishCandidates(village)
+    .filter(candidate => !busyRequesters.has(candidate.requester.id ?? candidate.requester.name));
   if (candidates.length === 0 || Math.random() >= WISH_START_CHANCE) return null;
 
   const candidate = randChoice(candidates);
@@ -172,65 +260,76 @@ export function tryStartWish(village) {
     monthsLeft: WISH_DURATION_MONTHS
   };
 
-  village.wish = wish;
+  setActiveWishes(village, [...active, wish]);
   village.log(`願望発生: ${wish.requesterName}「${wish.name}」（${WISH_DURATION_MONTHS}か月）`);
   showWishStartModal(wish);
   return wish;
 }
 
 export function advanceWishMonth(village) {
-  const wish = getActiveWish(village);
-  if (!wish) return null;
-  if (checkWishCompletion(village)) return null;
+  if (!village) return [];
+  checkWishCompletion(village);
 
-  const requester = findWishRequester(getVillageResidents(village), wish);
-  if (!requester) {
-    village.wish = null;
-    village.log(`願望消失: ${wish.requesterName}が村にいないため「${wish.name}」は消失しました。`);
-    return null;
-  }
+  const residents = getVillageResidents(village);
+  const remaining = [];
+  getActiveWishes(village).forEach(wish => {
+    if (!findWishRequester(residents, wish)) {
+      recordWishOutcome(village, wish, "lost");
+      village.log(`願望消失: ${wish.requesterName}が村にいないため「${wish.name}」は消失しました。`);
+      return;
+    }
+    wish.monthsLeft -= 1;
+    if (wish.monthsLeft <= 0) {
+      recordWishOutcome(village, wish, "expired");
+      village.log(`願望消失: ${wish.requesterName}の「${wish.name}」は期限を迎えました。`);
+      return;
+    }
+    remaining.push(wish);
+  });
 
-  wish.monthsLeft -= 1;
-  if (wish.monthsLeft <= 0) {
-    village.wish = null;
-    village.log(`願望消失: ${wish.requesterName}の「${wish.name}」は期限を迎えました。`);
-    return null;
-  }
-
-  village.wish = wish;
-  return wish;
+  setActiveWishes(village, remaining);
+  return remaining;
 }
 
 export function checkWishCompletion(village, context = {}) {
-  const wish = getActiveWish(village);
-  if (!wish) return null;
-
+  if (!village) return [];
   const villagers = getVillageResidents(village);
-  const requester = findWishRequester(villagers, wish);
-  if (!requester) {
-    village.wish = null;
-    village.log(`願望消失: ${wish.requesterName}が村にいないため「${wish.name}」は消失しました。`);
-    return { wish, requester: null, canceled: true };
-  }
+  const remaining = [];
+  const completed = [];
 
-  const reason = getWishCompletionReason(wish, requester, villagers, context);
-  if (!reason) return null;
+  getActiveWishes(village).forEach(wish => {
+    const requester = findWishRequester(villagers, wish);
+    if (!requester) {
+      recordWishOutcome(village, wish, "lost");
+      village.log(`願望消失: ${wish.requesterName}が村にいないため「${wish.name}」は消失しました。`);
+      return;
+    }
 
-  const definition = WISH_DEFINITION_BY_ID.get(wish.id);
-  const currentTargetName = wish.id === "want_child"
-    ? getSpouse(requester, villagers)?.name || wish.targetName
-    : wish.targetName;
-  const completionLine = resolveWishLine(definition?.completionLines?.[reason], {
-    requester,
-    targetName: currentTargetName
-  }, requester, "complete");
+    const reason = getWishCompletionReason(wish, requester, villagers, context);
+    if (!reason) {
+      remaining.push(wish);
+      return;
+    }
 
-  requester.happiness = clampValue((Number(requester.happiness) || 0) + 30, 0, 100);
-  village.wish = null;
-  addDivineMight(village, 10);
-  village.log(`願望達成: ${wish.requesterName}「${wish.name}」。幸福度+30、神威+10`);
-  showWishCompletionModal({ ...wish, completionLine, reason }, requester);
-  return { wish, requester, reason };
+    const definition = WISH_DEFINITION_BY_ID.get(wish.id);
+    const currentTargetName = wish.id === "want_child"
+      ? getSpouse(requester, villagers)?.name || wish.targetName
+      : wish.targetName;
+    const completionLine = resolveWishLine(definition?.completionLines?.[reason], {
+      requester,
+      targetName: currentTargetName
+    }, requester, "complete");
+
+    requester.happiness = clampValue((Number(requester.happiness) || 0) + 30, 0, 100);
+    addDivineMight(village, 10);
+    recordWishOutcome(village, wish, "achieved");
+    village.log(`願望達成: ${wish.requesterName}「${wish.name}」。幸福度+30、神威+10`);
+    showWishCompletionModal({ ...wish, completionLine, reason }, requester);
+    completed.push({ wish, requester, reason });
+  });
+
+  setActiveWishes(village, remaining);
+  return completed;
 }
 
 function getWishCandidates(village) {

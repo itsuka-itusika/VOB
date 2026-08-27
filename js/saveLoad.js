@@ -13,7 +13,8 @@ import { normalizeTutorialState } from "./tutorial.js";
 import { getInitialScaleStageIndex } from "./villageScale.js";
 import { ensureCaptiveReleaseDeadline, normalizeCaptive } from "./captives.js";
 import { normalizeBuildingRequestState } from "./buildingRequests.js";
-import { normalizeWishState } from "./wishes.js";
+import { normalizeWishListState, normalizeWishLog, normalizeWishState } from "./wishes.js";
+import { normalizeManagementGoals } from "./managementGoals.js";
 import { normalizeAutoAssignSettings } from "./autoAssignSettings.js";
 import { normalizeDamagedBuildings, recalculateBuildingDerivedState } from "./domain/buildingState.js";
 import { normalizeVillageRoleForPerson, normalizeVillageRoles } from "./domain/villageRoles.js";
@@ -247,7 +248,11 @@ function convertVillageToObject(village) {
     secretTreasures: normalizeSecretTreasures(village),
     buildingRequest: normalizeBuildingRequestState(village.buildingRequest),
     hasStartedBuildingRequest: !!village.hasStartedBuildingRequest || !!normalizeBuildingRequestState(village.buildingRequest),
-    wish: normalizeWishState(village.wish),
+    // 単数の wish は古い保存を読む版のために残す。正はこちらの配列。
+    wishes: normalizeWishListState(village.wishes, village.wish),
+    wish: normalizeWishState(village.wishes?.[0] ?? village.wish),
+    wishLog: normalizeWishLog(village.wishLog),
+    managementGoals: normalizeManagementGoals(village.managementGoals),
     festivalFlags: normalizeFestivalFlags(village.festivalFlags),
     tutorial: normalizeTutorialState(village.tutorial),
     autoAssignSettings: normalizeAutoAssignSettings(village.autoAssignSettings),
@@ -453,7 +458,10 @@ function convertObjectToVillage(dataObj) {
   v.secretTreasures = normalizeSecretTreasures(dataObj);
   v.buildingRequest = normalizeBuildingRequestState(dataObj.buildingRequest);
   v.hasStartedBuildingRequest = !!dataObj.hasStartedBuildingRequest || !!v.buildingRequest;
-  v.wish = normalizeWishState(dataObj.wish);
+  v.wishes = normalizeWishListState(dataObj.wishes, dataObj.wish);
+  v.wish = v.wishes[0] || null;
+  v.wishLog = normalizeWishLog(dataObj.wishLog);
+  v.managementGoals = normalizeManagementGoals(dataObj.managementGoals);
   v.festivalFlags = normalizeFestivalFlags(dataObj.festivalFlags);
   v.tutorial = normalizeTutorialState(dataObj.tutorial);
   v.autoAssignSettings = normalizeAutoAssignSettings(dataObj.autoAssignSettings);
