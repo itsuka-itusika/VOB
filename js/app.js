@@ -350,9 +350,6 @@ function bindGlobalHandlers() {
     closePersonalHistoryModal,
     openLedgerModal: () => openLedgerModal(theVillage),
     closeLedgerModal,
-    closeElectionRecordModal,
-    closeWishLedgerModal,
-    closeManagementGoalsModal,
     onAutoAssignJobs: () => {
       autoAssignJobs(theVillage);
       updateUI(theVillage);
