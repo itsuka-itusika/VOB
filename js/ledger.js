@@ -5,11 +5,9 @@
 import { HISTORY_EVENT_TYPES, openHistoryModal, openPastBookModal, renderHistoryEntry } from "./history.js";
 import {
   MANAGEMENT_GOAL_AXES,
-  MANAGEMENT_GOAL_EXCESS_MULTIPLIER,
   MANAGEMENT_GOAL_LABELS,
   MANAGEMENT_GOAL_MAX,
   MANAGEMENT_GOAL_MIN,
-  MANAGEMENT_GOAL_SHORTAGE_MULTIPLIER,
   getManagementGoals,
   setManagementGoals
 } from "./managementGoals.js";
@@ -62,8 +60,11 @@ export function openLedgerModal(village) {
     <div class="ledger-card-grid">
       ${LEDGER_CARDS.map(card => `
         <button type="button" class="ledger-card" data-ledger-card="${card.id}">
-          <span class="ledger-card-title">${escapeHtml(card.title)}</span>
-          <span class="ledger-card-note">${escapeHtml(card.note)}</span>
+          <span class="ledger-card-spine" aria-hidden="true"></span>
+          <span class="ledger-card-body">
+            <span class="ledger-card-title">${escapeHtml(card.title)}</span>
+            <span class="ledger-card-note">${escapeHtml(card.note)}</span>
+          </span>
         </button>
       `).join("")}
     </div>
@@ -222,8 +223,8 @@ export function openManagementGoalsModal(village, { onApplied = null } = {}) {
       <button type="button" data-goal-apply>適用</button>
     </div>
     <p class="ledger-goal-note">
-      目標未達成の資源は自動割り振り時に優先されます（重み${MANAGEMENT_GOAL_SHORTAGE_MULTIPLIER}倍）。<br>
-      過剰になった資源は優先度が下がります（重み${MANAGEMENT_GOAL_EXCESS_MULTIPLIER}倍）。
+      目標未達成の資源は自動割り振り時に優先されます。<br>
+      過剰になった資源は優先度が下がります。
     </p>
     <p class="ledger-goal-status" data-goal-status></p>
     <div class="ledger-back-row"><button type="button" data-ledger-back>台帳へ戻る</button></div>

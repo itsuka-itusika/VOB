@@ -60,6 +60,28 @@ const HISTORY_SCOPES = Object.freeze({
 
 // 成狼の記録を成人と区別するタグ。表示側もこの値で文言を切り替える。
 const ADULTHOOD_WOLF_TAG = "成狼";
+// 里長選挙の得票を残すタグ。「得票:名前0票、…」の形で持つ。
+const ELECTION_COUNTS_TAG_PREFIX = "得票:";
+
+// 得票のない選挙（無投票）と、同数のくじ引きを見分けるためのタグ。
+const ELECTION_RESULT_TAG_PREFIX = "結果:";
+const ELECTION_RESULT_NOTES = Object.freeze({
+  uncontested: "候補者は1人で、無投票だった。",
+  lottery: "得票が並び、くじ引きで決まった。"
+});
+
+function getElectionResultNote(event) {
+  const tag = (Array.isArray(event?.tags) ? event.tags : [])
+    .find(value => String(value).startsWith(ELECTION_RESULT_TAG_PREFIX));
+  const result = tag ? String(tag).slice(ELECTION_RESULT_TAG_PREFIX.length) : "";
+  return ELECTION_RESULT_NOTES[result] || "";
+}
+
+function getElectionCounts(event) {
+  const tag = (Array.isArray(event?.tags) ? event.tags : [])
+    .find(value => String(value).startsWith(ELECTION_COUNTS_TAG_PREFIX));
+  return tag ? String(tag).slice(ELECTION_COUNTS_TAG_PREFIX.length) : "";
+}
 
 const MYTHIC_EVENT_TEXTS = Object.freeze({
   "狩猟神": personName => `${personName}が狩女神の祝福を受けた。`,
@@ -206,13 +228,16 @@ export function recordScaleTitleHistory(village, stage) {
 }
 
 export function recordHeadmanElectionHistory(village, winner, options = {}) {
-  const counts = options.counts ? ` 得票は${options.counts}。` : "";
+  const countsText = String(options.counts || "").trim();
+  const counts = countsText ? ` 得票は${countsText}。` : "";
+  const countsTags = countsText ? [`${ELECTION_COUNTS_TAG_PREFIX}${countsText}`] : [];
+  const resultTags = options.result ? [`${ELECTION_RESULT_TAG_PREFIX}${options.result}`] : [];
   if (!winner) {
     addHistoryEvent(village, {
       type: HISTORY_EVENT_TYPES.HEADMAN_ELECTION,
       title: "里長選挙、不成立",
       text: "里長選挙は不成立となった。",
-      tags: ["里長選挙"]
+      tags: ["里長選挙", ...countsTags, ...resultTags]
     });
     return;
   }
@@ -225,7 +250,7 @@ export function recordHeadmanElectionHistory(village, winner, options = {}) {
       ? `${winner.name}が里長を続けることになった。`
       : `${winner.name}が里長に選ばれた。${counts}`.trim(),
     people: [winner],
-    tags: ["里長選挙"]
+    tags: ["里長選挙", ...countsTags, ...resultTags]
   });
 }
 
@@ -580,11 +605,15 @@ function getVillageHistoryText(event) {
       const scaleTitle = event.tags[1] || event.title.match(/「(.+)」/)?.[1] || "";
       return scaleTitle ? `「${scaleTitle}」と呼ばれる規模になった。` : cleanRecordText(event.text || event.title);
     }
-    case HISTORY_EVENT_TYPES.HEADMAN_ELECTION:
+    case HISTORY_EVENT_TYPES.HEADMAN_ELECTION: {
       if (!personA) return "里長選挙は不成立となった。";
-      return event.title.includes("続ける")
+      const base = event.title.includes("続ける")
         ? `${personA}が里長を続けることになった。`
         : `${personA}が里長に選ばれた。`;
+      const counts = getElectionCounts(event);
+      const note = getElectionResultNote(event);
+      return [base, counts ? `得票は${counts}。` : "", note].filter(Boolean).join(" ");
+    }
     case HISTORY_EVENT_TYPES.VILLAGER_JOIN: {
       const source = normalizeJoinSource(getEventSource(event));
       if (personA && personB) return `${personB}の${source}で、${personA}が村に加わった。`;

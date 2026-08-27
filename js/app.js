@@ -3,7 +3,7 @@ import { openBuildingModal, closeBuildingModal, unlockAllBuildings } from "./bui
 import { createRandomVillager, createRandomVisitor, getVisitorTypeChoices } from "./createVillagers.js";
 import "./dictionary.js";
 import { addNonHousePopLimitBonus } from "./domain/buildingState.js";
-import { closeHistoryModal, closePersonalHistoryModal, openHistoryModal, openPastBookModal } from "./history.js";
+import { closeHistoryModal, closePersonalHistoryModal } from "./history.js";
 import {
   closeElectionRecordModal,
   closeLedgerModal,
@@ -308,8 +308,6 @@ function runUtilityAction() {
     }
   } else if (action === "auto-assign-settings") {
     openAutoAssignSettingsModal(theVillage, { onApplied: () => updateUI(theVillage) });
-  } else if (action === "pastbook") {
-    openPastBookModal(theVillage);
   } else if (action === "opening") {
     replayOpeningStory();
   } else if (action === "readme") {
@@ -349,7 +347,6 @@ function bindGlobalHandlers() {
     openSecretTreasureModal: () => openSecretTreasureModal(theVillage),
     closeSecretTreasureModal,
     closeDryadFruitModal,
-    openHistoryModal: () => openHistoryModal(theVillage),
     closeHistoryModal,
     closePersonalHistoryModal,
     openLedgerModal: () => openLedgerModal(theVillage),

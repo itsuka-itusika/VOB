@@ -4063,36 +4063,96 @@ section h2 {
 }
 .ledger-card-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
 }
-/* 羊皮紙のカード。1枚ずつ切り出した帳面の見立て。 */
+/*
+ * 台帳のカードは横長の和綴じ帳面に見立てる。
+ * 左端に綴じ代を置き、そこへ四つ目綴じの綴じ穴と糸を並べる。
+ */
 .ledger-card {
+  position: relative;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 16px 18px;
-  border: 1px solid #c3ad7d;
-  border-radius: 4px;
+  align-items: stretch;
+  gap: 0;
+  min-height: 76px;
+  padding: 0;
+  border: 1px solid #b99f6c;
+  border-radius: 2px 6px 6px 2px;
   background:
-    url("data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20width='160'%20height='160'><filter%20id='n'><feTurbulence%20type='fractalNoise'%20baseFrequency='0.9'%20numOctaves='3'%20stitchTiles='stitch'/><feColorMatrix%20type='saturate'%20values='0'/></filter><rect%20width='160'%20height='160'%20filter='url(%23n)'%20opacity='0.08'/></svg>"),
-    linear-gradient(180deg, #f6edd6, #ecdfc2);
-  background-size: 160px 160px, auto;
-  box-shadow: 0 2px 6px rgba(60, 44, 18, 0.18);
+    /* 綴じ側から差す影 */
+    linear-gradient(90deg, rgba(90, 68, 30, 0.16) 0 6px, rgba(90, 68, 30, 0) 22px),
+    /* 帳面の罫 */
+    repeating-linear-gradient(180deg, rgba(150, 122, 70, 0.14) 0 1px, rgba(150, 122, 70, 0) 1px 22px),
+    linear-gradient(180deg, #f7efd9, #eee0be);
+  box-shadow:
+    0 2px 5px rgba(60, 44, 18, 0.2),
+    /* 重ねた紙の断面 */
+    2px 2px 0 -1px #e6d7b4,
+    4px 4px 0 -2px #dccca4;
   color: #3b2f19;
   font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
   text-align: left;
   cursor: pointer;
 }
+/* 綴じ代。四つ目綴じの綴じ糸と綴じ穴をここへ描く。 */
+.ledger-card-spine {
+  position: relative;
+  flex: none;
+  width: 28px;
+  border-right: 1px solid rgba(150, 122, 70, 0.45);
+  background: linear-gradient(90deg, #e0cea3, #efe3c6);
+}
+/* 綴じ糸。穴と穴の間だけを渡し、上下の端は折り返して見せる。 */
+.ledger-card-spine::before {
+  content: "";
+  position: absolute;
+  top: 12%;
+  bottom: 12%;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    180deg,
+    #6b5326 0 14%, rgba(0, 0, 0, 0) 14% 20%,
+    #6b5326 20% 47%, rgba(0, 0, 0, 0) 47% 53%,
+    #6b5326 53% 80%, rgba(0, 0, 0, 0) 80% 86%,
+    #6b5326 86% 100%
+  );
+  opacity: 0.75;
+}
+/* 四つの綴じ穴。 */
+.ledger-card-spine::after {
+  content: "";
+  position: absolute;
+  top: 12%;
+  bottom: 12%;
+  left: 50%;
+  width: 6px;
+  transform: translateX(-50%);
+  background-image: radial-gradient(circle at center, #5c4620 0 2px, rgba(92, 70, 32, 0.35) 2px 2.6px, rgba(0, 0, 0, 0) 2.7px), radial-gradient(circle at center, #5c4620 0 2px, rgba(92, 70, 32, 0.35) 2px 2.6px, rgba(0, 0, 0, 0) 2.7px), radial-gradient(circle at center, #5c4620 0 2px, rgba(92, 70, 32, 0.35) 2px 2.6px, rgba(0, 0, 0, 0) 2.7px), radial-gradient(circle at center, #5c4620 0 2px, rgba(92, 70, 32, 0.35) 2px 2.6px, rgba(0, 0, 0, 0) 2.7px);
+  background-repeat: no-repeat;
+  background-size: 6px 6px;
+  background-position: center 0, center 33.333%, center 66.666%, center 100%;
+}
+.ledger-card-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 16px;
+}
 .ledger-card:hover {
-  border-color: #a98c50;
-  background-image:
-    url("data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20width='160'%20height='160'><filter%20id='n'><feTurbulence%20type='fractalNoise'%20baseFrequency='0.9'%20numOctaves='3'%20stitchTiles='stitch'/><feColorMatrix%20type='saturate'%20values='0'/></filter><rect%20width='160'%20height='160'%20filter='url(%23n)'%20opacity='0.08'/></svg>"),
-    linear-gradient(180deg, #fbf4e2, #f0e5cb);
+  border-color: #a1853f;
+  background:
+    linear-gradient(90deg, rgba(90, 68, 30, 0.16) 0 6px, rgba(90, 68, 30, 0) 22px),
+    repeating-linear-gradient(180deg, rgba(150, 122, 70, 0.14) 0 1px, rgba(150, 122, 70, 0) 1px 22px),
+    linear-gradient(180deg, #fdf6e4, #f3e7c9);
 }
 .ledger-card-title {
   font-size: 1.15rem;
   font-weight: bold;
+  letter-spacing: 0.08em;
 }
 .ledger-card-note {
   color: #6d5c3c;
