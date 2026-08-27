@@ -3965,7 +3965,14 @@ section h2 {
 .wc-villager-table { min-width: 1240px; }
 .wc-col-portrait { width: 44px; }
 .wc-col-name { width: 150px; }
-.wc-col-stat { width: 38px; }
+.wc-col-stat { width: 32px; }
+/* 2文字の見出しが折り返さない範囲まで、簡易能力の列を詰める。 */
+.wc-table .wc-col-stat,
+.wc-table .wc-stat-value {
+  padding-left: 1px;
+  padding-right: 1px;
+}
+.wc-table .wc-col-stat { font-size: 0.73rem; }
 .wc-col-stats { width: 180px; }
 .wc-col-task { width: 78px; }
 .wc-col-estimate { width: 230px; }
