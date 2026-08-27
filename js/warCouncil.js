@@ -42,6 +42,16 @@ const COUNCIL_ACTION_NOTES = {
 const OVERLAY_ID = "warCouncilOverlay";
 const MODAL_ID = "warCouncilModal";
 
+// 体力の右に並べる簡易能力。見出しをクリックすると、その値で並び替える。
+const SIMPLE_STAT_COLUMNS = [
+  { key: "hp", label: "体力" },
+  { key: "str", label: "筋力" },
+  { key: "dex", label: "器用" },
+  { key: "mag", label: "魔力" },
+  { key: "int", label: "知力" },
+  { key: "cou", label: "勇気" }
+];
+
 // 列の並びは戦列順。1人が就けるのは1つだけで、外すと通常業務へ戻る。
 const COUNCIL_LINES = [
   {
@@ -86,6 +96,10 @@ const ALL_COUNCIL_ACTIONS = COUNCIL_LINES.flatMap(line => line.actions.map(entry
 
 let councilVillage = null;
 let onCouncilStart = null;
+// 全能力欄は初期状態では隠す。並び替えは村人表だけに掛かる。
+let councilShowFullStats = false;
+let councilSortKey = "";
+let councilSortDesc = true;
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -149,13 +163,48 @@ function getNormalTask(person) {
   return preferred && preferred !== ACTION_NONE ? preferred : "なし";
 }
 
-function renderStatSummary(person) {
+function renderStatSummary(person, { showHappiness = false } = {}) {
   const body = [["筋", "str"], ["耐", "vit"], ["器", "dex"], ["魔", "mag"], ["魅", "chr"]];
   const mind = [["知", "int"], ["勤", "ind"], ["倫", "eth"], ["勇", "cou"], ["色", "sexdr"]];
   const line = pairs => pairs
     .map(([label, key]) => `${label}${Math.floor(Number(person?.[key]) || 0)}`)
     .join(" ");
-  return `<span class="wc-stat-line">${escapeHtml(line(body))}</span><span class="wc-stat-line">${escapeHtml(line(mind))}</span>`;
+  // 幸福度は村人だけの指標なので、襲撃者の行には出さない。
+  const happiness = showHappiness
+    ? ` <span class="wc-stat-happiness">幸${Math.floor(Number(person?.happiness) || 0)}</span>`
+    : "";
+  return `<span class="wc-stat-line">${escapeHtml(line(body))}</span><span class="wc-stat-line">${escapeHtml(line(mind))}${happiness}</span>`;
+}
+
+/** 体力と主要能力の数値セル。 */
+function renderSimpleStatCells(person) {
+  return SIMPLE_STAT_COLUMNS
+    .map(col => `<td class="wc-stat-value">${Math.floor(Number(person?.[col.key]) || 0)}</td>`)
+    .join("");
+}
+
+function renderSimpleStatHeaders({ rowspan = 1, sortable = false } = {}) {
+  return SIMPLE_STAT_COLUMNS.map(col => {
+    const span = rowspan > 1 ? ` rowspan="${rowspan}"` : "";
+    if (!sortable) return `<th${span} class="wc-col-stat">${escapeHtml(col.label)}</th>`;
+    const sorted = councilSortKey === col.key;
+    const mark = sorted ? (councilSortDesc ? "▼" : "▲") : "";
+    return `<th${span} class="wc-col-stat wc-sortable${sorted ? " is-sorted" : ""}" data-wc-sort="${col.key}"
+      title="クリックで並び替え">${escapeHtml(col.label)}<span class="wc-sort-mark">${mark}</span></th>`;
+  }).join("");
+}
+
+/** 顔・名前・簡易能力・全能力までの列数。枠行の左端セルを伸ばすのに使う。 */
+function getLeftColumnCount() {
+  return 2 + SIMPLE_STAT_COLUMNS.length + (councilShowFullStats ? 1 : 0);
+}
+
+/** 並び替え中はその値の順、指定がなければ村の並び順のまま。 */
+function getSortedCouncilVillagers(village) {
+  const villagers = getCouncilVillagers(village);
+  if (!councilSortKey) return villagers;
+  const value = person => Math.floor(Number(person?.[councilSortKey]) || 0);
+  return villagers.sort((a, b) => (councilSortDesc ? value(b) - value(a) : value(a) - value(b)));
 }
 
 // 肉体特性と精神特性は色で分け、同じ側は「・」、肉体と精神の間は「/」で区切る。
@@ -234,8 +283,8 @@ function renderVillagerRow(person, village) {
         <div class="wc-name">${escapeHtml(person.name)}</div>
         <div class="wc-traits">${renderTraits(person)}</div>
       </td>
-      <td class="wc-hp">${Math.floor(Number(person.hp) || 0)}</td>
-      <td class="wc-stats">${renderStatSummary(person)}</td>
+      ${renderSimpleStatCells(person)}
+      ${councilShowFullStats ? `<td class="wc-stats">${renderStatSummary(person, { showHappiness: true })}</td>` : ""}
       ${cells}
       <td class="wc-task${onCouncilDuty ? " is-suspended" : ""}">${escapeHtml(getNormalTask(person))}</td>
       <td class="wc-estimate">${escapeHtml(estimate).replace(/\n/g, "<br>")}</td>
@@ -253,7 +302,12 @@ function renderSlotRow(village) {
         ${over ? '<span class="wc-slot-over">出撃枠超過</span>' : ""}
       </td>`;
   }).join("");
-  return `<tr class="wc-slot-row"><td colspan="4"></td>${cells}<td colspan="2"></td></tr>`;
+  return `<tr class="wc-slot-row">
+    <td class="wc-slot-toggle" colspan="${getLeftColumnCount()}">
+      <label class="wc-full-stats-toggle">
+        <input type="checkbox" data-wc-full-stats ${councilShowFullStats ? "checked" : ""}>全能力表示
+      </label>
+    </td>${cells}<td colspan="2"></td></tr>`;
 }
 
 function renderEnemyRow(enemy) {
@@ -264,8 +318,8 @@ function renderEnemyRow(enemy) {
         <div class="wc-name">${escapeHtml(enemy.name)}</div>
         <div class="wc-traits">${renderTraits(enemy)}</div>
       </td>
-      <td class="wc-hp">${Math.floor(Number(enemy.hp) || 0)}</td>
-      <td class="wc-stats">${renderStatSummary(enemy)}</td>
+      ${renderSimpleStatCells(enemy)}
+      ${councilShowFullStats ? `<td class="wc-stats">${renderStatSummary(enemy)}</td>` : ""}
     </tr>`;
 }
 
@@ -282,17 +336,18 @@ function renderBody(village) {
         : `<th class="wc-action-head">${escapeHtml(entry.label)}</th>`;
     }))
     .join("");
-  const rows = getCouncilVillagers(village).map(person => renderVillagerRow(person, village)).join("");
+  const rows = getSortedCouncilVillagers(village).map(person => renderVillagerRow(person, village)).join("");
   const enemies = Array.isArray(village.raidEnemies) ? village.raidEnemies : [];
+  const villagerColumns = getLeftColumnCount() + ALL_COUNCIL_ACTIONS.length + 2;
 
   return `
-    <table class="wc-table">
+    <table class="wc-table wc-villager-table">
       <thead>
         <tr>
           <th rowspan="2" class="wc-col-portrait">顔</th>
           <th rowspan="2" class="wc-col-name">名前<br>特性</th>
-          <th rowspan="2" class="wc-col-hp">体力</th>
-          <th rowspan="2" class="wc-col-stats">能力</th>
+          ${renderSimpleStatHeaders({ rowspan: 2, sortable: true })}
+          ${councilShowFullStats ? '<th rowspan="2" class="wc-col-stats">能力</th>' : ""}
           ${lineHeaders}
           <th rowspan="2" class="wc-col-task">通常行動</th>
           <th rowspan="2" class="wc-col-estimate">予想</th>
@@ -300,7 +355,7 @@ function renderBody(village) {
         <tr>${actionHeaders}</tr>
       </thead>
       <tbody>
-        ${rows || '<tr><td colspan="11" class="wc-empty">配置できる村人がいません。</td></tr>'}
+        ${rows || `<tr><td colspan="${villagerColumns}" class="wc-empty">配置できる村人がいません。</td></tr>`}
         ${renderSlotRow(village)}
       </tbody>
     </table>
@@ -311,12 +366,12 @@ function renderBody(village) {
         <tr>
           <th class="wc-col-portrait">顔</th>
           <th class="wc-col-name">名前<br>特性</th>
-          <th class="wc-col-hp">体力</th>
-          <th class="wc-col-stats">能力</th>
+          ${renderSimpleStatHeaders()}
+          ${councilShowFullStats ? '<th class="wc-col-stats">能力</th>' : ""}
         </tr>
       </thead>
       <tbody>
-        ${enemies.map(renderEnemyRow).join("") || '<tr><td colspan="4" class="wc-empty">襲撃者はいません。</td></tr>'}
+        ${enemies.map(renderEnemyRow).join("") || `<tr><td colspan="${getLeftColumnCount()}" class="wc-empty">襲撃者はいません。</td></tr>`}
       </tbody>
     </table>
   `;
@@ -374,6 +429,27 @@ function bindCouncilInputs() {
     });
   });
 
+  content.querySelector("[data-wc-full-stats]")?.addEventListener("change", event => {
+    councilShowFullStats = !!event.target.checked;
+    refreshCouncilBody();
+  });
+
+  // 見出しのクリックで降順→昇順→解除と切り替える。
+  content.querySelectorAll("[data-wc-sort]").forEach(header => {
+    header.addEventListener("click", () => {
+      const key = header.dataset.wcSort;
+      if (councilSortKey !== key) {
+        councilSortKey = key;
+        councilSortDesc = true;
+      } else if (councilSortDesc) {
+        councilSortDesc = false;
+      } else {
+        councilSortKey = "";
+      }
+      refreshCouncilBody();
+    });
+  });
+
   content.querySelectorAll("[data-wc-face]").forEach(cell => {
     cell.addEventListener("click", () => {
       const enemies = Array.isArray(councilVillage?.raidEnemies) ? councilVillage.raidEnemies : [];
@@ -409,6 +485,9 @@ export function openWarCouncilModal(village, { onStart = null, onAutoAssign = nu
   closeWarCouncilModal();
   councilVillage = village;
   onCouncilStart = onStart;
+  councilShowFullStats = false;
+  councilSortKey = "";
+  councilSortDesc = true;
 
   const overlay = document.createElement("div");
   overlay.id = OVERLAY_ID;

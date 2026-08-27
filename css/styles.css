@@ -942,12 +942,13 @@ tr.apocalypse-war-row > td {
   background: #f9d8e9;
 }
 
-tr td:nth-child(14),
-tr td:nth-child(15),
-tr td:nth-child(16),
-tr td:nth-child(17),
-tr td:nth-child(18),
-tr td:nth-child(19) {
+/* 作戦会議表は列構成が違うため、この列色は当てない。 */
+table:not(.wc-table) tr td:nth-child(14),
+table:not(.wc-table) tr td:nth-child(15),
+table:not(.wc-table) tr td:nth-child(16),
+table:not(.wc-table) tr td:nth-child(17),
+table:not(.wc-table) tr td:nth-child(18),
+table:not(.wc-table) tr td:nth-child(19) {
   background: #faf2d3;
 }
 
@@ -3861,7 +3862,7 @@ section h2 {
   left: 50%;
   transform: translate(-50%, -50%);
   box-sizing: border-box;
-  width: min(1180px, calc(100vw - 24px));
+  width: min(1360px, calc(100vw - 24px));
   max-height: 90vh;
   background: #fffdf7;
   border: 1px solid #b8a36d;
@@ -3933,6 +3934,7 @@ section h2 {
   color: #a3261b;
 }
 .wc-content {
+  overflow-x: auto;
   overflow-y: auto;
   min-height: 0;
 }
@@ -3959,12 +3961,14 @@ section h2 {
   color: #2b3036;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
 }
-.wc-col-portrait { width: 48px; }
+/* 全能力欄を出すと列が増えるため、狭い画面では横スクロールで幅を確保する。 */
+.wc-villager-table { min-width: 1240px; }
+.wc-col-portrait { width: 44px; }
 .wc-col-name { width: 150px; }
-.wc-col-hp { width: 52px; }
-.wc-col-stats { width: 190px; }
-.wc-col-task { width: 84px; }
-.wc-col-estimate { width: 240px; }
+.wc-col-stat { width: 46px; }
+.wc-col-stats { width: 180px; }
+.wc-col-task { width: 78px; }
+.wc-col-estimate { width: 230px; }
 .wc-action-head { width: 54px; }
 .wc-portrait-cell { padding: 2px; cursor: pointer; }
 .wc-name-cell { text-align: left; }
@@ -3984,8 +3988,28 @@ section h2 {
   margin: 0 3px;
   color: #8b8478;
 }
-.wc-hp { font-variant-numeric: tabular-nums; }
+.wc-stat-value { font-variant-numeric: tabular-nums; }
+/* 並び替えできる見出し。今の基準は矢印で示す。 */
+.wc-sortable { cursor: pointer; }
+.wc-sortable.is-sorted { color: #1f4f8b; }
+.wc-sort-mark {
+  margin-left: 2px;
+  font-size: 0.6rem;
+}
 .wc-stats { text-align: left; }
+/* 幸福度は他の能力と性質が違うため、色で分ける。 */
+.wc-stat-happiness { color: #d97706; }
+.wc-slot-toggle {
+  text-align: left;
+  font-weight: normal;
+}
+.wc-full-stats-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
 .wc-stat-line {
   display: block;
   font-size: 0.72rem;
@@ -4043,7 +4067,8 @@ section h2 {
 }
 .wc-enemy-table {
   table-layout: fixed;
-  width: min(100%, 520px);
+  width: max-content;
+  max-width: 100%;
 }
 @media (max-width: 860px) {
   .wc-table th,
