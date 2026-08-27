@@ -884,11 +884,27 @@ function startPregnancy(village, mother, father, options = {}) {
   showPregnancyModal(village, mother, father);
 }
 
+/**
+ * 出産直後の母体の変化。命名を待つ間に肉体交換が起きると身体側の妊娠が相手へ移り、
+ * 同じ妊娠から二度出産してしまうため、身体に関わる分はここで確定させる。
+ */
+function applyPostpartumToMother(mother) {
+  mother.pregnancy = null;
+  mother.bodyTraits = mother.bodyTraits.filter(trait => trait !== "妊娠" && trait !== "臨月");
+  mother.hp = Math.floor(mother.hp * 0.25);
+  addUnique(mother.bodyTraits, "産褥");
+  mother.postpartumMonths = POSTPARTUM_MONTHS;
+  syncEffectiveStats(mother);
+  mother.action = "療養";
+  mother.actionTable = ["療養"];
+}
+
 function giveBirth(village, mother) {
   const data = mother.pregnancy;
   if (!data) return;
 
-  // 命名が決まるまで村へは加えない。母側の出産処理も finalizeBirth へまとめる。
+  // 命名が決まるまで村へは加えない。母体の変化だけは先に確定させる。
+  applyPostpartumToMother(mother);
   const child = createNewbornChild(village, data);
   showBirthModal(village, mother, getSpouse(mother, village), child, childName => {
     finalizeBirth(village, mother, data, child, childName);
@@ -932,9 +948,6 @@ function finalizeBirth(village, mother, data, child, childName) {
   child.bodyOwnerId = child.id;
   registerUsedName(childName);
 
-  mother.bodyTraits = mother.bodyTraits.filter(trait => trait !== "妊娠" && trait !== "臨月");
-  syncEffectiveStats(mother);
-
   addRelationship(child, "母", mother);
   addRelationship(mother, "子", child);
   // 遺伝上の親は妊娠時点の肉体の持ち主。既に村を去っていることもあるためスナップショットで持つ。
@@ -957,18 +970,11 @@ function finalizeBirth(village, mother, data, child, childName) {
   }
 
   mother.happiness = clampValue(mother.happiness + 50, 0, 100);
-  mother.hp = Math.floor(mother.hp * 0.25);
-  addUnique(mother.bodyTraits, "産褥");
-  mother.postpartumMonths = POSTPARTUM_MONTHS;
-  syncEffectiveStats(mother);
-  mother.action = "療養";
-  mother.actionTable = ["療養"];
 
   if (spouse) {
     spouse.happiness = clampValue(spouse.happiness + 30, 0, 100);
   }
 
-  mother.pregnancy = null;
   addNonHousePopLimitBonus(village, 1);
   village.villagers.push(child);
   recordBirthHistory(village, mother, child, {
