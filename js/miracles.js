@@ -176,8 +176,14 @@ export function onSelectMiracleChange(village) {
   }
 }
 
+/** 宴会・狂宴の費用を数える人数。効果が届かない塩の柱は数えない。 */
+function countFeastCostTargets(village) {
+  const villagers = Array.isArray(village?.villagers) ? village.villagers : [];
+  return villagers.filter(person => !isSaltPillar(person)).length;
+}
+
 function getMiracleCostInfo(miracle, village) {
-  const peopleCount = village.villagers.length;
+  const peopleCount = countFeastCostTargets(village);
   if (miracle.cost === -1) {
     const amount = peopleCount * FEAST_COST_PER_PERSON;
     return { mana: amount, funds: amount, label: `魔素: ${amount} / 資金: ${amount}` };
@@ -955,7 +961,7 @@ export function performMiracle(village) {
     .map(id => findMiracleTargetById(id, village))
     .filter(Boolean);
   if (multiTargets.length > 0) cost *= multiTargets.length;
-  let vc = village.villagers.length;
+  const vc = countFeastCostTargets(village);
   if (info.cost===-1) {
     // 宴会
     cost = vc * FEAST_COST_PER_PERSON;
