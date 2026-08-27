@@ -2125,6 +2125,52 @@ section h2 {
   color: #8a6d1d;
   font-size: 0.9rem;
 }
+.raid-result-breakdown {
+  margin: 10px 0 4px;
+  max-height: 38vh;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+.raid-result-breakdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.raid-result-breakdown-table th,
+.raid-result-breakdown-table td {
+  padding: 4px 8px;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+  vertical-align: middle;
+}
+.raid-result-breakdown-table th {
+  position: sticky;
+  top: 0;
+  background: #f4efe4;
+  font-weight: bold;
+}
+.raid-result-breakdown-table tr:last-child td {
+  border-bottom: none;
+}
+.raid-result-breakdown-table .portrait-sprite {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+}
+.raid-result-breakdown-rank {
+  width: 2.5em;
+  color: #777;
+}
+.raid-result-breakdown-damage {
+  text-align: right;
+  font-weight: bold;
+  color: #8a6d1d;
+}
+.event-modal-buttons > button + button {
+  margin-left: 8px;
+}
 .event-modal-buttons {
   margin-top: 14px;
   text-align: right;

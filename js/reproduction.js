@@ -1042,7 +1042,7 @@ function announceWolfMaturity(village, child) {
   if ((Number(child.spiritAge) || 0) !== 1 || child.adultModalShown) return;
 
   village.log(`${child.name}は一人前になりました`);
-  recordAdulthoodHistory(village, child, { source: "成長" });
+  recordAdulthoodHistory(village, child, { source: "成長", label: "成狼" });
   child.adultModalShown = true;
   showAdultModal(village, child, {
     title: "一人前",

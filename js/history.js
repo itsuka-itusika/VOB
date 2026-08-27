@@ -58,6 +58,9 @@ const HISTORY_SCOPES = Object.freeze({
   PERSON: "person"
 });
 
+// 成狼の記録を成人と区別するタグ。表示側もこの値で文言を切り替える。
+const ADULTHOOD_WOLF_TAG = "成狼";
+
 const MYTHIC_EVENT_TEXTS = Object.freeze({
   "狩猟神": personName => `${personName}が狩女神の祝福を受けた。`,
   "太陽神": personName => `${personName}が太陽神の寵愛を受けた。`,
@@ -362,14 +365,16 @@ export function recordBirthHistory(village, mother, child, options = {}) {
 export function recordAdulthoodHistory(village, person, options = {}) {
   if (!person) return;
   const source = options.source || "成長";
+  // 狼は「成人」ではなく「成狼」として記録する。表示側もこのタグで文言を分ける。
+  const isWolfMaturity = options.label === ADULTHOOD_WOLF_TAG;
   addHistoryEvent(village, {
     type: HISTORY_EVENT_TYPES.ADULTHOOD,
-    title: `${person.name}、成人する`,
-    text: `${person.name}が成人した。`,
+    title: isWolfMaturity ? `${person.name}、成狼になる` : `${person.name}、成人する`,
+    text: isWolfMaturity ? `${person.name}が成狼になった。` : `${person.name}が成人した。`,
     people: [person],
     importance: "minor",
     scope: HISTORY_SCOPES.PERSON,
-    tags: ["成人", source],
+    tags: [isWolfMaturity ? ADULTHOOD_WOLF_TAG : "成人", source],
     dedupeKey: `adulthood:${person.name}`
   });
 }
@@ -620,7 +625,11 @@ function getVillageHistoryText(event) {
       if (personA) return event.text.includes("神秘") ? `${personA}に神秘の子が宿った。` : `${personA}が子を身ごもった。`;
       break;
     case HISTORY_EVENT_TYPES.ADULTHOOD:
-      if (personA) return `${personA}が成人した。`;
+      if (personA) {
+        return event.tags.includes(ADULTHOOD_WOLF_TAG)
+          ? `${personA}が成狼になった。`
+          : `${personA}が成人した。`;
+      }
       break;
     case HISTORY_EVENT_TYPES.CRITICAL:
       if (personA) return `${personA}が危篤となった。`;
@@ -682,7 +691,7 @@ function getPersonalHistoryText(event, personName, personId = null) {
         ? `${getEventSource(event)}により村での生を終えた。`
         : "村での生を終えた。";
     case HISTORY_EVENT_TYPES.ADULTHOOD:
-      return "成人した。";
+      return event.tags.includes(ADULTHOOD_WOLF_TAG) ? "成狼になった。" : "成人した。";
     case HISTORY_EVENT_TYPES.CRITICAL:
       return "危篤となった。";
     case HISTORY_EVENT_TYPES.EPIDEMIC:

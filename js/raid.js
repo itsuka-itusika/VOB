@@ -1389,6 +1389,24 @@ function collectRaidResultInfo(village, isSuccess, isPartSuccess, resultReason =
     .filter(person => person && Number(person.hp) <= 0)
     .map(person => person.name);
 
+  // 戦果詳細用。参加した村人を全員並べ、与ダメージの多い順にする。
+  const damageByKey = village.raidFriendshipDamage || {};
+  const damageBreakdown = [...new Set(participantIds)]
+    .map(id => village.villagers.find(v => v.id === Number(id)))
+    .filter(Boolean)
+    .map(person => ({
+      name: person.name,
+      action: String(person.action || ""),
+      damage: Math.floor(Number(damageByKey[String(person.id)]) || 0),
+      portrait: {
+        name: person.name,
+        portraitFile: person.portraitFile,
+        adultPortraitFile: person.adultPortraitFile,
+        bodyTraits: Array.isArray(person.bodyTraits) ? [...person.bodyTraits] : []
+      }
+    }))
+    .sort((a, b) => b.damage - a.damage || a.name.localeCompare(b.name, "ja"));
+
   let mvp = null;
   if (isSuccess) {
     const damageEntries = Object.entries(village.raidFriendshipDamage || {})
@@ -1424,6 +1442,7 @@ function collectRaidResultInfo(village, isSuccess, isPartSuccess, resultReason =
     survivingCount,
     fallenNames,
     mvp,
+    damageBreakdown,
     capturedName: "",
     happinessGain: 0,
     divineGain: 0,
@@ -1501,6 +1520,26 @@ function showRaidResultModal(info) {
       </div>`
     : "";
 
+  // 戦果詳細。与ダメージの多い順に、参加した村人を全員並べる。
+  const breakdown = Array.isArray(info.damageBreakdown) ? info.damageBreakdown : [];
+  const breakdownHtml = breakdown.length > 0
+    ? `<div class="raid-result-breakdown" data-raid-result-breakdown hidden>
+        <table class="raid-result-breakdown-table">
+          <thead><tr><th>順</th><th>顔</th><th>名前</th><th>行動</th><th>与ダメージ</th></tr></thead>
+          <tbody>
+            ${breakdown.map((entry, index) => `
+              <tr>
+                <td class="raid-result-breakdown-rank">${index + 1}</td>
+                <td>${getPortraitSpriteHtml(entry.portrait, { size: 32, alt: entry.name })}</td>
+                <td>${escapeRaidResultText(entry.name)}</td>
+                <td>${escapeRaidResultText(entry.action)}</td>
+                <td class="raid-result-breakdown-damage">${Math.floor(entry.damage)}</td>
+              </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>`
+    : "";
+
   const overlay = document.createElement("div");
   overlay.id = RAID_RESULT_OVERLAY_ID;
   overlay.className = "event-modal-overlay raid-result-overlay";
@@ -1515,7 +1554,9 @@ function showRaidResultModal(info) {
       <h3>${escapeRaidResultText(title)}${reasonText ? `<span class="raid-result-reason">${escapeRaidResultText(reasonText)}</span>` : ""}</h3>
       ${mvpHtml}
       ${lines.map(line => `<p>${line}</p>`).join("")}
+      ${breakdownHtml}
       <div class="event-modal-buttons">
+        ${breakdown.length > 0 ? '<button type="button" data-toggle-raid-breakdown>戦果詳細</button>' : ""}
         <button type="button" data-close-raid-result>閉じる</button>
       </div>
     </div>
@@ -1525,6 +1566,15 @@ function showRaidResultModal(info) {
     overlay.remove();
     modal.remove();
   };
+  const toggleButton = modal.querySelector("[data-toggle-raid-breakdown]");
+  if (toggleButton) {
+    const panel = modal.querySelector("[data-raid-result-breakdown]");
+    toggleButton.onclick = () => {
+      const willShow = panel.hidden;
+      panel.hidden = !willShow;
+      toggleButton.textContent = willShow ? "戦果詳細を閉じる" : "戦果詳細";
+    };
+  }
   modal.querySelector("[data-close-raid-result]").onclick = close;
   overlay.onclick = close;
   document.body.appendChild(overlay);
