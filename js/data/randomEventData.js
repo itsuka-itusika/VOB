@@ -12,7 +12,7 @@ export const EVENT_KIND_TITLES = {
 
 export const EVENT_POOLS = {
   good: ["wolfChild", "cat", "gold", "strangeRain", "fireworks", "hotSpring", "bathPerk", "hobbyFriends", "thaw", "menFriendship", "lover", "hitItOff", "pickup", "yuri", "tattoo", "fashion", "muscle", "selfPleasure"],
-  bad: ["storm", "downpour", "heat", "fire", "thief", "rats", "lightning1", "lightning2", "snow", "fight", "loverArgument", "argument", "drunk", "epidemic"]
+  bad: ["storm", "greatStorm", "downpour", "heat", "fire", "thief", "rats", "lightning1", "lightning2", "snow", "fight", "loverArgument", "argument", "drunk", "epidemic"]
 };
 
 // 村全体へ一律に効くイベント。同じ状況を何人も語る意味がないため、代表1人だけが反応する。
@@ -45,6 +45,7 @@ export const EVENT_SUBJECTS = {
   muscle: "筋トレ",
   selfPleasure: "自家発電にはまった",
   storm: "春の嵐",
+  greatStorm: "大嵐",
   downpour: "豪雨",
   heat: "猛暑",
   fire: "ボヤ",
@@ -86,6 +87,7 @@ export const EVENT_MOODS = {
   muscle: "selfChange",
   selfPleasure: "selfChange",
   storm: "loss",
+  greatStorm: "loss",
   downpour: "loss",
   heat: "hardship",
   fire: "loss",
@@ -332,6 +334,7 @@ export const EVENT_SECOND_LINE_BASES = {
   fashion: "装いひとつで見える景色まで変わる",
   muscle: "鍛えた分だけ体が応えてくれる",
   storm: "嵐の後片付けから始めるしかない",
+  greatStorm: "壊れた建物を見上げると、途方に暮れてしまう",
   downpour: "濡れた食料を分けて、使えるものを残したい",
   heat: "この暑さでは立っているだけで体力を削られる",
   fire: "煙の匂いがまだ残っていて落ち着かない",

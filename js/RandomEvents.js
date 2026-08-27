@@ -15,6 +15,7 @@ import { refreshJobTable } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { getActiveVillagers, getVillagersIncludingSaltPillar } from "./domain/apocalypseRules.js";
+import { damageRandomBuilding } from "./buildings.js";
 import { addAcquiredStat, syncEffectiveStats } from "./domain/statLayers.js";
 import { recordEpidemicHistory, recordHobbyAwakeningHistory, recordLoverHistory, recordMythicEventHistory, recordSocialRelationHistory, recordVillagerJoinHistory } from "./history.js";
 import { updateUI } from "./ui.js";
@@ -754,6 +755,8 @@ export class RandomEvents {
     switch (eventKey) {
       case "storm":
         return season === "春" ? 1 : 0;
+      case "greatStorm":
+        return season === "夏" || season === "秋" ? 1 : 0;
       case "downpour":
         return season === "夏" || season === "秋" ? 1 : 0;
       case "heat":
@@ -807,6 +810,11 @@ export class RandomEvents {
         let loss = Math.floor(v.food * 0.1);
         v.food = clampValue(v.food - loss, 0, 99999);
         v.log(`春の嵐:食料-${loss}`);
+        break;
+      }
+      case "greatStorm": {
+        // 黄金像は damageRandomBuilding 側で損壊対象から除外されている。
+        damageRandomBuilding(v);
         break;
       }
       case "downpour": {
