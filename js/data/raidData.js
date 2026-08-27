@@ -24,7 +24,7 @@ export const RAIDER_TYPES = [
     ],
     ranges: {
       hp: [50, 70],
-      mp: [30, 55],
+      mp: [34, 55],
       happiness: [10, 30],
       str: [15, 21],
       vit: [8, 25],
@@ -302,7 +302,7 @@ export const RAIDER_TYPES = [
     raidPosition: "front",
     ranges: {
       hp: [30, 50],
-      mp: [25, 45],
+      mp: [34, 45],
       happiness: [5, 20],
       str: [15, 20],
       vit: [8, 16],
