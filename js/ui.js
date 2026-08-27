@@ -913,7 +913,7 @@ function appendActionCell(row, person, village, editable) {
   const lockButton = document.createElement("button");
   lockButton.type = "button";
   lockButton.className = `assignment-lock-toggle ${person.assignmentLocked ? "is-locked" : "is-auto"}`;
-  lockButton.title = "通常行動を固定します。自動割り振りで変更されません。手で行動を選び直すと解除されます。";
+  lockButton.title = "通常行動を固定します。自動割り振りで変更されません。手で仕事を選び直すと解除されます。";
   lockButton.setAttribute("aria-label", person.assignmentLocked ? "固定中" : "自動割り振り対象");
   lockButton.setAttribute("aria-pressed", person.assignmentLocked ? "true" : "false");
   const lockIcon = document.createElement("span");
