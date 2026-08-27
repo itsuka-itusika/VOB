@@ -8,10 +8,12 @@ import { HobbyEffects } from "./HobbyEffects.js";
 import {
   canReceiveGoldenRainPregnancy,
   createWolfFoundling,
+  growPersonToAdultAge,
   matureBodyToAdultOnly,
   scheduleGoldenRainPregnancy
 } from "./reproduction.js";
 import { refreshJobTable } from "./domain/jobTables.js";
+import { isOriginalBodyOwner } from "./domain/portraitHistory.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { getActiveVillagers, getVillagersIncludingSaltPillar } from "./domain/apocalypseRules.js";
@@ -44,6 +46,9 @@ const VILLAGER_STATE_KEYS = [
   "bodyTraits", "mindTraits", "relationships", "friendships", "friendshipStats", "hobby",
   "bodySex", "bodyAge", "bodyOwner", "race", "portraitFile"
 ];
+// 時空のうねりで到達する年齢の幅。
+const TIME_RIPPLE_MIN_AGE = 16;
+const TIME_RIPPLE_MAX_AGE = 20;
 const YURI_BLOCKING_RELATION_PREFIXES = ["天敵", "母", "父", "子", "夫", "妻", "恋人"];
 const THUNDERBOLT_LOVE_BLOCKING_RELATION_PREFIXES = ["恋人", "夫", "妻", "母", "父", "子"];
 const FIGHT_ALLOWED_RELATION_PREFIXES = new Set(["村設立の同志", "仕事仲間"]);
@@ -311,6 +316,15 @@ export class RandomEvents {
       cands.push({ type: "strangeGrowthPotion", vill: this.randChoice(growthPotionCandidates) });
     }
 
+    // 時空のうねりは、幼い精神を持ち、肉体交換をしていない村人だけに起こる。
+    const timeRippleCandidates = getActiveVillagers(v).filter(person =>
+      Number(person.spiritAge) <= 9 &&
+      isOriginalBodyOwner(person.name, person.bodyOwner) &&
+      !hasMindTrait(person, "野生"));
+    if (timeRippleCandidates.length > 0) {
+      cands.push({ type: "timeRipple", vill: this.randChoice(timeRippleCandidates) });
+    }
+
     // 突然の恋は2人組で成立するため、成立し得る組を1つだけ候補に載せる。
     const thunderboltLovePairs = this.collectThunderboltLovePairs(v);
     if (thunderboltLovePairs.length > 0) {
@@ -354,6 +368,15 @@ export class RandomEvents {
         if (!matureBodyToAdultOnly(p, v)) return null;
         this.addForcedSpeaker(p);
         v.log(`怪しい薬:${p.name}は怪しい薬を頭からかぶり、肉体だけが急成長した。肉体年齢${beforeAge}歳→16歳、肉体能力が潜在値まで成長`);
+        break;
+      }
+      case "timeRipple": {
+        const beforeBodyAge = Number(p.bodyAge) || 0;
+        const beforeSpiritAge = Number(p.spiritAge) || 0;
+        const grownAge = randInt(TIME_RIPPLE_MIN_AGE, TIME_RIPPLE_MAX_AGE);
+        if (!growPersonToAdultAge(p, v, { targetAge: grownAge })) return null;
+        this.addForcedSpeaker(p);
+        v.log(`時空のうねり:${p.name}は時空のうねりに巻き込まれ成長した姿で現れた。肉体年齢${beforeBodyAge}歳→${p.bodyAge}歳、精神年齢${beforeSpiritAge}歳→${p.spiritAge}歳`);
         break;
       }
       case "thunderboltLove": {

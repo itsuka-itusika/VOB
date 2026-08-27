@@ -67,7 +67,8 @@ const MYTHIC_EVENT_TEXTS = Object.freeze({
   "戦女神": personName => `${personName}が戦女神の啓示を受けた。`,
   "地母神": personName => `${personName}が地母神の慈愛を受けた。`,
   goldenRain: personName => `黄金の雨が降り、${personName}に神秘の兆しが宿った。`,
-  strangeGrowthPotion: personName => `怪しい薬により、${personName}の身体が急速に成長した。`
+  strangeGrowthPotion: personName => `怪しい薬により、${personName}の身体が急速に成長した。`,
+  timeRipple: personName => `${personName}は時空のうねりに巻き込まれ、成長した姿で現れた。`
 });
 
 function ensureHistoryEvents(village) {

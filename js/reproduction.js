@@ -669,6 +669,33 @@ export function updateChildGrowthStage(child, village, { announce = false } = {}
   }
 }
 
+/**
+ * 子どもを一気に成人の年齢まで進める。肉体と精神の両方を動かす。
+ * 潜在能力を持たない村人には成長段階が働かないため、子ども特性だけを外す。
+ * 進めるものが無い場合は false を返す。
+ */
+export function growPersonToAdultAge(person, village, { targetAge = 16, announce = false } = {}) {
+  if (!person) return false;
+  const oldBodyAge = Number(person.bodyAge) || 0;
+  const oldSpiritAge = Number(person.spiritAge) || 0;
+  if (oldBodyAge > 15 && oldSpiritAge > 15) return false;
+
+  const age = Math.max(16, Math.floor(Number(targetAge) || 16));
+  const hasPotential = !!(person.potentialStats || person.bodyPotentialStats || person.mindPotentialStats);
+
+  if (oldBodyAge <= 15) person.bodyAge = age;
+  if (oldSpiritAge <= 15) person.spiritAge = age;
+  updateChildGrowthStage(person, village, { announce });
+  syncWolfSpeciesTraits(person);
+  if (!hasPotential) {
+    person.bodyTraits = removeTraits(person.bodyTraits, CHILD_BODY_TRAITS);
+    person.mindTraits = removeTraits(person.mindTraits, CHILD_MIND_TRAITS);
+  }
+  syncEffectiveStats(person);
+  refreshJobTable(person, village);
+  return true;
+}
+
 export function matureBodyToAdultOnly(character, village) {
   if (!character || Number(character.bodyAge) >= 16) return false;
 
