@@ -24,6 +24,8 @@ export const RAIDER_TYPES = [
     ],
     ranges: {
       hp: [50, 70],
+      mp: [30, 55],
+      happiness: [10, 30],
       str: [15, 21],
       vit: [8, 25],
       dex: [10, 20],
@@ -65,6 +67,8 @@ export const RAIDER_TYPES = [
     ],
     ranges: {
       hp: [65, 85],
+      mp: [55, 75],
+      happiness: [35, 55],
       str: [18, 24],
       vit: [14, 28],
       dex: [12, 22],
@@ -102,6 +106,8 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("BAN", 20),
     ranges: {
       hp: [55, 75],
+      mp: [55, 75],
+      happiness: [35, 55],
       str: [14, 20],
       vit: [10, 20],
       dex: [18, 24],
@@ -139,6 +145,8 @@ export const RAIDER_TYPES = [
     ],
     ranges: {
       hp: [30, 50],
+      mp: [40, 60],
+      happiness: [55, 80],
       str: [12, 18],
       vit: [5, 15],
       dex: [18, 25],
@@ -178,6 +186,8 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("GOB", 13),
     ranges: {
       hp: [50, 70],
+      mp: [50, 70],
+      happiness: [65, 88],
       str: [15, 21],
       vit: [10, 20],
       dex: [18, 26],
@@ -214,6 +224,8 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("GOB", 13),
     ranges: {
       hp: [35, 55],
+      mp: [40, 60],
+      happiness: [55, 80],
       str: [10, 16],
       vit: [6, 16],
       dex: [24, 32],
@@ -245,6 +257,8 @@ export const RAIDER_TYPES = [
     raidPosition: "front",
     ranges: {
       hp: [30, 50],
+      mp: [50, 70],
+      happiness: [40, 60],
       str: [15, 20],
       vit: [8, 16],
       dex: [3, 8],
@@ -288,6 +302,8 @@ export const RAIDER_TYPES = [
     raidPosition: "front",
     ranges: {
       hp: [30, 50],
+      mp: [25, 45],
+      happiness: [5, 20],
       str: [15, 20],
       vit: [8, 16],
       dex: [3, 8],
@@ -331,6 +347,8 @@ export const RAIDER_TYPES = [
     raidPosition: "front",
     ranges: {
       hp: [90, 120],
+      mp: [55, 80],
+      happiness: [45, 70],
       str: [23, 30],
       vit: [23, 30],
       dex: [5, 15],
@@ -376,6 +394,8 @@ export const RAIDER_TYPES = [
     ],
     ranges: {
       hp: [50, 70],
+      mp: [50, 70],
+      happiness: [65, 90],
       str: [16, 22],
       vit: [8, 18],
       dex: [1, 5],
@@ -421,6 +441,8 @@ export const RAIDER_TYPES = [
     ],
     ranges: {
       hp: [70, 90],
+      mp: [60, 80],
+      happiness: [75, 95],
       str: [18, 24],
       vit: [12, 22],
       dex: [2, 7],
@@ -460,6 +482,8 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("NOMAD", 20),
     ranges: {
       hp: [45, 60],
+      mp: [45, 65],
+      happiness: [20, 40],
       str: [18, 24],
       vit: [16, 23],
       dex: [18, 26],
@@ -495,6 +519,8 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("ELITE_NOMAD", 20),
     ranges: {
       hp: [70, 90],
+      mp: [60, 80],
+      happiness: [45, 65],
       str: [20, 25],
       vit: [18, 23],
       dex: [20, 25],
@@ -530,6 +556,8 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("CENTAUR", 9),
     ranges: {
       hp: [80, 100],
+      mp: [60, 80],
+      happiness: [50, 70],
       str: [18, 23],
       vit: [18, 23],
       dex: [18, 28],
@@ -564,6 +592,8 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("KNIGHT", 26),
     ranges: {
       hp: [75, 95],
+      mp: [55, 75],
+      happiness: [30, 50],
       str: [19, 24],
       vit: [17, 24],
       dex: [12, 20],
@@ -597,6 +627,8 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("ARMORED", 8),
     ranges: {
       hp: [80, 100],
+      mp: [60, 80],
+      happiness: [35, 55],
       str: [20, 25],
       vit: [20, 28],
       dex: [8, 15],
@@ -631,6 +663,8 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("ELITE", 22),
     ranges: {
       hp: [70, 90],
+      mp: [70, 88],
+      happiness: [50, 70],
       str: [22, 25],
       vit: [20, 25],
       dex: [18, 24],
@@ -665,6 +699,8 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("HOLY_KNIGHT", 8),
     ranges: {
       hp: [80, 100],
+      mp: [80, 95],
+      happiness: [55, 75],
       str: [22, 25],
       vit: [20, 25],
       dex: [18, 24],
@@ -700,6 +736,8 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("SAINT", 21),
     ranges: {
       hp: [60, 90],
+      mp: [85, 98],
+      happiness: [60, 80],
       str: [8, 15],
       vit: [12, 20],
       dex: [12, 20],
@@ -737,6 +775,8 @@ export const RAIDER_TYPES = [
     },
     ranges: {
       hp: [160, 200],
+      mp: [80, 95],
+      happiness: [40, 60],
       str: [25, 32],
       vit: [25, 32],
       dex: [18, 28],
@@ -774,6 +814,8 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("ANGEL_FIGHTER", 16),
     ranges: {
       hp: [70, 90],
+      mp: [85, 97],
+      happiness: [55, 75],
       str: [16, 23],
       vit: [16, 23],
       dex: [16, 23],
@@ -810,6 +852,8 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("ARCHANGEL", 13),
     ranges: {
       hp: [80, 100],
+      mp: [90, 99],
+      happiness: [65, 85],
       str: [18, 25],
       vit: [18, 25],
       dex: [16, 22],
@@ -846,6 +890,8 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("ELITE_NOMAD", 20),
     ranges: {
       hp: [85, 110],
+      mp: [65, 85],
+      happiness: [40, 60],
       str: [22, 28],
       vit: [18, 25],
       dex: [22, 30],
@@ -883,6 +929,8 @@ export const RAIDER_TYPES = [
     uncapturable: true,
     ranges: {
       hp: [350, 350],
+      mp: [100, 100],
+      happiness: [100, 100],
       str: [28, 28],
       vit: [18, 18],
       dex: [28, 28],
@@ -925,6 +973,8 @@ export const RAIDER_TYPES = [
     uncapturable: true,
     ranges: {
       hp: [280, 280],
+      mp: [100, 100],
+      happiness: [100, 100],
       str: [45, 45],
       vit: [35, 35],
       dex: [21, 21],

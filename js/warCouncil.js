@@ -163,16 +163,13 @@ function getNormalTask(person) {
   return preferred && preferred !== ACTION_NONE ? preferred : "なし";
 }
 
-function renderStatSummary(person, { showHappiness = false } = {}) {
+function renderStatSummary(person) {
   const body = [["筋", "str"], ["耐", "vit"], ["器", "dex"], ["魔", "mag"], ["魅", "chr"]];
   const mind = [["知", "int"], ["勤", "ind"], ["倫", "eth"], ["勇", "cou"], ["色", "sexdr"]];
   const line = pairs => pairs
     .map(([label, key]) => `${label}${Math.floor(Number(person?.[key]) || 0)}`)
     .join(" ");
-  // 幸福度は村人だけの指標なので、襲撃者の行には出さない。
-  const happiness = showHappiness
-    ? ` <span class="wc-stat-happiness">幸${Math.floor(Number(person?.happiness) || 0)}</span>`
-    : "";
+  const happiness = ` <span class="wc-stat-happiness">幸${Math.floor(Number(person?.happiness) || 0)}</span>`;
   return `<span class="wc-stat-line">${escapeHtml(line(body))}</span><span class="wc-stat-line">${escapeHtml(line(mind))}${happiness}</span>`;
 }
 
@@ -284,7 +281,7 @@ function renderVillagerRow(person, village) {
         <div class="wc-traits">${renderTraits(person)}</div>
       </td>
       ${renderSimpleStatCells(person)}
-      ${councilShowFullStats ? `<td class="wc-stats">${renderStatSummary(person, { showHappiness: true })}</td>` : ""}
+      ${councilShowFullStats ? `<td class="wc-stats">${renderStatSummary(person)}</td>` : ""}
       ${cells}
       <td class="wc-task${onCouncilDuty ? " is-suspended" : ""}">${escapeHtml(getNormalTask(person))}</td>
       <td class="wc-estimate">${escapeHtml(estimate).replace(/\n/g, "<br>")}</td>
