@@ -84,8 +84,8 @@ function openLedgerPage(village, cardId) {
   // 台帳は開いたままにせず、選んだ画面だけを表示する。
   closeLedgerModal();
   switch (cardId) {
-    case "history": openHistoryModal(village); break;
-    case "pastbook": openPastBookModal(village); break;
+    case "history": openHistoryModal(village, { onBack: () => openLedgerModal(village) }); break;
+    case "pastbook": openPastBookModal(village, { onBack: () => openLedgerModal(village) }); break;
     case "election": openElectionRecordModal(village); break;
     case "wish": openWishLedgerModal(village); break;
     case "goals": openManagementGoalsModal(village); break;

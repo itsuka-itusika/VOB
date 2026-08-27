@@ -347,7 +347,6 @@ function bindGlobalHandlers() {
     openSecretTreasureModal: () => openSecretTreasureModal(theVillage),
     closeSecretTreasureModal,
     closeDryadFruitModal,
-    closeHistoryModal,
     closePersonalHistoryModal,
     openLedgerModal: () => openLedgerModal(theVillage),
     closeLedgerModal,

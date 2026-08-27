@@ -1081,7 +1081,7 @@ export function recordDepartedVillager(village, person, reason) {
   village.departedVillagers.push(snapshot);
 }
 
-export function openPastBookModal(village) {
+export function openPastBookModal(village, { onBack = null } = {}) {
   if (typeof document === "undefined" || !village) return;
   document.getElementById("pastBookOverlay")?.remove();
   document.getElementById("pastBookModal")?.remove();
@@ -1125,7 +1125,7 @@ export function openPastBookModal(village) {
       </table>
     </div>
     <div class="modal-buttons">
-      <button type="button" data-close-past-book>閉じる</button>
+      <button type="button" data-past-book-back>台帳へ戻る</button>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -1143,11 +1143,15 @@ export function openPastBookModal(village) {
       openPersonalHistoryModal(village, person, { archived: true });
     });
   });
-  modal.querySelector("[data-close-past-book]").addEventListener("click", close);
+  // ボタンは台帳へ戻し、オーバーレイのクリックは閉じるだけにする。
+  modal.querySelector("[data-past-book-back]").addEventListener("click", () => {
+    close();
+    if (typeof onBack === "function") onBack();
+  });
   overlay.addEventListener("click", close);
 }
 
-export function openHistoryModal(village) {
+export function openHistoryModal(village, { onBack = null } = {}) {
   const overlay = document.getElementById("historyOverlay");
   const modal = document.getElementById("historyModal");
   const content = document.getElementById("historyContent");
@@ -1158,6 +1162,15 @@ export function openHistoryModal(village) {
   content.innerHTML = events.length > 0
     ? `<div class="history-list">${events.map(renderHistoryEntry).join("")}</div>`
     : `<div class="history-empty">この村について記すべき出来事は、まだ帳面には残されていない。</div>`;
+
+  // ボタンは台帳へ戻し、オーバーレイのクリックは閉じるだけにする。
+  const backButton = modal.querySelector("[data-history-back]");
+  if (backButton) {
+    backButton.onclick = () => {
+      closeHistoryModal();
+      if (typeof onBack === "function") onBack();
+    };
+  }
 
   overlay.style.display = "block";
   modal.style.display = "block";
