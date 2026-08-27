@@ -68,14 +68,18 @@ function getAlcoholMiracleRecoveryAmount(person, baseAmount) {
 /**
  * 奇跡リスト
  */
+// 宴会・狂宴の費用は在籍人数に比例し、魔素と資金を同額ずつ消費する。
+export const FEAST_COST_PER_PERSON = 10;
+export const REVEL_COST_PER_PERSON = 20;
+
 export const MIRACLES = [
   {id:"12", name:"交換の奇跡(20)", cost:20, desc:"2人の肉体を交換"},
   {id:"13", name:"交換の奇跡・強(200)", cost:200, desc:"村外含む2人交換"},
   {id:"1",  name:"豊穣の奇跡(100)", cost:100, desc:"今月のみ、農作業・伐採・狩猟・漁・採集の成果と醸造の食料獲得2倍"},
   {id:"2",  name:"マナの奇跡(40)",  cost:40,  desc:"食料+80"},
   {id:"3",  name:"クピドの奇跡(80)", cost:80, desc:"2人を強制結婚(条件無視)"},
-  {id:"4",  name:"宴会の奇跡(人数×15)", cost:-1, desc:"全員体力/メンタル+20,幸福+20,失望/絶望解除 (資金×人数分も要)"},
-  {id:"5",  name:"狂宴の奇跡(人数×30)", cost:-2, desc:"全員体力/メンタル+60,幸福+50,失望/絶望解除,倫理↓,好色+15"},
+  {id:"4",  name:`宴会の奇跡(人数×${FEAST_COST_PER_PERSON})`, cost:-1, desc:"全員体力/メンタル+20,幸福+20,失望/絶望解除 (資金×人数分も要)"},
+  {id:"5",  name:`狂宴の奇跡(人数×${REVEL_COST_PER_PERSON})`, cost:-2, desc:"全員体力/メンタル+60,幸福+50,失望/絶望解除,倫理↓,好色+15"},
   {id:"6",  name:"癒しの奇跡(80)", cost:80, desc:"1人の負傷/重体/疫病/疲労等回復,体力+50"},
   {id:"20", name:"清拭の奇跡(60)", cost:60, desc:"3ヶ月間、村特性「清浄」を付与し、疫病の感染と重体の危篤化を防ぐ"},
   {id:"16", name:"酒杯の奇跡(50)", cost:50, desc:"1人の心労/抑鬱/失望/絶望回復,メンタル+50,幸福+30,酩酊付与"},
@@ -175,11 +179,11 @@ export function onSelectMiracleChange(village) {
 function getMiracleCostInfo(miracle, village) {
   const peopleCount = village.villagers.length;
   if (miracle.cost === -1) {
-    const amount = peopleCount * 15;
+    const amount = peopleCount * FEAST_COST_PER_PERSON;
     return { mana: amount, funds: amount, label: `魔素: ${amount} / 資金: ${amount}` };
   }
   if (miracle.cost === -2) {
-    const amount = peopleCount * 30;
+    const amount = peopleCount * REVEL_COST_PER_PERSON;
     return { mana: amount, funds: amount, label: `魔素: ${amount} / 資金: ${amount}` };
   }
   const hasGoldenStatue = hasActiveBuildingFlag(village, "hasBacchusGoldenStatue", "bacchusGoldenStatue");
@@ -953,15 +957,15 @@ export function performMiracle(village) {
   if (multiTargets.length > 0) cost *= multiTargets.length;
   let vc = village.villagers.length;
   if (info.cost===-1) {
-    // 宴会(人数×15)
-    cost = vc * 15;
+    // 宴会
+    cost = vc * FEAST_COST_PER_PERSON;
     if (village.mana<cost || village.funds<cost) {
       village.log(`魔素or資金不足(必要:${cost})`);
       return;
     }
   } else if (info.cost===-2) {
-    // 狂宴(人数×30)
-    cost = vc * 30;
+    // 狂宴
+    cost = vc * REVEL_COST_PER_PERSON;
     if (village.mana<cost || village.funds<cost) {
       village.log(`魔素or資金不足(必要:${cost})`);
       return;
