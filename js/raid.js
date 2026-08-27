@@ -1211,6 +1211,19 @@ function grantSoloDefenderTitle(village) {
   village.log(`【称号】${hero.name}は${stance}、「一騎当千」を得た`);
 }
 
+/**
+ * 前衛も中衛も立てず、罠だけで敵を全滅させたとき、罠を張った村人へ「トラッパー」を贈る。
+ * 一騎当千と同じく、襲撃者を片付ける前に呼ぶ。
+ */
+function grantTrapperTitles(village) {
+  if (getActiveRaidFrontliners(village).length > 0) return;
+  if (getActiveRaidMiddleliners(village).length > 0) return;
+  const trapMakers = getActiveRaidTrapMakers(village);
+  const awarded = trapMakers.filter(person => grantTitle(person, "trapper"));
+  if (awarded.length === 0) return;
+  village.log(`【称号】${awarded.map(person => person.name).join("、")}は罠だけで襲撃者を退け、「トラッパー」を得た`);
+}
+
 /** 襲撃終了処理 */
 function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
   if (village.isRaidFinalizing || village.isRaidProcessDone) return;
@@ -1244,6 +1257,7 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
     if (isSuccess && !isPartSuccess) {
       resultInfo.capturedName = tryCaptureRaidPrisoner(village)?.name || "";
       grantSoloDefenderTitle(village);
+      grantTrapperTitles(village);
     }
     village.raidEnemies=[];
     clearDefeatedRaidEnemies(village);

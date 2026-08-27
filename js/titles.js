@@ -78,6 +78,11 @@ const TITLE_DEFINITIONS = Object.freeze({
     id: "soloDefender",
     name: "一騎当千",
     description: "ただ一人の前衛として迎撃に立ち、襲撃者を残らず討ち果たした。"
+  },
+  trapper: {
+    id: "trapper",
+    name: "トラッパー",
+    description: "前衛も中衛も立てず、仕掛けた罠だけで襲撃者を残らず討ち果たした。"
   }
 });
 
