@@ -3965,7 +3965,7 @@ section h2 {
 .wc-villager-table { min-width: 1240px; }
 .wc-col-portrait { width: 44px; }
 .wc-col-name { width: 150px; }
-.wc-col-stat { width: 46px; }
+.wc-col-stat { width: 38px; }
 .wc-col-stats { width: 180px; }
 .wc-col-task { width: 78px; }
 .wc-col-estimate { width: 230px; }
@@ -3999,7 +3999,8 @@ section h2 {
 .wc-stats { text-align: left; }
 /* 幸福度は他の能力と性質が違うため、色で分ける。 */
 .wc-stat-happiness { color: #d97706; }
-.wc-slot-toggle {
+/* 見出し行の中央寄せより優先させ、チェックは行の左端に置く。 */
+.wc-table td.wc-slot-toggle {
   text-align: left;
   font-weight: normal;
 }

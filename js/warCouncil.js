@@ -347,7 +347,7 @@ function renderBody(village) {
           <th rowspan="2" class="wc-col-portrait">顔</th>
           <th rowspan="2" class="wc-col-name">名前<br>特性</th>
           ${renderSimpleStatHeaders({ rowspan: 2, sortable: true })}
-          ${councilShowFullStats ? '<th rowspan="2" class="wc-col-stats">能力</th>' : ""}
+          ${councilShowFullStats ? '<th rowspan="2" class="wc-col-stats">全能力</th>' : ""}
           ${lineHeaders}
           <th rowspan="2" class="wc-col-task">通常行動</th>
           <th rowspan="2" class="wc-col-estimate">予想</th>
@@ -367,7 +367,7 @@ function renderBody(village) {
           <th class="wc-col-portrait">顔</th>
           <th class="wc-col-name">名前<br>特性</th>
           ${renderSimpleStatHeaders()}
-          ${councilShowFullStats ? '<th class="wc-col-stats">能力</th>' : ""}
+          ${councilShowFullStats ? '<th class="wc-col-stats">全能力</th>' : ""}
         </tr>
       </thead>
       <tbody>
