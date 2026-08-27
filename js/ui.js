@@ -899,6 +899,11 @@ function appendActionCell(row, person, village, editable) {
       return;
     }
     person.action = newAction;
+    // 手で行動を選び直したら、その選択を優先して固定を解く。
+    // 襲撃行動は作戦会議から一時的に就くだけなので、固定は保ったままにする。
+    if (person.assignmentLocked && !RAID_ACTIONS.includes(newAction)) {
+      person.assignmentLocked = false;
+    }
     if (isPreferredActionCandidate(newAction)) {
       setPreferredAction(person, newAction);
     }
@@ -910,7 +915,7 @@ function appendActionCell(row, person, village, editable) {
   const lockButton = document.createElement("button");
   lockButton.type = "button";
   lockButton.className = `assignment-lock-toggle ${person.assignmentLocked ? "is-locked" : "is-auto"}`;
-  lockButton.title = "通常行動を固定します。自動割り振りで変更されません。";
+  lockButton.title = "通常行動を固定します。自動割り振りで変更されません。手で行動を選び直すと解除されます。";
   lockButton.setAttribute("aria-label", person.assignmentLocked ? "固定中" : "自動割り振り対象");
   lockButton.setAttribute("aria-pressed", person.assignmentLocked ? "true" : "false");
   const lockIcon = document.createElement("span");
