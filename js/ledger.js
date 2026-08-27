@@ -11,7 +11,7 @@ import {
   getManagementGoals,
   setManagementGoals
 } from "./managementGoals.js";
-import { MAX_ACTIVE_WISHES, getActiveWishes, getWishLog } from "./wishes.js";
+import { MAX_ACTIVE_WISHES, getActiveWishes, getWishLog, openWishStartModal } from "./wishes.js";
 import { getPortraitSpriteHtml } from "./data/portraitAtlas.js";
 
 // 台帳を開いた村。各画面を閉じたときに台帳へ戻すため覚えておく。
@@ -129,11 +129,18 @@ export function closeElectionRecordModal() {
 
 /* ----------------------------- 願望 ----------------------------- */
 
-function renderWishCard(wish, { active }) {
-  const portrait = getPortraitSpriteHtml(
+function renderWishCard(wish, { active, index }) {
+  const portraitHtml = getPortraitSpriteHtml(
     { name: wish.requesterName, portraitFile: wish.requesterPortraitFile, bodyTraits: [] },
     { size: 44, alt: wish.requesterName }
   );
+  // 発生時のセリフが残っている願望だけ、顔から発生時のモーダルを開ける。
+  const canReopen = !!String(wish.line || "").trim();
+  const portrait = canReopen
+    ? `<button type="button" class="ledger-wish-portrait" data-wish-open="${active ? "active" : "log"}"
+        data-wish-index="${index}" title="願望が起きたときの様子を見る"
+        aria-label="${escapeHtml(wish.requesterName)}の願望が起きたときの様子を見る">${portraitHtml}</button>`
+    : portraitHtml;
   const targetText = wish.targetName && wish.id !== "get_closer"
     ? `<span class="ledger-wish-target">対象: ${escapeHtml(wish.targetName)}</span>`
     : "";
@@ -168,17 +175,31 @@ export function openWishLedgerModal(village) {
     <section class="ledger-section">
       <h3 class="ledger-section-title">いま抱えている願望（${active.length}/${MAX_ACTIVE_WISHES}）</h3>
       ${active.length > 0
-        ? active.map(wish => renderWishCard(wish, { active: true })).join("")
+        ? active.map((wish, index) => renderWishCard(wish, { active: true, index })).join("")
         : `<div class="history-empty">神へ託された望みは、いまはない。</div>`}
     </section>
     <section class="ledger-section">
       <h3 class="ledger-section-title">これまでの願望</h3>
       ${log.length > 0
-        ? log.map(wish => renderWishCard(wish, { active: false })).join("")
+        ? log.map((wish, index) => renderWishCard(wish, { active: false, index })).join("")
         : `<div class="history-empty">決着した願望はまだ記されていない。</div>`}
     </section>
     <div class="ledger-back-row"><button type="button" data-ledger-back>台帳へ戻る</button></div>
   `;
+  content.querySelectorAll("[data-wish-open]").forEach(button => {
+    button.addEventListener("click", () => {
+      const index = Number(button.dataset.wishIndex);
+      const isActive = button.dataset.wishOpen === "active";
+      const wish = isActive ? active[index] : log[index];
+      if (!wish) return;
+      openWishStartModal(wish, {
+        detailText: isActive
+          ? `残り${wish.monthsLeft}か月`
+          : `${WISH_OUTCOME_LABELS[wish.outcome] || wish.outcome} ${formatYearMonth(wish.year, wish.month)}`
+      });
+    });
+  });
+
   content.querySelector("[data-ledger-back]")
     ?.addEventListener("click", () => backToLedger(closeWishLedgerModal));
 

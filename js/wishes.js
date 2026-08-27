@@ -188,7 +188,11 @@ export function normalizeWishLog(source) {
         name,
         requesterName,
         requesterId: Number.isInteger(entry?.requesterId) && entry.requesterId > 0 ? entry.requesterId : null,
+        requesterRace: String(entry?.requesterRace || "人間"),
+        requesterBodySex: String(entry?.requesterBodySex || ""),
+        requesterBodyAge: normalizeOptionalNumber(entry?.requesterBodyAge),
         requesterPortraitFile: String(entry?.requesterPortraitFile || DEFAULT_PORTRAIT_KEY),
+        line: String(entry?.line || ""),
         targetName: String(entry?.targetName || ""),
         outcome: ["achieved", "expired", "lost"].includes(entry?.outcome) ? entry.outcome : "expired",
         year: normalizeOptionalNumber(entry?.year) ?? 0,
@@ -207,7 +211,12 @@ function recordWishOutcome(village, wish, outcome) {
     name: wish.name,
     requesterName: wish.requesterName,
     requesterId: wish.requesterId ?? null,
+    requesterRace: wish.requesterRace || "人間",
+    requesterBodySex: wish.requesterBodySex || "",
+    requesterBodyAge: wish.requesterBodyAge ?? null,
     requesterPortraitFile: wish.requesterPortraitFile || DEFAULT_PORTRAIT_KEY,
+    // 台帳から発生時のモーダルを開き直すため、そのときのセリフも残す。
+    line: wish.line || "",
     targetName: wish.targetName || "",
     outcome,
     year: Number(village.year) || 0,
@@ -552,6 +561,33 @@ function showWishStartModal(wish) {
   showPendingWishModalWhenReady();
 }
 
+/**
+ * 台帳から、その願望が発生したときのモーダルを開き直す。
+ * 決着済みの願望は残り月数がないため、代わりの一文を detailText で渡す。
+ */
+export function openWishStartModal(source, { detailText = "" } = {}) {
+  if (typeof document === "undefined" || !source) return false;
+  const line = String(source.line || "").trim();
+  if (!line) return false;
+
+  pendingStartModal = {
+    id: String(source.id || ""),
+    name: String(source.name || ""),
+    requesterName: String(source.requesterName || ""),
+    requesterRace: String(source.requesterRace || "人間"),
+    requesterBodySex: String(source.requesterBodySex || ""),
+    requesterBodyAge: normalizeOptionalNumber(source.requesterBodyAge),
+    requesterPortraitFile: String(source.requesterPortraitFile || DEFAULT_PORTRAIT_KEY),
+    targetName: String(source.targetName || ""),
+    monthsLeft: Math.floor(Number(source.monthsLeft)) || 0,
+    line,
+    detailText
+  };
+  closeModal(WISH_OVERLAY_ID, WISH_MODAL_ID);
+  showPendingWishModalWhenReady();
+  return true;
+}
+
 function showWishCompletionModal(wish, requester) {
   if (typeof document === "undefined") return;
   pendingCompletionModal = {
@@ -634,7 +670,8 @@ function renderWishModal(wish, isCompletion) {
     detail.appendChild(reward);
   } else {
     const targetText = wish.targetName && wish.id !== "get_closer" ? ` / 対象: ${wish.targetName}` : "";
-    detail.textContent = `願望「${wish.name}」${targetText} / 残り${wish.monthsLeft}か月`;
+    const tailText = wish.detailText || `残り${wish.monthsLeft}か月`;
+    detail.textContent = `願望「${wish.name}」${targetText} / ${tailText}`;
     const reward = document.createElement("div");
     reward.textContent = `達成時: ${wish.requesterName}の幸福度+30、神威+10`;
     detail.appendChild(reward);

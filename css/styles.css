@@ -4163,6 +4163,19 @@ section h2 {
   border: 1px solid #c9b98a;
   border-radius: 3px;
 }
+/* 顔を押すと、その願望が起きたときのモーダルを開き直す。 */
+.ledger-wish-portrait {
+  flex: none;
+  padding: 0;
+  border: none;
+  background: none;
+  line-height: 0;
+  cursor: pointer;
+}
+.ledger-wish-portrait:hover .portrait-sprite {
+  border-color: #8a6d1d;
+  box-shadow: 0 0 0 2px rgba(138, 109, 29, 0.3);
+}
 .ledger-wish-body {
   min-width: 0;
 }
