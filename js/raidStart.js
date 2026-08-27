@@ -626,6 +626,11 @@ function executeRaidAvoidance(village, raidDefinition, option = null) {
   }
 
   if (option.type === "messengerPass") {
+    // 秘宝画面と違い、襲撃発生モーダルは選ぶと即座に手形を失うため、直前に確認する。
+    if (typeof window !== "undefined" &&
+      !window.confirm(`秘宝「伝令神の手形」を使い、${raidDefinition.name}の襲撃をなかったことにします。\n手形は失われます。よろしいですか？`)) {
+      return false;
+    }
     if (!consumeMessengerPass(village)) return false;
   } else {
     const payments = Array.isArray(option.resourcePayments) && option.resourcePayments.length > 0
