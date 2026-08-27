@@ -996,7 +996,7 @@ function calcRangedDamage(atk, def) {
       attackText: "遠距離魔法"
     };
   }
-  const damage = Math.max(0, Math.floor(((atk.dex * atk.cou) / 400) * 40 - def.vit * 1.2));
+  const damage = Math.max(0, Math.floor(((atk.dex * atk.cou) / 400) * 50 - def.vit * 1.2));
   return {
     damage: Math.floor(damage * getShootingTraitMultiplier(atk)),
     isMagic: false,

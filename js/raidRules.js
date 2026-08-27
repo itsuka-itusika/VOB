@@ -223,7 +223,7 @@ export function estimateRaidActionDamage(person, action, village = null) {
     const magical = Math.max(0, Math.floor((stat("mag") * stat("cou") / 400) * 25));
     base = Math.max(physical, magical);
   } else if (action === ACTION_SHOOT) {
-    base = Math.max(0, Math.floor((stat("dex") * stat("cou") / 400) * 40 - averageVitality * 1.2));
+    base = Math.max(0, Math.floor((stat("dex") * stat("cou") / 400) * 50 - averageVitality * 1.2));
     base = Math.floor(base * getShootingTraitMultiplier(person));
   } else if (action === ACTION_CANNON) {
     base = Math.max(0, Math.floor((stat("mag") * stat("int") / 400) * 20));
@@ -289,7 +289,7 @@ export function getAverageEnemyAttack(village) {
       if (enemy.raidAttackType === RAID_ATTACK_RANGED_MAGIC) {
         return sum + Math.max(0, (stat("mag") * stat("cou") / 400) * 20);
       }
-      return sum + Math.max(0, (stat("dex") * stat("cou") / 400) * 40 - averageVitality * 1.2);
+      return sum + Math.max(0, (stat("dex") * stat("cou") / 400) * 50 - averageVitality * 1.2);
     }
     const physical = Math.max(0, (stat("str") * stat("cou") / 400) * 50 - averageVitality);
     const magical = Math.max(0, (stat("mag") * stat("cou") / 400) * 25);
