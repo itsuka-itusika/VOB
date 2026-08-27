@@ -85,6 +85,17 @@ const SELF_RECOVERY_ACTION_SET = new Set([
   "\u4f59\u6687"
 ]);
 
+// 通常職から外して回復へ回す境目。体力は休養、メンタルは余暇で戻す。
+const SELF_RECOVERY_HP_LIMIT = 50;
+const SELF_RECOVERY_MP_LIMIT = 50;
+// 食料か資材が危険段階の間は、多少弱っていても働いてもらう。従来の基準に戻す。
+const SUPPLY_CRISIS_RECOVERY_HP_LIMIT = 33;
+const SUPPLY_CRISIS_RECOVERY_MP_LIMIT = 33;
+// 襲撃が予見されている月は、戦列に立てるだけの体力を残しておく。
+const RAID_WARNING_REST_HP_LIMIT = 60;
+// 備蓄が尽きかけていると見なす段階。
+const SUPPLY_CRISIS_STAGE = "danger";
+
 // 職の評価は jobMath.js の期待成果をそのまま使う。ここに計算式は持たない。
 // 産出する資源軸ごとの基本重みと、村が困っているときの効き幅だけを定める。
 // 食料・資材・資金・技術は「重み×その職の平均産出」が横並びになる値にする。
@@ -381,12 +392,13 @@ function chooseWorkAction(person, actionTable, preferredAction) {
   return nonRecoveryAction || actionTable[0] || preferredAction || JOB_NONE;
 }
 
-function chooseRecoveryAction(person, actionTable, currentAction) {
+function chooseRecoveryAction(person, actionTable, currentAction, limits) {
   if (isTemporaryAction(currentAction) && actionTable.includes(currentAction)) {
     return currentAction;
   }
 
-  if ((Number(person.hp) || 0) <= (Number(person.mp) || 0)) {
+  // 体力が基準を割っていれば休養。体力とメンタルの両方が低い場合も休養から入る。
+  if ((Number(person.hp) || 0) <= limits.hp) {
     return firstAvailable([JOB_REST, JOB_LEISURE], actionTable) || currentAction;
   }
   return firstAvailable([JOB_LEISURE, JOB_REST], actionTable) || currentAction;
@@ -420,10 +432,12 @@ function chooseAssignment(person, village, context) {
   const bestPreferred = chooseBestJob(person, context);
   const nextPreferred = bestPreferred !== JOB_NONE ? bestPreferred : currentPreferred;
 
-  if ((person.hp <= 33 || person.mp <= 33) && (actionTable.includes(JOB_REST) || actionTable.includes(JOB_LEISURE))) {
+  const recoveryLimits = getSelfRecoveryLimits(village, context);
+  if ((person.hp <= recoveryLimits.hp || person.mp <= recoveryLimits.mp) &&
+    (actionTable.includes(JOB_REST) || actionTable.includes(JOB_LEISURE))) {
     return {
       preferredAction: nextPreferred,
-      action: chooseRecoveryAction(person, actionTable, currentAction)
+      action: chooseRecoveryAction(person, actionTable, currentAction, recoveryLimits)
     };
   }
 
@@ -435,6 +449,31 @@ function chooseAssignment(person, village, context) {
 
 function canUseAction(person, action) {
   return Array.isArray(person.actionTable) && person.actionTable.includes(action);
+}
+
+/** 食料か資材が危険段階か。尽きかけている間は休ませる基準を厳しくする。 */
+function isSupplyCrisis(context) {
+  const stages = context?.stageByAxis || {};
+  return stages.food === SUPPLY_CRISIS_STAGE || stages.materials === SUPPLY_CRISIS_STAGE;
+}
+
+/**
+ * 来月の襲撃が村へ知らされているか。
+ * 予言が出ていない襲撃予約で判断を変えると、画面に出ていない情報が漏れる。
+ */
+function hasRaidWarning(village) {
+  return !!village?.pendingRaid?.prophecyNotified;
+}
+
+/** その村人を回復へ回す境目。備蓄の危機と襲撃予告で変わる。 */
+function getSelfRecoveryLimits(village, context) {
+  if (isSupplyCrisis(context)) {
+    return { hp: SUPPLY_CRISIS_RECOVERY_HP_LIMIT, mp: SUPPLY_CRISIS_RECOVERY_MP_LIMIT };
+  }
+  return {
+    hp: hasRaidWarning(village) ? RAID_WARNING_REST_HP_LIMIT : SELF_RECOVERY_HP_LIMIT,
+    mp: SELF_RECOVERY_MP_LIMIT
+  };
 }
 
 /** 手で火砲に就けた村人か。手動の配置を尊重し、割り振りで動かさない。 */
@@ -592,7 +631,7 @@ const RAID_ACTION_TIE_ORDER = [ACTION_SHOOT, ACTION_CANNON, ACTION_TRAP, ACTION_
 
 /**
  * 割り振り対象外の村人が、すでに占めている枠と出している火力。
- * 行動固定中の村人と、手で火砲に就けた村人は動かせないため、その枠を空きとして数えない。
+ * 手で火砲に就けた村人は動かせないため、その枠を空きとして数えない。
  */
 function getReservedRaidLines(village, targets) {
   const villagers = Array.isArray(village?.villagers) ? village.villagers : [];
@@ -768,8 +807,9 @@ export function autoAssignRaidActions(village) {
 
   let changed = 0;
   const allVillagers = Array.isArray(village.villagers) ? village.villagers : [];
-  // 固定中の村人と、手で火砲に就けた村人はそのままにする。
-  const targets = allVillagers.filter(person => !person.assignmentLocked && !isManualCannoneer(person, village));
+  // 防衛は村の存亡に関わるため、行動固定中の村人も割り振りの対象にする。
+  // 手で火砲に就けた村人だけは、その配置を尊重してそのままにする。
+  const targets = allVillagers.filter(person => !isManualCannoneer(person, village));
   const { assignments, hasChance } = buildRaidAssignments(village, targets);
 
   targets.forEach(person => {
