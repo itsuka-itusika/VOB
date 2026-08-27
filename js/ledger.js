@@ -60,7 +60,6 @@ export function openLedgerModal(village) {
     <div class="ledger-card-grid">
       ${LEDGER_CARDS.map(card => `
         <button type="button" class="ledger-card" data-ledger-card="${card.id}">
-          <span class="ledger-card-spine" aria-hidden="true"></span>
           <span class="ledger-card-body">
             <span class="ledger-card-title">${escapeHtml(card.title)}</span>
             <span class="ledger-card-note">${escapeHtml(card.note)}</span>

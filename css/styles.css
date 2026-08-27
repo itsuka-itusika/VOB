@@ -4063,99 +4063,72 @@ section h2 {
 }
 .ledger-card-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 /*
- * 台帳のカードは横長の和綴じ帳面に見立てる。
- * 左端に綴じ代を置き、そこへ四つ目綴じの綴じ穴と糸を並べる。
+ * 台帳のカードは横長の帳面に見立てる。
+ * 紙面の内側へ二重罫（細い実線と、その内側の刻み罫）を引くだけの簡素な作り。
  */
 .ledger-card {
   position: relative;
-  display: flex;
-  align-items: stretch;
-  gap: 0;
-  min-height: 76px;
-  padding: 0;
-  border: 1px solid #b99f6c;
-  border-radius: 2px 6px 6px 2px;
-  background:
-    /* 綴じ側から差す影 */
-    linear-gradient(90deg, rgba(90, 68, 30, 0.16) 0 6px, rgba(90, 68, 30, 0) 22px),
-    /* 帳面の罫 */
-    repeating-linear-gradient(180deg, rgba(150, 122, 70, 0.14) 0 1px, rgba(150, 122, 70, 0) 1px 22px),
-    linear-gradient(180deg, #f7efd9, #eee0be);
+  display: block;
+  min-height: 116px;
+  padding: 12px 14px;
+  border: 1px solid #b09566;
+  border-radius: 2px;
+  background: linear-gradient(178deg, #f7f1dc, #efe6ca);
   box-shadow:
     0 2px 5px rgba(60, 44, 18, 0.2),
     /* 重ねた紙の断面 */
-    2px 2px 0 -1px #e6d7b4,
-    4px 4px 0 -2px #dccca4;
+    2px 2px 0 -1px #e8dab8,
+    4px 4px 0 -2px #ded0aa;
   color: #3b2f19;
   font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
   text-align: left;
   cursor: pointer;
 }
-/* 綴じ代。四つ目綴じの綴じ糸と綴じ穴をここへ描く。 */
-.ledger-card-spine {
-  position: relative;
-  flex: none;
-  width: 28px;
-  border-right: 1px solid rgba(150, 122, 70, 0.45);
-  background: linear-gradient(90deg, #e0cea3, #efe3c6);
-}
-/* 綴じ糸。穴と穴の間だけを渡し、上下の端は折り返して見せる。 */
-.ledger-card-spine::before {
+/* 二重罫の外側。細い実線。 */
+.ledger-card::before {
   content: "";
   position: absolute;
-  top: 12%;
-  bottom: 12%;
-  left: 50%;
-  width: 2px;
-  transform: translateX(-50%);
-  background: linear-gradient(
-    180deg,
-    #6b5326 0 14%, rgba(0, 0, 0, 0) 14% 20%,
-    #6b5326 20% 47%, rgba(0, 0, 0, 0) 47% 53%,
-    #6b5326 53% 80%, rgba(0, 0, 0, 0) 80% 86%,
-    #6b5326 86% 100%
-  );
-  opacity: 0.75;
+  inset: 10px;
+  border: 1px solid #33405f;
+  pointer-events: none;
 }
-/* 四つの綴じ穴。 */
-.ledger-card-spine::after {
+/* 二重罫の内側。細かい刻みの罫。 */
+.ledger-card::after {
   content: "";
   position: absolute;
-  top: 12%;
-  bottom: 12%;
-  left: 50%;
-  width: 6px;
-  transform: translateX(-50%);
-  background-image: radial-gradient(circle at center, #5c4620 0 2px, rgba(92, 70, 32, 0.35) 2px 2.6px, rgba(0, 0, 0, 0) 2.7px), radial-gradient(circle at center, #5c4620 0 2px, rgba(92, 70, 32, 0.35) 2px 2.6px, rgba(0, 0, 0, 0) 2.7px), radial-gradient(circle at center, #5c4620 0 2px, rgba(92, 70, 32, 0.35) 2px 2.6px, rgba(0, 0, 0, 0) 2.7px), radial-gradient(circle at center, #5c4620 0 2px, rgba(92, 70, 32, 0.35) 2px 2.6px, rgba(0, 0, 0, 0) 2.7px);
-  background-repeat: no-repeat;
-  background-size: 6px 6px;
-  background-position: center 0, center 33.333%, center 66.666%, center 100%;
-}
-.ledger-card-body {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 4px;
-  padding: 12px 16px;
+  inset: 14px;
+  background:
+    repeating-linear-gradient(90deg, #33405f 0 1.4px, rgba(0, 0, 0, 0) 1.4px 3.6px) top left / 100% 3px no-repeat,
+    repeating-linear-gradient(90deg, #33405f 0 1.4px, rgba(0, 0, 0, 0) 1.4px 3.6px) bottom left / 100% 3px no-repeat,
+    repeating-linear-gradient(180deg, #33405f 0 1.4px, rgba(0, 0, 0, 0) 1.4px 3.6px) top left / 3px 100% no-repeat,
+    repeating-linear-gradient(180deg, #33405f 0 1.4px, rgba(0, 0, 0, 0) 1.4px 3.6px) top right / 3px 100% no-repeat;
+  pointer-events: none;
 }
 .ledger-card:hover {
   border-color: #a1853f;
-  background:
-    linear-gradient(90deg, rgba(90, 68, 30, 0.16) 0 6px, rgba(90, 68, 30, 0) 22px),
-    repeating-linear-gradient(180deg, rgba(150, 122, 70, 0.14) 0 1px, rgba(150, 122, 70, 0) 1px 22px),
-    linear-gradient(180deg, #fdf6e4, #f3e7c9);
+  background: linear-gradient(178deg, #fdf7e6, #f4e9cd);
+}
+.ledger-card-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  min-height: 92px;
+  padding: 0 14px;
 }
 .ledger-card-title {
-  font-size: 1.15rem;
+  font-size: 1.18rem;
   font-weight: bold;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.14em;
+  color: #22283a;
 }
 .ledger-card-note {
-  color: #6d5c3c;
+  color: #5d5340;
   font-size: 0.82rem;
 }
 .ledger-back-row {
