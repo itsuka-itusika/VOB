@@ -899,12 +899,10 @@ function appendActionCell(row, person, village, editable) {
       return;
     }
     person.action = newAction;
-    // 手で行動を選び直したら、その選択を優先して固定を解く。
-    // 襲撃行動は作戦会議から一時的に就くだけなので、固定は保ったままにする。
-    if (person.assignmentLocked && !RAID_ACTIONS.includes(newAction)) {
-      person.assignmentLocked = false;
-    }
     if (isPreferredActionCandidate(newAction)) {
+      // 手で仕事を選び直したら、その選択を優先して固定を解く。
+      // 休養・余暇や襲撃行動は一時的な行動なので、固定は保ったままにする。
+      person.assignmentLocked = false;
       setPreferredAction(person, newAction);
     }
     showDictionaryEntry(getActionDisplayName(newAction));
