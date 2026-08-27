@@ -43,9 +43,9 @@ const OVERLAY_ID = "warCouncilOverlay";
 const MODAL_ID = "warCouncilModal";
 
 // 体力の右に並べる簡易能力。見出しをクリックすると、その値で並び替える。
-// group は村人一覧と同じ色分け（肉体側は薄黄、精神側は薄緑）に使う。
+// group は色分けに使う。体力と肉体側の能力は薄黄、精神側の能力は薄緑。
 const SIMPLE_STAT_COLUMNS = [
-  { key: "hp", label: "体力", group: "" },
+  { key: "hp", label: "体力", group: "body" },
   { key: "str", label: "筋力", group: "body" },
   { key: "dex", label: "器用", group: "body" },
   { key: "mag", label: "魔力", group: "body" },
