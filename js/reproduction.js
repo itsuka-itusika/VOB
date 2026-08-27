@@ -600,6 +600,7 @@ export function updateChildGrowthStage(child, village, { announce = false } = {}
       syncEffectiveStats(child);
       setChildPortrait(child);
       refreshJobTable(child, village);
+      if (announce) announceWolfMaturity(village, child);
     }
     return;
   }
@@ -658,7 +659,9 @@ export function updateChildGrowthStage(child, village, { announce = false } = {}
     } else if (child.bodyAge === 16 || child.spiritAge === 16) {
       village.log(`${child.name}は成人しました`);
     }
-    if (child.spiritAge === 16 && !child.adultModalShown) {
+    if (child.race === "狼") {
+      announceWolfMaturity(village, child);
+    } else if (child.spiritAge === 16 && !child.adultModalShown) {
       recordAdulthoodHistory(village, child);
       child.adultModalShown = true;
       showAdultModal(village, child);
@@ -1030,19 +1033,37 @@ function showPregnancyModal(village, mother, father) {
   });
 }
 
+/**
+ * 狼は精神年齢1歳で「未成熟」が外れ、一人前として扱われる。
+ * 人間の成人と同じ節目なので、同じ形の告知モーダルを出す。
+ */
+function announceWolfMaturity(village, child) {
+  if (!village || child?.race !== "狼") return;
+  if ((Number(child.spiritAge) || 0) !== 1 || child.adultModalShown) return;
+
+  village.log(`${child.name}は一人前になりました`);
+  recordAdulthoodHistory(village, child, { source: "成長" });
+  child.adultModalShown = true;
+  showAdultModal(village, child, {
+    title: "一人前",
+    message: `${child.name}は一人前になりました。`
+  });
+}
+
 function getAdultLine(character) {
   return getDialogueLine({ character, scene: "reproduction", key: "adult" }) || "";
 }
 
-function showAdultModal(village, character) {
+function showAdultModal(village, character, { title = "成人", message = "" } = {}) {
+  const bodyText = message || `${character.name}が成人しました。`;
   enqueueReproductionModal(onClosed => {
     const overlay = document.createElement("div");
     overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;";
     const modal = document.createElement("div");
     modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;max-width:560px;width:calc(100% - 32px);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
     modal.innerHTML = `
-      <h2>成人</h2>
-      <p>${character.name}が成人しました。</p>
+      <h2>${title}</h2>
+      <p>${bodyText}</p>
       ${renderPortraitLine(character, getAdultLine(character))}
       <button type="button" data-close-reproduction-modal>閉じる</button>
     `;

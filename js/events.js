@@ -967,48 +967,21 @@ export function doMonthStartProcess(v, simulationOptions = {}) {
     };
 
     if (canSwitchToRest) {
-      if (p.ind >= 21) {
-        if (p.hp <= 33 && p.mp <= 33) {
-          needsRest = true;
-          restReason = "体力とメンタルが低下";
-          p.action = chooseRecoveryAction();
-        } else if (p.hp <= 33) {
-          needsRest = true;
-          restReason = "体力が低下";
-          p.action = p.actionTable.includes(ACTION_REST) ? ACTION_REST : ACTION_LEISURE;
-        } else if (p.mp <= 33) {
-          needsRest = true;
-          restReason = "メンタルが低下";
-          p.action = p.actionTable.includes(ACTION_LEISURE) ? ACTION_LEISURE : ACTION_REST;
-        }
-      } else if (p.ind >= 13) {
-        if (p.hp <= 50 && p.mp <= 50) {
-          needsRest = true;
-          restReason = "体力とメンタルが低下";
-          p.action = chooseRecoveryAction();
-        } else if (p.hp <= 50) {
-          needsRest = true;
-          restReason = "体力が低下";
-          p.action = p.actionTable.includes(ACTION_REST) ? ACTION_REST : ACTION_LEISURE;
-        } else if (p.mp <= 50) {
-          needsRest = true;
-          restReason = "メンタルが低下";
-          p.action = p.actionTable.includes(ACTION_LEISURE) ? ACTION_LEISURE : ACTION_REST;
-        }
-      } else {
-        if (p.hp <= 60 && p.mp <= 60) {
-          needsRest = true;
-          restReason = "体力とメンタルが低下";
-          p.action = chooseRecoveryAction();
-        } else if (p.hp <= 60) {
-          needsRest = true;
-          restReason = "体力が低下";
-          p.action = p.actionTable.includes(ACTION_REST) ? ACTION_REST : ACTION_LEISURE;
-        } else if (p.mp <= 60) {
-          needsRest = true;
-          restReason = "メンタルが低下";
-          p.action = p.actionTable.includes(ACTION_LEISURE) ? ACTION_LEISURE : ACTION_REST;
-        }
+      // 勤勉が高い村人ほど無理をきかせる。それ以外は勤勉によらず一律の基準で休む。
+      // 働き方の個性はサボり率が担うため、ここでの段階は2つに留める。
+      const restLimit = p.ind >= 21 ? 33 : 50;
+      if (p.hp <= restLimit && p.mp <= restLimit) {
+        needsRest = true;
+        restReason = "体力とメンタルが低下";
+        p.action = chooseRecoveryAction();
+      } else if (p.hp <= restLimit) {
+        needsRest = true;
+        restReason = "体力が低下";
+        p.action = p.actionTable.includes(ACTION_REST) ? ACTION_REST : ACTION_LEISURE;
+      } else if (p.mp <= restLimit) {
+        needsRest = true;
+        restReason = "メンタルが低下";
+        p.action = p.actionTable.includes(ACTION_LEISURE) ? ACTION_LEISURE : ACTION_REST;
       }
     }
 
