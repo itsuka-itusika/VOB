@@ -15,7 +15,7 @@ import { resolveDialogueTone } from "./data/dialogue/toneProfiles.js";
 import { getDialogueLine } from "./dialogue/dialogueEngine.js";
 import { BODY_EXCHANGE_SOURCE_RACE_LINE_KEYS, BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
 import { getVisitorArrivalLine } from "./data/dialogue/visitorLines.js";
-import { getActiveVillagers, isSaltPillar } from "./domain/apocalypseRules.js";
+import { getActiveVillagers, isSaltPillar, SALT_PILLAR_TRAIT } from "./domain/apocalypseRules.js";
 import { getSelectableRaidTables, startRaidEvent } from "./raidStart.js";
 import { getRaiderIncomingDamageMultiplier } from "./raidRules.js";
 import { completeTutorialTask } from "./tutorial.js";
@@ -1735,6 +1735,7 @@ function randFrom(lines) {
 }
 
 function getBodyExchangeLineKey(person) {
+  if (isSaltPillar(person)) return SALT_PILLAR_TRAIT;
   const raiderTypes = ["野盗", "ゴブリン", "狼", "キュクロプス", "ハーピー"];
   if (person.mindTraits && person.mindTraits.includes("襲撃者")) {
     const raiderType = raiderTypes.find(type => person.name.includes(type));
