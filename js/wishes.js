@@ -38,6 +38,8 @@ const RARE_RACES = new Set([
 ]);
 const RESEARCH_MIND_TRAITS = new Set(["マッド", "天才肌", "学者肌", "好奇心旺盛"]);
 const WISH_REQUESTER_EXCLUDED_MIND_TRAITS = new Set(["野生", "無垢", "神聖"]);
+// 戦いを拒む、または戦列に並べない精神特性。殊勲は狙えない。
+const DISTINCTION_BLOCKING_MIND_TRAITS = new Set(["野生", "非戦主義", "不殺"]);
 const HUMANOID_RACES = new Set([
   "人間",
   "ゴブリン",
@@ -266,6 +268,10 @@ function getWishCandidates(village) {
     if (hasMindTrait(requester, "思春期") && Number(requester.bodyAge) <= 14) {
       candidates.push({ id: "be_full_fledged", requester });
     }
+    if (Number(requester.spiritAge) >= 16 && Number(requester.cou) >= 20 &&
+      !hasAnyMindTrait(requester, DISTINCTION_BLOCKING_MIND_TRAITS)) {
+      candidates.push({ id: "win_distinction", requester });
+    }
     if (Number(requester.bodyAge) >= 16 && Number(requester.ind) <= 14) {
       candidates.push({ id: "be_child_again", requester });
     }
@@ -326,6 +332,9 @@ function getWishCompletionReason(wish, requester, villagers, context = {}) {
       return villagers.some(isRareRace) ? "rareRacePresent" : null;
     case "celebrate":
       return ["4", "5"].includes(String(context.miracleId || "")) ? "celebration" : null;
+    case "win_distinction":
+      return Array.isArray(context.distinguishedIds) &&
+        context.distinguishedIds.includes(requester.id) ? "distinguished" : null;
     case "want_child": {
       if (hasPregnancy(requester)) return "requesterPregnant";
       const spouse = getSpouse(requester, villagers);

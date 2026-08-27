@@ -175,6 +175,14 @@ export const WISH_DEFINITIONS = [
     }
   },
   {
+    id: "win_distinction",
+    name: "殊勲をあげたい",
+    startLine: () => "この村を守る戦で、いちばんの働きをしてみせたい。",
+    completionLines: {
+      distinguished: () => "殊勲は自分のものだ。守ると誓った村を、この手で守り抜いた。"
+    }
+  },
+  {
     id: "be_child_again",
     name: "子どもに戻りたい",
     startLine: () => "働くことばかり考えずに、もう一度、子どものように過ごしたい。",

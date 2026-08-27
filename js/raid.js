@@ -47,6 +47,7 @@ import { applyRaidFriendshipResults, recordRaidFriendshipDamage, startRaidFriend
 import { handleApocalypseRaidResult } from "./apocalypse.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
 import { grantTitle } from "./titles.js";
+import { checkWishCompletion } from "./wishes.js";
 
 const RAID_CLOSE_DELAY_MS = 700;
 const RAID_ACTION_SETTLE_DELAY_MS = 780;
@@ -1310,6 +1311,8 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
     }
 
     const severeInjuryResult = rollRaidSevereInjuryCheck(village, raidRules);
+    // 殊勲の願望は、結果モーダルに殊勲として出る村人と同じ条件で達成にする。
+    checkWishCompletion(village, { distinguishedIds: resultInfo.mvp?.ids || [] });
     applyRaidFriendshipResults(village);
     handleApocalypseRaidResult(village, completedRaidId, isSuccess);
     village.isRaidProcessDone=true;
@@ -1418,6 +1421,7 @@ function collectRaidResultInfo(village, isSuccess, isPartSuccess, resultReason =
         .map(([id]) => id);
       mvp = {
         damage: topDamage,
+        ids: topIds.map(id => Number(id)).filter(Number.isFinite),
         people: topIds.map(id => {
           const person = village.villagers.find(v => v.id === Number(id));
           return {
