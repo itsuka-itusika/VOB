@@ -1740,6 +1740,14 @@ section h2 {
 .personal-history-relation-line {
   display: block;
 }
+/* 名前は本文と同じ見た目のまま、押せることだけを伝える。 */
+.history-person-link {
+  cursor: pointer;
+}
+.history-person-link:hover,
+.history-person-link:focus {
+  text-decoration: underline;
+}
 .personal-history-detail-row {
   display: block;
   margin-top: 5px;
