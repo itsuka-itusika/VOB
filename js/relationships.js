@@ -124,23 +124,30 @@ export function areSiblings(a, b) {
 
 // 系譜をさかのぼる上限。関係が壊れていても止まるようにする。
 const LINEAGE_MAX_DEPTH = 12;
+// 系譜としてさかのぼる親。遺伝上の親は家系ではないため、ここには入れない。
+const LINEAGE_PARENT_RELATION_PREFIXES = new Set(["母", "父"]);
 
 /**
- * 村人と過去帳の記録から、子の id から親の id を引ける系譜を組み立てる。
+ * 血縁をたどるための索引。
  *
+ * 祖父母から上は家系（母・父）だけをたどる。遺伝上の母・父は本人の一代分だけを
+ * 血縁として持ち、その先へは進まない。こうすると祖父母は多くても4人に収まり、
+ * 呼び名も母・父、遺伝上の母・父、祖父母、先祖だけで足りる。
+ *
+ * 家系の辺は、親を指す関係と子を指す関係の双方から集める。
  * 村人が去ると clearRelationshipsForDepartedVillager が生存者側の関係を消すため、
- * 生きている者の親をたどるだけでは、間の代が死んだ時点で系譜が切れる。
- * 過去帳には去った時点の関係がそのまま残るので、
- * 「親を指す関係」と「子を指す関係」の両側から辺を集め直して系譜をつなぐ。
+ * 生きている者の親をたどるだけでは間の代が死んだ時点で系譜が切れるが、
+ * 過去帳には去った時点の関係が残るので、両側から集め直せばつながる。
  *
  * 過去帳は長期プレイで伸びるため、判定のたびに作らず呼び出し側で使い回す。
  */
 export function createLineageIndex(village) {
-  const parentsByChild = new Map();
-  const link = (childId, parentId) => {
+  const parents = new Map();
+  const geneticParents = new Map();
+  const link = (map, childId, parentId) => {
     if (childId == null || parentId == null || childId === parentId) return;
-    if (!parentsByChild.has(childId)) parentsByChild.set(childId, new Set());
-    parentsByChild.get(childId).add(parentId);
+    if (!map.has(childId)) map.set(childId, new Set());
+    map.get(childId).add(parentId);
   };
 
   [
@@ -150,15 +157,16 @@ export function createLineageIndex(village) {
     if (person?.id == null) return;
     getRelationshipEntries(person).forEach(entry => {
       if (entry.targetId == null) return;
-      if (PARENT_RELATION_PREFIXES.has(entry.prefix)) link(person.id, entry.targetId);
-      else if (entry.prefix === "子") link(entry.targetId, person.id);
+      if (LINEAGE_PARENT_RELATION_PREFIXES.has(entry.prefix)) link(parents, person.id, entry.targetId);
+      else if (entry.prefix === "子") link(parents, entry.targetId, person.id);
+      else if (GENETIC_RELATION_PREFIXES.has(entry.prefix)) link(geneticParents, person.id, entry.targetId);
     });
   });
-  return parentsByChild;
+  return { parents, geneticParents };
 }
 
 /**
- * descendant から見て ancestor が何代前の先祖かを返す。直系でなければ 0。
+ * descendant から見て ancestor が何代前の先祖かを返す。家系でつながらなければ 0。
  * 1代前が母・父、2代前が祖父母。近い代を優先するため、代ごとに横へ広げて探す。
  */
 function getAncestorDepth(lineage, ancestor, descendant) {
@@ -169,7 +177,7 @@ function getAncestorDepth(lineage, ancestor, descendant) {
   for (let depth = 1; depth <= LINEAGE_MAX_DEPTH && current.length > 0; depth++) {
     const next = [];
     for (const id of current) {
-      for (const parentId of lineage.get(id) || []) {
+      for (const parentId of lineage.parents.get(id) || []) {
         if (parentId === ancestor.id) return depth;
         if (seen.has(parentId)) continue;
         seen.add(parentId);
@@ -181,9 +189,16 @@ function getAncestorDepth(lineage, ancestor, descendant) {
   return 0;
 }
 
-/** 親子、祖父母と孫、その先の先祖と子孫。縦につながる血縁か。 */
+/** parent が child の遺伝上の母・父か。ここから先の代はたどらない。 */
+function isGeneticParent(lineage, parent, child) {
+  if (!parent || !child || parent.id == null || child.id == null) return false;
+  return (lineage.geneticParents.get(child.id) || new Set()).has(parent.id);
+}
+
+/** 家系でつながる親子・祖父母と孫・先祖と子孫、または遺伝上の親子か。 */
 export function isDirectLineage(lineage, a, b) {
-  return getAncestorDepth(lineage, a, b) > 0 || getAncestorDepth(lineage, b, a) > 0;
+  return getAncestorDepth(lineage, a, b) > 0 || getAncestorDepth(lineage, b, a) > 0
+    || isGeneticParent(lineage, a, b) || isGeneticParent(lineage, b, a);
 }
 
 function isLoverCandidate(lineageIndex, a, b) {
