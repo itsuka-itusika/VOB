@@ -817,6 +817,18 @@ function getSpecialRaiderRowClass(person) {
   return "";
 }
 
+// 精神側の列は、肉体性別ではなく精神性別の色にする。
+function applySpiritSexColor(cell, person) {
+  if (!cell) return;
+  cell.classList.remove("male-basic", "female-basic");
+  if (person.uiSexDisplay) return;
+  if (person.spiritSex === "男") {
+    cell.classList.add("male-basic");
+  } else if (person.spiritSex === "女") {
+    cell.classList.add("female-basic");
+  }
+}
+
 function appendIdentityCells(row, person) {
   appendPortraitCell(row, person);
 
@@ -829,13 +841,8 @@ function appendIdentityCells(row, person) {
   // bodySex/bodyAge と spiritSex/spiritAge は別仕様。表示時も統合しない。
   appendTextCell(row, person.uiSexDisplay || person.bodySex);
   appendTextCell(row, person.uiAgeDisplay || person.bodyAge);
-  const spiritSexCell = appendTextCell(row, person.uiSexDisplay || person.spiritSex, "spirit-column");
-  if (!person.uiSexDisplay && person.spiritSex === "男") {
-    spiritSexCell.classList.add("male-basic");
-  } else if (!person.uiSexDisplay && person.spiritSex === "女") {
-    spiritSexCell.classList.add("female-basic");
-  }
-  appendTextCell(row, person.uiAgeDisplay || person.spiritAge, "spirit-column");
+  applySpiritSexColor(appendTextCell(row, person.uiSexDisplay || person.spiritSex, "spirit-column"), person);
+  applySpiritSexColor(appendTextCell(row, person.uiAgeDisplay || person.spiritAge, "spirit-column"), person);
   appendNumberCell(row, person.hp);
   appendNumberCell(row, person.mp);
   appendTextCell(row, Math.floor(Number(person.happiness) || 0), "happiness-cell");
@@ -1045,15 +1052,8 @@ function applyPersonRowStyle(row, person) {
     if (!cell) continue;
     cell.classList.add(person.bodySex === "男" ? "male-basic" : "female-basic");
   }
-  const spiritSexCell = row.cells[6];
-  if (spiritSexCell) {
-    spiritSexCell.classList.remove("male-basic", "female-basic");
-    if (!person.uiSexDisplay && person.spiritSex === "男") {
-      spiritSexCell.classList.add("male-basic");
-    } else if (!person.uiSexDisplay && person.spiritSex === "女") {
-      spiritSexCell.classList.add("female-basic");
-    }
-  }
+  applySpiritSexColor(row.cells[6], person);
+  applySpiritSexColor(row.cells[7], person);
   if (person.hp <= 33 && row.cells[8]) row.cells[8].classList.add("low-hpmp");
   if (person.mp <= 33 && row.cells[9]) row.cells[9].classList.add("low-hpmp");
   applyStatusHighlights(row, person);
