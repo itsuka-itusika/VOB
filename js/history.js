@@ -8,6 +8,7 @@ import { combinedDictionaryData } from "./data/dictionaryData.js";
 import { getRelationshipEntries } from "./relationships.js";
 import { syncTitleCountRecord } from "./records.js";
 import { findPersonEverywhereById, normalizePersonId } from "./domain/personId.js";
+import { EXCLUSIVE_BODY_TRAITS } from "./createVillagers.js";
 
 export const HISTORY_EVENT_TYPES = Object.freeze({
   ARCHIVE_GAP: "archiveGap",
@@ -888,6 +889,12 @@ function renderPersonalTitleSummary(person) {
   )).join("、");
 }
 
+// 排他の身体特性は1つだけ付くため、見つかったものをそのまま外見として出す。
+function getAppearanceTrait(person) {
+  const bodyTraits = Array.isArray(person?.bodyTraits) ? person.bodyTraits : [];
+  return bodyTraits.find(trait => EXCLUSIVE_BODY_TRAITS.includes(trait)) || "特徴なし";
+}
+
 function getPersonalityTrait(person) {
   const mindTraits = Array.isArray(person?.mindTraits) ? person.mindTraits : [];
   return mindTraits.find(trait => Object.prototype.hasOwnProperty.call(SPEECH_TYPE_MAPPING, trait)) || "特徴なし";
@@ -1060,6 +1067,7 @@ function renderPersonalHistorySummary(village, person, options = {}) {
     { label: "種族", valueHtml: renderDictionaryTerm(person.race || "人間"), className: "is-race" },
     { label: "肉体", value: `${person.bodyAge ?? "?"}歳/${person.bodySex || "不明"}`, className: "is-body" },
     { label: "精神", value: `${person.spiritAge ?? "?"}歳/${person.spiritSex || "不明"}`, className: "is-spirit" },
+    { label: "外見", value: getAppearanceTrait(person), className: "is-appearance" },
     { label: "性格", value: getPersonalityTrait(person), className: "is-personality" },
     { label: "趣味", value: person.hobby || "なし", className: "is-hobby" }
   ];

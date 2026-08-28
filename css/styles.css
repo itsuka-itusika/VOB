@@ -1676,7 +1676,7 @@ section h2 {
 }
 .personal-history-profile-table {
   display: grid;
-  grid-template-columns: 6em max-content max-content max-content max-content max-content;
+  grid-template-columns: 6em max-content max-content max-content max-content max-content max-content;
   justify-content: start;
   gap: 3px 10px;
   align-items: baseline;
@@ -1698,10 +1698,12 @@ section h2 {
 }
 .personal-history-profile-label.is-body,
 .personal-history-profile-label.is-spirit,
+.personal-history-profile-label.is-appearance,
 .personal-history-profile-label.is-personality,
 .personal-history-profile-label.is-hobby,
 .personal-history-profile-value.is-body,
 .personal-history-profile-value.is-spirit,
+.personal-history-profile-value.is-appearance,
 .personal-history-profile-value.is-personality,
 .personal-history-profile-value.is-hobby {
   margin-left: 10px;
