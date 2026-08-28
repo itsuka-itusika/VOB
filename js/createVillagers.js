@@ -350,8 +350,8 @@ export function isNameReserved(name, village = null) {
   return collectReservedNames(village).has(String(name || "").trim());
 }
 
-// 一覧を使い切ったときは、同じ一覧の名前2つを「・」でつないで新しい名前を作る。
-const COMBINED_NAME_SEPARATOR = "・";
+// 一覧を使い切ったときは、同じ一覧の名前2つを「=」でつないで新しい名前を作る。
+const COMBINED_NAME_SEPARATOR = "=";
 const COMBINED_NAME_PREFERRED_LENGTH = 8;
 
 function buildCombinedNameCandidates(nameList, maxLength) {
