@@ -155,7 +155,8 @@ function prepareApocalypseDebugState() {
         str: [20, 25], vit: [20, 25], dex: [20, 25], mag: [20, 25], chr: [20, 25],
         int: [20, 25], ind: [20, 25], eth: [20, 25], cou: [20, 25], sexdr: [20, 25]
       },
-      existingNames: getExistingNames()
+      existingNames: getExistingNames(),
+      village: theVillage
     });
     theVillage.villagers.push(villager);
     addedVillagers.push(villager);

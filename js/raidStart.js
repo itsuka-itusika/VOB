@@ -262,6 +262,7 @@ function createRaidEnemy(village, raiderType, existingNames, enemyGroup = null) 
     minAge: raiderType.ageRange.min,
     maxAge: raiderType.ageRange.max,
     existingNames,
+    village,
     params: {
       ...raiderType.params,
       race: raiderType.race

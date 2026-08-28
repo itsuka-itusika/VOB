@@ -3,7 +3,6 @@ import { randChoice, randInt, clampValue, randFloat } from "./util.js";
 import { getPortraitSpriteHtml } from "./data/portraitAtlas.js";
 import {
   generateRandomName,
-  registerUsedName,
   isNameReserved,
   createRandomVillager,
   assignBodyMindTraits,
@@ -569,7 +568,7 @@ export function createWolfFoundling(village) {
     sex,
     minAge: 0,
     maxAge: 0,
-    existingNames: village.villagers.map(person => person.name),
+    village,
     params: {
       ...wolfType.params,
       race: wolfType.race
@@ -946,7 +945,6 @@ function finalizeBirth(village, mother, data, child, childName) {
   child.name = childName;
   child.bodyOwner = childName;
   child.bodyOwnerId = child.id;
-  registerUsedName(childName);
 
   addRelationship(child, "母", mother);
   addRelationship(mother, "子", child);
@@ -1129,11 +1127,10 @@ function getUnnamedChildLabel(child) {
 }
 
 /** オートネームの候補。確定するまで使用済みには登録しない。 */
-function rollChildName(village, mother, child, excludedName = "") {
+function rollChildName(village, child, excludedName = "") {
   return generateRandomName(child.bodySex, {
-    existingNames: [...village.villagers.map(person => person.name), excludedName].filter(Boolean),
-    fallbackParentName: mother.name,
-    register: false
+    existingNames: [excludedName].filter(Boolean),
+    village
   });
 }
 
@@ -1145,8 +1142,7 @@ function getChildNameError(name, village) {
   if (!CHILD_NAME_PATTERN.test(trimmed)) return "使えるのは かな・カタカナ・漢字・英数字・「ー」「・」だけです。";
   if (/の(母|父|息子|娘)$/.test(trimmed)) return "「〜の母」「〜の娘」などで終わる名は、続柄と紛れるため使えません。";
   if (trimmed === "既婚") return "その名は使えません。";
-  const taken = isNameReserved(trimmed) ||
-    village.villagers.some(person => person.name === trimmed);
+  const taken = isNameReserved(trimmed, village);
   if (taken) return "同じ名の者がすでにいます。";
   return "";
 }
@@ -1189,7 +1185,7 @@ function showBirthModal(village, mother, father, child, onNamed) {
     };
 
     modal.querySelector("[data-leave-name]").onclick = () => {
-      decideName(rollChildName(village, mother, child));
+      decideName(rollChildName(village, child));
     };
     modal.querySelector("[data-name-child]").onclick = () => {
       choiceArea.hidden = true;
@@ -1198,7 +1194,7 @@ function showBirthModal(village, mother, father, child, onNamed) {
     };
     // 押すたびに、今入っている名前とは別の候補を入れる。
     modal.querySelector("[data-auto-name]").onclick = () => {
-      nameInput.value = rollChildName(village, mother, child, nameInput.value.trim());
+      nameInput.value = rollChildName(village, child, nameInput.value.trim());
       errorText.hidden = true;
       nameInput.focus();
     };

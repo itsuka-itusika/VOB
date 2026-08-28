@@ -3,6 +3,7 @@
 import { Villager } from "./classes.js";
 import { randInt, randChoice, randNormalInRange } from "./util.js";
 import { ACTION_NONE, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
+import { getNameList } from "./data/nameData.js";
 import { isOriginalBodyPortrait, rememberCurrentPortrait } from "./domain/portraitHistory.js";
 import {
   ALSEID_PORTRAIT_FILES,
@@ -313,36 +314,73 @@ const GOAT_PAIR_VISITOR_TYPES = new Map([
   [MAENAD_VISITOR_TYPE.type, MAENAD_VISITOR_TYPE]
 ]);
 
-// 使用済みの名前を追跡する Set を追加
-const usedNames = new Set();
 const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成", "人面獣身"]);
 const NO_AGING_RACES = new Set(["翼人", "アルセイド", "ネレイド", "ドライアド", "スフィンクス"]);
 
-export function registerUsedName(name) {
+// 名前の予約は村の状態から都度導く。訪問者・襲撃者・捕虜は去れば解放され、
+// 村人と過去帳の名前だけが記録の一意性のために残り続ける。
+function addReservedName(set, name) {
   const normalized = String(name || "").trim();
-  if (normalized) usedNames.add(normalized);
+  if (normalized) set.add(normalized);
+}
+
+/** 人物1人が占有している名前。訪問者は肩書付きの表示名と素の名前の両方を押さえる。 */
+function addPersonNames(set, person) {
+  addReservedName(set, person?.name);
+  addReservedName(set, person?.givenName);
+}
+
+export function collectReservedNames(village, extraNames = []) {
+  const reserved = new Set();
+  Array.from(extraNames || []).forEach(name => addReservedName(reserved, name));
+  if (!village) return reserved;
+
+  // 永久に予約する側。個人史・村史・続柄に名前が残るため再利用しない。
+  (Array.isArray(village.villagers) ? village.villagers : []).forEach(person => addPersonNames(reserved, person));
+  (Array.isArray(village.departedVillagers) ? village.departedVillagers : []).forEach(person => addPersonNames(reserved, person));
+  // 村にいる間だけ占有する側。
+  (Array.isArray(village.visitors) ? village.visitors : []).forEach(person => addPersonNames(reserved, person));
+  (Array.isArray(village.raidEnemies) ? village.raidEnemies : []).forEach(person => addPersonNames(reserved, person));
+  (Array.isArray(village.captives) ? village.captives : []).forEach(person => addPersonNames(reserved, person));
+  return reserved;
 }
 
 /** 命名済みの名前かどうか。プレイヤー命名の重複確認に使う。 */
-export function isNameReserved(name) {
-  return usedNames.has(String(name || "").trim());
+export function isNameReserved(name, village = null) {
+  return collectReservedNames(village).has(String(name || "").trim());
 }
 
-function getReservedNames(extraNames = []) {
-  return new Set([
-    ...usedNames,
-    ...Array.from(extraNames || []).map(name => String(name || "").trim()).filter(Boolean)
-  ]);
+// 一覧を使い切ったときは、同じ一覧の名前2つを「・」でつないで新しい名前を作る。
+const COMBINED_NAME_SEPARATOR = "・";
+const COMBINED_NAME_PREFERRED_LENGTH = 8;
+
+function buildCombinedNameCandidates(nameList, maxLength) {
+  const candidates = [];
+  nameList.forEach(first => {
+    nameList.forEach(second => {
+      if (first === second) return;
+      const candidate = `${first}${COMBINED_NAME_SEPARATOR}${second}`;
+      if (maxLength && [...candidate].length > maxLength) return;
+      candidates.push(candidate);
+    });
+  });
+  return candidates;
 }
 
-function buildFallbackChildName(baseName, reservedNames) {
-  const base = String(baseName || "").trim() || "誰か";
-  for (let i = 1; i <= 9999; i++) {
-    const suffix = String(i).padStart(2, "0");
-    const candidate = `${base}の子${suffix}`;
+function buildCombinedName(nameList, reservedNames) {
+  // 一覧の名前欄が崩れないよう、まずは短い組み合わせから探す。
+  for (const maxLength of [COMBINED_NAME_PREFERRED_LENGTH, 0]) {
+    const available = buildCombinedNameCandidates(nameList, maxLength)
+      .filter(name => !reservedNames.has(name));
+    if (available.length > 0) return randChoice(available);
+  }
+  // 2つの組み合わせが尽きることは実質ないが、袋小路にはしない。
+  for (let i = 0; i < 500; i++) {
+    const candidate = [randChoice(nameList), randChoice(nameList), randChoice(nameList)]
+      .join(COMBINED_NAME_SEPARATOR);
     if (!reservedNames.has(candidate)) return candidate;
   }
-  return `${base}の子${Date.now()}`;
+  return `${randChoice(nameList)}${COMBINED_NAME_SEPARATOR}${Date.now()}`;
 }
 
 // 使用済みの顔グラフィックを追跡するSetを追加
@@ -555,12 +593,12 @@ export function createInitialVillagers() {
  * @param {Object} [options.params] - 固定パラメータ設定
  * @param {Object} [options.ranges] - パラメータ範囲設定 { param: [min, max] }
  */
-export function createRandomVillager({ sex, minAge, maxAge, params = {}, ranges = {}, existingNames = [], fallbackParentName = "" }) {
+export function createRandomVillager({ sex, minAge, maxAge, params = {}, ranges = {}, existingNames = [], village = null }) {
   let age = randInt(minAge, maxAge);
 
   let nm = generateRandomName(sex, {
     existingNames,
-    fallbackParentName,
+    village,
     race: params.race,
     job: params.job
   });
@@ -611,79 +649,11 @@ export function createRandomVillager({ sex, minAge, maxAge, params = {}, ranges 
  * ランダム名前生成(男/女)を修正
  */
 export function generateRandomName(sex, options = {}) {
-  const maleNames = [
-    "アルフ","ガルド","レオン","エルネスト","ヨハン","ハイン","グレン","ディルク","ロベルト","シュテファン",
-    "オスカー","フィン","ルーカス","ヴィクトール","ベルトラン","ライオネル","ガブリエル","セルジオ","ミハエル","リッツ",
-    "クライド","アードルフ","ダリオ","フリード","ハンツ","フェリクス","マキシム","オーウェン","バーン","タイラー",
-    "ビルヘルム","イングラム","ジャスパー","レザルド","ガストン","ヘルマン","トリスタン","ファビアン","ヘリオス","アルドール",
-    "ローエン","カロル","マルコ","アギル","ボリス","イライアス","サムソン","ブラッド","シモン","エリク",
-    "ギルベルト","エドムント",
-    "ロタール","バルタザール","テオドール","ラインハルト","ヴォルフガング","アーサー","ランスロット","ガウェイン",
-    "パーシヴァル","ベディヴィア","ケイ","トリストラム",
-    "アストラル","ファイアル","ソラリス","ルミナス","セレスト","ドラゴ","エオス","オリオン","クロノス",
-    "アイオロス","テラス","ブラギ"
-  ];
-  const femaleNames = [
-    "ルナ","エマ","エリー","リサ","フローレ","ナギサ","ミレイ","フェリシア","ユリア","エリシア",
-    "マルレーネ","アデル","クラリス","オリガ","シルヴィ","ローザ","フランカ","ロゼッタ","グレース","サラ",
-    "ティナ","マリー","ネリア","ディアナ","レティシア","クロエ","イリーナ","ミリア","リンリン","ファナ",
-    "エステラ","セルフィ","ベアトリス","フィオナ","フローラ","アンナ","オデット","アメリア","ユナ","ルイネ",
-    "シェリル","カトレア","エルディア","ラミア","ミスティ","サリナ","ベルト","クラウディア","カレン","ユリエ",
-    "アデルハイト","イゾルデ","ジークリンデ",
-    "モルガナ","ヴィヴィアン","エレイン","イグレイン","リノア","エーデルリート",
-    "ヘレナ","セシリア",
-    "ルミエール","セレスティア","アストリア","エテリア","アウローラ","ノヴァ","アイリス","リリス","アテナ",
-    "アルテミシア","フレイヤ","イドゥン","スカディ","エイル","ナンナ","シグリド","ヘル","フリッグ","セレーネ","エオウィン"
-  ];
-  const steppeFemaleNames = [
-    "アルタンナ", "アリグナ", "アヤラ", "バヤルマ", "ボルテ", "ボルガナ", "チャガナ", "チメグ", "ダリカ", "エルデネ",
-    "エセンナ", "ガンチメグ", "ハラナ", "ハルガナ", "ホラン", "イルガ", "ジャルガ", "カラナ", "カスミラ", "ケレナ",
-    "クラン", "クルミシュ", "クトルナ", "マラル", "メルゲナ", "ナランナ", "ノミン", "オユン", "オルダナ", "サイハナ",
-    "サラナ", "サリナイ", "セチェナ", "シベナ", "ソロンゴ", "タミラ", "タルカナ", "テムリナ", "トヤナ", "ウルガナ",
-    "ウリナ", "ヤラナ", "ユルドゥナ", "ザラナ", "ズラガナ", "アルシャナ", "アスパラ", "バフラナ", "ファルナ", "ミフリ",
-    "ロクサナ", "サカラ", "スパラ", "ヴァルカナ", "アラシナ", "バルシナ", "イルテリナ", "ビルゲナ", "キュルナ", "トルグナ",
-    "アイスル", "アイヌル", "アイチュレク", "アクチュレク", "アルズ", "アスリ", "バイサル", "ベグミラ", "チョルパナ", "エルキナ",
-    "グルバハル", "グルナズ", "カラグル", "クムリ", "メレク", "ミナラ", "ナズグル", "ヌルアイ", "サビラ", "セヴィル",
-    "トマリス", "トゥラン", "ウルミラ", "ヤスミラ", "ザリナ", "ゼリハ", "アムリタ", "アナヒタ", "アタナ", "フラワル",
-    "マフリナ", "ラナク", "ロシャナ", "スリヤナ", "タパナ", "ヴァルジナ", "ヤシュナ", "アラティ", "バヌカ", "ミトラナ"
-  ];
-  const steppeMaleNames = [
-    "アラト", "アルタン", "アルグン", "バトゥ", "バトル", "ベルグテイ", "ボロル", "ボルカン", "ボルテイ", "ブカ",
-    "チャガン", "チャガタイ", "チルゲン", "チョルン", "ダヤン", "エルデン", "エセン", "ガンバル", "ガントゥル", "ガルサン",
-    "ハラル", "ハルガイ", "ハルタン", "ホルチ", "ホルムズ", "イルベル", "イルハン", "イナル", "ジャライ", "ジェベ",
-    "ジェルメ", "カダン", "カイドゥ", "カイラト", "カラチ", "カラハン", "カスカイ", "カシュガル", "ケレイ", "クチュル",
-    "クルタイ", "クルガン", "クトルグ", "マングダイ", "メルゲン", "ムカリ", "ナラン", "ノガイ", "オグル", "オグズ",
-    "オルダ", "オルホン", "オルクン", "オトチ", "サイハン", "サルバン", "サルタク", "サリク", "セチェン", "シベグ",
-    "シデイ", "ソヨン", "スブタイ", "タバル", "タムガ", "タルカン", "テムゲ", "テムル", "トグリル", "トクトア",
-    "トルイ", "トゥメン", "ウルス", "ウルグ", "ウリャン", "ウズベク", "ヤブグ", "ヤガン", "ヤルカン", "ユルドゥズ",
-    "ザバン", "ザラン", "ズラガ", "アスパル", "アルシャク", "バフラム", "ファルナク", "ミフラク", "ロスタム", "サカール",
-    "スパーダ", "ヴァルカ", "アショク", "アラシュ", "バルス", "イルテリシュ", "クテイ", "トニュクク", "ビルゲ", "キュル"
-  ];
-
-  // 性別に応じた名前リストを選択
-  let nameList = sex === "男" ? maleNames : femaleNames;
-  if (options.race === "エクイナ") {
-    nameList = steppeFemaleNames;
-  } else if (options.race === "セントール" || options.job === "セントール" || options.job === "遊牧民" || options.job === "騎馬兵団") {
-    nameList = steppeMaleNames;
-  }
-
-  const reservedNames = getReservedNames(options.existingNames);
+  const nameList = getNameList(sex, { race: options.race, job: options.job });
+  const reservedNames = collectReservedNames(options.village, options.existingNames);
   const availableNames = nameList.filter(name => !reservedNames.has(name));
-
-  const shouldRegister = options.register !== false;
-
-  if (availableNames.length === 0) {
-    const baseName = options.fallbackParentName || randChoice(nameList);
-    const fallbackName = buildFallbackChildName(baseName, reservedNames);
-    if (shouldRegister) registerUsedName(fallbackName);
-    return fallbackName;
-  }
-
-  // ランダムに名前を選択して使用済みとしてマーク
-  const chosenName = randChoice(availableNames);
-  if (shouldRegister) registerUsedName(chosenName);
-  return chosenName;
+  if (availableNames.length > 0) return randChoice(availableNames);
+  return buildCombinedName(nameList, reservedNames);
 }
 
 /**
@@ -1344,7 +1314,7 @@ function isGoatPairVisitorType(visitorType) {
 /**
  * 訪問者を生成する関数
  */
-function buildVisitorFromType(visitorType, existingNames = [], options = {}) {
+function buildVisitorFromType(visitorType, existingNames = [], village = null) {
   const displayType = getVisitorDisplayType(visitorType);
 
   // 性別を明示的に設定（visitorTypeに指定がなければランダム）
@@ -1360,18 +1330,13 @@ function buildVisitorFromType(visitorType, existingNames = [], options = {}) {
     maxAge: visitorType.ageRange.max,
     params: visitorParams,
     ranges: visitorType.ranges,
-    existingNames
+    existingNames,
+    village
   });
 
-  // 訪問者の名前を修正
-  const visitorName = `${displayType}の${visitor.name}`;
-  const reservedNames = getReservedNames(existingNames);
-  visitor.name = reservedNames.has(visitorName)
-    ? buildFallbackChildName(visitorName, reservedNames)
-    : visitorName;
-  if (options.registerName !== false) {
-    registerUsedName(visitor.name);
-  }
+  // 表示名は肩書付きにする。素の名前は givenName に残し、名前の予約判定で使う。
+  visitor.givenName = visitor.name;
+  visitor.name = `${displayType}の${visitor.name}`;
 
   // 訪問者は村人化するまで訪問固定。通常時の復帰先は持たない。
   setPreferredAction(visitor, ACTION_NONE);
@@ -1418,14 +1383,15 @@ function buildVisitorFromType(visitorType, existingNames = [], options = {}) {
   return visitor;
 }
 
-function createBodyExchangedPairVisitor(selectedType, existingNames = []) {
-  const satyr = buildVisitorFromType(SATYR_VISITOR_TYPE, existingNames, { registerName: false });
-  const maenad = buildVisitorFromType(MAENAD_VISITOR_TYPE, [...existingNames, satyr.name], { registerName: false });
+function createBodyExchangedPairVisitor(selectedType, existingNames = [], village = null) {
+  const satyr = buildVisitorFromType(SATYR_VISITOR_TYPE, existingNames, village);
+  const maenad = buildVisitorFromType(
+    MAENAD_VISITOR_TYPE,
+    [...existingNames, satyr.name, satyr.givenName],
+    village
+  );
   exchangeGeneratedVisitorBodies(satyr, maenad);
-
-  const visitor = selectedType === MAENAD_VISITOR_TYPE.type ? maenad : satyr;
-  registerUsedName(visitor.name);
-  return visitor;
+  return selectedType === MAENAD_VISITOR_TYPE.type ? maenad : satyr;
 }
 
 export function createRandomVisitor(existingNames = [], forcedType = null, village = null) {
@@ -1434,10 +1400,10 @@ export function createRandomVisitor(existingNames = [], forcedType = null, villa
     : selectVisitorType(village);
 
   if (isGoatPairVisitorType(visitorType)) {
-    return createBodyExchangedPairVisitor(visitorType.type, existingNames);
+    return createBodyExchangedPairVisitor(visitorType.type, existingNames, village);
   }
 
-  return buildVisitorFromType(visitorType, existingNames);
+  return buildVisitorFromType(visitorType, existingNames, village);
 }
 
 export function createRandomVisitorOfType(type, existingNames = []) {
