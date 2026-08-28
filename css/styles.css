@@ -1717,7 +1717,7 @@ section h2 {
   padding: 7px 0;
   border-bottom: 1px solid #d9ccb0;
 }
-.personal-history-profile-field span {
+.personal-history-profile-field > span {
   display: block;
   color: #6d5b34;
   font-size: 0.76rem;
@@ -1730,8 +1730,8 @@ section h2 {
   font-size: 0.9rem;
   line-height: 1.45;
 }
-.personal-history-profile-field.is-detail span,
-.personal-history-profile-field.is-detail strong {
+.personal-history-profile-field.is-detail > span,
+.personal-history-profile-field.is-detail > strong {
   line-height: 1.55;
 }
 .personal-history-relationship-text {
@@ -4149,6 +4149,20 @@ section h2 {
 .ledger-rank-place.is-1 { color: #b8860b; }
 .ledger-rank-place.is-2 { color: #8c8c8c; }
 .ledger-rank-place.is-3 { color: #a0672d; }
+.ledger-rank-portrait-button {
+  flex: none;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  line-height: 0;
+  cursor: pointer;
+}
+.ledger-rank-portrait-button:hover .portrait-sprite,
+.ledger-rank-portrait-button:focus .portrait-sprite {
+  outline: 2px solid #8b6d31;
+  outline-offset: 1px;
+}
 .ledger-rank-name {
   flex: 1 1 auto;
   overflow: hidden;

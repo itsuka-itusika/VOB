@@ -1215,6 +1215,14 @@ function grantSoloDefenderTitle(village) {
   village.log(`【称号】${hero.name}は${stance}、「一騎当千」を得た`);
 }
 
+/** 結果モーダルに殊勲として出た村人へ、殊勲を1回ずつ記録する。 */
+function recordDistinguishedService(village, distinguishedIds) {
+  distinguishedIds.forEach(id => {
+    const person = village.villagers.find(v => v.id === id);
+    if (person) addVillageRecord(village, person, "distinguished", 1);
+  });
+}
+
 /** 前衛・中衛として戦い、防衛に成功した村人へ勝利を1回ずつ記録する。 */
 function recordRaidVictories(village) {
   [...getActiveRaidFrontliners(village), ...getActiveRaidMiddleliners(village)]
@@ -1336,8 +1344,9 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
     }
 
     const severeInjuryResult = rollRaidSevereInjuryCheck(village, raidRules);
-    // 殊勲の願望は、結果モーダルに殊勲として出る村人と同じ条件で達成にする。
+    // 殊勲の願望とランキングは、結果モーダルに殊勲として出る村人と同じ条件で扱う。
     checkWishCompletion(village, { distinguishedIds: resultInfo.mvp?.ids || [] });
+    recordDistinguishedService(village, resultInfo.mvp?.ids || []);
     applyRaidFriendshipResults(village);
     handleApocalypseRaidResult(village, completedRaidId, isSuccess);
     village.isRaidProcessDone=true;

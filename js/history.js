@@ -6,6 +6,7 @@ import { SPEECH_TYPE_MAPPING } from "./data/villagerData.js";
 import { showDictionaryEntry } from "./dictionary.js";
 import { combinedDictionaryData } from "./data/dictionaryData.js";
 import { getRelationshipEntries } from "./relationships.js";
+import { syncTitleCountRecord } from "./records.js";
 
 export const HISTORY_EVENT_TYPES = Object.freeze({
   ARCHIVE_GAP: "archiveGap",
@@ -1078,6 +1079,7 @@ function formatDepartureSentence(departure) {
  */
 export function recordDepartedVillager(village, person, reason) {
   if (!village || !person) return;
+  syncTitleCountRecord(village, person);
   if (!Array.isArray(village.departedVillagers)) village.departedVillagers = [];
   const snapshot = JSON.parse(JSON.stringify(person));
   snapshot.departure = {
