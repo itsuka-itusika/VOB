@@ -1796,6 +1796,19 @@ section h2 {
   font-size: 1.12rem;
   font-weight: bold;
 }
+.friendship-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.friendship-detail-header .portrait-sprite {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  object-fit: cover;
+  border: 1px solid #bda978;
+  background: #e8dfcb;
+}
 .friendship-detail-content {
   overflow: auto;
   border: 1px solid #e0d1ad;

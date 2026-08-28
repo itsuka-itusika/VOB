@@ -1359,7 +1359,10 @@ export function openFriendshipDetailModal(village, person) {
   modal.id = "friendshipDetailModal";
   modal.className = "friendship-detail-modal";
   modal.innerHTML = `
-    <div class="modal-header">${escapeHtml(person.name)}の好感度</div>
+    <div class="modal-header friendship-detail-header">
+      ${getPortraitSpriteHtml(person, { alt: person.name })}
+      <span>${escapeHtml(person.name)}の好感度</span>
+    </div>
     <div class="friendship-detail-content">
       <table class="friendship-detail-table">
         <colgroup>
