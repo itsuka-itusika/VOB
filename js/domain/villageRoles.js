@@ -81,10 +81,6 @@ export function getVillageRoleHolder(village, role, exceptPerson = null) {
   ) || null;
 }
 
-export function isVillageRoleTaken(village, role, exceptPerson = null) {
-  return !!getVillageRoleHolder(village, role, exceptPerson);
-}
-
 export function canAssignVillageRole(village, person, role) {
   if (!person) return false;
   const normalized = normalizeVillageRole(role);
@@ -96,13 +92,18 @@ export function canAssignVillageRole(village, person, role) {
   if (normalized === VILLAGE_ROLE_NONE) return true;
   if (normalized === VILLAGE_ROLE_HEADMAN) return false;
   if (!isAdultMindForVillageRole(person)) return false;
-  if (!isVillageRoleUnlocked(village, normalized)) return false;
-  return !isVillageRoleTaken(village, normalized, person);
+  // 既に就いている村人がいても選べる。選んだ時点で役職がそちらへ移る。
+  return isVillageRoleUnlocked(village, normalized);
 }
 
+/** 役職を与える。既に就いている村人がいれば、その者を「なし」へ戻して引き継ぐ。 */
 export function assignVillageRole(village, person, role) {
   const normalized = normalizeVillageRole(role);
   if (!canAssignVillageRole(village, person, normalized)) return false;
+  const previousHolder = normalized === VILLAGE_ROLE_NONE
+    ? null
+    : getVillageRoleHolder(village, normalized, person);
+  if (previousHolder) setVillageRole(previousHolder, VILLAGE_ROLE_NONE);
   setVillageRole(person, normalized);
   return true;
 }

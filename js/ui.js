@@ -85,6 +85,7 @@ import {
   VILLAGE_ROLE_PRIEST,
   assignVillageRole,
   canAssignVillageRole,
+  getVillageRoleHolder,
   getUnlockedVillageRoles,
   isAdultMindForVillageRole,
   normalizeVillageRoleForPerson
@@ -989,7 +990,9 @@ function appendVillageRoleCell(row, person, village, editable) {
   roles.forEach(role => {
     const option = document.createElement("option");
     option.value = role;
-    option.textContent = role;
+    // 別の村人が就いている役職は、選ぶと交代になる。誰から引き継ぐのかを添える。
+    const holder = role === VILLAGE_ROLE_NONE ? null : getVillageRoleHolder(village, role, person);
+    option.textContent = holder ? `${role}（現：${holder.name}）` : role;
     const title = getVillageRoleDescription(role);
     if (title) option.title = title;
     if (role === currentRole) option.selected = true;
@@ -1002,8 +1005,16 @@ function appendVillageRoleCell(row, person, village, editable) {
   cell.title = select.title;
   select.onchange = () => {
     const nextRole = select.value;
+    const previousHolder = nextRole === VILLAGE_ROLE_NONE
+      ? null
+      : getVillageRoleHolder(village, nextRole, person);
     if (assignVillageRole(village, person, nextRole)) {
       syncEffectiveStats(person);
+      if (previousHolder) {
+        // 前任者の役職補正も外す。
+        syncEffectiveStats(previousHolder);
+        village.log(`${previousHolder.name}に代わり、${person.name}が${nextRole}になった`);
+      }
       if (nextRole !== VILLAGE_ROLE_NONE) showDictionaryEntry(nextRole);
       updateUI(village);
       return;
