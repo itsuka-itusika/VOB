@@ -1331,7 +1331,7 @@ export function openFriendshipDetailModal(village, person) {
       html: `
       <tr>
         <td class="friendship-detail-person">
-          <button type="button" class="friendship-detail-portrait-button" data-open-friendship-person="${index}" aria-label="${escapeHtml(other.name)}の好感度を見る">
+          <button type="button" class="friendship-detail-portrait-button" data-open-friendship-person="${index}" aria-label="${escapeHtml(other.name)}の人間関係を見る">
             ${getPortraitSpriteHtml(other, { alt: other.name })}
           </button>
           <span>${escapeHtml(other.name)}</span>
@@ -1361,7 +1361,7 @@ export function openFriendshipDetailModal(village, person) {
   modal.innerHTML = `
     <div class="modal-header friendship-detail-header">
       ${getPortraitSpriteHtml(person, { alt: person.name })}
-      <span>${escapeHtml(person.name)}の好感度</span>
+      <span>${escapeHtml(person.name)}の人間関係</span>
     </div>
     <div class="friendship-detail-content">
       <table class="friendship-detail-table">
