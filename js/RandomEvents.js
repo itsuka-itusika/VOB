@@ -17,6 +17,7 @@ import { isOriginalBodyOwner } from "./domain/portraitHistory.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { getActiveVillagers, getVillagersIncludingSaltPillar } from "./domain/apocalypseRules.js";
+import { getCaptives } from "./captives.js";
 import { damageRandomBuilding } from "./buildings.js";
 import { addAcquiredStat, syncEffectiveStats } from "./domain/statLayers.js";
 import { recordEpidemicHistory, recordHobbyAwakeningHistory, recordLoverHistory, recordMythicEventHistory, recordSocialRelationHistory, recordVillagerJoinHistory } from "./history.js";
@@ -900,11 +901,17 @@ export class RandomEvents {
         break;
       }
       case "lightning2": {
-        const candidates = getVillagersIncludingSaltPillar(v).filter(canExchangeBody);
+        // 交換の奇跡と同じく、村人だけでなく捕虜も雷に打たれる。
+        const candidates = getVillagersIncludingSaltPillar(v)
+          .concat(getCaptives(v))
+          .filter(canExchangeBody);
         if (candidates.length >= 2) {
           let a = this.randChoice(candidates);
           let b = this.randChoice(candidates.filter(x => x !== a));
           doExchange(a, b, v, true);
+          // 捕虜は collectChangedVillagers が拾わないため、当事者を話者として登録する。
+          this.addForcedSpeaker(a);
+          this.addForcedSpeaker(b);
           v.log(`落雷2:${a.name}と${b.name}の肉体交換`);
         }
         break;
