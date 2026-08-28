@@ -3,7 +3,7 @@
 import { Villager } from "./classes.js";
 import { randInt, randChoice, randNormalInRange } from "./util.js";
 import { ACTION_NONE, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
-import { getNameList } from "./data/nameData.js";
+import { getFallbackNameList, getNameList } from "./data/nameData.js";
 import { isOriginalBodyPortrait, rememberCurrentPortrait } from "./domain/portraitHistory.js";
 import {
   ALSEID_PORTRAIT_FILES,
@@ -350,7 +350,7 @@ export function isNameReserved(name, village = null) {
   return collectReservedNames(village).has(String(name || "").trim());
 }
 
-// 一覧を使い切ったときは、同じ一覧の名前2つを「＝」でつないで新しい名前を作る。
+// 選び直す一覧まで使い切ったときは、その一覧の名前2つを「＝」でつないで新しい名前を作る。
 const COMBINED_NAME_SEPARATOR = "＝";
 const COMBINED_NAME_PREFERRED_LENGTH = 8;
 
@@ -649,11 +649,17 @@ export function createRandomVillager({ sex, minAge, maxAge, params = {}, ranges 
  * ランダム名前生成(男/女)を修正
  */
 export function generateRandomName(sex, options = {}) {
-  const nameList = getNameList(sex, { race: options.race, job: options.job });
+  const listOptions = { race: options.race, job: options.job };
+  const nameList = getNameList(sex, listOptions);
+  // 専用の一覧が尽きた種族は、連結名より先に一般の一覧から選び直す。
+  const fallbackList = getFallbackNameList(sex, listOptions);
   const reservedNames = collectReservedNames(options.village, options.existingNames);
-  const availableNames = nameList.filter(name => !reservedNames.has(name));
-  if (availableNames.length > 0) return randChoice(availableNames);
-  return buildCombinedName(nameList, reservedNames);
+  for (const list of [nameList, fallbackList]) {
+    if (!list) continue;
+    const availableNames = list.filter(name => !reservedNames.has(name));
+    if (availableNames.length > 0) return randChoice(availableNames);
+  }
+  return buildCombinedName(fallbackList || nameList, reservedNames);
 }
 
 /**
