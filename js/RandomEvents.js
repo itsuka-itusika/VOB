@@ -1,7 +1,7 @@
 // RandomEvents.js
 
 import { randInt, clampValue, round3 } from "./util.js";
-import { adjustMutualFriendship, areSiblings, doHitItOffEvent, doLoverCheck, addRelationship as addCategorizedRelationship, getFriendshipScore, getPairFriendshipMaximum, getPairFriendshipMinimum, getRelationshipEntries, isSingle, setFriendshipScore } from "./relationships.js";
+import { adjustMutualFriendship, areSiblings, createLineageIndex, doHitItOffEvent, doLoverCheck, addRelationship as addCategorizedRelationship, getFriendshipScore, getPairFriendshipMaximum, getPairFriendshipMinimum, getRelationshipEntries, isDirectLineage, isSingle, setFriendshipScore } from "./relationships.js";
 import { canExchangeBody, doExchange } from "./exchange.js";
 import { showRandomEventModal } from "./randomEventModal.js";
 import { HobbyEffects } from "./HobbyEffects.js";
@@ -273,6 +273,7 @@ export class RandomEvents {
   static collectThunderboltLovePairs(v) {
     const villagers = getActiveVillagers(v);
     const pairs = [];
+    const lineageIndex = createLineageIndex(v);
     villagers.forEach(a => {
       if (!isSingle(a) || Number(a.spiritAge) < 12) return;
       villagers.forEach(b => {
@@ -282,6 +283,7 @@ export class RandomEvents {
         if (getFriendshipScore(a, b) > 19) return;
         if (this.hasPairRelationship(a, b, THUNDERBOLT_LOVE_BLOCKING_RELATION_PREFIXES)) return;
         if (areSiblings(a, b)) return;
+        if (isDirectLineage(lineageIndex, a, b)) return;
         pairs.push([a, b]);
       });
     });

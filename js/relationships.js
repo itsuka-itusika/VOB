@@ -50,14 +50,15 @@ export function doLoverCheck(village, options = {}) {
     && !hasMindTrait(x, "野生")
   );
   // 相手候補が1人もいない者を除いてからAを抽選する。候補なしの空振りを防ぐ。
-  candidatesA = candidatesA.filter(x => village.villagers.some(b => isLoverCandidate(x, b)));
+  const lineageIndex = createLineageIndex(village);
+  candidatesA = candidatesA.filter(x => village.villagers.some(b => isLoverCandidate(lineageIndex, x, b)));
   if (candidatesA.length===0) {
     village.log("恋人判定:対象者なし");
     return false;
   }
 
   let a = randChoice(candidatesA);
-  let candidatesB = village.villagers.filter(b=>isLoverCandidate(a, b));
+  let candidatesB = village.villagers.filter(b=>isLoverCandidate(lineageIndex, a, b));
   let b = randChoice(candidatesB);
   let sc = getLoverSuccessRate(a, b);
   if (Math.random()<=sc) {
@@ -121,7 +122,71 @@ export function areSiblings(a, b) {
   return getParentKeys(a).some(key => parentsOfB.has(key));
 }
 
-function isLoverCandidate(a, b) {
+// 系譜をさかのぼる上限。関係が壊れていても止まるようにする。
+const LINEAGE_MAX_DEPTH = 12;
+
+/**
+ * 村人と過去帳の記録から、子の id から親の id を引ける系譜を組み立てる。
+ *
+ * 村人が去ると clearRelationshipsForDepartedVillager が生存者側の関係を消すため、
+ * 生きている者の親をたどるだけでは、間の代が死んだ時点で系譜が切れる。
+ * 過去帳には去った時点の関係がそのまま残るので、
+ * 「親を指す関係」と「子を指す関係」の両側から辺を集め直して系譜をつなぐ。
+ *
+ * 過去帳は長期プレイで伸びるため、判定のたびに作らず呼び出し側で使い回す。
+ */
+export function createLineageIndex(village) {
+  const parentsByChild = new Map();
+  const link = (childId, parentId) => {
+    if (childId == null || parentId == null || childId === parentId) return;
+    if (!parentsByChild.has(childId)) parentsByChild.set(childId, new Set());
+    parentsByChild.get(childId).add(parentId);
+  };
+
+  [
+    ...(Array.isArray(village?.villagers) ? village.villagers : []),
+    ...(Array.isArray(village?.departedVillagers) ? village.departedVillagers : [])
+  ].forEach(person => {
+    if (person?.id == null) return;
+    getRelationshipEntries(person).forEach(entry => {
+      if (entry.targetId == null) return;
+      if (PARENT_RELATION_PREFIXES.has(entry.prefix)) link(person.id, entry.targetId);
+      else if (entry.prefix === "子") link(entry.targetId, person.id);
+    });
+  });
+  return parentsByChild;
+}
+
+/**
+ * descendant から見て ancestor が何代前の先祖かを返す。直系でなければ 0。
+ * 1代前が母・父、2代前が祖父母。近い代を優先するため、代ごとに横へ広げて探す。
+ */
+function getAncestorDepth(lineage, ancestor, descendant) {
+  if (!ancestor || !descendant || ancestor === descendant) return 0;
+  if (ancestor.id == null || descendant.id == null) return 0;
+  const seen = new Set([descendant.id]);
+  let current = [descendant.id];
+  for (let depth = 1; depth <= LINEAGE_MAX_DEPTH && current.length > 0; depth++) {
+    const next = [];
+    for (const id of current) {
+      for (const parentId of lineage.get(id) || []) {
+        if (parentId === ancestor.id) return depth;
+        if (seen.has(parentId)) continue;
+        seen.add(parentId);
+        next.push(parentId);
+      }
+    }
+    current = next;
+  }
+  return 0;
+}
+
+/** 親子、祖父母と孫、その先の先祖と子孫。縦につながる血縁か。 */
+export function isDirectLineage(lineage, a, b) {
+  return getAncestorDepth(lineage, a, b) > 0 || getAncestorDepth(lineage, b, a) > 0;
+}
+
+function isLoverCandidate(lineageIndex, a, b) {
   if (!a || !b || a === b) return false;
   if (isSaltPillar(a) || isSaltPillar(b)) return false;
   if (hasMindTrait(a, "神聖") || hasMindTrait(b, "神聖")) return false;
@@ -130,6 +195,7 @@ function isLoverCandidate(a, b) {
   return isSingle(b)
     && !hasLoverBlockingRelationship(a, b)
     && !areSiblings(a, b)
+    && !isDirectLineage(lineageIndex, a, b)
     && !hasBodyTrait(b, "四足歩行")
     && !hasBodyTrait(b, "人面獣身")
     && getPairFriendshipMinimum(a, b) >= 30
@@ -895,8 +961,9 @@ function isBondingPartnerCandidate(a, b, friendshipThreshold) {
 }
 
 // 恋人になれる組み合わせか。なれなければ親友になる。
-function canBecomeLoversByBonding(a, b) {
+function canBecomeLoversByBonding(village, a, b) {
   return !!a.spiritSex && !!b.bodySex && a.spiritSex !== b.bodySex
+    && !isDirectLineage(createLineageIndex(village), a, b)
     && isSingle(a) && isSingle(b)
     && !hasBodyTrait(b, "四足歩行")
     && b.bodyAge >= 16;
@@ -913,7 +980,7 @@ function pickBondingPair(village, friendshipThreshold) {
 }
 
 function formBond(village, a, b, { source, happinessGain = 0, friendshipGain = 0 }) {
-  if (canBecomeLoversByBonding(a, b)) {
+  if (canBecomeLoversByBonding(village, a, b)) {
     addRelationship(a, "恋人", b);
     addRelationship(b, "恋人", a);
     if (happinessGain) {
@@ -1121,11 +1188,19 @@ function getRelationshipDisplayLabel(person, other, entry) {
   }
 }
 
-function collectRelationshipLabels(village, person, other) {
+function collectRelationshipLabels(village, person, other, lineageIndex) {
   const labels = [];
   getRelationshipEntries(person).forEach(entry => {
     if (entryMatchesPerson(entry, other)) labels.push(getRelationshipDisplayLabel(person, other, entry));
   });
+
+  // 祖父母から上の代は関係として持たないため、系譜をたどって呼び名を出す。
+  const ancestorDepth = getAncestorDepth(lineageIndex, other, person);
+  if (ancestorDepth === 2) labels.push(other.bodySex === "女" ? "祖母" : "祖父");
+  else if (ancestorDepth >= 3) labels.push("先祖");
+  const descendantDepth = getAncestorDepth(lineageIndex, person, other);
+  if (descendantDepth === 2) labels.push("孫");
+  else if (descendantDepth >= 3) labels.push("子孫");
 
   const spouseId = getRelationshipTargetId(person, "夫") ?? getRelationshipTargetId(person, "妻");
   const spouse = getVillagerById(village, spouseId);
@@ -1210,9 +1285,10 @@ export function openFriendshipDetailModal(village, person) {
   document.getElementById("friendshipDetailModal")?.remove();
 
   const others = (Array.isArray(village.villagers) ? village.villagers : []).filter(other => other !== person);
+  const lineageIndex = createLineageIndex(village);
   const rows = others.map((other, index) => {
     const score = getFriendshipScore(person, other);
-    const relationLabels = collectRelationshipLabels(village, person, other);
+    const relationLabels = collectRelationshipLabels(village, person, other, lineageIndex);
     const specialLabels = collectSpecialRelationshipLabels(person, other);
     const exchangeLabels = collectExchangeLabels(person, other);
     const friendshipLabel = formatFriendshipScore(score);
