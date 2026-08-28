@@ -12,6 +12,12 @@ import {
   setManagementGoals
 } from "./managementGoals.js";
 import { MAX_ACTIVE_WISHES, getActiveWishes, getWishLog, openWishStartModal } from "./wishes.js";
+import {
+  RECORD_CATEGORIES,
+  RECORD_RANKING_LIMIT,
+  getRecordPortraitHtml,
+  getVillageRecordRanking
+} from "./records.js";
 import { getPortraitSpriteHtml } from "./data/portraitAtlas.js";
 
 // 台帳を開いた村。各画面を閉じたときに台帳へ戻すため覚えておく。
@@ -28,6 +34,7 @@ const LEDGER_CARDS = [
   { id: "pastbook", title: "過去帳", note: "村を去った者たちの記録" },
   { id: "election", title: "選挙記録", note: "里長選挙の結果と得票" },
   { id: "wish", title: "願望", note: "村人が神へ託した望み" },
+  { id: "ranking", title: "ランキング", note: "村に残る歴代の記録" },
   { id: "goals", title: "経営目標", note: "資金と技術の目標を定める" }
 ];
 
@@ -88,6 +95,7 @@ function openLedgerPage(village, cardId) {
     case "pastbook": openPastBookModal(village, { onBack: () => openLedgerModal(village) }); break;
     case "election": openElectionRecordModal(village); break;
     case "wish": openWishLedgerModal(village); break;
+    case "ranking": openRankingModal(village); break;
     case "goals": openManagementGoalsModal(village); break;
     default: openLedgerModal(village); break;
   }
@@ -208,6 +216,50 @@ export function openWishLedgerModal(village) {
 
 export function closeWishLedgerModal() {
   setModalVisible("wishLedger", false);
+}
+
+/* -------------------------- ランキング -------------------------- */
+
+const RANKING_MEDALS = ["金", "銀", "銅"];
+
+function renderRankingCategory(village, category) {
+  const rows = getVillageRecordRanking(village, category.id, RECORD_RANKING_LIMIT);
+  const body = rows.length > 0
+    ? rows.map((row, index) => `
+        <li class="ledger-rank-row">
+          <span class="ledger-rank-place is-${index + 1}">${escapeHtml(RANKING_MEDALS[index] || String(index + 1))}</span>
+          ${getRecordPortraitHtml(row)}
+          <span class="ledger-rank-name">${escapeHtml(row.name)}</span>
+          <span class="ledger-rank-value">${row.value}${escapeHtml(category.unit)}</span>
+        </li>`).join("")
+    : `<li class="ledger-rank-empty">まだ記録がない。</li>`;
+  return `
+    <section class="ledger-rank-card">
+      <h3 class="ledger-rank-title">${escapeHtml(category.label)}</h3>
+      <ol class="ledger-rank-list">${body}</ol>
+    </section>`;
+}
+
+export function openRankingModal(village) {
+  const content = document.getElementById("rankingContent");
+  if (!content || !village) return;
+  ledgerVillage = village;
+
+  content.innerHTML = `
+    <p class="ledger-lead">村を去った者の記録も、そのまま帳面に残る。</p>
+    <div class="ledger-rank-grid">
+      ${RECORD_CATEGORIES.map(category => renderRankingCategory(village, category)).join("")}
+    </div>
+    <div class="ledger-back-row"><button type="button" data-ledger-back>台帳へ戻る</button></div>
+  `;
+  content.querySelector("[data-ledger-back]")
+    ?.addEventListener("click", () => backToLedger(closeRankingModal));
+
+  setModalVisible("ranking", true);
+}
+
+export function closeRankingModal() {
+  setModalVisible("ranking", false);
 }
 
 /* --------------------------- 経営目標 --------------------------- */

@@ -8,6 +8,7 @@ import {
   closeElectionRecordModal,
   closeLedgerModal,
   closeManagementGoalsModal,
+  closeRankingModal,
   closeWishLedgerModal,
   openLedgerModal
 } from "./ledger.js";
@@ -442,6 +443,7 @@ function bindModalOverlayClickClose() {
   bindOverlayClickClose("ledgerOverlay", closeLedgerModal);
   bindOverlayClickClose("electionRecordOverlay", closeElectionRecordModal);
   bindOverlayClickClose("wishLedgerOverlay", closeWishLedgerModal);
+  bindOverlayClickClose("rankingOverlay", closeRankingModal);
   bindOverlayClickClose("managementGoalsOverlay", closeManagementGoalsModal);
 }
 

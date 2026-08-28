@@ -1483,6 +1483,7 @@ section h2 {
 #ledgerOverlay,
 #electionRecordOverlay,
 #wishLedgerOverlay,
+#rankingOverlay,
 #managementGoalsOverlay {
   position: fixed;
   top:0; left:0;
@@ -1499,6 +1500,7 @@ section h2 {
 #ledgerModal,
 #electionRecordModal,
 #wishLedgerModal,
+#rankingModal,
 #managementGoalsModal {
   position: fixed;
   top: 50%; left: 50%;
@@ -1543,6 +1545,7 @@ section h2 {
 #ledgerModal,
 #electionRecordModal,
 #wishLedgerModal,
+#rankingModal,
 #managementGoalsModal {
   background: #f7f0e3;
   border: 1px solid #9b875d;
@@ -1555,6 +1558,7 @@ section h2 {
 #ledgerModal .modal-header,
 #electionRecordModal .modal-header,
 #wishLedgerModal .modal-header,
+#rankingModal .modal-header,
 #managementGoalsModal .modal-header {
   margin-bottom: 10px;
   padding-bottom: 8px;
@@ -4092,6 +4096,63 @@ section h2 {
 }
 
 /* ---------------- 台帳 ---------------- */
+/* ランキングは項目ごとの小さな帳面を並べる */
+.ledger-rank-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+}
+.ledger-rank-card {
+  border: 1px solid #c9b892;
+  border-radius: 4px;
+  background: rgba(255, 253, 245, 0.65);
+  padding: 8px 10px 10px;
+}
+.ledger-rank-title {
+  margin: 0 0 6px;
+  font-size: 0.85rem;
+  color: #6b5a3a;
+  border-bottom: 1px solid #d9c9a4;
+  padding-bottom: 4px;
+}
+.ledger-rank-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ledger-rank-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+  font-size: 0.8rem;
+}
+.ledger-rank-place {
+  flex: none;
+  width: 1.6em;
+  text-align: center;
+  font-weight: bold;
+  color: #8b7a55;
+}
+.ledger-rank-place.is-1 { color: #b8860b; }
+.ledger-rank-place.is-2 { color: #8c8c8c; }
+.ledger-rank-place.is-3 { color: #a0672d; }
+.ledger-rank-name {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ledger-rank-value {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  font-weight: bold;
+}
+.ledger-rank-empty {
+  padding: 3px 0;
+  font-size: 0.78rem;
+  color: #8b8478;
+}
 .ledger-lead {
   margin: 0 0 12px;
   color: #6b5a3a;

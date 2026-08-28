@@ -40,6 +40,7 @@ import {
   refreshJobTable
 } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
+import { addVillageRecord } from "./records.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { addAcquiredStat, getPermanentStat, syncEffectiveStats } from "./domain/statLayers.js";
 import { rollSecretTreasureJobEvents, showSecretTreasureEventModals } from "./secretTreasureEvents.js";
@@ -434,6 +435,27 @@ function doLeisureJob(p, v) {
   v.log(`${p.name}余暇:メンタル+${base}${hobbyMateMsg}${hobbyMsg}`);
 }
 
+// 生産は加算と歴代記録をまとめて行う。記録は台帳のランキングで使う。
+function recordHeal(v, healer, target, categoryId, before, after) {
+  if (target === healer) return;
+  addVillageRecord(v, healer, categoryId, after - before);
+}
+
+function gainStoredResource(v, p, key, amount) {
+  addStoredResource(v, key, amount);
+  addVillageRecord(v, p, key, amount);
+}
+
+function gainFunds(v, p, amount) {
+  v.funds = clampValue(v.funds + amount, 0, 99999);
+  addVillageRecord(v, p, "funds", amount);
+}
+
+function gainTech(v, p, amount) {
+  v.tech = clampValue(v.tech + amount, 0, 99999);
+  addVillageRecord(v, p, "tech", amount);
+}
+
 function doPlayJob(p, v) {
   const tc = calcBodyCost(5, p.vit, p, v);
   p.hp = clampValue(p.hp - tc, 0, 100);
@@ -447,8 +469,8 @@ function doHelpJob(p, v) {
   const foodGain = randInt(3, 6);
   const materialGain = randInt(3, 6);
   p.hp = clampValue(p.hp - tc, 0, 100);
-  addStoredResource(v, "food", foodGain);
-  addStoredResource(v, "materials", materialGain);
+  gainStoredResource(v, p, "food", foodGain);
+  gainStoredResource(v, p, "materials", materialGain);
   completeTutorialTask(v, "produce_food");
   completeTutorialTask(v, "produce_materials");
 
@@ -473,10 +495,10 @@ function doFarm(p, v) {
 
   // ミダスの奇跡の効果
   if (v.villageTraits.includes("ミダス")) {
-    v.funds = clampValue(v.funds+amt, 0, 99999);
+    gainFunds(v, p, amt);
     resourceLabel = "資金";
   } else {
-    addStoredResource(v, "food", amt);
+    gainStoredResource(v, p, "food", amt);
     if (amt >= 1) completeTutorialTask(v, "produce_food");
   }
 
@@ -513,7 +535,7 @@ function doLumber(p, v) {
   p.mp=clampValue(p.mp-mc,0,100);
 
   let amt=calculateLumberYield(p, v);
-  addStoredResource(v, "materials", amt);
+  gainStoredResource(v, p, "materials", amt);
   if (amt >= 1) completeTutorialTask(v, "produce_materials");
 
   let logMsg = `${p.name}伐採:資材+${amt},体力-${tc},メンタル-${mc}`;
@@ -570,10 +592,10 @@ function doHunt(p, v) {
 
   // ミダスの奇跡の効果
   if (v.villageTraits.includes("ミダス")) {
-    v.funds = clampValue(v.funds+amt, 0, 99999);
+    gainFunds(v, p, amt);
     v.log(`${p.name}狩猟:${result} 資金+${amt},体力-${tc},メンタル-${mc}`);
   } else {
-    addStoredResource(v, "food", amt);
+    gainStoredResource(v, p, "food", amt);
     if (amt >= 1) completeTutorialTask(v, "produce_food");
     v.log(`${p.name}狩猟:${result} 食料+${amt},体力-${tc},メンタル-${mc}`);
   }
@@ -632,10 +654,10 @@ function doFish(p, v) {
 
   // ミダスの奇跡の効果
   if (v.villageTraits.includes("ミダス")) {
-    v.funds = clampValue(v.funds+amt, 0, 99999);
+    gainFunds(v, p, amt);
     v.log(`${p.name}漁:${result} 資金+${amt},体力-${tc},メンタル-${mc}`);
   } else {
-    addStoredResource(v, "food", amt);
+    gainStoredResource(v, p, "food", amt);
     if (amt >= 1) completeTutorialTask(v, "produce_food");
     v.log(`${p.name}漁:${result} 食料+${amt},体力-${tc},メンタル-${mc}`);
   }
@@ -682,13 +704,13 @@ function doGather(p, v) {
 
   // ミダスの奇跡の効果
   if (v.villageTraits.includes("ミダス")) {
-    v.funds = clampValue(v.funds+f, 0, 99999);
-    addStoredResource(v, "materials", mm);
+    gainFunds(v, p, f);
+    gainStoredResource(v, p, "materials", mm);
     if (mm >= 1) completeTutorialTask(v, "produce_materials");
     v.log(`${p.name}採集:資金+${f},資材+${mm},体力-${tc},メンタル-${mc}`);
   } else {
-    addStoredResource(v, "food", f);
-    addStoredResource(v, "materials", mm);
+    gainStoredResource(v, p, "food", f);
+    gainStoredResource(v, p, "materials", mm);
     if (f >= 1) completeTutorialTask(v, "produce_food");
     if (mm >= 1) completeTutorialTask(v, "produce_materials");
     v.log(`${p.name}採集:食料+${f},資材+${mm},体力-${tc},メンタル-${mc}`);
@@ -718,7 +740,7 @@ function doHandiwork(p, v) {
   p.mp = clampValue(p.mp-mc, 0, 100);
 
   let amt = calculateHandiworkYield(p, v);
-  v.funds = clampValue(v.funds+amt, 0, 99999);
+  gainFunds(v, p, amt);
 
   let logMsg = `${p.name}内職:資金+${amt},体力-${tc},メンタル-${mc}`;
 
@@ -752,7 +774,7 @@ function doResearchLikeJob(p, v, jobName, calculateYield) {
 
   let gain = calculateYield(p, v);
 
-  v.tech = clampValue(v.tech+gain, 0, 99999);
+  gainTech(v, p, gain);
 
   let logMsg = `${p.name}${jobName}:技術+${gain},体力-${tc},メンタル-${mc}`;
 
@@ -913,7 +935,9 @@ function doNurse(p, v) {
     let target = targets[Math.floor(Math.random() * targets.length)];
     let heal = calculateNurseHeal(p, v);
 
+    const beforeHp = target.hp;
     target.hp = clampValue(target.hp + heal, 0, 100);
+    recordHeal(v, p, target, "healedHp", beforeHp, target.hp);
     logMsg = `${p.name}看護:${target.name}の体力+${heal},体力-${tc},メンタル-${mc}`;
   } else {
     logMsg = `${p.name}看護:対象なし,体力-${tc},メンタル-${mc}`;
@@ -943,7 +967,9 @@ function doSister(p, v) {
   let affected = 0;
   v.villagers.forEach(target => {
     if (isSaltPillar(target)) return;
+    const beforeMp = target.mp;
     target.mp = clampValue(target.mp + heal, 0, 100);
+    recordHeal(v, p, target, "healedMp", beforeMp, target.mp);
     affected++;
   });
 
@@ -981,7 +1007,9 @@ function doPriest(p, v) {
   let affected = 0;
   v.villagers.forEach(target => {
     if (isSaltPillar(target)) return;
+    const beforeMp = target.mp;
     target.mp = clampValue(target.mp + heal, 0, 100);
+    recordHeal(v, p, target, "healedMp", beforeMp, target.mp);
     affected++;
   });
 
@@ -1041,7 +1069,7 @@ function doTradingLike(p, v, jobName, calculateYield) {
 
   let amt = calculateYield(p, x);
 
-  v.funds = clampValue(v.funds+amt, 0, 99999);
+  gainFunds(v, p, amt);
 
   let logMsg = `${p.name}${jobName}:${result} 資金+${amt},体力-${tc},メンタル-${mc}`;
 
@@ -1113,7 +1141,9 @@ function doMassage(p, v) {
 
   if (targets.length > 0) {
     let target = targets[Math.floor(Math.random() * targets.length)];
+    const beforeHp = target.hp;
     target.hp = clampValue(target.hp + heal, 0, 100);
+    recordHeal(v, p, target, "healedHp", beforeHp, target.hp);
     if (
       jobName === ACTION_MASSAGE_FEMALE &&
       target.spiritSex === "男" &&
@@ -1167,7 +1197,9 @@ function doBunny(p, v) {
     if (isSaltPillar(target)) return;
     if (target.spiritSex === "男") {
       target.happiness = clampValue(target.happiness + happinessInc, 0, 100);
+      const beforeMp = target.mp;
       target.mp = clampValue(target.mp + mentalHeal, 0, 100);
+      recordHeal(v, p, target, "healedMp", beforeMp, target.mp);
       affected++;
     }
   });
@@ -1197,7 +1229,7 @@ function doAlchemy(p, v) {
   let fundsGain = alchemyYield.funds;
   let manaGain = alchemyYield.mana;
 
-  v.funds = clampValue(v.funds + fundsGain, 0, 99999);
+  gainFunds(v, p, fundsGain);
   v.mana = clampValue(v.mana + manaGain, 0, 99999);
 
   let logMsg = `${p.name}錬金:資金+${fundsGain},魔素+${manaGain},体力-${tc},メンタル-${mc}`;
@@ -1224,8 +1256,8 @@ function doCopyBook(p, v) {
   let fundsGain = calculateCopyBookYield(p);
   let techGain = calculateCopyBookYield(p);
 
-  v.funds = clampValue(v.funds + fundsGain, 0, 99999);
-  v.tech = clampValue(v.tech + techGain, 0, 99999);
+  gainFunds(v, p, fundsGain);
+  gainTech(v, p, techGain);
 
   let logMsg = `${p.name}写本:資金+${fundsGain},技術+${techGain},体力-${tc},メンタル-${mc}`;
 
@@ -1249,7 +1281,7 @@ function doWeaving(p, v) {
   p.mp = clampValue(p.mp-mc, 0, 100);
 
   let fundsGain = calculateWeavingYield(p);
-  v.funds = clampValue(v.funds + fundsGain, 0, 99999);
+  gainFunds(v, p, fundsGain);
 
   let logMsg = `${p.name}機織り:資金+${fundsGain},体力-${tc},メンタル-${mc}`;
 
@@ -1278,9 +1310,9 @@ function doBrewing(p, v) {
 
   const foodResourceName = v.villageTraits.includes("ミダス") ? "資金" : "食料";
   if (v.villageTraits.includes("ミダス")) {
-    v.funds = clampValue(v.funds + foodGain, 0, 99999);
+    gainFunds(v, p, foodGain);
   } else {
-    addStoredResource(v, "food", foodGain);
+    gainStoredResource(v, p, "food", foodGain);
     if (foodGain >= 1) completeTutorialTask(v, "produce_food");
   }
   v.mana = clampValue(v.mana + manaGain, 0, 99999);

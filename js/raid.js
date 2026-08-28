@@ -47,6 +47,7 @@ import { applyRaidFriendshipResults, recordRaidFriendshipDamage, startRaidFriend
 import { handleApocalypseRaidResult } from "./apocalypse.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
 import { grantTitle } from "./titles.js";
+import { addVillageRecord } from "./records.js";
 import { checkWishCompletion } from "./wishes.js";
 
 const RAID_CLOSE_DELAY_MS = 700;
@@ -765,6 +766,7 @@ function doOneTrapAction(action, village) {
   if (hasTrait(e, "飛行")) dmg = Math.floor(dmg * 0.5);
   const saltPillarShattered = applyRaidDamage(e, dmg);
   recordRaidFriendshipDamage(village, p, dmg);
+  addVillageRecord(village, p, "raidDamage", dmg);
   addRaidDamageAnimation(result, p, e, dmg, false, "罠発動");
   addRaidActionLog(result, `【罠作成】${p.name}→${e.name}に${dmg}ダメージ`);
   if (saltPillarShattered) addSaltPillarShatterLog(result, e);
@@ -955,6 +957,7 @@ function doOneCombatAction(action, village) {
   const saltPillarShattered = applyRaidDamage(target, dmg);
   if (!isEnemyUnit(actor, village)) {
     recordRaidFriendshipDamage(village, actor, dmg);
+    addVillageRecord(village, actor, "raidDamage", dmg);
   }
   addRaidDamageAnimation(result, actor, target, dmg, false, getAttackActionPopLabel(attackResult, isRanged));
   addRaidActionLog(result, `${label}${actor.name}の${atkTypeText}→${target.name}に ${dmg}ダメージ`);
@@ -1070,6 +1073,7 @@ function doCounterAttack(counterActor, target, village, result) {
   const saltPillarShattered = applyRaidDamage(target, rdmg);
   if (!isEnemyUnit(counterActor, village)) {
     recordRaidFriendshipDamage(village, counterActor, rdmg);
+    addVillageRecord(village, counterActor, "raidDamage", rdmg);
   }
   addRaidDamageAnimation(result, counterActor, target, rdmg, true, ret.isMagic ? "魔法で反撃" : "反撃");
   addRaidActionLog(result, `　　→ 反撃(${retTypeText}):${counterActor.name}→${target.name}に${rdmg}ダメージ`);
@@ -1211,6 +1215,12 @@ function grantSoloDefenderTitle(village) {
   village.log(`【称号】${hero.name}は${stance}、「一騎当千」を得た`);
 }
 
+/** 前衛・中衛として戦い、防衛に成功した村人へ勝利を1回ずつ記録する。 */
+function recordRaidVictories(village) {
+  [...getActiveRaidFrontliners(village), ...getActiveRaidMiddleliners(village)]
+    .forEach(person => addVillageRecord(village, person, "raidWins", 1));
+}
+
 /**
  * 前衛も中衛も立てず、罠だけで敵を全滅させたとき、罠を張った村人へ「トラッパー」を贈る。
  * 一騎当千と同じく、襲撃者を片付ける前に呼ぶ。
@@ -1254,6 +1264,7 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
     }
     // 結果モーダル用の集計。敵リストの破棄や敗北ペナルティで情報が消える前に行う。
     const resultInfo = collectRaidResultInfo(village, isSuccess, isPartSuccess, options.resultReason);
+    if (isSuccess) recordRaidVictories(village);
     if (isSuccess && !isPartSuccess) {
       resultInfo.capturedName = tryCaptureRaidPrisoner(village)?.name || "";
       grantSoloDefenderTitle(village);

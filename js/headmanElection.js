@@ -3,6 +3,7 @@ import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { HISTORY_EVENT_TYPES, recordHeadmanElectionHistory } from "./history.js";
 import { getRelationshipEntries } from "./relationships.js";
 import { grantTitle, incrementTitleCounter, TITLE_COUNTER_KEYS } from "./titles.js";
+import { addVillageRecord } from "./records.js";
 import {
   VILLAGE_ROLE_HEADMAN,
   VILLAGE_ROLE_NONE,
@@ -199,6 +200,7 @@ function recordHeadmanTitleProgress(village, headman) {
   if (!headman) return;
   const isFirstHeadman = !hasRecordedHeadman(village);
   incrementTitleCounter(headman, TITLE_COUNTER_KEYS.HEADMAN_TERMS, 1, { getPermanentStat });
+  addVillageRecord(village, headman, "headmanTerms", 1);
   if (isFirstHeadman) {
     grantTitle(headman, "firstHeadman");
   }

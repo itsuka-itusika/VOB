@@ -15,6 +15,7 @@ import { ensureCaptiveReleaseDeadline, normalizeCaptive } from "./captives.js";
 import { normalizeBuildingRequestState } from "./buildingRequests.js";
 import { normalizeWishListState, normalizeWishLog, normalizeWishState } from "./wishes.js";
 import { normalizeManagementGoals } from "./managementGoals.js";
+import { normalizeVillageRecords } from "./records.js";
 import { normalizeAutoAssignSettings } from "./autoAssignSettings.js";
 import { normalizeDamagedBuildings, recalculateBuildingDerivedState } from "./domain/buildingState.js";
 import { normalizeVillageRoleForPerson, normalizeVillageRoles } from "./domain/villageRoles.js";
@@ -253,6 +254,7 @@ function convertVillageToObject(village) {
     wish: normalizeWishState(village.wishes?.[0] ?? village.wish),
     wishLog: normalizeWishLog(village.wishLog),
     managementGoals: normalizeManagementGoals(village.managementGoals),
+    villageRecords: normalizeVillageRecords(village.villageRecords),
     festivalFlags: normalizeFestivalFlags(village.festivalFlags),
     tutorial: normalizeTutorialState(village.tutorial),
     autoAssignSettings: normalizeAutoAssignSettings(village.autoAssignSettings),
@@ -462,6 +464,7 @@ function convertObjectToVillage(dataObj) {
   v.wish = v.wishes[0] || null;
   v.wishLog = normalizeWishLog(dataObj.wishLog);
   v.managementGoals = normalizeManagementGoals(dataObj.managementGoals);
+  v.villageRecords = normalizeVillageRecords(dataObj.villageRecords);
   v.festivalFlags = normalizeFestivalFlags(dataObj.festivalFlags);
   v.tutorial = normalizeTutorialState(dataObj.tutorial);
   v.autoAssignSettings = normalizeAutoAssignSettings(dataObj.autoAssignSettings);

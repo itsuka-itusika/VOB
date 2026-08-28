@@ -5,6 +5,7 @@ import { getPortraitSpriteHtml } from "./data/portraitAtlas.js";
 import { recordLoverHistory, recordMarriageHistory, recordSocialRelationHistory } from "./history.js";
 import { runAfterFestivalModals } from "./festivalModal.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
+import { addVillageRecord, updateVillageRecordMax } from "./records.js";
 
 const FRIENDSHIP_MIN = -100;
 const FRIENDSHIP_MAX = 100;
@@ -931,6 +932,7 @@ function formBond(village, a, b, { source, happinessGain = 0, friendshipGain = 0
 
   addRelationship(a, "親友", b);
   addRelationship(b, "親友", a);
+  [a, b].forEach(person => updateVillageRecordMax(village, person, "bestFriends", countBestFriends(person)));
   if (friendshipGain) adjustMutualFriendship(a, b, friendshipGain);
   recordSocialRelationHistory(village, a, b, "親友", { source });
   village.log(`【${source}】${a.name}と${b.name}が親友になりました`);
@@ -1053,6 +1055,11 @@ function showBreakupModal(village, a, b) {
   ]);
 }
 
+/** その人物が今持っている親友の数。歴代記録では最高値を残す。 */
+function countBestFriends(person) {
+  return getRelationshipEntries(person).filter(entry => entry.prefix === "親友").length;
+}
+
 export function processFriendshipRelationChanges(village) {
   if (!village || !Array.isArray(village.villagers)) return;
   const handledBreakups = new Set();
@@ -1068,6 +1075,8 @@ export function processFriendshipRelationChanges(village) {
       b.happiness = clampValue(b.happiness - 30, 0, 100);
       addRelationship(a, "元恋人", b);
       addRelationship(b, "元恋人", a);
+      addVillageRecord(village, a, "heartbreak", 1);
+      addVillageRecord(village, b, "heartbreak", 1);
       recordSocialRelationHistory(village, a, b, "元恋人", { source: "破局" });
       showBreakupModal(village, a, b);
     }
