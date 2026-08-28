@@ -295,8 +295,9 @@ export function advanceWishMonth(village) {
       village.log(`願望消失: ${wish.requesterName}が村にいないため「${wish.name}」は消失しました。`);
       return;
     }
-    // 「救って」は相手のための願い。相手が村を去れば、叶わないまま消える。
-    if (wish.id === "save_someone" && !findWishTargetPerson(residents, wish)) {
+    // 相手あっての願いは、相手が村を去れば叶わないまま消える。
+    if (WISH_DEFINITION_BY_ID.get(wish.id)?.losesWithoutTarget &&
+      !findWishTargetPerson(residents, wish)) {
       recordWishOutcome(village, wish, "lost");
       village.log(`願望消失: ${wish.targetName}が村にいないため、${wish.requesterName}の「${wish.name}」は消失しました。`);
       return;

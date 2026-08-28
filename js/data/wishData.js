@@ -169,6 +169,8 @@ export const WISH_DEFINITIONS = [
     id: "get_closer",
     name: "近づきたい",
     buildName: ({ targetName }) => `${targetName}と近づきたい`,
+    // 相手あっての願い。相手が村を去れば叶う道がなくなる。
+    losesWithoutTarget: true,
     startLine: ({ targetName }) => `${targetName}とお近づきになりたい。もっと心を通わせたい。`,
     completionLines: {
       partner: ({ targetName }) => `${targetName}と心を通わせることができた。この縁を大切にしたい。`,
@@ -276,6 +278,7 @@ export const WISH_DEFINITIONS = [
     id: "save_someone",
     name: "救って",
     buildName: ({ targetName }) => `${targetName}を救って`,
+    losesWithoutTarget: true,
     startLine: buildSaveSomeoneLine,
     completionLines: {
       rescued: ({ targetName }) => `${targetName}が持ち直した。あの命が戻っただけで、もう何も要らない。`
