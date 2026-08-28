@@ -1119,7 +1119,7 @@ function getBirthLine(character, role) {
 
 const CHILD_NAME_MAX_LENGTH = 8;
 // 関係文字列とログが名前をそのまま埋め込むため、使える文字を絞る。
-const CHILD_NAME_PATTERN = /^[0-9A-Za-z\u3041-\u3096\u30A1-\u30FA\u30FC\u4E00-\u9FFF々・=]+$/;
+const CHILD_NAME_PATTERN = /^[0-9A-Za-z\u3041-\u3096\u30A1-\u30FA\u30FC\u4E00-\u9FFF々・＝]+$/;
 
 /** 未命名の赤子の呼び名 */
 function getUnnamedChildLabel(child) {
@@ -1139,7 +1139,7 @@ function getChildNameError(name, village) {
   const trimmed = String(name || "").trim();
   if (!trimmed) return "名を入力してください。";
   if ([...trimmed].length > CHILD_NAME_MAX_LENGTH) return `名は${CHILD_NAME_MAX_LENGTH}文字までです。`;
-  if (!CHILD_NAME_PATTERN.test(trimmed)) return "使えるのは かな・カタカナ・漢字・英数字・「ー」「・」「=」だけです。";
+  if (!CHILD_NAME_PATTERN.test(trimmed)) return "使えるのは かな・カタカナ・漢字・英数字・「ー」「・」「＝」だけです。";
   if (/の(母|父|息子|娘)$/.test(trimmed)) return "「〜の母」「〜の娘」などで終わる名は、続柄と紛れるため使えません。";
   if (trimmed === "既婚") return "その名は使えません。";
   const taken = isNameReserved(trimmed, village);
