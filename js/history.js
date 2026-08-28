@@ -773,12 +773,13 @@ export function renderHistoryEntry(event, options = {}) {
   `;
 }
 
-/** 名前から、その人物の記録へ移る。 */
-function bindPersonLinks(content, village) {
+/** 名前から、その人物の記録へ移る。個人記録の中では開き直すだけなので beforeOpen は要らない。 */
+function bindPersonLinks(content, village, { beforeOpen = null } = {}) {
   content.querySelectorAll("[data-open-person-id]").forEach(element => {
     const open = () => {
       const person = findPersonEverywhereById(village, element.dataset.openPersonId);
       if (!person) return;
+      if (typeof beforeOpen === "function") beforeOpen();
       openPersonalHistoryModal(village, person, { archived: Boolean(person.departure) });
     };
     element.addEventListener("click", open);
@@ -1257,8 +1258,10 @@ export function openHistoryModal(village, { onBack = null } = {}) {
   const events = normalizeHistoryEvents(village?.historyEvents)
     .filter(event => event.scope !== HISTORY_SCOPES.PERSON);
   content.innerHTML = events.length > 0
-    ? `<div class="history-list">${events.map(renderHistoryEntry).join("")}</div>`
+    ? `<div class="history-list">${events.map(event => renderHistoryEntry(event, { village })).join("")}</div>`
     : `<div class="history-empty">この村について記すべき出来事は、まだ帳面には残されていない。</div>`;
+  // 過去帳やランキングと同じく、村史は閉じてからその人物の記録を開く。
+  bindPersonLinks(content, village, { beforeOpen: closeHistoryModal });
 
   // ボタンは台帳へ戻し、オーバーレイのクリックは閉じるだけにする。
   const backButton = modal.querySelector("[data-history-back]");
