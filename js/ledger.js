@@ -4,6 +4,7 @@
 
 import {
   HISTORY_EVENT_TYPES,
+  bindPersonLinks,
   openHistoryModal,
   openPastBookModal,
   openPersonalHistoryModal,
@@ -129,10 +130,12 @@ export function openElectionRecordModal(village) {
 
   content.innerHTML = `
     ${events.length > 0
-      ? `<div class="history-list">${events.map(event => renderHistoryEntry(event)).join("")}</div>`
+      ? `<div class="history-list">${events.map(event => renderHistoryEntry(event, { village })).join("")}</div>`
       : `<div class="history-empty">里長選挙はまだ行われていない。</div>`}
     <div class="ledger-back-row"><button type="button" data-ledger-back>台帳へ戻る</button></div>
   `;
+  // 村史と同じく、選挙記録は閉じてからその人物の記録を開く。
+  bindPersonLinks(content, village, { beforeOpen: closeElectionRecordModal });
   content.querySelector("[data-ledger-back]")
     ?.addEventListener("click", () => backToLedger(closeElectionRecordModal));
 

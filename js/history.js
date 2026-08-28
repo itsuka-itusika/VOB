@@ -774,7 +774,7 @@ export function renderHistoryEntry(event, options = {}) {
 }
 
 /** 名前から、その人物の記録へ移る。個人記録の中では開き直すだけなので beforeOpen は要らない。 */
-function bindPersonLinks(content, village, { beforeOpen = null } = {}) {
+export function bindPersonLinks(content, village, { beforeOpen = null } = {}) {
   content.querySelectorAll("[data-open-person-id]").forEach(element => {
     const open = () => {
       const person = findPersonEverywhereById(village, element.dataset.openPersonId);

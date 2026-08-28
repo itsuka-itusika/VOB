@@ -1302,8 +1302,8 @@ function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
-// 好感度の見出しを押すたびに、村人順 → 降順 → 昇順 と切り替える。
-const FRIENDSHIP_SORT_ORDERS = ["default", "desc", "asc"];
+// 好感度の高い順から始め、見出しを押すたびに 降順 → 昇順 → 村人順 と切り替える。
+const FRIENDSHIP_SORT_ORDERS = ["desc", "asc", "default"];
 const FRIENDSHIP_SORT_HEADERS = {
   default: { label: "好感度", aria: "none" },
   desc: { label: "好感度 ▼", aria: "descending" },
@@ -1344,7 +1344,7 @@ export function openFriendshipDetailModal(village, person) {
   });
 
   const emptyRowHtml = `<tr><td colspan="3" class="friendship-detail-empty">表示できる相手がいません。</td></tr>`;
-  let sortOrder = "default";
+  let sortOrder = FRIENDSHIP_SORT_ORDERS[0];
   const buildRowsHtml = () => {
     const sorted = sortOrder === "default"
       ? rows
@@ -1370,8 +1370,8 @@ export function openFriendshipDetailModal(village, person) {
         <thead>
           <tr>
             <th>相手</th>
-            <th aria-sort="none" data-friendship-sort-header>
-              <button type="button" class="friendship-detail-sort-button" data-sort-friendship>好感度</button>
+            <th aria-sort="${FRIENDSHIP_SORT_HEADERS[sortOrder].aria}" data-friendship-sort-header>
+              <button type="button" class="friendship-detail-sort-button" data-sort-friendship>${FRIENDSHIP_SORT_HEADERS[sortOrder].label}</button>
             </th>
             <th>関係</th>
           </tr>
