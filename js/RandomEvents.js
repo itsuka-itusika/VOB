@@ -282,7 +282,7 @@ export class RandomEvents {
         if (Number(b.bodyAge) < 16) return;
         if (getFriendshipScore(a, b) > 19) return;
         if (this.hasPairRelationship(a, b, THUNDERBOLT_LOVE_BLOCKING_RELATION_PREFIXES)) return;
-        if (areSiblings(a, b)) return;
+        if (areSiblings(lineageIndex, a, b)) return;
         if (isDirectLineage(lineageIndex, a, b)) return;
         pairs.push([a, b]);
       });

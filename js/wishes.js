@@ -12,6 +12,7 @@ import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { getPermanentStat } from "./domain/statLayers.js";
 import {
   areSiblings,
+  createLineageIndex,
   getFriendshipScore,
   getRelationshipEntries,
   getRelationshipTargetId
@@ -359,6 +360,7 @@ export function checkWishCompletion(village, context = {}) {
 function getWishCandidates(village) {
   const villagers = getActiveVillagers(village);
   const residents = getVillageResidents(village);
+  const lineageIndex = createLineageIndex(village);
   const candidates = [];
   const hasMonster = residents.some(isMonster);
   const hasRareRace = residents.some(isRareRace);
@@ -406,7 +408,7 @@ function getWishCandidates(village) {
         if (target === requester) return;
         if (!isCriticalCondition(target)) return;
         if (getFriendshipScore(requester, target) < RESCUE_MIN_FRIENDSHIP) return;
-        if (!isCloseFamily(requester, target)) return;
+        if (!isCloseFamily(lineageIndex, requester, target)) return;
         candidates.push({ id: "save_someone", requester, target });
       });
     }
@@ -512,9 +514,9 @@ function isCriticalCondition(person) {
 }
 
 /** 親子・恋人・配偶者は続柄で、きょうだいは共通の親をたどって判定する。 */
-function isCloseFamily(person, target) {
+function isCloseFamily(lineageIndex, person, target) {
   return RESCUE_RELATION_PREFIXES.some(prefix => hasTargetRelationship(person, prefix, target)) ||
-    areSiblings(person, target);
+    areSiblings(lineageIndex, person, target);
 }
 
 function isWishTargetBody(requester, wish) {

@@ -104,8 +104,8 @@ function getOppositeSex(sex) {
   return null;
 }
 
-function getParentKeys(person) {
-  return getRelationshipEntries(person)
+function getParentKeys(person, lineage) {
+  const keys = getRelationshipEntries(person)
     .filter(entry => PARENT_RELATION_PREFIXES.has(entry.prefix))
     .map(entry => {
       if (entry.targetId != null) return `id:${entry.targetId}`;
@@ -113,13 +113,21 @@ function getParentKeys(person) {
       return entry.targetName && entry.targetName !== "不明" ? `name:${entry.targetName}` : "";
     })
     .filter(Boolean);
+  // 親が村を去ると本人側の関係が消えるため、過去帳から組み直した系譜の親も足す。
+  if (person?.id != null) {
+    (lineage?.parents?.get(person.id) || []).forEach(parentId => keys.push(`id:${parentId}`));
+  }
+  return keys;
 }
 
-/** きょうだいか。両者の間に直接の関係がないため、親をたどって判定する。 */
-export function areSiblings(a, b) {
-  const parentsOfB = new Set(getParentKeys(b));
+/**
+ * きょうだいか。両者の間に直接の関係がないため、親をたどって判定する。
+ * 共通の親が村を去った後も判定が残るよう、系譜の索引も併せて見る。
+ */
+export function areSiblings(lineage, a, b) {
+  const parentsOfB = new Set(getParentKeys(b, lineage));
   if (parentsOfB.size === 0) return false;
-  return getParentKeys(a).some(key => parentsOfB.has(key));
+  return getParentKeys(a, lineage).some(key => parentsOfB.has(key));
 }
 
 // 系譜をさかのぼる上限。関係が壊れていても止まるようにする。
@@ -209,7 +217,7 @@ function isLoverCandidate(lineageIndex, a, b) {
   if (!expectedBodySex) return false;
   return isSingle(b)
     && !hasLoverBlockingRelationship(a, b)
-    && !areSiblings(a, b)
+    && !areSiblings(lineageIndex, a, b)
     && !isDirectLineage(lineageIndex, a, b)
     && !hasBodyTrait(b, "四足歩行")
     && !hasBodyTrait(b, "人面獣身")
@@ -966,12 +974,12 @@ const BONDING_BLOCKING_RELATION_PREFIXES = new Set([
   "親友"
 ]);
 
-function isBondingPartnerCandidate(a, b, friendshipThreshold) {
+function isBondingPartnerCandidate(lineageIndex, a, b, friendshipThreshold) {
   if (!a || !b || a === b) return false;
   if (isSaltPillar(a) || isSaltPillar(b)) return false;
   if (hasRelationshipTo(a, b, BONDING_BLOCKING_RELATION_PREFIXES) ||
       hasRelationshipTo(b, a, BONDING_BLOCKING_RELATION_PREFIXES)) return false;
-  if (areSiblings(a, b)) return false;
+  if (areSiblings(lineageIndex, a, b)) return false;
   return getPairFriendshipMinimum(a, b) >= friendshipThreshold;
 }
 
@@ -986,11 +994,12 @@ function canBecomeLoversByBonding(village, a, b) {
 
 function pickBondingPair(village, friendshipThreshold) {
   const villagers = Array.isArray(village?.villagers) ? village.villagers : [];
+  const lineageIndex = createLineageIndex(village);
   const withCandidates = villagers.filter(a =>
-    villagers.some(b => isBondingPartnerCandidate(a, b, friendshipThreshold)));
+    villagers.some(b => isBondingPartnerCandidate(lineageIndex, a, b, friendshipThreshold)));
   if (withCandidates.length === 0) return null;
   const a = randChoice(withCandidates);
-  const b = randChoice(villagers.filter(x => isBondingPartnerCandidate(a, x, friendshipThreshold)));
+  const b = randChoice(villagers.filter(x => isBondingPartnerCandidate(lineageIndex, a, x, friendshipThreshold)));
   return { a, b };
 }
 
