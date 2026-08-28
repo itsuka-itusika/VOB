@@ -435,7 +435,7 @@ function doLeisureJob(p, v) {
   v.log(`${p.name}余暇:メンタル+${base}${hobbyMateMsg}${hobbyMsg}`);
 }
 
-// 生産は加算と歴代記録をまとめて行う。記録は台帳のランキングで使う。
+// 生産は加算と歴代記録をまとめて行う。記録は台帳の殿堂で使う。
 function recordHeal(v, healer, target, categoryId, before, after) {
   if (target === healer) return;
   addVillageRecord(v, healer, categoryId, after - before);

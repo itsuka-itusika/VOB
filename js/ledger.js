@@ -34,7 +34,7 @@ const LEDGER_CARDS = [
   { id: "pastbook", title: "過去帳", note: "村を去った者たちの記録" },
   { id: "election", title: "選挙記録", note: "里長選挙の結果と得票" },
   { id: "wish", title: "願望", note: "村人が神へ託した望み" },
-  { id: "ranking", title: "ランキング", note: "村に残る歴代の記録" },
+  { id: "ranking", title: "殿堂", note: "村に残る歴代の記録" },
   { id: "goals", title: "経営目標", note: "資金と技術の目標を定める" }
 ];
 
@@ -218,7 +218,7 @@ export function closeWishLedgerModal() {
   setModalVisible("wishLedger", false);
 }
 
-/* -------------------------- ランキング -------------------------- */
+/* ---------------------------- 殿堂 ---------------------------- */
 
 function renderRankingCategory(village, category) {
   const rows = getVillageRecordRanking(village, category.id, RECORD_RANKING_LIMIT);

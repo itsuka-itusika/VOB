@@ -1,5 +1,5 @@
 // records.js
-// 台帳の「ランキング」に出す歴代記録。村人が死亡・出立しても残るよう、
+// 台帳の「殿堂」に出す歴代記録。村人が死亡・出立しても残るよう、
 // 人物ではなく村の側へ精神ID（person.id）ごとに積む。
 
 import { getPortraitSpriteHtml } from "./data/portraitAtlas.js";

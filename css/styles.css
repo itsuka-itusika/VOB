@@ -4096,7 +4096,7 @@ section h2 {
 }
 
 /* ---------------- 台帳 ---------------- */
-/* ランキングは項目ごとの小さな帳面を並べる */
+/* 殿堂は項目ごとの小さな帳面を並べる */
 .ledger-rank-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
