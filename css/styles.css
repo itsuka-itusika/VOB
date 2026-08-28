@@ -1822,6 +1822,18 @@ section h2 {
   white-space: nowrap;
   z-index: 1;
 }
+.friendship-detail-sort-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.friendship-detail-sort-button:hover,
+.friendship-detail-sort-button:focus {
+  text-decoration: underline;
+}
 .friendship-detail-person {
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr);

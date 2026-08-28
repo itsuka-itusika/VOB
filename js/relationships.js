@@ -1302,6 +1302,14 @@ function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
+// 好感度の見出しを押すたびに、村人順 → 降順 → 昇順 と切り替える。
+const FRIENDSHIP_SORT_ORDERS = ["default", "desc", "asc"];
+const FRIENDSHIP_SORT_HEADERS = {
+  default: { label: "好感度", aria: "none" },
+  desc: { label: "好感度 ▼", aria: "descending" },
+  asc: { label: "好感度 ▲", aria: "ascending" }
+};
+
 export function openFriendshipDetailModal(village, person) {
   if (typeof document === "undefined" || !village || !person) return;
   ensureVillageFriendships(village, 0);
@@ -1318,7 +1326,9 @@ export function openFriendshipDetailModal(village, person) {
     const friendshipLabel = formatFriendshipScore(score);
     const fixedRelationLabels = relationLabels.length > 0 ? relationLabels : ["村の一員"];
     const labels = [...fixedRelationLabels, ...specialLabels, ...exchangeLabels].join(" / ");
-    return `
+    return {
+      score,
+      html: `
       <tr>
         <td class="friendship-detail-person">
           <button type="button" class="friendship-detail-portrait-button" data-open-friendship-person="${index}" aria-label="${escapeHtml(other.name)}の個人記録を見る">
@@ -1329,8 +1339,18 @@ export function openFriendshipDetailModal(village, person) {
         <td>${escapeHtml(friendshipLabel)}</td>
         <td>${escapeHtml(labels)}</td>
       </tr>
-    `;
-  }).join("");
+    `
+    };
+  });
+
+  const emptyRowHtml = `<tr><td colspan="3" class="friendship-detail-empty">表示できる相手がいません。</td></tr>`;
+  let sortOrder = "default";
+  const buildRowsHtml = () => {
+    const sorted = sortOrder === "default"
+      ? rows
+      : [...rows].sort((a, b) => (sortOrder === "desc" ? b.score - a.score : a.score - b.score));
+    return sorted.map(row => row.html).join("") || emptyRowHtml;
+  };
 
   const overlay = document.createElement("div");
   overlay.id = "friendshipDetailOverlay";
@@ -1350,12 +1370,14 @@ export function openFriendshipDetailModal(village, person) {
         <thead>
           <tr>
             <th>相手</th>
-            <th>好感度</th>
+            <th aria-sort="none" data-friendship-sort-header>
+              <button type="button" class="friendship-detail-sort-button" data-sort-friendship>好感度</button>
+            </th>
             <th>関係</th>
           </tr>
         </thead>
         <tbody>
-          ${rows || `<tr><td colspan="3" class="friendship-detail-empty">表示できる相手がいません。</td></tr>`}
+          ${buildRowsHtml()}
         </tbody>
       </table>
     </div>
@@ -1370,14 +1392,26 @@ export function openFriendshipDetailModal(village, person) {
     overlay.remove();
     modal.remove();
   };
-  modal.querySelectorAll("[data-open-friendship-person]").forEach(button => {
-    button.addEventListener("click", async () => {
-      const target = others[Number(button.dataset.openFriendshipPerson)];
-      if (!target) return;
-      const { openPersonalHistoryModal } = await import("./history.js");
-      close();
-      openPersonalHistoryModal(village, target);
-    });
+  const tbody = modal.querySelector(".friendship-detail-table tbody");
+  // 並べ替えで行を作り直すため、個別ボタンではなく tbody 側で受ける。
+  tbody.addEventListener("click", async event => {
+    const button = event.target.closest("[data-open-friendship-person]");
+    if (!button) return;
+    const target = others[Number(button.dataset.openFriendshipPerson)];
+    if (!target) return;
+    const { openPersonalHistoryModal } = await import("./history.js");
+    close();
+    openPersonalHistoryModal(village, target);
+  });
+  const sortHeader = modal.querySelector("[data-friendship-sort-header]");
+  const sortButton = modal.querySelector("[data-sort-friendship]");
+  sortButton.addEventListener("click", () => {
+    const nextIndex = (FRIENDSHIP_SORT_ORDERS.indexOf(sortOrder) + 1) % FRIENDSHIP_SORT_ORDERS.length;
+    sortOrder = FRIENDSHIP_SORT_ORDERS[nextIndex];
+    const header = FRIENDSHIP_SORT_HEADERS[sortOrder];
+    sortButton.textContent = header.label;
+    sortHeader.setAttribute("aria-sort", header.aria);
+    tbody.innerHTML = buildRowsHtml();
   });
   modal.querySelector("[data-close-friendship-detail]").addEventListener("click", close);
   overlay.addEventListener("click", close);

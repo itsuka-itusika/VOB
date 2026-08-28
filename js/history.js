@@ -766,26 +766,33 @@ function hasArchiveGap(village) {
 function parsePersonalRelationship(entry) {
   const prefix = String(entry?.prefix || "").trim();
   if (!prefix) return null;
-  if (prefix === "既婚") return { category: "family", label: "既婚" };
+  if (prefix === "既婚") return { category: "family", prefix, target: "" };
 
   const target = String(entry?.targetName || "").trim();
-  const label = target ? `${prefix}：${target}` : prefix;
 
   if (["夫", "妻", "母", "父", "子"].includes(prefix)) {
-    return { category: "family", label };
+    return { category: "family", prefix, target };
   }
   if (["遺伝母", "遺伝父"].includes(prefix)) {
-    return { category: "genetic", label };
+    return { category: "genetic", prefix, target };
   }
-  return { category: "social", label };
+  return { category: "social", prefix, target };
 }
 
+// 同じ続柄をひとつにまとめ、「戦友：リッツ、ランスロット」の形で並べる。
 function formatRelationshipCategory(person, category) {
-  const labels = getRelationshipEntries(person)
+  const groups = new Map();
+  getRelationshipEntries(person)
     .map(parsePersonalRelationship)
-    .filter(item => item?.category === category && !item.label.startsWith("村設立の同志："))
-    .map(item => item.label);
-  return labels.length > 0 ? [...new Set(labels)].join("、") : "なし";
+    .filter(item => item?.category === category && item.prefix !== "村設立の同志")
+    .forEach(item => {
+      if (!groups.has(item.prefix)) groups.set(item.prefix, new Set());
+      if (item.target) groups.get(item.prefix).add(item.target);
+    });
+  if (groups.size === 0) return "なし";
+  return [...groups.entries()]
+    .map(([prefix, targets]) => (targets.size > 0 ? `${prefix}：${[...targets].join("、")}` : prefix))
+    .join("／");
 }
 
 function renderPersonalTitleSummary(person) {
