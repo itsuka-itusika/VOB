@@ -220,14 +220,12 @@ export function closeWishLedgerModal() {
 
 /* -------------------------- ランキング -------------------------- */
 
-const RANKING_MEDALS = ["金", "銀", "銅"];
-
 function renderRankingCategory(village, category) {
   const rows = getVillageRecordRanking(village, category.id, RECORD_RANKING_LIMIT);
   const body = rows.length > 0
     ? rows.map((row, index) => `
         <li class="ledger-rank-row">
-          <span class="ledger-rank-place is-${index + 1}">${escapeHtml(RANKING_MEDALS[index] || String(index + 1))}</span>
+          <span class="ledger-rank-place is-${index + 1}">${index + 1}</span>
           ${getRecordPortraitHtml(row)}
           <span class="ledger-rank-name">${escapeHtml(row.name)}</span>
           <span class="ledger-rank-value">${row.value}${escapeHtml(category.unit)}</span>
