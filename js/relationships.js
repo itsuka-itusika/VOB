@@ -1331,7 +1331,7 @@ export function openFriendshipDetailModal(village, person) {
       html: `
       <tr>
         <td class="friendship-detail-person">
-          <button type="button" class="friendship-detail-portrait-button" data-open-friendship-person="${index}" aria-label="${escapeHtml(other.name)}の個人記録を見る">
+          <button type="button" class="friendship-detail-portrait-button" data-open-friendship-person="${index}" aria-label="${escapeHtml(other.name)}の好感度を見る">
             ${getPortraitSpriteHtml(other, { alt: other.name })}
           </button>
           <span>${escapeHtml(other.name)}</span>
@@ -1394,14 +1394,13 @@ export function openFriendshipDetailModal(village, person) {
   };
   const tbody = modal.querySelector(".friendship-detail-table tbody");
   // 並べ替えで行を作り直すため、個別ボタンではなく tbody 側で受ける。
-  tbody.addEventListener("click", async event => {
+  tbody.addEventListener("click", event => {
     const button = event.target.closest("[data-open-friendship-person]");
     if (!button) return;
     const target = others[Number(button.dataset.openFriendshipPerson)];
     if (!target) return;
-    const { openPersonalHistoryModal } = await import("./history.js");
-    close();
-    openPersonalHistoryModal(village, target);
+    // 開き直す側で今のモーダルを消すため、ここでは閉じない。
+    openFriendshipDetailModal(village, target);
   });
   const sortHeader = modal.querySelector("[data-friendship-sort-header]");
   const sortButton = modal.querySelector("[data-sort-friendship]");
