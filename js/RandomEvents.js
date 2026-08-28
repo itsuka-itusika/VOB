@@ -36,6 +36,7 @@ import {
   EVENT_POOLS,
   EVENT_SECOND_LINE_BASES,
   EVENT_SUBJECTS,
+  FORCED_SPEAKER_ONLY_EVENTS,
   SINGLE_SPEAKER_EVENTS
 } from "./data/randomEventData.js";
 import { WOLF_FOUNDLING_LINES } from "./data/dialogue/randomEventLines.js";
@@ -66,6 +67,8 @@ function snapshotVillager(person) {
  */
 export class RandomEvents {
   static _forcedSpeakers = [];
+  // 役割ごとにセリフを決めるイベント用。話者に割り当てるセリフを覚えておく。
+  static _forcedSpeakerLines = new Map();
 
   static announce(title, message, participants = []) {
     showRandomEventModal({ title, message, participants });
@@ -144,12 +147,13 @@ export class RandomEvents {
     });
   }
 
-  static addForcedSpeaker(character) {
+  static addForcedSpeaker(character, line = null) {
     if (!character) return;
     if (!Array.isArray(this._forcedSpeakers)) this._forcedSpeakers = [];
     if (!this._forcedSpeakers.includes(character)) {
       this._forcedSpeakers.push(character);
     }
+    if (line) this._forcedSpeakerLines.set(character, line);
   }
 
   static runWithAnnouncement(village, phase, kind, runEvent) {
@@ -157,6 +161,7 @@ export class RandomEvents {
     const originalLog = village.log.bind(village);
     const logs = [];
     this._forcedSpeakers = [];
+    this._forcedSpeakerLines = new Map();
 
     village.log = (msg) => {
       logs.push(String(msg));
@@ -182,6 +187,10 @@ export class RandomEvents {
     if (SINGLE_SPEAKER_EVENTS.has(eventKey) && speakers.length > 1) {
       speakers = [this.randChoice(speakers)];
     }
+    // 当事者以外が当事者向けのセリフを話さないよう、指定した話者だけに絞る。
+    if (FORCED_SPEAKER_ONLY_EVENTS.has(eventKey) && this._forcedSpeakers.length > 0) {
+      speakers = [...this._forcedSpeakers];
+    }
     const title = EVENT_SUBJECTS[eventKey] || EVENT_KIND_TITLES[kind] || "ランダムイベント";
     const message = logs.length > 0 ? logs.join("\n") : `${phase}ランダムイベントが発生しました。`;
 
@@ -190,7 +199,8 @@ export class RandomEvents {
       const participants = speakers
         .map((p, index) => this.participant(
           p,
-          this.createEventLine(kind, p, eventKey, speakers.length > 1 ? index : null)
+          this._forcedSpeakerLines.get(p)
+            || this.createEventLine(kind, p, eventKey, speakers.length > 1 ? index : null)
         ));
       this.announce(title, message, participants);
     } catch (error) {
@@ -703,8 +713,16 @@ export class RandomEvents {
         if (candidates.length === 0) return null;
 
         const a = this.randChoice(candidates);
-        v.log(`ナンパイベント:${a.name}${HobbyEffects.applyPickup(a, v, rules)}`);
+        const pickup = HobbyEffects.runPickup(a, v, rules);
+        v.log(`ナンパイベント:${a.name}${pickup.text}`);
         this.addForcedSpeaker(a);
+        // 相手の返事は受諾か拒否かで変わるため、ここでセリフを決めて渡す。
+        if (pickup.target) {
+          this.addForcedSpeaker(
+            pickup.target,
+            this.createEventLine("good", pickup.target, pickup.accepted ? "pickupAccept" : "pickupReject")
+          );
+        }
         break;
       }
       case "selfPleasure": {

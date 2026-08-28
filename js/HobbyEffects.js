@@ -11,11 +11,22 @@ import {
   hasCloseOrHostileRelationship,
   isSingle
 } from "./relationships.js";
+import { getDialogueLine } from "./dialogue/dialogueEngine.js";
 import { recordLoverHistory } from "./history.js";
 import { incrementTitleCounter, TITLE_COUNTER_KEYS } from "./titles.js";
 
 // 趣味によるステータス変動の発生率倍率。全趣味に一律で掛かる。
 const HOBBY_STAT_CHANGE_RATE = 0.4;
+
+// ナンパ・逆ナンのセリフは、ランダムイベントと同じ会話データから引く。
+function getPickupLine(person, key) {
+  return getDialogueLine({
+    character: person,
+    scene: "randomEvent",
+    key,
+    context: { kind: "good", subject: "ナンパ", mood: "romance" }
+  });
+}
 
 export class HobbyEffects {
   static apply(p, v) {
@@ -49,9 +60,11 @@ export class HobbyEffects {
         msg = this.applyGamble(p, v);
         break;
       case "ナンパ":
-      case "逆ナン":
-        msg = this.applyPickup(p, v);
+      case "逆ナン": {
+        const pickup = this.runPickup(p, v);
+        msg = `${pickup.text}${this.buildPickupDialogue(p, pickup)}`;
         break;
+      }
       case "滝行":
         msg = this.applyAsceticTraining(p);
         break;
@@ -378,34 +391,45 @@ export class HobbyEffects {
     return `${b.name}と意気投合,双方好感度+10,双方メンタル+10,幸福+10${jealousy}${loverText}`;
   }
 
+  // 成否はセリフの出し分けにも使うため、記録文と一緒に返す。
   static resolvePickup(a, b, v, rules) {
     if (this.refusesPickup(a, b, rules)) {
       adjustFriendshipScore(b, a, rules.refusePenalty);
-      return `${b.name}に相手にされなかった,好感度${rules.refusePenalty}`;
+      return { accepted: false, text: `${b.name}に相手にされなかった,好感度${rules.refusePenalty}` };
     }
     if (getFriendshipScore(b, a) < 40 && !this.rollPickupAcceptance(a, b, rules)) {
       adjustFriendshipScore(b, a, rules.rejectPenalty);
-      return `${b.name}に振られた,好感度${rules.rejectPenalty}`;
+      return { accepted: false, text: `${b.name}に振られた,好感度${rules.rejectPenalty}` };
     }
-    return this.resolvePickupSuccess(a, b, v, rules);
+    return { accepted: true, text: this.resolvePickupSuccess(a, b, v, rules) };
   }
 
   static hasPickupTarget(p, v, rules) {
     return getActiveVillagers(v).some(x => this.isPickupTargetCandidate(p, x, rules));
   }
 
-  static applyPickup(p, v, rules = null) {
+  static runPickup(p, v, rules = null) {
     const appliedRules = rules || this.getPickupRules(p.hobby);
     const targets = getActiveVillagers(v).filter(x => this.isPickupTargetCandidate(p, x, appliedRules));
     if (targets.length === 0) {
-      return `(${appliedRules.label}:めぼしい相手がいなかった…)`;
+      return { text: `(${appliedRules.label}:めぼしい相手がいなかった…)`, target: null, accepted: false };
     }
 
     const target = targets[randInt(0, targets.length - 1)];
     const outcome = this.resolvePickup(p, target, v, appliedRules);
     // 魅力上昇が同じ試行の成否へ影響しないよう、能力上昇は判定後に処理する。
     const statGrowth = `${this.maybeRaiseStat(p, "chr", 0.3)}${this.maybeRaiseStat(p, "sexdr", 0.25)}`;
-    return `(${appliedRules.label}:${outcome}${statGrowth})`;
+    return { text: `(${appliedRules.label}:${outcome.text}${statGrowth})`, target, accepted: outcome.accepted };
+  }
+
+  // 趣味でのナンパ・逆ナンは通知が出ないため、声をかけた側と相手のやりとりを記録へ添える。
+  static buildPickupDialogue(p, pickup) {
+    if (!pickup.target) return "";
+    const approach = getPickupLine(p, "pickup");
+    const reply = getPickupLine(pickup.target, pickup.accepted ? "pickupAccept" : "pickupReject");
+    const approachText = approach ? ` ${p.name}「${approach}」` : "";
+    const replyText = reply ? ` ${pickup.target.name}「${reply}」` : "";
+    return `${approachText}${replyText}`;
   }
 
   static applyAsceticTraining(p) {

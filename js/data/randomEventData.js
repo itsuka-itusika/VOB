@@ -18,6 +18,9 @@ export const EVENT_POOLS = {
 // 村全体へ一律に効くイベント。同じ状況を何人も語る意味がないため、代表1人だけが反応する。
 export const SINGLE_SPEAKER_EVENTS = new Set(["fireworks", "hotSpring", "heat", "snow"]);
 
+// 当事者だけが話すイベント。周囲の好感度が動いた村人まで当事者向けのセリフを話さないようにする。
+export const FORCED_SPEAKER_ONLY_EVENTS = new Set(["pickup"]);
+
 export const EVENT_SUBJECTS = {
   "狩猟神": "狩女神の祝福",
   "太陽神": "太陽神の寵愛",
