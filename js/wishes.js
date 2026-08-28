@@ -11,6 +11,7 @@ import { getActiveVillagers } from "./domain/apocalypseRules.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { getPermanentStat } from "./domain/statLayers.js";
 import {
+  areSiblings,
   getFriendshipScore,
   getRelationshipEntries,
   getRelationshipTargetId
@@ -41,6 +42,10 @@ const RARE_RACES = new Set([
 ]);
 const RESEARCH_MIND_TRAITS = new Set(["マッド", "天才肌", "学者肌", "好奇心旺盛"]);
 const WISH_REQUESTER_EXCLUDED_MIND_TRAITS = new Set(["野生", "無垢", "神聖"]);
+// 「救って」の対象になる続柄。きょうだいは続柄を持たないため areSiblings で見る。
+const RESCUE_RELATION_PREFIXES = ["母", "父", "子", "恋人", "夫", "妻"];
+const RESCUE_MIN_FRIENDSHIP = 60;
+const CRITICAL_BODY_TRAIT = "危篤";
 // 戦いを拒む、または戦列に並べない精神特性。殊勲は狙えない。
 const DISTINCTION_BLOCKING_MIND_TRAITS = new Set(["野生", "非戦主義", "不殺"]);
 const HUMANOID_RACES = new Set([
@@ -112,8 +117,8 @@ export function normalizeWishState(source = null) {
   const targetId = Number.isInteger(source.targetId) && source.targetId > 0 ? source.targetId : null;
   const targetName = String(source.targetName || "").trim();
   const context = { targetName };
-  const defaultName = id === "get_closer" && targetName
-    ? `${targetName}と近づきたい`
+  const defaultName = definition.buildName && targetName
+    ? definition.buildName({ targetName })
     : definition.name;
   return {
     id,
@@ -259,7 +264,7 @@ export function tryStartWish(village) {
   const targetName = target?.name || "";
   const wish = {
     id: definition.id,
-    name: definition.id === "get_closer" ? `${targetName}と近づきたい` : definition.name,
+    name: definition.buildName && targetName ? definition.buildName({ targetName }) : definition.name,
     requesterId: requester.id,
     requesterName: requester.name,
     requesterRace: requester.race || "人間",
@@ -288,6 +293,12 @@ export function advanceWishMonth(village) {
     if (!findWishRequester(residents, wish)) {
       recordWishOutcome(village, wish, "lost");
       village.log(`願望消失: ${wish.requesterName}が村にいないため「${wish.name}」は消失しました。`);
+      return;
+    }
+    // 「救って」は相手のための願い。相手が村を去れば、叶わないまま消える。
+    if (wish.id === "save_someone" && !findWishTargetPerson(residents, wish)) {
+      recordWishOutcome(village, wish, "lost");
+      village.log(`願望消失: ${wish.targetName}が村にいないため、${wish.requesterName}の「${wish.name}」は消失しました。`);
       return;
     }
     wish.monthsLeft -= 1;
@@ -389,6 +400,15 @@ function getWishCandidates(village) {
     if (Number(requester.spiritAge) >= 16 && !hasPartner(requester)) {
       candidates.push({ id: "want_partner", requester });
     }
+    if (Number(requester.spiritAge) >= 16) {
+      villagers.forEach(target => {
+        if (target === requester) return;
+        if (!isCriticalCondition(target)) return;
+        if (getFriendshipScore(requester, target) < RESCUE_MIN_FRIENDSHIP) return;
+        if (!isCloseFamily(requester, target)) return;
+        candidates.push({ id: "save_someone", requester, target });
+      });
+    }
     if (hasAnyBodyTrait(requester, ["中年", "老人"])) {
       candidates.push({ id: "regain_youth", requester });
     }
@@ -412,8 +432,7 @@ function getWishCandidates(village) {
 }
 
 function getWishCompletionReason(wish, requester, villagers, context = {}) {
-  const target = villagers.find(person =>
-    wish.targetId != null ? person.id === wish.targetId : person.name === wish.targetName);
+  const target = findWishTargetPerson(villagers, wish);
   switch (wish.id) {
     case "avoid_enemy":
       if (!target) return "targetGone";
@@ -433,6 +452,10 @@ function getWishCompletionReason(wish, requester, villagers, context = {}) {
       return Number(requester.bodyAge) >= 16 ? "adultBody" : null;
     case "be_child_again":
       return hasAnyBodyTrait(requester, CHILD_BODY_TRAITS) ? "childBody" : null;
+    case "save_someone":
+      // 相手が村にいる間だけ叶う。危篤が解けたその月に達成となる。
+      if (!target) return null;
+      return isCriticalCondition(target) ? null : "rescued";
     case "want_partner":
       return hasPartner(requester) ? "partner" : null;
     case "regain_youth":
@@ -475,6 +498,22 @@ function findWishRequester(villagers, wish) {
 // 願望の相手参照。ID優先で、旧セーブは名前で読み替える。
 function getWishTarget(wish) {
   return { id: wish?.targetId ?? null, name: wish?.targetName || "" };
+}
+
+// 願望の相手を村人から引く。IDを優先し、旧セーブは名前で読み替える。
+function findWishTargetPerson(villagers, wish) {
+  return villagers.find(person =>
+    wish?.targetId != null ? person.id === wish.targetId : person.name === wish?.targetName) || null;
+}
+
+function isCriticalCondition(person) {
+  return Array.isArray(person?.bodyTraits) && person.bodyTraits.includes(CRITICAL_BODY_TRAIT);
+}
+
+/** 親子・恋人・配偶者は続柄で、きょうだいは共通の親をたどって判定する。 */
+function isCloseFamily(person, target) {
+  return RESCUE_RELATION_PREFIXES.some(prefix => hasTargetRelationship(person, prefix, target)) ||
+    areSiblings(person, target);
 }
 
 function isWishTargetBody(requester, wish) {

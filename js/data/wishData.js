@@ -114,6 +114,38 @@ const WISH_TONE_PATTERNS = {
   }
 };
 
+// 「XXXを救って」の願い方。口調によっては、自分の身と引き換えにしてでもと訴える。
+const SAVE_SOMEONE_LINES = {
+  "普通Ｍ": t => `${t}が危ない。俺の代わりでいい、どうか助けてやってくれ。`,
+  "丁寧Ｍ": t => `${t}の息が細くなっています。わたしはどうなっても構いません、あの人だけは。`,
+  "強気Ｍ": t => `${t}をここで失うわけにはいかない。俺の命でいいなら持っていけ。`,
+  "乱暴": t => `${t}が死にかけてる。俺のことなんざどうでもいい、あいつを助けろよ。`,
+  "お調子者": t => `${t}が危ないんだ。おれの運はぜんぶ渡すから、あいつを返してくれよ。`,
+  "陰気": t => `${t}が死んでしまう。……ぼくが代わりならよかったのに。`,
+  "クールＭ": t => `${t}の容体が限界だ。俺の身を差し出す取引でいい、なんとかしてくれ。`,
+  "普通Ｆ": t => `${t}が危ないの。わたしはどうなってもいい、あの人を助けて。`,
+  "丁寧Ｆ": t => `${t}の命が細くなっています。わたしの寿命を分けても構いません。`,
+  "お嬢様": t => `${t}が生死の境にいますの。わたくしの持てるものは、何でも差し上げますわ。`,
+  "快活": t => `${t}が危ないの！ あたしにできることなら何だってする、だから助けて！`,
+  "内気": t => `${t}が……死んでしまいます。わたしの代わりで、いいですから……`,
+  "強気Ｆ": t => `${t}を死なせるつもりはないわ。要るならわたしの分を持っていって。`,
+  "蓮っ葉": t => `${t}がやばいんだよ。あたしはどうなったっていい、あいつを助けてよ。`,
+  "おっとり": t => `${t}が……とても危ないんです。わたしのぶんでよければ、差し上げます。`,
+  "ぶりっこ": t => `${t}が死んじゃうの……わたしのこと、どうなってもいいから……`,
+  "クールＦ": t => `${t}の命が尽きかけている。代償が要るなら、わたしで足りるはずよ。`,
+  "ギャル風": t => `${t}、マジで危ないの。あたしのことはいいから、あの子だけは。`,
+  "中性的": t => `${t}が死のふちにいる。ぼくの命でよければ、いくらでも差し出すよ。`,
+  "老人": t => `${t}が危篤じゃ。先の短い儂を、代わりに連れて行ってくだされ。`,
+  "ゴブリン": t => `${t}が死にそうゴブ。オレはどうなってもいいゴブ、あいつを助けるゴブ。`
+};
+
+function buildSaveSomeoneLine({ requester, targetName }) {
+  const tone = resolveDialogueTone(requester);
+  const build = SAVE_SOMEONE_LINES[tone] ||
+    SAVE_SOMEONE_LINES[requester?.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"];
+  return build(targetName);
+}
+
 export const WISH_DEFINITIONS = [
   {
     id: "avoid_enemy",
@@ -136,6 +168,7 @@ export const WISH_DEFINITIONS = [
   {
     id: "get_closer",
     name: "近づきたい",
+    buildName: ({ targetName }) => `${targetName}と近づきたい`,
     startLine: ({ targetName }) => `${targetName}とお近づきになりたい。もっと心を通わせたい。`,
     completionLines: {
       partner: ({ targetName }) => `${targetName}と心を通わせることができた。この縁を大切にしたい。`,
@@ -237,6 +270,15 @@ export const WISH_DEFINITIONS = [
     startLine: () => "たまには村のみんなで、酒を飲んでパーッと騒ぎたい。",
     completionLines: {
       celebration: () => "思いきり飲んで騒げた。胸のつかえまで吹き飛んだよ。"
+    }
+  },
+  {
+    id: "save_someone",
+    name: "救って",
+    buildName: ({ targetName }) => `${targetName}を救って`,
+    startLine: buildSaveSomeoneLine,
+    completionLines: {
+      rescued: ({ targetName }) => `${targetName}が持ち直した。あの命が戻っただけで、もう何も要らない。`
     }
   }
 ];
