@@ -6,6 +6,9 @@ import { SPEECH_TYPE_MAPPING } from "./data/villagerData.js";
 import { showDictionaryEntry } from "./dictionary.js";
 import { combinedDictionaryData } from "./data/dictionaryData.js";
 import { getRelationshipEntries } from "./relationships.js";
+import { syncTitleCountRecord } from "./records.js";
+import { findPersonEverywhereById, normalizePersonId } from "./domain/personId.js";
+import { EXCLUSIVE_BODY_TRAITS } from "./createVillagers.js";
 
 export const HISTORY_EVENT_TYPES = Object.freeze({
   ARCHIVE_GAP: "archiveGap",
@@ -733,6 +736,30 @@ function getPersonalHistoryText(event, personName, personId = null) {
   }
 }
 
+/** 本文に出てくる登場人物の名前を、その人物の記録への入口にする。 */
+function renderHistoryText(text, event, { village = null, personId = null } = {}) {
+  const escaped = escapeHtml(text);
+  if (!village) return escaped;
+
+  const links = new Map();
+  (Array.isArray(event.people) ? event.people : []).forEach((name, index) => {
+    if (!name) return;
+    const rawId = Array.isArray(event.peopleIds) ? event.peopleIds[index] : null;
+    const linkId = resolveLinkablePersonId(village, rawId);
+    // 開いている記録の本人は、押しても動かないので入口にしない。
+    if (linkId == null || linkId === personId) return;
+    links.set(escapeHtml(name), linkId);
+  });
+  if (links.size === 0) return escaped;
+
+  // 長い名前から当てて、短い名前が別の名前の一部に一致するのを防ぐ。
+  const pattern = new RegExp(
+    [...links.keys()].sort((a, b) => b.length - a.length).map(escapeRegExp).join("|"),
+    "g"
+  );
+  return escaped.replace(pattern, matched => renderPersonLink(matched, links.get(matched)));
+}
+
 export function renderHistoryEntry(event, options = {}) {
   const text = options.personName
     ? getPersonalHistoryText(event, options.personName, options.personId ?? null)
@@ -741,10 +768,28 @@ export function renderHistoryEntry(event, options = {}) {
     <article class="history-entry history-entry-${escapeHtml(event.type)}">
       <p class="history-record-line">
         <time class="history-date">${escapeHtml(formatHistoryDate(event))}</time>
-        <span class="history-record-text">${escapeHtml(text)}</span>
+        <span class="history-record-text">${renderHistoryText(text, event, options)}</span>
       </p>
     </article>
   `;
+}
+
+/** 名前から、その人物の記録へ移る。個人記録の中では開き直すだけなので beforeOpen は要らない。 */
+export function bindPersonLinks(content, village, { beforeOpen = null } = {}) {
+  content.querySelectorAll("[data-open-person-id]").forEach(element => {
+    const open = () => {
+      const person = findPersonEverywhereById(village, element.dataset.openPersonId);
+      if (!person) return;
+      if (typeof beforeOpen === "function") beforeOpen();
+      openPersonalHistoryModal(village, person, { archived: Boolean(person.departure) });
+    };
+    element.addEventListener("click", open);
+    element.addEventListener("keydown", event => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      open();
+    });
+  });
 }
 
 function includesPerson(event, personName, personId = null) {
@@ -763,29 +808,77 @@ function hasArchiveGap(village) {
   return normalizeHistoryEvents(village?.historyEvents).some(event => event.type === HISTORY_EVENT_TYPES.ARCHIVE_GAP);
 }
 
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// 記録に出てくる名前は、その人物の記録への入口にする。見た目は本文のままにする。
+function renderPersonLink(escapedName, personId) {
+  return `<span class="history-person-link" role="button" tabindex="0" data-open-person-id="${personId}">${escapedName}</span>`;
+}
+
+/** 村にいる者と過去帳に載る者だけをつなぐ。訪問者や襲撃者には記録がないため入口にしない。 */
+function resolveLinkablePersonId(village, id) {
+  const personId = normalizePersonId(id);
+  if (personId == null) return null;
+  return findPersonEverywhereById(village, personId) ? personId : null;
+}
+
 function parsePersonalRelationship(entry) {
   const prefix = String(entry?.prefix || "").trim();
   if (!prefix) return null;
-  if (prefix === "既婚") return { category: "family", label: "既婚" };
+  if (prefix === "既婚") return { category: "family", prefix, target: "", targetId: null };
 
   const target = String(entry?.targetName || "").trim();
-  const label = target ? `${prefix}：${target}` : prefix;
+  const targetId = entry?.targetId ?? null;
 
   if (["夫", "妻", "母", "父", "子"].includes(prefix)) {
-    return { category: "family", label };
+    return { category: "family", prefix, target, targetId };
   }
   if (["遺伝母", "遺伝父"].includes(prefix)) {
-    return { category: "genetic", label };
+    return { category: "genetic", prefix, target, targetId };
   }
-  return { category: "social", label };
+  return { category: "social", prefix, target, targetId };
 }
 
-function formatRelationshipCategory(person, category) {
-  const labels = getRelationshipEntries(person)
+// 人間関係を並べる順。趣味仲間は「推し活仲間」のように趣味名が入るため、まとめて同じ位置に置く。
+const SOCIAL_RELATION_ORDER = ["恋人", "親友", "戦友", "仕事仲間", "趣味仲間", "天敵"];
+
+function getSocialRelationOrder(prefix) {
+  const key = prefix !== "仕事仲間" && prefix.endsWith("仲間") ? "趣味仲間" : prefix;
+  const index = SOCIAL_RELATION_ORDER.indexOf(key);
+  // 元恋人・かつての天敵など、順を決めていない続柄は後ろへ回す。
+  return index >= 0 ? index : SOCIAL_RELATION_ORDER.length;
+}
+
+// 同じ続柄をひとつにまとめ、「戦友：リッツ、ランスロット」の形で1行ずつ返す。
+function formatRelationshipGroups(person, category) {
+  const groups = new Map();
+  getRelationshipEntries(person)
     .map(parsePersonalRelationship)
-    .filter(item => item?.category === category && !item.label.startsWith("村設立の同志："))
-    .map(item => item.label);
-  return labels.length > 0 ? [...new Set(labels)].join("、") : "なし";
+    .filter(item => item?.category === category && item.prefix !== "村設立の同志")
+    .forEach(item => {
+      if (!groups.has(item.prefix)) groups.set(item.prefix, new Map());
+      if (item.target) groups.get(item.prefix).set(item.target, item.targetId);
+    });
+  const entries = [...groups.entries()];
+  if (category === "social") {
+    entries.sort((a, b) => getSocialRelationOrder(a[0]) - getSocialRelationOrder(b[0]));
+  }
+  return entries.map(([prefix, targets]) => ({ prefix, targets: [...targets.entries()] }));
+}
+
+function renderRelationshipLines(village, person, category) {
+  const groups = formatRelationshipGroups(person, category);
+  if (groups.length === 0) return "なし";
+  return groups.map(({ prefix, targets }) => {
+    const names = targets.map(([name, targetId]) => {
+      const linkId = resolveLinkablePersonId(village, targetId);
+      return linkId != null ? renderPersonLink(escapeHtml(name), linkId) : escapeHtml(name);
+    }).join("、");
+    const body = names ? `${escapeHtml(prefix)}：${names}` : escapeHtml(prefix);
+    return `<span class="personal-history-relation-line">${body}</span>`;
+  }).join("");
 }
 
 function renderPersonalTitleSummary(person) {
@@ -794,6 +887,12 @@ function renderPersonalTitleSummary(person) {
   return titles.map(title => (
     `<span class="dictionary-term" title="${escapeHtml(title.description || "")}">${escapeHtml(title.name)}</span>`
   )).join("、");
+}
+
+// 排他の身体特性は1つだけ付くため、見つかったものをそのまま外見として出す。
+function getAppearanceTrait(person) {
+  const bodyTraits = Array.isArray(person?.bodyTraits) ? person.bodyTraits : [];
+  return bodyTraits.find(trait => EXCLUSIVE_BODY_TRAITS.includes(trait)) || "特徴なし";
 }
 
 function getPersonalityTrait(person) {
@@ -962,28 +1061,29 @@ function bindPastPortraitControls(content) {
   renderPortraitStep();
 }
 
-function renderPersonalHistorySummary(person, options = {}) {
+function renderPersonalHistorySummary(village, person, options = {}) {
   const profileFields = [
     { label: "名前", value: person.name || "不明", className: "is-name" },
     { label: "種族", valueHtml: renderDictionaryTerm(person.race || "人間"), className: "is-race" },
     { label: "肉体", value: `${person.bodyAge ?? "?"}歳/${person.bodySex || "不明"}`, className: "is-body" },
     { label: "精神", value: `${person.spiritAge ?? "?"}歳/${person.spiritSex || "不明"}`, className: "is-spirit" },
+    { label: "外見", value: getAppearanceTrait(person), className: "is-appearance" },
     { label: "性格", value: getPersonalityTrait(person), className: "is-personality" },
     { label: "趣味", value: person.hobby || "なし", className: "is-hobby" }
   ];
-  const familyRelations = formatRelationshipCategory(person, "family");
-  const socialRelations = formatRelationshipCategory(person, "social");
+  const familyRelations = renderRelationshipLines(village, person, "family");
+  const socialRelations = renderRelationshipLines(village, person, "social");
   // 過去帳の人物は好感度が残っていないため、詳細ボタンを出さない。
   const detailButtonHtml = options.archived ? "" : `
         <span class="personal-history-detail-row">
           <button type="button" class="personal-history-detail-button" data-open-friendship-detail>詳細</button>
         </span>`;
   const relationshipFields = [
-    { label: "家族関係", value: familyRelations },
+    { label: "家族関係", valueHtml: familyRelations },
     {
       label: "人間関係",
       valueHtml: `
-        <span class="personal-history-relationship-text">${escapeHtml(socialRelations)}</span>${detailButtonHtml}
+        <span class="personal-history-relationship-text">${socialRelations}</span>${detailButtonHtml}
       `
     }
   ];
@@ -1033,15 +1133,20 @@ export function openPersonalHistoryModal(village, person, options = {}) {
 
   title.textContent = `${person.name}の記録`;
   content.innerHTML = `
-    ${renderPersonalHistorySummary(person, options)}
+    ${renderPersonalHistorySummary(village, person, options)}
     ${archiveGapNote}
     ${events.length > 0
-      ? `<div class="history-list">${events.map(event => renderHistoryEntry(event, { personName: person.name, personId: person.id ?? null })).join("")}</div>`
+      ? `<div class="history-list">${events.map(event => renderHistoryEntry(event, {
+        personName: person.name,
+        personId: person.id ?? null,
+        village
+      })).join("")}</div>`
       : `<div class="history-empty">この人物の歩みは、まだ村の帳面には記されていない。</div>`}
   `;
   bindPersonalHistoryPortrait(content, person);
   bindPastPortraitControls(content);
   bindDictionaryTerms(content);
+  bindPersonLinks(content, village);
   content.querySelector("[data-open-friendship-detail]")?.addEventListener("click", async () => {
     const { openFriendshipDetailModal } = await import("./relationships.js");
     openFriendshipDetailModal(village, person);
@@ -1071,6 +1176,7 @@ function formatDepartureSentence(departure) {
  */
 export function recordDepartedVillager(village, person, reason) {
   if (!village || !person) return;
+  syncTitleCountRecord(village, person);
   if (!Array.isArray(village.departedVillagers)) village.departedVillagers = [];
   const snapshot = JSON.parse(JSON.stringify(person));
   snapshot.departure = {
@@ -1160,8 +1266,10 @@ export function openHistoryModal(village, { onBack = null } = {}) {
   const events = normalizeHistoryEvents(village?.historyEvents)
     .filter(event => event.scope !== HISTORY_SCOPES.PERSON);
   content.innerHTML = events.length > 0
-    ? `<div class="history-list">${events.map(renderHistoryEntry).join("")}</div>`
+    ? `<div class="history-list">${events.map(event => renderHistoryEntry(event, { village })).join("")}</div>`
     : `<div class="history-empty">この村について記すべき出来事は、まだ帳面には残されていない。</div>`;
+  // 過去帳や殿堂と同じく、村史は閉じてからその人物の記録を開く。
+  bindPersonLinks(content, village, { beforeOpen: closeHistoryModal });
 
   // ボタンは台帳へ戻し、オーバーレイのクリックは閉じるだけにする。
   const backButton = modal.querySelector("[data-history-back]");

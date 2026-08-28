@@ -1676,7 +1676,7 @@ section h2 {
 }
 .personal-history-profile-table {
   display: grid;
-  grid-template-columns: 6em max-content max-content max-content max-content max-content;
+  grid-template-columns: 6em max-content max-content max-content max-content max-content max-content;
   justify-content: start;
   gap: 3px 10px;
   align-items: baseline;
@@ -1698,10 +1698,12 @@ section h2 {
 }
 .personal-history-profile-label.is-body,
 .personal-history-profile-label.is-spirit,
+.personal-history-profile-label.is-appearance,
 .personal-history-profile-label.is-personality,
 .personal-history-profile-label.is-hobby,
 .personal-history-profile-value.is-body,
 .personal-history-profile-value.is-spirit,
+.personal-history-profile-value.is-appearance,
 .personal-history-profile-value.is-personality,
 .personal-history-profile-value.is-hobby {
   margin-left: 10px;
@@ -1717,7 +1719,7 @@ section h2 {
   padding: 7px 0;
   border-bottom: 1px solid #d9ccb0;
 }
-.personal-history-profile-field span {
+.personal-history-profile-field > span {
   display: block;
   color: #6d5b34;
   font-size: 0.76rem;
@@ -1730,12 +1732,23 @@ section h2 {
   font-size: 0.9rem;
   line-height: 1.45;
 }
-.personal-history-profile-field.is-detail span,
-.personal-history-profile-field.is-detail strong {
+.personal-history-profile-field.is-detail > span,
+.personal-history-profile-field.is-detail > strong {
   line-height: 1.55;
 }
 .personal-history-relationship-text {
   display: block;
+}
+.personal-history-relation-line {
+  display: block;
+}
+/* 名前は本文と同じ見た目のまま、押せることだけを伝える。 */
+.history-person-link {
+  cursor: pointer;
+}
+.history-person-link:hover,
+.history-person-link:focus {
+  text-decoration: underline;
 }
 .personal-history-detail-row {
   display: block;
@@ -1785,6 +1798,19 @@ section h2 {
   font-size: 1.12rem;
   font-weight: bold;
 }
+.friendship-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.friendship-detail-header .portrait-sprite {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  object-fit: cover;
+  border: 1px solid #bda978;
+  background: #e8dfcb;
+}
 .friendship-detail-content {
   overflow: auto;
   border: 1px solid #e0d1ad;
@@ -1821,6 +1847,18 @@ section h2 {
   color: #3d321f;
   white-space: nowrap;
   z-index: 1;
+}
+.friendship-detail-sort-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.friendship-detail-sort-button:hover,
+.friendship-detail-sort-button:focus {
+  text-decoration: underline;
 }
 .friendship-detail-person {
   display: grid;
@@ -4137,6 +4175,20 @@ section h2 {
 .ledger-rank-place.is-1 { color: #b8860b; }
 .ledger-rank-place.is-2 { color: #8c8c8c; }
 .ledger-rank-place.is-3 { color: #a0672d; }
+.ledger-rank-portrait-button {
+  flex: none;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  line-height: 0;
+  cursor: pointer;
+}
+.ledger-rank-portrait-button:hover .portrait-sprite,
+.ledger-rank-portrait-button:focus .portrait-sprite {
+  outline: 2px solid #8b6d31;
+  outline-offset: 1px;
+}
 .ledger-rank-name {
   flex: 1 1 auto;
   overflow: hidden;

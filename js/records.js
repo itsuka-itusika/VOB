@@ -3,16 +3,19 @@
 // 人物ではなく村の側へ精神ID（person.id）ごとに積む。
 
 import { getPortraitSpriteHtml } from "./data/portraitAtlas.js";
+import { getPersonTitles } from "./titles.js";
 
 /** 記録の種類。表示順もこの並びに従う。 */
 export const RECORD_CATEGORIES = [
-  { id: "heartbreak", label: "失恋回数", unit: "回", mode: "sum" },
   { id: "bestFriends", label: "親友の数", unit: "人", mode: "max" },
-  { id: "headmanTerms", label: "里長当選回数", unit: "回", mode: "sum" },
+  { id: "titleCount", label: "称号の数", unit: "個", mode: "max" },
+  { id: "heartbreak", label: "失恋回数", unit: "回", mode: "sum" },
   { id: "recruitment", label: "勧誘成功回数", unit: "回", mode: "sum" },
   { id: "seduction", label: "誘惑成功回数", unit: "回", mode: "sum" },
+  { id: "headmanTerms", label: "里長当選回数", unit: "回", mode: "sum" },
+  { id: "raidWins", label: "迎撃勝利回数", unit: "回", mode: "sum" },
+  { id: "distinguished", label: "殊勲回数", unit: "回", mode: "sum" },
   { id: "raidDamage", label: "累積与ダメージ", unit: "", mode: "sum" },
-  { id: "raidWins", label: "迎撃の勝利回数", unit: "回", mode: "sum" },
   { id: "food", label: "累積食料生産", unit: "", mode: "sum" },
   { id: "materials", label: "累積資材生産", unit: "", mode: "sum" },
   { id: "funds", label: "累積資金生産", unit: "", mode: "sum" },
@@ -63,6 +66,11 @@ export function updateVillageRecordMax(village, person, categoryId, value) {
   if (next > (Number(entry.values[categoryId]) || 0)) entry.values[categoryId] = next;
 }
 
+/** 称号は各所で贈られるため、記録は一覧を開いたときと離村時に取り直す。 */
+export function syncTitleCountRecord(village, person) {
+  updateVillageRecordMax(village, person, "titleCount", getPersonTitles(person).length);
+}
+
 export function normalizeVillageRecords(source) {
   if (!source || typeof source !== "object") return {};
   const records = {};
@@ -88,8 +96,9 @@ export function normalizeVillageRecords(source) {
 export function getVillageRecordRanking(village, categoryId, limit = RECORD_RANKING_LIMIT) {
   const store = getRecordStore(village);
   if (!store) return [];
-  return Object.values(store)
-    .map(entry => ({
+  return Object.entries(store)
+    .map(([id, entry]) => ({
+      id,
       name: entry.name || "",
       portraitFile: entry.portraitFile || "",
       value: Number(entry.values?.[categoryId]) || 0

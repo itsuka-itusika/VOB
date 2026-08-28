@@ -2,7 +2,14 @@
 // 村の記録をまとめる「台帳」。村史・過去帳・選挙記録・願望・経営目標への入口を持つ。
 // 各画面は台帳から開き、閉じると台帳へ戻る。
 
-import { HISTORY_EVENT_TYPES, openHistoryModal, openPastBookModal, renderHistoryEntry } from "./history.js";
+import {
+  HISTORY_EVENT_TYPES,
+  bindPersonLinks,
+  openHistoryModal,
+  openPastBookModal,
+  openPersonalHistoryModal,
+  renderHistoryEntry
+} from "./history.js";
 import {
   MANAGEMENT_GOAL_AXES,
   MANAGEMENT_GOAL_LABELS,
@@ -16,9 +23,11 @@ import {
   RECORD_CATEGORIES,
   RECORD_RANKING_LIMIT,
   getRecordPortraitHtml,
-  getVillageRecordRanking
+  getVillageRecordRanking,
+  syncTitleCountRecord
 } from "./records.js";
 import { getPortraitSpriteHtml } from "./data/portraitAtlas.js";
+import { findPersonEverywhereById } from "./domain/personId.js";
 
 // 台帳を開いた村。各画面を閉じたときに台帳へ戻すため覚えておく。
 let ledgerVillage = null;
@@ -121,10 +130,12 @@ export function openElectionRecordModal(village) {
 
   content.innerHTML = `
     ${events.length > 0
-      ? `<div class="history-list">${events.map(event => renderHistoryEntry(event)).join("")}</div>`
+      ? `<div class="history-list">${events.map(event => renderHistoryEntry(event, { village })).join("")}</div>`
       : `<div class="history-empty">里長選挙はまだ行われていない。</div>`}
     <div class="ledger-back-row"><button type="button" data-ledger-back>台帳へ戻る</button></div>
   `;
+  // 村史と同じく、選挙記録は閉じてからその人物の記録を開く。
+  bindPersonLinks(content, village, { beforeOpen: closeElectionRecordModal });
   content.querySelector("[data-ledger-back]")
     ?.addEventListener("click", () => backToLedger(closeElectionRecordModal));
 
@@ -226,7 +237,10 @@ function renderRankingCategory(village, category) {
     ? rows.map((row, index) => `
         <li class="ledger-rank-row">
           <span class="ledger-rank-place is-${index + 1}">${index + 1}</span>
-          ${getRecordPortraitHtml(row)}
+          <button type="button" class="ledger-rank-portrait-button" data-open-record-person="${escapeHtml(row.id)}"
+            aria-label="${escapeHtml(row.name)}の記録を見る">
+            ${getRecordPortraitHtml(row)}
+          </button>
           <span class="ledger-rank-name">${escapeHtml(row.name)}</span>
           <span class="ledger-rank-value">${row.value}${escapeHtml(category.unit)}</span>
         </li>`).join("")
@@ -243,13 +257,25 @@ export function openRankingModal(village) {
   if (!content || !village) return;
   ledgerVillage = village;
 
+  // 称号は各所で贈られるため、並べる直前に今の村人の分を記録し直す。
+  (Array.isArray(village.villagers) ? village.villagers : [])
+    .forEach(person => syncTitleCountRecord(village, person));
+
   content.innerHTML = `
-    <p class="ledger-lead">村を去った者の記録も、そのまま帳面に残る。</p>
     <div class="ledger-rank-grid">
       ${RECORD_CATEGORIES.map(category => renderRankingCategory(village, category)).join("")}
     </div>
     <div class="ledger-back-row"><button type="button" data-ledger-back>台帳へ戻る</button></div>
   `;
+  content.querySelectorAll("[data-open-record-person]").forEach(button => {
+    button.addEventListener("click", () => {
+      const person = findPersonEverywhereById(village, button.dataset.openRecordPerson);
+      if (!person) return;
+      closeRankingModal();
+      // 村を去った者は過去帳と同じ扱いにし、好感度の詳細を出さない。
+      openPersonalHistoryModal(village, person, { archived: Boolean(person.departure) });
+    });
+  });
   content.querySelector("[data-ledger-back]")
     ?.addEventListener("click", () => backToLedger(closeRankingModal));
 
