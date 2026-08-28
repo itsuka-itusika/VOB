@@ -35,10 +35,9 @@
 - [WORLDVIEW.md](../../WORLDVIEW.md): 世界観、外部勢力、黙示録の意味。
 - [ARCHITECTURE.md](../../ARCHITECTURE.md): 状態管理と月次処理の構造。
 - [CODE_REVIEW.md](../../CODE_REVIEW.md): 実装変更時の技術的検証。
-- [GAME_ANALYSIS.md](../../GAME_ANALYSIS.md): ゲーム内容とプレイヤー体験の批評方針。
 - [GAME_GUIDE_JA.md](../../GAME_GUIDE_JA.md): プレイヤー向けの現行仕様説明。
 
-このディレクトリは既存文書を置き換えません。実装構造は ARCHITECTURE.md、世界観判断は WORLDVIEW.md、技術レビューは CODE_REVIEW.md、内容批評は GAME_ANALYSIS.md を優先します。
+このディレクトリは既存文書を置き換えません。実装構造は ARCHITECTURE.md、世界観判断は WORLDVIEW.md、技術レビューは CODE_REVIEW.md を優先します。
 
 ## 現在の作業段階
 
