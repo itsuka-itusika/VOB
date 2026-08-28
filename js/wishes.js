@@ -9,6 +9,7 @@ import { DEFAULT_PORTRAIT_KEY } from "./data/portraitPaths.js";
 import { addDivineMight } from "./divineMight.js";
 import { getActiveVillagers } from "./domain/apocalypseRules.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
+import { getPermanentStat } from "./domain/statLayers.js";
 import {
   getFriendshipScore,
   getRelationshipEntries,
@@ -21,6 +22,8 @@ const WISH_OVERLAY_ID = "wishOverlay";
 const WISH_COMPLETE_MODAL_ID = "wishCompleteModal";
 const WISH_COMPLETE_OVERLAY_ID = "wishCompleteOverlay";
 const CHILD_BODY_TRAITS = new Set(["赤子", "幼児", "少年", "少女"]);
+// 願望の能力条件は、狂乱や火星の加護のような当月限りの増減を除いた永続値で見る。
+const stat = (person, key) => getPermanentStat(person, key);
 const MONSTER_RACES = new Set(["ゴブリン", "ハーピー", "スフィンクス", "ミノタウロス", "キュクロプス", "サイクロプス"]);
 const RARE_RACES = new Set([
   "レア種族",
@@ -358,7 +361,7 @@ function getWishCandidates(village) {
       .filter(Boolean)
       .forEach(target => candidates.push({ id: "avoid_enemy", requester, target }));
 
-    if (requester.spiritSex === "男" && Number(requester.sexdr) >= 20 && Number(requester.chr) <= 14) {
+    if (requester.spiritSex === "男" && stat(requester, "sexdr") >= 20 && stat(requester, "chr") <= 14) {
       candidates.push({ id: "be_popular", requester });
     }
 
@@ -368,19 +371,19 @@ function getWishCandidates(village) {
       }
     });
 
-    if (Number(requester.vit) <= 13) candidates.push({ id: "be_healthy", requester });
-    if (Number(requester.str) <= 13) candidates.push({ id: "be_strong", requester });
+    if (stat(requester, "vit") <= 13) candidates.push({ id: "be_healthy", requester });
+    if (stat(requester, "str") <= 13) candidates.push({ id: "be_strong", requester });
     if (hasMindTrait(requester, "萌芽") && Number(requester.bodyAge) <= 14) {
       candidates.push({ id: "grow_up", requester });
     }
     if (hasMindTrait(requester, "思春期") && Number(requester.bodyAge) <= 14) {
       candidates.push({ id: "be_full_fledged", requester });
     }
-    if (Number(requester.spiritAge) >= 16 && Number(requester.cou) >= 20 &&
+    if (Number(requester.spiritAge) >= 16 && stat(requester, "cou") >= 20 &&
       !hasAnyMindTrait(requester, DISTINCTION_BLOCKING_MIND_TRAITS)) {
       candidates.push({ id: "win_distinction", requester });
     }
-    if (Number(requester.bodyAge) >= 16 && Number(requester.ind) <= 14) {
+    if (Number(requester.bodyAge) >= 16 && stat(requester, "ind") <= 14) {
       candidates.push({ id: "be_child_again", requester });
     }
     if (Number(requester.spiritAge) >= 16 && !hasPartner(requester)) {
@@ -417,14 +420,14 @@ function getWishCompletionReason(wish, requester, villagers, context = {}) {
       return hasTargetRelationship(requester, "天敵", target) ? null : "rivalryResolved";
     case "be_popular":
       if (hasPartner(requester)) return "partner";
-      return Number(requester.chr) >= 20 ? "charm" : null;
+      return stat(requester, "chr") >= 20 ? "charm" : null;
     case "get_closer":
       if (hasPartnerWith(requester, getWishTarget(wish))) return "partner";
       return isWishTargetBody(requester, wish) ? "exchangedBody" : null;
     case "be_healthy":
-      return Number(requester.vit) >= 20 ? "healthy" : null;
+      return stat(requester, "vit") >= 20 ? "healthy" : null;
     case "be_strong":
-      return Number(requester.str) >= 20 ? "strong" : null;
+      return stat(requester, "str") >= 20 ? "strong" : null;
     case "grow_up":
     case "be_full_fledged":
       return Number(requester.bodyAge) >= 16 ? "adultBody" : null;
