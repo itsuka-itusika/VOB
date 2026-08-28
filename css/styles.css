@@ -4160,17 +4160,17 @@ section h2 {
 }
 .ledger-card-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 /*
- * 台帳のカードは横長の帳面に見立てる。
+ * 台帳のカードは、A4の紙を立てた帳面に見立てる。
  * 紙面の内側へ二重罫（細い実線と、その内側の刻み罫）を引くだけの簡素な作り。
  */
 .ledger-card {
   position: relative;
   display: block;
-  min-height: 116px;
+  aspect-ratio: 210 / 297;
   padding: 12px 14px;
   border: 1px solid #b09566;
   border-radius: 2px;
@@ -4215,8 +4215,8 @@ section h2 {
   flex-direction: column;
   justify-content: center;
   gap: 6px;
-  min-height: 92px;
-  padding: 0 14px;
+  height: 100%;
+  padding: 0 10px;
 }
 .ledger-card-title {
   font-size: 1.18rem;
