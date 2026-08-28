@@ -780,8 +780,18 @@ function parsePersonalRelationship(entry) {
   return { category: "social", prefix, target };
 }
 
-// 同じ続柄をひとつにまとめ、「戦友：リッツ、ランスロット」の形で並べる。
-function formatRelationshipCategory(person, category) {
+// 人間関係を並べる順。趣味仲間は「推し活仲間」のように趣味名が入るため、まとめて同じ位置に置く。
+const SOCIAL_RELATION_ORDER = ["恋人", "親友", "戦友", "仕事仲間", "趣味仲間", "天敵"];
+
+function getSocialRelationOrder(prefix) {
+  const key = prefix !== "仕事仲間" && prefix.endsWith("仲間") ? "趣味仲間" : prefix;
+  const index = SOCIAL_RELATION_ORDER.indexOf(key);
+  // 元恋人・かつての天敵など、順を決めていない続柄は後ろへ回す。
+  return index >= 0 ? index : SOCIAL_RELATION_ORDER.length;
+}
+
+// 同じ続柄をひとつにまとめ、「戦友：リッツ、ランスロット」の形で1行ずつ返す。
+function formatRelationshipGroups(person, category) {
   const groups = new Map();
   getRelationshipEntries(person)
     .map(parsePersonalRelationship)
@@ -790,10 +800,21 @@ function formatRelationshipCategory(person, category) {
       if (!groups.has(item.prefix)) groups.set(item.prefix, new Set());
       if (item.target) groups.get(item.prefix).add(item.target);
     });
-  if (groups.size === 0) return "なし";
-  return [...groups.entries()]
-    .map(([prefix, targets]) => (targets.size > 0 ? `${prefix}：${[...targets].join("、")}` : prefix))
-    .join("／");
+  const entries = [...groups.entries()];
+  if (category === "social") {
+    entries.sort((a, b) => getSocialRelationOrder(a[0]) - getSocialRelationOrder(b[0]));
+  }
+  return entries.map(([prefix, targets]) => (
+    targets.size > 0 ? `${prefix}：${[...targets].join("、")}` : prefix
+  ));
+}
+
+function renderRelationshipLines(person, category) {
+  const lines = formatRelationshipGroups(person, category);
+  if (lines.length === 0) return "なし";
+  return lines
+    .map(line => `<span class="personal-history-relation-line">${escapeHtml(line)}</span>`)
+    .join("");
 }
 
 function renderPersonalTitleSummary(person) {
@@ -979,19 +1000,19 @@ function renderPersonalHistorySummary(person, options = {}) {
     { label: "性格", value: getPersonalityTrait(person), className: "is-personality" },
     { label: "趣味", value: person.hobby || "なし", className: "is-hobby" }
   ];
-  const familyRelations = formatRelationshipCategory(person, "family");
-  const socialRelations = formatRelationshipCategory(person, "social");
+  const familyRelations = renderRelationshipLines(person, "family");
+  const socialRelations = renderRelationshipLines(person, "social");
   // 過去帳の人物は好感度が残っていないため、詳細ボタンを出さない。
   const detailButtonHtml = options.archived ? "" : `
         <span class="personal-history-detail-row">
           <button type="button" class="personal-history-detail-button" data-open-friendship-detail>詳細</button>
         </span>`;
   const relationshipFields = [
-    { label: "家族関係", value: familyRelations },
+    { label: "家族関係", valueHtml: familyRelations },
     {
       label: "人間関係",
       valueHtml: `
-        <span class="personal-history-relationship-text">${escapeHtml(socialRelations)}</span>${detailButtonHtml}
+        <span class="personal-history-relationship-text">${socialRelations}</span>${detailButtonHtml}
       `
     }
   ];

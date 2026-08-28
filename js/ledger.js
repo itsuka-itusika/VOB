@@ -259,7 +259,6 @@ export function openRankingModal(village) {
     .forEach(person => syncTitleCountRecord(village, person));
 
   content.innerHTML = `
-    <p class="ledger-lead">村を去った者の記録も、そのまま帳面に残る。</p>
     <div class="ledger-rank-grid">
       ${RECORD_CATEGORIES.map(category => renderRankingCategory(village, category)).join("")}
     </div>

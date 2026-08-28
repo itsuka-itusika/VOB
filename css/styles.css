@@ -1737,6 +1737,9 @@ section h2 {
 .personal-history-relationship-text {
   display: block;
 }
+.personal-history-relation-line {
+  display: block;
+}
 .personal-history-detail-row {
   display: block;
   margin-top: 5px;
