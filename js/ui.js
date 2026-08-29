@@ -782,8 +782,8 @@ function appendTextCell(row, value, className = "") {
   return cell;
 }
 
-function appendNumberCell(row, value) {
-  return appendTextCell(row, Math.floor(Number(value) || 0));
+function appendNumberCell(row, value, className = "") {
+  return appendTextCell(row, Math.floor(Number(value) || 0), className);
 }
 
 function appendPortraitCell(row, person) {
@@ -1034,9 +1034,9 @@ function appendVillageRoleCell(row, person, village, editable) {
 }
 
 function appendStatCells(row, person, village) {
-  ["str", "vit", "dex", "mag", "chr"].forEach(stat => appendNumberCell(row, person[stat]));
+  ["str", "vit", "dex", "mag", "chr"].forEach(stat => appendNumberCell(row, person[stat], "stat-column"));
   appendDictionaryCell(row, person.bodyTraits, { category: "trait" });
-  ["int", "ind", "eth", "cou", "sexdr"].forEach(stat => appendNumberCell(row, person[stat]));
+  ["int", "ind", "eth", "cou", "sexdr"].forEach(stat => appendNumberCell(row, person[stat], "stat-column"));
   const displayedMindTraits = getSpecialRaiderRowClass(person)
     ? (person.mindTraits || []).filter(trait => trait !== "襲撃者")
     : person.mindTraits;

@@ -999,6 +999,10 @@ tr td:nth-child(25) {
 table.show-spirit-columns .spirit-column {
   display: table-cell;
 }
+/* ステータス列は既定で表示し、チェックを外した時だけ隠す。 */
+table.hide-stat-columns .stat-column {
+  display: none;
+}
 .table-tools {
   margin: 2px 0 6px;
   font-size: 0.85rem;

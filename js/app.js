@@ -330,6 +330,15 @@ function setSpiritColumnsVisibility(visible) {
   if (checkbox) checkbox.checked = Boolean(visible);
 }
 
+function setStatColumnsVisibility(visible) {
+  ["villagersTable", "captivesTable", "visitorsTable", "raidEnemiesTable"].forEach(id => {
+    const table = document.getElementById(id);
+    if (table) table.classList.toggle("hide-stat-columns", !visible);
+  });
+  const checkbox = document.getElementById("statColumnsToggle");
+  if (checkbox) checkbox.checked = Boolean(visible);
+}
+
 function bindGlobalHandlers() {
   Object.assign(window, {
     onNextTurn,
@@ -372,6 +381,7 @@ function bindGlobalHandlers() {
     }),
     closeWarCouncil: closeWarCouncilModal,
     toggleSpiritColumns: setSpiritColumnsVisibility,
+    toggleStatColumns: setStatColumnsVisibility,
     closeConversationModal: async () => {
       const { closeConversationModal } = await import("./conversation.js");
       closeConversationModal();
