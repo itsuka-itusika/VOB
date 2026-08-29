@@ -1356,6 +1356,7 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
     let btn=document.getElementById("nextTurnButton");
     if (btn) {
       btn.textContent="次の月へ";
+      btn.style.display = "";
       btn.disabled = false;
       btn.title = "";
     }

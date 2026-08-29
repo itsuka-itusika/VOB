@@ -542,6 +542,7 @@ export function resetRaidUiAfterAvoidance() {
   const nextBtn = document.getElementById("nextTurnButton");
   if (nextBtn) {
     nextBtn.textContent = "次の月へ";
+    nextBtn.style.display = "";
     nextBtn.disabled = false;
     nextBtn.title = "";
   }
@@ -760,8 +761,9 @@ export function startRaidEvent(village, options = {}) {
     let nextBtn = document.getElementById("nextTurnButton");
     if (nextBtn) {
       nextBtn.textContent = "次の月へ";
+      nextBtn.style.display = "none";
       nextBtn.disabled = true;
-      nextBtn.title = "襲撃中は作戦会議から迎撃を始めます";
+      nextBtn.title = "";
     }
     let autoAssignBtn = document.getElementById("autoAssignButton");
     if (autoAssignBtn) {

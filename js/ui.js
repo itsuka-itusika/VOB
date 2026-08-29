@@ -1152,11 +1152,12 @@ export function updateUI(v) {
     if (warCouncilButton) {
       warCouncilButton.style.display = raidMode ? "" : "none";
     }
-    // 襲撃中に月を進める操作は作戦会議の「迎撃開始」へ寄せる。
+    // 襲撃中に月を進める操作は作戦会議の「迎撃開始」へ寄せるため、ボタンごと隠す。
     const nextTurnButton = document.getElementById("nextTurnButton");
     if (nextTurnButton && !v.isRaidFinalizing) {
+      nextTurnButton.style.display = raidMode ? "none" : "";
       nextTurnButton.disabled = raidMode;
-      nextTurnButton.title = raidMode ? "襲撃中は作戦会議から迎撃を始めます" : "";
+      nextTurnButton.title = "";
     }
   }
 
