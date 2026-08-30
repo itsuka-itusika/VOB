@@ -923,9 +923,9 @@ body.apocalypse-mode #villageInfoHeading {
 }
 
 tr.apocalypse-conquest-row > td {
-  background: #e8c86a !important;
+  background: linear-gradient(180deg, #f6e3a1 0%, #e3c463 55%, #c9a544 100%) !important;
   border-color: #a8801f !important;
-  color: #2e2205;
+  color: #2b2005;
 }
 
 tr.apocalypse-war-row > td {
