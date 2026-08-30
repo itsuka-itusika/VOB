@@ -85,6 +85,7 @@ import {
   VILLAGE_ROLE_PRIEST,
   assignVillageRole,
   canAssignVillageRole,
+  getVillageRole,
   getVillageRoleHolder,
   getUnlockedVillageRoles,
   isAdultMindForVillageRole,
@@ -178,6 +179,22 @@ function isFilterChecked(id) {
 function hasAilmentTrait(person) {
   const traits = [...(person?.bodyTraits || []), ...(person?.mindTraits || [])];
   return traits.some(trait => AILMENT_FILTER_TRAITS.has(trait));
+}
+
+// 初期表示の並び。役職持ちを先頭に、この順で並べる。同役職の中では元の並びを保つ。
+const VILLAGE_ROLE_DISPLAY_ORDER = [
+  VILLAGE_ROLE_HEADMAN,
+  VILLAGE_ROLE_PRIEST,
+  VILLAGE_ROLE_DOCTOR,
+  VILLAGE_ROLE_LIBRARIAN
+];
+
+function getRoleDisplayRank(person) {
+  const role = getVillageRole(person);
+  if (role === VILLAGE_ROLE_NONE) return VILLAGE_ROLE_DISPLAY_ORDER.length + 1;
+  const index = VILLAGE_ROLE_DISPLAY_ORDER.indexOf(role);
+  // 将来追加される役職は「その他」として、既定の役職の後・なしの前に置く。
+  return index >= 0 ? index : VILLAGE_ROLE_DISPLAY_ORDER.length;
 }
 
 /** 自由入力の特性検索。肉体特性と精神特性のどれかに含まれれば拾う。 */
@@ -1267,7 +1284,8 @@ export function updateUI(v) {
   const villagers = Array.isArray(v.villagers) ? v.villagers : [];
   refreshFilterOptions("filterRace", villagers.map(person => person.race || "人間"), "種族：すべて");
   refreshFilterOptions("filterJob", villagers.map(getVillagerJobLabel), "仕事：すべて");
-  const shownVillagers = filterVillagers(villagers);
+  const shownVillagers = filterVillagers(villagers)
+    .sort((a, b) => getRoleDisplayRank(a) - getRoleDisplayRank(b));
   const filterCount = document.getElementById("villagerFilterCount");
   if (filterCount) {
     filterCount.textContent = shownVillagers.length === villagers.length
