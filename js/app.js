@@ -330,13 +330,13 @@ function setSpiritColumnsVisibility(visible) {
   if (checkbox) checkbox.checked = Boolean(visible);
 }
 
-function setStatColumnsVisibility(visible) {
+function setStatColumnsHidden(hidden) {
   ["villagersTable", "captivesTable", "visitorsTable", "raidEnemiesTable"].forEach(id => {
     const table = document.getElementById(id);
-    if (table) table.classList.toggle("hide-stat-columns", !visible);
+    if (table) table.classList.toggle("hide-stat-columns", Boolean(hidden));
   });
   const checkbox = document.getElementById("statColumnsToggle");
-  if (checkbox) checkbox.checked = Boolean(visible);
+  if (checkbox) checkbox.checked = Boolean(hidden);
 }
 
 function bindGlobalHandlers() {
@@ -381,7 +381,7 @@ function bindGlobalHandlers() {
     }),
     closeWarCouncil: closeWarCouncilModal,
     toggleSpiritColumns: setSpiritColumnsVisibility,
-    toggleStatColumns: setStatColumnsVisibility,
+    toggleStatColumns: setStatColumnsHidden,
     onVillagerFilterChange: () => updateUI(theVillage),
     clearVillagerFilter: () => {
       resetVillagerFilter();
