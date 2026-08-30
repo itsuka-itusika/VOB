@@ -506,7 +506,7 @@ function chooseRaidFallbackAction(person, currentPreferred, currentAction) {
 }
 
 /**
- * 迎撃の想定ダメージ。tools/balance の測定からも参照する。
+ * 迎撃の想定ダメージ。
  * useBaseStats は、一時的な増減を除いた素の能力で比べたいときに使う。
  */
 export function getExpectedDefenderDamage(person, { useBaseStats = false } = {}) {
