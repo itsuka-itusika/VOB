@@ -123,9 +123,13 @@ export function saveVillageToJsonFile(village) {
   const blob = new Blob([jsonStr], { type: "application/json" });
   const url = URL.createObjectURL(blob);
 
+  // ファイル名に保存日(yyyymmdd)を入れて、複数の保存を見分けられるようにする
+  const now = new Date();
+  const dateText = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+
   const a = document.createElement("a");
   a.href = url;
-  a.download = "village_save.json";
+  a.download = `village_save_${dateText}.json`;
   document.body.appendChild(a);
   a.click();
 
