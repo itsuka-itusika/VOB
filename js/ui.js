@@ -180,6 +180,12 @@ function hasAilmentTrait(person) {
   return traits.some(trait => AILMENT_FILTER_TRAITS.has(trait));
 }
 
+/** 自由入力の特性検索。肉体特性と精神特性のどれかに含まれれば拾う。 */
+function matchesTraitQuery(person, query) {
+  const traits = [...(person?.bodyTraits || []), ...(person?.mindTraits || [])];
+  return traits.some(trait => String(trait).includes(query));
+}
+
 function getVillagerJobLabel(person) {
   return getActionDisplayName(person?.action) || "なし";
 }
@@ -209,6 +215,7 @@ function filterVillagers(villagers) {
   const spiritSex = getFilterValue("filterSpiritSex");
   const race = getFilterValue("filterRace");
   const job = getFilterValue("filterJob");
+  const traitQuery = getFilterValue("filterTrait").trim();
   const needsAilment = isFilterChecked("filterAilment");
   const needsLover = isFilterChecked("filterLover");
   const needsSpouse = isFilterChecked("filterMarried");
@@ -218,6 +225,7 @@ function filterVillagers(villagers) {
     if (spiritSex && person.spiritSex !== spiritSex) return false;
     if (race && (person.race || "人間") !== race) return false;
     if (job && getVillagerJobLabel(person) !== job) return false;
+    if (traitQuery && !matchesTraitQuery(person, traitQuery)) return false;
     if (needsAilment && !hasAilmentTrait(person)) return false;
     if (needsLover && !hasLoverRelationship(person)) return false;
     if (needsSpouse && !hasSpouseRelationship(person)) return false;
@@ -235,6 +243,8 @@ export function resetVillagerFilter() {
     const checkbox = document.getElementById(id);
     if (checkbox) checkbox.checked = false;
   });
+  const traitInput = document.getElementById("filterTrait");
+  if (traitInput) traitInput.value = "";
 }
 
 function appendDictionaryTerm(parent, term, options = {}) {

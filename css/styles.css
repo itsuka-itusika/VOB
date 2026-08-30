@@ -1039,6 +1039,13 @@ table.hide-stat-columns .stat-column {
   padding: 1px 4px;
   font-size: 0.85rem;
 }
+.villager-filter input[type="search"] {
+  width: 96px;
+  height: 24px;
+  box-sizing: border-box;
+  padding: 1px 4px;
+  font-size: 0.85rem;
+}
 .villager-filter label {
   display: inline-flex;
   align-items: center;
