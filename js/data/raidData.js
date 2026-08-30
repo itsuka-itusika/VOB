@@ -1221,7 +1221,7 @@ export const RAID_MODULES = [
     weight: 14,
     representative: { raiderType: "ハーピーの長", role: "leader" },
     enemyGroups: [
-      { raiderType: "ハーピー", minCount: 3, maxCount: 4 },
+      { raiderType: "ハーピー", minCount: 4, maxCount: 5 },
       { raiderType: "ハーピーの長", minCount: 1, maxCount: 1 }
     ],
     failurePenalty: {
