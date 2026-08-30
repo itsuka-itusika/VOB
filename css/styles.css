@@ -32,6 +32,17 @@ body {
   font-family: sans-serif;
   background: #f5f5f5;
   color: #333;
+  --village-scale-image: url("../images/village-scale-01-unnamed-hamlet.webp");
+}
+/* ページ全体の背景に、現在の発展段階の村をうっすら敷く */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--village-scale-image) center / cover no-repeat;
+  opacity: 0.16;
+  pointer-events: none;
 }
 body.opening-active {
   overflow: hidden;
@@ -723,10 +734,11 @@ th, td {
 .log-area {
   height: 400px;
   overflow-y: auto;
-  --village-scale-image: url("../images/village-scale-01-unnamed-hamlet.webp");
+  /* ページ背景と同じ村絵を固定配置で敷き、枠の内外で絵がつながって見えるようにする。
+     文字を読みやすくするため、ページ背景よりひとまわり薄い。 */
   background:
-    linear-gradient(rgba(255,255,255,0.86), rgba(255,255,255,0.91)),
-    var(--village-scale-image) center / cover no-repeat #fff;
+    linear-gradient(rgba(255,255,255,0.90), rgba(255,255,255,0.90)),
+    var(--village-scale-image) center / cover no-repeat fixed #fff;
   border: 1px solid #ccc;
   padding: 5px;
   font-size: 0.85rem;
@@ -830,31 +842,31 @@ select {
     linear-gradient(rgba(255,248,226,0.72), rgba(255,255,255,0.92)),
     var(--village-scale-image) center / cover no-repeat #f7efd9;
 }
-body.scale-stage-0 .log-area,
+body.scale-stage-0,
 #villageScaleModal.scale-stage-0 {
   --village-scale-image: url("../images/village-scale-01-unnamed-hamlet.webp");
 }
-body.scale-stage-1 .log-area,
+body.scale-stage-1,
 #villageScaleModal.scale-stage-1 {
   --village-scale-image: url("../images/village-scale-02-small-frontier-village.webp");
 }
-body.scale-stage-2 .log-area,
+body.scale-stage-2,
 #villageScaleModal.scale-stage-2 {
   --village-scale-image: url("../images/village-scale-03-border-village.webp");
 }
-body.scale-stage-3 .log-area,
+body.scale-stage-3,
 #villageScaleModal.scale-stage-3 {
   --village-scale-image: url("../images/village-scale-04-traveler-stop.webp");
 }
-body.scale-stage-4 .log-area,
+body.scale-stage-4,
 #villageScaleModal.scale-stage-4 {
   --village-scale-image: url("../images/village-scale-05-rich-village.webp");
 }
-body.scale-stage-5 .log-area,
+body.scale-stage-5,
 #villageScaleModal.scale-stage-5 {
   --village-scale-image: url("../images/village-scale-06-prosperous-rural-village.webp");
 }
-body.scale-stage-6 .log-area,
+body.scale-stage-6,
 #villageScaleModal.scale-stage-6 {
   --village-scale-image: url("../images/village-scale-07-autonomous-settlement.webp");
 }
@@ -875,8 +887,8 @@ body.apocalypse-mode .resource-box {
 }
 body.apocalypse-mode .log-area {
   background:
-    linear-gradient(rgba(255, 236, 232, 0.85), rgba(243, 219, 214, 0.92)),
-    var(--village-scale-image) center / cover no-repeat #fff;
+    linear-gradient(rgba(255, 236, 232, 0.90), rgba(243, 219, 214, 0.93)),
+    var(--village-scale-image) center / cover no-repeat fixed #fff;
   border-color: #a45f5f;
 }
 body.apocalypse-mode #villageInfoHeading {
