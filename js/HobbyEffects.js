@@ -145,6 +145,12 @@ export class HobbyEffects {
       case "羽づくろい":
         msg = this.applyGrooming(p, "羽づくろい");
         break;
+      case "光輪磨き":
+        msg = this.applyGrooming(p, "光輪磨き");
+        break;
+      case "飛翔":
+        msg = this.applySoaring(p);
+        break;
       case "繁殖":
         msg = this.applyBreedingHobby(p);
         break;
@@ -590,6 +596,14 @@ export class HobbyEffects {
     p.hp = clampValue(p.hp - 8, 0, 100);
     p.happiness = clampValue(p.happiness + 12, 0, 100);
     return `(遠乗り:体力-8,幸福+12${this.maybeRaiseStat(p, "cou", 0.2)}${this.maybeRaiseStat(p, "vit", 0.15)})`;
+  }
+
+  // 遠乗りの翼人版。地を蹴らずに高く昇るぶん、体力の消耗は軽い。
+  static applySoaring(p) {
+    p.hp = clampValue(p.hp - 5, 0, 100);
+    p.mp = clampValue(p.mp + 10, 0, 100);
+    p.happiness = clampValue(p.happiness + 12, 0, 100);
+    return `(飛翔:体力-5,メンタル+10,幸福+12${this.maybeRaiseStat(p, "cou", 0.2)}${this.maybeRaiseStat(p, "dex", 0.15)})`;
   }
 
   static applyGrooming(p, label) {

@@ -491,6 +491,11 @@ export function openWarCouncilModal(village, { onStart = null, onAutoAssign = nu
   overlay.id = OVERLAY_ID;
   overlay.className = "wc-overlay";
 
+  // 堅忍は籠城で組む方針のため、木柵を建てるまでは押せても意味がない。
+  const fortifyHidden = hasActiveBuildingFlag(village, "hasWoodenFence", "woodenFence")
+    ? ""
+    : ' style="display:none;"';
+
   const modal = document.createElement("div");
   modal.id = MODAL_ID;
   modal.className = "wc-modal";
@@ -502,7 +507,7 @@ export function openWarCouncilModal(village, { onStart = null, onAutoAssign = nu
       <h2 id="${MODAL_ID}Title">作戦会議</h2>
       <div class="wc-header-buttons">
         <button type="button" data-wc-auto="defend">防衛割り振り</button>
-        <button type="button" data-wc-auto="fortify" title="籠城を中心に組み、持久戦で凌ぎます">防衛割り振り（堅忍）</button>
+        <button type="button" data-wc-auto="fortify" title="籠城を中心に組み、持久戦で凌ぎます"${fortifyHidden}>防衛割り振り（堅忍）</button>
         <button type="button" data-wc-auto="economy" title="勝てる見込みを保てる最低限の人数だけ出します">防衛割り振り（省力）</button>
         <button type="button" data-wc-miracle>奇跡の行使</button>
         <button type="button" data-wc-close>戻る</button>

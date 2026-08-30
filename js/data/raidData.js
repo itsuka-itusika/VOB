@@ -2,6 +2,13 @@ function numberedPortraits(prefix, count) {
   return Array.from({ length: count }, (_, index) => `${prefix}${index + 1}.png`);
 }
 
+// 翼人兵と上位翼人が共有する趣味。天と光、翼、信仰に寄せる。
+const WINGED_RAIDER_HOBBIES = [
+  "祈り", "瞑想", "歌唱", "詩作",
+  "羽づくろい", "光輪磨き", "飛翔",
+  "日光浴", "天体観測", "人間観察"
+];
+
 export const RAIDER_TYPES = [
   {
     type: "野盗",
@@ -827,6 +834,7 @@ export const RAIDER_TYPES = [
       cou: [22, 26],
       sexdr: [3, 8]
     },
+    hobbies: WINGED_RAIDER_HOBBIES,
     forcedBodyTraits: ["飛行", "光輪"],
     mindTraits: ["神聖", "狂信"],
     dialogues: [
@@ -865,6 +873,7 @@ export const RAIDER_TYPES = [
       cou: [22, 30],
       sexdr: [3, 10]
     },
+    hobbies: WINGED_RAIDER_HOBBIES,
     forcedBodyTraits: ["飛行", "光輪"],
     mindTraits: ["神聖", "狂信", "歴戦"],
     dialogues: [

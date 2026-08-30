@@ -1299,8 +1299,8 @@ let sortState = {
 };
 
 // 列番号は index.html の村人一覧テーブルと対応する。列を増減したら両方を合わせること。
-// 行動と役職はプルダウンのため、並べ替えの対象にしない。
-const SORTABLE_VILLAGER_COLUMNS = [3, 4, 5, 6, 7, 8, 9, 10, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23];
+// 行動と役職はプルダウンだが、選ばれている項目の名前で並べ替える。
+const SORTABLE_VILLAGER_COLUMNS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23];
 const NUMERIC_VILLAGER_COLUMNS = [5, 7, 8, 9, 10, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23];
 
 /**
@@ -1334,6 +1334,17 @@ function setupTableSort() {
 }
 
 /**
+ * 並べ替えに使う文字列。行動・役職はプルダウンなので、選ばれている項目の名前を取る。
+ * セルの textContent には選択肢の全文が入ってしまうため、直接は使えない。
+ */
+function getSortText(cell) {
+  if (!cell) return "";
+  const select = cell.querySelector("select");
+  if (select) return select.options[select.selectedIndex]?.textContent?.trim() ?? "";
+  return cell.textContent.trim();
+}
+
+/**
  * テーブルのソート実行
  */
 function sortVillagerTable(colIndex, isAsc) {
@@ -1344,18 +1355,21 @@ function sortVillagerTable(colIndex, isAsc) {
   const rows = Array.from(tbody.querySelectorAll("tr"));
 
   rows.sort((a, b) => {
-    let aVal = a.cells[colIndex]?.textContent ?? "";
-    let bVal = b.cells[colIndex]?.textContent ?? "";
+    const aText = getSortText(a.cells[colIndex]);
+    const bText = getSortText(b.cells[colIndex]);
 
     // 数値の場合は数値としてソート
     if (NUMERIC_VILLAGER_COLUMNS.includes(colIndex)) {
-      aVal = Number(aVal);
-      bVal = Number(bVal);
+      const aNum = Number(aText);
+      const bNum = Number(bText);
+      if (aNum < bNum) return isAsc ? -1 : 1;
+      if (aNum > bNum) return isAsc ? 1 : -1;
+      return 0;
     }
 
-    if (aVal < bVal) return isAsc ? -1 : 1;
-    if (aVal > bVal) return isAsc ? 1 : -1;
-    return 0;
+    // 名前・肉体・種族などは五十音順で並べる。
+    const diff = aText.localeCompare(bText, "ja");
+    return isAsc ? diff : -diff;
   });
 
   // ソート後のテーブルを再構築
