@@ -151,6 +151,9 @@ export class HobbyEffects {
       case "飛翔":
         msg = this.applySoaring(p);
         break;
+      case "聖句誦唱":
+        msg = this.applyScriptureRecitation(p);
+        break;
       case "繁殖":
         msg = this.applyBreedingHobby(p);
         break;
@@ -596,6 +599,12 @@ export class HobbyEffects {
     p.hp = clampValue(p.hp - 8, 0, 100);
     p.happiness = clampValue(p.happiness + 12, 0, 100);
     return `(遠乗り:体力-8,幸福+12${this.maybeRaiseStat(p, "cou", 0.2)}${this.maybeRaiseStat(p, "vit", 0.15)})`;
+  }
+
+  // 経典の一節を繰り返し唱える。祈りと違って魔素は生まないが、心と規律が強く整う。
+  static applyScriptureRecitation(p) {
+    p.mp = clampValue(p.mp + 18, 0, 100);
+    return `(聖句誦唱:メンタル+18${this.maybeRaiseStat(p, "eth", 0.35)}${this.maybeRaiseStat(p, "int", 0.2)})`;
   }
 
   // 遠乗りの翼人版。地を蹴らずに高く昇るぶん、体力の消耗は軽い。
