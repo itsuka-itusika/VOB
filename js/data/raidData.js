@@ -1107,6 +1107,13 @@ export const FALLBACK_RAID_RULES = {
   failurePenalty: cloneRaidRules(DEFAULT_RAID_FAILURE_PENALTY)
 };
 
+// 逸れハーピーの襲撃はハーピーの襲撃と同じ告知にする。
+const HARPY_RAID_INTRO_DIALOGUES = [
+  "キャハハ！上から見ていたのよ。いい村を見つけちゃった！",
+  "屋根の隙間から、光るものが覗いているわ。頂きに来たの。",
+  "空から降りてくるものに、備えなんてしていないでしょう？"
+];
+
 export const RAID_MODULES = [
   createExistingRaiderRaid("bandit", "野盗", {
     failurePenalty: {
@@ -1191,11 +1198,7 @@ export const RAID_MODULES = [
     failurePenalty: {
       fundsRate: 0.25
     },
-    introDialogues: [
-      "キャハハ！上から見ていたのよ。いい村を見つけちゃった！",
-      "屋根の隙間から、光るものが覗いているわ。頂きに来たの。",
-      "空から降りてくるものに、備えなんてしていないでしょう？"
-    ]
+    introDialogues: HARPY_RAID_INTRO_DIALOGUES
   }),
   createCompositeRaiderRaid({
     id: "stray-harpy",
@@ -1209,11 +1212,7 @@ export const RAID_MODULES = [
     failurePenalty: {
       fundsRate: 0.15
     },
-    introDialogues: [
-      "キャハ...群れとはぐれちゃった。でも、一羽でも足りるわ。",
-      "手ぶらでは巣に帰れないの。少しだけ頂くわね。",
-      "一羽だからと侮らないで。空にいるのは私だけよ。"
-    ]
+    introDialogues: HARPY_RAID_INTRO_DIALOGUES
   }),
   createCompositeRaiderRaid({
     id: "harpy-swarm",
