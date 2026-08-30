@@ -923,9 +923,9 @@ body.apocalypse-mode #villageInfoHeading {
 }
 
 tr.apocalypse-conquest-row > td {
-  background: #fff !important;
-  border-color: #d4af37 !important;
-  color: #211805;
+  background: #e8c86a !important;
+  border-color: #a8801f !important;
+  color: #2e2205;
 }
 
 tr.apocalypse-war-row > td {
@@ -972,6 +972,16 @@ tr td:nth-child(25) {
   font-weight: bold;
 }
 .status-debuff {
+  color: #1565c0;
+  font-weight: bold;
+}
+
+/* 傷病の肉体特性は赤、心を削る精神特性は青で太字にする。 */
+.dictionary-term.trait-injury {
+  color: #c62828;
+  font-weight: bold;
+}
+.dictionary-term.trait-despair {
   color: #1565c0;
   font-weight: bold;
 }

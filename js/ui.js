@@ -148,12 +148,27 @@ function getTermTooltip(label, category) {
   return lines.join("\n");
 }
 
+// 一覧で目立たせる状態異常。傷と病は赤、心を削る状態は青にする。
+// 飢餓・凍え・疲労・過労はステータス側が status-debuff で示すため、ここには入れない。
+const INJURY_BODY_TRAITS = new Set(["負傷", "重体", "危篤", "疫病", "曝露"]);
+const DESPAIR_MIND_TRAITS = new Set(["心労", "抑鬱", "失望", "絶望"]);
+
+function getTraitEmphasisClass(label) {
+  if (INJURY_BODY_TRAITS.has(label)) return "trait-injury";
+  if (DESPAIR_MIND_TRAITS.has(label)) return "trait-despair";
+  return "";
+}
+
 function appendDictionaryTerm(parent, term, options = {}) {
   const label = String(term || "").trim();
   if (!label) return;
 
   const span = document.createElement("span");
   span.className = "dictionary-term";
+  if (options.category === "trait") {
+    const emphasis = getTraitEmphasisClass(label);
+    if (emphasis) span.classList.add(emphasis);
+  }
   span.tabIndex = 0;
   span.textContent = label;
   span.title = getTermTooltip(label, options.category);
