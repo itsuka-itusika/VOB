@@ -148,19 +148,24 @@ function getTermTooltip(label, category) {
   return lines.join("\n");
 }
 
-// 一覧で目立たせる状態異常。傷と病は赤、心を削る状態は青にする。
-// 飢餓・凍え・疲労・過労はステータス側が status-debuff で示すため、ここには入れない。
-const INJURY_BODY_TRAITS = new Set(["負傷", "重体", "危篤", "疫病", "曝露"]);
-const DESPAIR_MIND_TRAITS = new Set(["心労", "抑鬱", "失望", "絶望"]);
+// 行動が奪われ、療養などへ固定される状態異常。身体か精神かを問わず赤の太字で示す。
+// js/domain/jobTables.js の applyForcedActionRestriction が縛る特性と揃える。
+const INCAPACITATING_TRAITS = new Set([
+  "塩の柱", "危篤", "重体", "負傷", "疫病", "過労", "産褥", "抑鬱"
+]);
+// 動けはするが放置できない状態異常。青の太字で示す。
+const IMPAIRING_TRAITS = new Set([
+  "疲労", "飢餓", "凍え", "曝露", "臨月", "心労", "失望", "絶望"
+]);
 
 function getTraitEmphasisClass(label) {
-  if (INJURY_BODY_TRAITS.has(label)) return "trait-injury";
-  if (DESPAIR_MIND_TRAITS.has(label)) return "trait-despair";
+  if (INCAPACITATING_TRAITS.has(label)) return "trait-incapacitated";
+  if (IMPAIRING_TRAITS.has(label)) return "trait-impaired";
   return "";
 }
 
 // 村人一覧の絞り込み。傷病は、赤と青で強調している状態異常をまとめて拾う。
-const AILMENT_FILTER_TRAITS = new Set([...INJURY_BODY_TRAITS, ...DESPAIR_MIND_TRAITS]);
+const AILMENT_FILTER_TRAITS = new Set([...INCAPACITATING_TRAITS, ...IMPAIRING_TRAITS]);
 
 function getFilterValue(id) {
   return document.getElementById(id)?.value || "";

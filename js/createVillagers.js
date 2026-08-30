@@ -96,6 +96,9 @@ const RARE_VISITOR_TYPES = [
         race: "翼人"
       },
       ranges: {
+        hp: [70, 95],
+        mp: [80, 100],      // 天の加護が心を支える
+        happiness: [55, 80],
         int: [10, 20],
         ind: [10, 20],
         cou: [8, 20],
@@ -123,6 +126,9 @@ const RARE_VISITOR_TYPES = [
         race: "アルセイド"
       },
       ranges: {
+        hp: [55, 80],       // 森を離れると身体が弱る
+        mp: [75, 95],
+        happiness: [60, 85],
         str: [5, 20],
         vit: [5, 20],
         chr: [18, 27],
@@ -154,6 +160,9 @@ const RARE_VISITOR_TYPES = [
         race: "ネレイド"
       },
       ranges: {
+        hp: [55, 80],       // 水を離れると身体が弱る
+        mp: [75, 95],
+        happiness: [60, 85],
         str: [5, 20],
         vit: [5, 20],
         chr: [18, 27],
@@ -181,6 +190,9 @@ const RARE_VISITOR_TYPES = [
         race: "ドライアド"
       },
       ranges: {
+        hp: [50, 75],       // 宿り木を離れると身体が弱る
+        mp: [80, 100],
+        happiness: [65, 90],
         str: [5, 20],
         vit: [5, 20],
         chr: [18, 27],
@@ -212,6 +224,9 @@ const RARE_VISITOR_TYPES = [
         race: "アラクニド"
       },
       ranges: {
+        hp: [65, 90],
+        mp: [50, 75],
+        happiness: [40, 65],
         int: [5, 16],
         ind: [5, 16],
         eth: [5, 18],
@@ -239,6 +254,9 @@ const EQUINA_VISITOR_TYPE = {
     race: "エクイナ"
   },
   ranges: {
+    hp: [80, 100],    // 馬体で草原を渡ってきた
+    mp: [70, 90],
+    happiness: [50, 75],
     str: [11, 25],
     vit: [11, 25],
     dex: [11, 25],
@@ -271,6 +289,9 @@ const SATYR_VISITOR_TYPE = {
     race: "サテュロス"
   },
   ranges: {
+    hp: [75, 95],
+    mp: [80, 100],    // 宴を渡り歩き、心は満ちている
+    happiness: [70, 95],
     mag: [11, 25],
     chr: [15, 25],
     int: [5, 25],
@@ -296,6 +317,9 @@ const MAENAD_VISITOR_TYPE = {
     race: "メナド"
   },
   ranges: {
+    hp: [65, 90],
+    mp: [80, 100],    // 宴を渡り歩き、心は満ちている
+    happiness: [70, 95],
     mag: [20, 27],
     chr: [20, 27],
     int: [5, 25],

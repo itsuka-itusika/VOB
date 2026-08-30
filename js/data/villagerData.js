@@ -179,6 +179,11 @@ export const VISITOR_TYPES = [
       job: "流民",
       action: "訪問"
     },
+    ranges: {
+      hp: [55, 80],       // 逃れてきた道中で消耗している
+      mp: [45, 70],
+      happiness: [20, 45] // 住処を失った不安
+    },
     status: "normal",
   },
   {
@@ -188,6 +193,11 @@ export const VISITOR_TYPES = [
     params: {
       job: "移民",
       action: "訪問"
+    },
+    ranges: {
+      hp: [70, 90],       // 移住の備えをしてきた
+      mp: [60, 85],
+      happiness: [45, 70]
     },
     status: "normal"
   },
@@ -200,6 +210,9 @@ export const VISITOR_TYPES = [
       action: "訪問"
     },
     ranges: {
+      hp: [80, 100],      // 荒事に慣れて頑健
+      mp: [70, 95],
+      happiness: [50, 75],
       str: [18, 25],  // 高い筋力
       vit: [18, 25],  // 高い体力
       cou: [20, 25]   // 高い勇気
@@ -214,6 +227,9 @@ export const VISITOR_TYPES = [
       action: "訪問"
     },
     ranges: {
+      hp: [60, 85],       // 長い巡礼で足は疲れている
+      mp: [75, 95],       // 信心が心を支える
+      happiness: [55, 80],
       mag: [18, 25],  // 高い魔力
       eth: [20, 25],  // 高い倫理
       sexdr: [5, 15]  // 低い好色
@@ -228,6 +244,9 @@ export const VISITOR_TYPES = [
       action: "訪問"
     },
     ranges: {
+      hp: [55, 80],       // 机に向かい続けて体は弱い
+      mp: [65, 90],
+      happiness: [45, 70],
       int: [20, 27],  // 高い知力
       ind: [20, 24],  // やや高い勤勉
       str: [5, 15],   // 低い筋力
@@ -241,6 +260,11 @@ export const VISITOR_TYPES = [
       job: "観光客",
       action: "訪問"
     },
+    ranges: {
+      hp: [70, 95],       // 物見遊山の余裕がある
+      mp: [75, 95],
+      happiness: [65, 90]
+    }
   },
   {
     type: "旅人",
@@ -250,6 +274,11 @@ export const VISITOR_TYPES = [
       job: "旅人",
       action: "訪問"
     },
+    ranges: {
+      hp: [70, 95],       // 旅慣れている
+      mp: [65, 90],
+      happiness: [50, 75]
+    }
   },
   {
     type: "行商人",
@@ -260,6 +289,9 @@ export const VISITOR_TYPES = [
       action: "訪問"
     },
     ranges: {
+      hp: [70, 90],
+      mp: [70, 90],
+      happiness: [55, 80],
       chr: [16, 22],  // 高い魅力
       dex: [12, 20],  // やや高い器用
       int: [12, 20],  // やや高い知力
@@ -277,6 +309,9 @@ export const VISITOR_TYPES = [
       action: "訪問"
     },
     ranges: {
+      hp: [35, 60],       // 村を追われ、蓄えも体力も尽きかけている
+      mp: [30, 55],
+      happiness: [5, 25],
       str: [5, 10],   // 低い筋力
       vit: [5, 10],   // 低い体力
       dex: [8, 16],   // 低い体力
