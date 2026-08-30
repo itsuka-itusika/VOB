@@ -5,7 +5,7 @@ import { applyPortraitToElement, getPortraitSpriteHtml } from "./data/portraitAt
 import { addRelationship, removeRelationship, checkHasRelationship, hasLoverRelationship, getRelationshipTargetId, clearRelationshipsForDepartedVillager, addSpouseRelationships, raiseMutualFriendshipTo } from "./relationships.js";
 import { updateUI } from "./ui.js";  // 実行後にUIを更新する
 import { canExchangeBody, doExchange } from "./exchange.js";
-import { createRandomVisitor, createRandomVisitorOfType, determineSpeechType, isRareVisitorTypeAvailable, EXCLUSIVE_BODY_TRAITS, EXCLUSIVE_MIND_TRAITS } from "./createVillagers.js";
+import { createRandomVisitor, createRandomVisitorOfType, isRareVisitorTypeAvailable, EXCLUSIVE_BODY_TRAITS, EXCLUSIVE_MIND_TRAITS } from "./createVillagers.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
@@ -15,7 +15,7 @@ import { resolveDialogueTone } from "./data/dialogue/toneProfiles.js";
 import { getDialogueLine } from "./dialogue/dialogueEngine.js";
 import { BODY_EXCHANGE_SOURCE_RACE_LINE_KEYS, BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
 import { getVisitorArrivalLine } from "./data/dialogue/visitorLines.js";
-import { getActiveVillagers, isSaltPillar } from "./domain/apocalypseRules.js";
+import { getActiveVillagers, isSaltPillar, SALT_PILLAR_TRAIT } from "./domain/apocalypseRules.js";
 import { getSelectableRaidTables, startRaidEvent } from "./raidStart.js";
 import { getRaiderIncomingDamageMultiplier } from "./raidRules.js";
 import { completeTutorialTask } from "./tutorial.js";
@@ -57,7 +57,11 @@ const EFFECT_RESULT_DIALOGUES = {
   "奇妙な計算機械": { scene: "secretTreasure", key: "strangeCalculator" },
   "蛇の巻き付いた杖": { scene: "secretTreasure", key: "serpentStaff" },
   "クロノスの秘薬": { scene: "secretTreasure", key: "chronosElixir" },
-  "腕の無い天使像": { scene: "secretTreasure", key: "armlessAngel" }
+  "腕の無い天使像": { scene: "secretTreasure", key: "armlessAngel" },
+  "悍ましい肖像画": { scene: "miracle", key: "grotesquePortrait" },
+  "旅人の奇跡": { scene: "miracle", key: "traveler" },
+  "市場の奇跡": { scene: "miracle", key: "market" },
+  "出立の奇跡": { scene: "miracle", key: "departure" }
 };
 
 function getAlcoholMiracleRecoveryAmount(person, baseAmount) {
@@ -68,14 +72,18 @@ function getAlcoholMiracleRecoveryAmount(person, baseAmount) {
 /**
  * 奇跡リスト
  */
+// 宴会・狂宴の費用は在籍人数に比例し、魔素と資金を同額ずつ消費する。
+export const FEAST_COST_PER_PERSON = 10;
+export const REVEL_COST_PER_PERSON = 20;
+
 export const MIRACLES = [
   {id:"12", name:"交換の奇跡(20)", cost:20, desc:"2人の肉体を交換"},
   {id:"13", name:"交換の奇跡・強(200)", cost:200, desc:"村外含む2人交換"},
   {id:"1",  name:"豊穣の奇跡(100)", cost:100, desc:"今月のみ、農作業・伐採・狩猟・漁・採集の成果と醸造の食料獲得2倍"},
   {id:"2",  name:"マナの奇跡(40)",  cost:40,  desc:"食料+80"},
   {id:"3",  name:"クピドの奇跡(80)", cost:80, desc:"2人を強制結婚(条件無視)"},
-  {id:"4",  name:"宴会の奇跡(人数×15)", cost:-1, desc:"全員体力/メンタル+20,幸福+20,失望/絶望解除 (資金×人数分も要)"},
-  {id:"5",  name:"狂宴の奇跡(人数×30)", cost:-2, desc:"全員体力/メンタル+60,幸福+50,失望/絶望解除,倫理↓,好色+15"},
+  {id:"4",  name:`宴会の奇跡(人数×${FEAST_COST_PER_PERSON})`, cost:-1, desc:"全員体力/メンタル+20,幸福+20,飢餓/凍え/失望/絶望解除 (資金×人数分も要)"},
+  {id:"5",  name:`狂宴の奇跡(人数×${REVEL_COST_PER_PERSON})`, cost:-2, desc:"全員体力/メンタル全回復,幸福+50,飢餓/凍え/失望/絶望解除,倫理↓,好色+15"},
   {id:"6",  name:"癒しの奇跡(80)", cost:80, desc:"1人の負傷/重体/疫病/疲労等回復,体力+50"},
   {id:"20", name:"清拭の奇跡(60)", cost:60, desc:"3ヶ月間、村特性「清浄」を付与し、疫病の感染と重体の危篤化を防ぐ"},
   {id:"16", name:"酒杯の奇跡(50)", cost:50, desc:"1人の心労/抑鬱/失望/絶望回復,メンタル+50,幸福+30,酩酊付与"},
@@ -172,14 +180,20 @@ export function onSelectMiracleChange(village) {
   }
 }
 
+/** 宴会・狂宴の費用を数える人数。効果が届かない塩の柱は数えない。 */
+function countFeastCostTargets(village) {
+  const villagers = Array.isArray(village?.villagers) ? village.villagers : [];
+  return villagers.filter(person => !isSaltPillar(person)).length;
+}
+
 function getMiracleCostInfo(miracle, village) {
-  const peopleCount = village.villagers.length;
+  const peopleCount = countFeastCostTargets(village);
   if (miracle.cost === -1) {
-    const amount = peopleCount * 15;
+    const amount = peopleCount * FEAST_COST_PER_PERSON;
     return { mana: amount, funds: amount, label: `魔素: ${amount} / 資金: ${amount}` };
   }
   if (miracle.cost === -2) {
-    const amount = peopleCount * 30;
+    const amount = peopleCount * REVEL_COST_PER_PERSON;
     return { mana: amount, funds: amount, label: `魔素: ${amount} / 資金: ${amount}` };
   }
   const hasGoldenStatue = hasActiveBuildingFlag(village, "hasBacchusGoldenStatue", "bacchusGoldenStatue");
@@ -209,6 +223,18 @@ function spendMiracleMana(village, cost) {
 function refundMiracleMana(village, cost) {
   village.mana = clampValue(village.mana + cost, 0, 99999);
   subtractDivineMight(village, getDivineMightGainFromMiracleCost(cost));
+}
+
+// 宴会・狂宴で振る舞う飲食が癒す、欠乏由来の状態異常。
+const BANQUET_MIRACLE_BODY_TRAITS = ["飢餓", "凍え"];
+
+/** 宴会・狂宴で飢餓と凍えを取り除く。1つでも取り除けたら true。 */
+function clearBanquetBodyTraits(person, village) {
+  if (!BANQUET_MIRACLE_BODY_TRAITS.some(trait => person.bodyTraits.includes(trait))) return false;
+  person.bodyTraits = person.bodyTraits.filter(trait => !BANQUET_MIRACLE_BODY_TRAITS.includes(trait));
+  syncEffectiveStats(person);
+  refreshJobTable(person, village);
+  return true;
 }
 
 function clearHopeLossByMiracle(person, village) {
@@ -951,17 +977,17 @@ export function performMiracle(village) {
     .map(id => findMiracleTargetById(id, village))
     .filter(Boolean);
   if (multiTargets.length > 0) cost *= multiTargets.length;
-  let vc = village.villagers.length;
+  const vc = countFeastCostTargets(village);
   if (info.cost===-1) {
-    // 宴会(人数×15)
-    cost = vc * 15;
+    // 宴会
+    cost = vc * FEAST_COST_PER_PERSON;
     if (village.mana<cost || village.funds<cost) {
       village.log(`魔素or資金不足(必要:${cost})`);
       return;
     }
   } else if (info.cost===-2) {
-    // 狂宴(人数×30)
-    cost = vc * 30;
+    // 狂宴
+    cost = vc * REVEL_COST_PER_PERSON;
     if (village.mana<cost || village.funds<cost) {
       village.log(`魔素or資金不足(必要:${cost})`);
       return;
@@ -1011,6 +1037,7 @@ export function performMiracle(village) {
       village.funds-=cost;
       let feastRecoveredCount = 0;
       let feastHeavyDrinkerCount = 0;
+      let feastNeedRecoveredCount = 0;
       village.villagers.forEach(p=>{
         if (isSaltPillar(p)) return;
         const hpRecovery = getAlcoholMiracleRecoveryAmount(p, 20);
@@ -1020,9 +1047,10 @@ export function performMiracle(village) {
         p.mp=clampValue(p.mp+mpRecovery,0,100);
         p.happiness=clampValue(p.happiness+happinessRecovery,0,100);
         if (hpRecovery > 20) feastHeavyDrinkerCount++;
+        if (clearBanquetBodyTraits(p, village)) feastNeedRecoveredCount++;
         if (clearHopeLossByMiracle(p, village).length > 0) feastRecoveredCount++;
       });
-      village.log(`【宴会】全員体力/メンタル+20,幸福+20(費用:${cost})${feastHeavyDrinkerCount > 0 ? `,酒豪${feastHeavyDrinkerCount}人は回復量1.5倍` : ""}${feastRecoveredCount > 0 ? `,失望・絶望${feastRecoveredCount}人解除` : ""}`);
+      village.log(`【宴会】全員体力/メンタル+20,幸福+20(費用:${cost})${feastHeavyDrinkerCount > 0 ? `,酒豪${feastHeavyDrinkerCount}人は回復量1.5倍` : ""}${feastNeedRecoveredCount > 0 ? `,飢餓・凍え${feastNeedRecoveredCount}人解除` : ""}${feastRecoveredCount > 0 ? `,失望・絶望${feastRecoveredCount}人解除` : ""}`);
       showMiracleResultModal(village, "宴会の奇跡", "村中に賑やかな宴が開かれました。", getActiveVillagers(village));
       break;
 
@@ -1031,15 +1059,16 @@ export function performMiracle(village) {
       village.funds-=cost;
       let revelRecoveredCount = 0;
       let revelHeavyDrinkerCount = 0;
+      let revelNeedRecoveredCount = 0;
       village.villagers.forEach(p=>{
         if (isSaltPillar(p)) return;
-        const hpRecovery = getAlcoholMiracleRecoveryAmount(p, 60);
-        const mpRecovery = getAlcoholMiracleRecoveryAmount(p, 60);
+        // 体力とメンタルは全回復するため、酒豪の倍率は幸福度にだけ効く。
         const happinessRecovery = getAlcoholMiracleRecoveryAmount(p, 50);
-        p.hp=clampValue(p.hp+hpRecovery,0,100);
-        p.mp=clampValue(p.mp+mpRecovery,0,100);
+        p.hp=100;
+        p.mp=100;
         p.happiness=clampValue(p.happiness+happinessRecovery,0,100);
-        if (hpRecovery > 60) revelHeavyDrinkerCount++;
+        if (happinessRecovery > 50) revelHeavyDrinkerCount++;
+        if (clearBanquetBodyTraits(p, village)) revelNeedRecoveredCount++;
         if (clearHopeLossByMiracle(p, village).length > 0) revelRecoveredCount++;
         // 狂乱特性を付与（まだ持っていない場合のみ）
         if (!p.mindTraits.includes("狂乱")) {
@@ -1047,7 +1076,7 @@ export function performMiracle(village) {
           syncEffectiveStats(p);
         }
       });
-      village.log(`【狂宴】全員体力/メンタル+60,幸福+50,狂乱付与(倫理*0.2,好色+15)${revelHeavyDrinkerCount > 0 ? `,酒豪${revelHeavyDrinkerCount}人は回復量1.5倍` : ""}${revelRecoveredCount > 0 ? `,失望・絶望${revelRecoveredCount}人解除` : ""}`);
+      village.log(`【狂宴】全員体力/メンタル全回復,幸福+50,狂乱付与(倫理*0.2,好色+15)${revelHeavyDrinkerCount > 0 ? `,酒豪${revelHeavyDrinkerCount}人は幸福度の回復量1.5倍` : ""}${revelNeedRecoveredCount > 0 ? `,飢餓・凍え${revelNeedRecoveredCount}人解除` : ""}${revelRecoveredCount > 0 ? `,失望・絶望${revelRecoveredCount}人解除` : ""}`);
       showMiracleResultModal(village, "狂宴の奇跡", "理性を揺らす熱気が村を満たしました。", getActiveVillagers(village));
       break;
 
@@ -1321,7 +1350,7 @@ function warMiracle(p, v) {
 
 function thunderboltMiracle(target, village) {
   const beforeHp = Number(target.hp) || 0;
-  const damage = THUNDERBOLT_MIRACLE_DAMAGE * getRaiderIncomingDamageMultiplier(target);
+  const damage = Math.floor(THUNDERBOLT_MIRACLE_DAMAGE * getRaiderIncomingDamageMultiplier(target));
   target.hp = beforeHp <= 1 ? beforeHp : Math.max(1, beforeHp - damage);
   village.lastThunderboltMiracleMonth = getVillageMonthKey(village);
   const actualDamage = Math.max(0, beforeHp - target.hp);
@@ -1435,88 +1464,14 @@ function departureMiracle(p,v,{ showModal = true } = {}) {
   if (showModal) showMiracleResultModal(v, "出立の奇跡", `${p.name}は村を去りました。`, [p]);
 }
 
-function getChildlikeMiracleLine(person) {
-  const mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
-  if (mindTraits.includes("無垢")) return randFrom(["あうー。", "んま。", "ばぶ。", "すやすや……"]);
-  if (mindTraits.includes("萌芽")) {
-    const lines = person.spiritSex === "女"
-      ? ["わあ……きらきらしてる。", "これ、なあに？", "わたし、ふしぎでどきどきする。"]
-      : ["わあ……きらきらしてる。", "これ、なあに？", "ぼく、ふしぎでどきどきする。"];
-    return randFrom(lines);
-  }
-  return null;
-}
 
-function getGrotesquePortraitLine(person) {
-  const mindTraits = Array.isArray(person.mindTraits) ? person.mindTraits : [];
-  if (mindTraits.includes("無垢")) return randFrom(["あ……こわい。", "ん……いや。"]);
-  if (mindTraits.includes("萌芽")) {
-    const lines = person.spiritSex === "女"
-      ? ["この絵、なんだかこわい……わたしの顔なの？", "胸がざわざわする。見ちゃだめな気がする。"]
-      : ["この絵、なんだかこわい……ぼくの顔なの？", "胸がざわざわする。見ちゃだめな気がする。"];
-    return randFrom(lines);
-  }
-  const type = person.speechType || determineSpeechType(person);
-  const lines = {
-    "普通Ｍ": ["……この絵、俺に似ているのか。見ていると、胸の奥がざわつくな。", "顔を描かれただけなのに、何かを置いてきた気がする。"],
-    "普通Ｆ": ["この絵、私の中の暗いところまで映しているみたいです。", "見つめていると、少し怖いのに目を離せません。"],
-    "強気Ｍ": ["上等だ。この不気味な絵ごと、俺の力にしてやる。", "清らかさなんて、今は邪魔になるだけだ。"],
-    "強気Ｆ": ["気味が悪い絵ね。でも、この艶だけは悪くないわ。", "私の影まで描くなら、その影も使ってみせる。"],
-    "内気": ["こ、これ……私なんですか？ 見ていると心まで汚れるみたいで……。", "怖いです。でも、目をそらせないんです……。"],
-    "陰気": ["……よく描けている。俺の嫌なところまでな。", "この絵の目、俺より正直だ。……不愉快なくらいに。"],
-    "お調子者": ["うわ、怖い絵っすね……でも妙に色気が出てないっすか？", "これ本当に自分っすか？ なんか危ない感じがするっす。"],
-    "快活": ["なんだか怖い絵だね。でも、今の私、少し強く見えるかも。", "胸がざわざわする……これも私の顔なんだね。"],
-    "お嬢様": ["まあ……なんて禍々しい筆致ですの。でも、目を離せませんわ。", "この肖像、私の影まで飾り立ててしまうのですわね。"],
-    "クールＭ": ["肖像の影響を確認した。ためらいが薄れ、印象が強まっている。", "不快な絵だが、変化は明確だ。利用価値はある。"],
-    "クールＦ": ["肖像の影響を確認したわ。ためらいが薄れて、印象だけが強く残る。", "気味は悪いけれど、変化は認めるしかないわね。"],
-    "老人": ["なんとも悍ましい絵じゃ。わしの業まで塗り込めたようじゃな。", "長く生きた影が、顔に浮いたかのう。目をそらせんわい。"],
-    "丁寧Ｍ": ["この絵に描かれているのは、私が隠していた部分でしょうか……。", "見るに堪えないはずなのに、目を離せません。困ったものです。"],
-    "丁寧Ｆ": ["この絵、わたくしの奥にあるものまで写しているようです……。", "恐ろしいのに、どこか惹かれてしまいます。おかしいですね。"],
-    "乱暴": ["ぞっとする絵だな。……だが、この顔つきは嫌いじゃねえ。", "汚ねえ絵だ。それが俺だってんなら、上等じゃねえか。"],
-    "蓮っ葉": ["嫌な絵だねえ。でも、この目つきは悪くないじゃない。", "きれいごとの顔より、こっちのほうが似合ってるかもね。"],
-    "おっとり": ["まあ、ずいぶん恐ろしい絵ですねえ。……それでも、目が離せません。", "わたくしの奥にも、こんな色があったのですねえ。"],
-    "ぶりっこ": ["やだぁ、こわい絵……。でも、ちょっとどきどきしちゃう。", "これがわたし？ 悪い子の顔になってるよぉ。"],
-    "ギャル風": ["うわ、この絵こわ……。でも妙に色っぽくない？", "きれいな自分より、こっちのほうがウケそうなのが嫌なんだけど。"],
-    "中性的": ["この絵は、隠していたものまで描いてしまうんだね。", "怖いけれど、否定はできない。これも自分だ。"]
-  };
-  return randFrom(lines[type] || lines[person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
-}
 
 function getGenericMiracleLine(person, miracleName) {
-  if (miracleName === "悍ましい肖像画") return getGrotesquePortraitLine(person);
   const dedicatedDialogue = EFFECT_RESULT_DIALOGUES[miracleName];
   if (dedicatedDialogue) {
     return getDialogueLine({ character: person, ...dedicatedDialogue });
   }
-  const childLine = getChildlikeMiracleLine(person);
-  if (childLine) return childLine;
-  if (miracleName === "市場の奇跡") return getMarketMiracleLine(person);
-  if (miracleName === "旅人の奇跡") return getTravelerMiracleLine(person);
-  if (miracleName === "出立の奇跡") return getDepartureMiracleLine(person);
-  const type = person.speechType || determineSpeechType(person);
-  const lines = {
-    "普通Ｍ": [`${miracleName}か……本当に不思議な力だな。`, "今の光、見えたか？"],
-    "普通Ｆ": [`${miracleName}ですね。不思議で、少し温かい感じがします。`, "これが奇跡の力なんですね。"],
-    "強気Ｍ": ["すごい力だな。これならやれる。", "神の力だろうが、使えるものは使うさ。"],
-    "強気Ｆ": ["悪くないわね。これで前に進める。", "奇跡に頼った分、結果を出すわよ。"],
-    "内気": ["す、すごいです……少し怖いくらい。", "今のが奇跡……なんですね。"],
-    "陰気": ["……眩しいな。", "……奇跡なんてものも、あるんだな。"],
-    "お調子者": ["うわー、すごいっすね！奇跡って感じっす！", "これは効いてるっすよ、たぶん！"],
-    "快活": ["すごいね！なんだか元気が出る！", "奇跡って本当にあるんだね！"],
-    "お嬢様": ["まあ……神々しい輝きですわ。", "この恵みに感謝いたしますわ。"],
-    "クールＭ": ["現象を確認した。効果は明確だ。", "奇跡の発動を確認した。"],
-    "クールＦ": ["発動したわね。効果を見極めましょう。", "不思議だけれど、結果は確かね。"],
-    "老人": ["ありがたいことじゃのう。", "長く生きても、奇跡には驚かされるわい。"],
-    "丁寧Ｍ": [`${miracleName}を目にできるとは、ありがたいことです。`, "今の輝きは、確かに人の業ではありませんね。"],
-    "丁寧Ｆ": [`${miracleName}のお力ですね。胸が静かに満たされます。`, "この恵み、忘れずにおきたいと思います。"],
-    "乱暴": ["おい、今のはなんだ！ すげえ力じゃねえか！", "神の力だろうがなんだろうが、効くならありがたいぜ。"],
-    "蓮っ葉": ["へえ、大した力じゃないの。神様も気前がいいね。", "こういうのは素直に受け取っておくもんだよ。"],
-    "おっとり": ["まあ、あたたかい光ですねえ。心まで緩んでしまいます。", "不思議なこともあるものですねえ。"],
-    "ぶりっこ": ["わあ、きらきらしてる！ 奇跡ってすごいねぇ。", "なんだか、あったかい気持ちになっちゃった。"],
-    "ギャル風": ["え、今の光やばくない？ 奇跡ってマジであるんだ。", "こういうのは素直に喜んどこ。ありがたいっしょ。"],
-    "中性的": ["理屈は分からないけれど、確かに何かが変わったね。", "奇跡というものを、初めて身近に感じた気がする。"]
-  };
-  return randFrom(lines[type] || lines[person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
+  return getDialogueLine({ character: person, scene: "miracle", key: "generic", context: { miracleName } });
 }
 
 function getCleanlinessMiracleSpeaker(village) {
@@ -1529,86 +1484,8 @@ function getCleanlinessMiracleSpeaker(village) {
   }, null);
 }
 
-function getTravelerMiracleLine(person) {
-  const type = person.speechType || determineSpeechType(person);
-  const lines = {
-    "普通Ｍ": ["不思議な導きで、この村に足が向いたんだ。しばらく世話になるよ。", "道を選んだつもりが、道に選ばれたみたいだな。ここがその先か。"],
-    "普通Ｆ": ["なぜかこの村へ来なければと思ったんです。少し、休ませてください。", "旅の途中で光を見たんです。気づいたら、この村へ向かっていました。"],
-    "丁寧Ｍ": ["旅の途中、不思議な導きを受けました。しばし滞在をお許しください。", "この村に寄るべきだと感じまして。ご迷惑でなければ、少し休ませていただきます。"],
-    "丁寧Ｆ": ["奇跡のお導きでしょうか。この村へ参るべきだと感じました。", "旅路の途中で不思議な気配に導かれました。どうぞよろしくお願いいたします。"],
-    "強気Ｍ": ["妙な力に引かれて来た。だが、来たからには役に立つつもりだ。", "道に迷ったわけじゃない。ここへ来るべきだと、はっきり感じたんだ。"],
-    "強気Ｆ": ["呼ばれた気がしたの。理由は後で考えるわ。まずはこの村を見せて。", "奇跡に背中を押されたなら、受けて立つだけよ。しばらく世話になるわ。"],
-    "内気": ["あ、あの……気づいたらこの村の近くまで来ていて……。", "不思議な光が見えて……怖かったけど、ここなら大丈夫な気がしたんです。"],
-    "陰気": ["……呼ばれた気がした。俺には似合わない話だが、ここに着いた。", "……道がこちらへ曲がった。偶然ではないんだろうな。"],
-    "お調子者": ["いやー、不思議な旅になったっす！ここに来れば何かある気がしたっすよ！", "奇跡に呼ばれて登場っす！しばらくよろしくお願いするっす！"],
-    "快活": ["ここだ！って思ったんだ。なんだか胸がわくわくする！", "旅の途中で光が見えてね。この村に来られてよかった！"],
-    "お嬢様": ["この村へ導かれるとは、きっと意味のある巡り合わせですわ。", "旅路に奇跡が差すなんて、物語の一節のようですわね。"],
-    "クールＭ": ["移動経路に不可解な偏りがあった。だが到着地点はこの村で間違いない。", "導きの原因は不明だ。しばらく観察と滞在を希望する。"],
-    "クールＦ": ["理由は説明できないけれど、この村に来る必要があった。そう判断しているわ。", "旅程は狂ったけれど、結果としてここへ着いた。悪くないわね。"],
-    "老人": ["足が勝手にこちらへ向いてのう。奇跡とは年寄りにも容赦がないわい。", "長旅の途中で、不思議な光に導かれたわい。少し腰を下ろさせておくれ。"],
-    "乱暴": ["妙な力に引きずられて来ちまった。文句はねえけどな。", "どこへ行くつもりもなかったが、ここで足が止まった。"],
-    "蓮っ葉": ["気づいたらこの村さ。まあ、悪くない引きだったね。", "呼ばれたなら来るしかないだろ。世話になるよ。"],
-    "おっとり": ["まあ、ここまで導かれてしまいました。少し休ませてくださいねえ。", "不思議な旅路でしたねえ。この村なら、落ち着けそうです。"],
-    "ぶりっこ": ["なんだか呼ばれた気がして来ちゃった。よろしくねぇ。", "道に迷ったんじゃないよ。ここに来たかったの。"],
-    "ギャル風": ["なんか呼ばれた感じ？ 気づいたらここにいたんだけど。", "旅の途中で光が見えてさ。まあ、来てよかったっしょ。"],
-    "中性的": ["導かれた、という言い方がいちばん近いかな。しばらく世話になるよ。", "行き先を決めた覚えはないのに、ここに着いた。不思議だね。"]
-  };
-  return randFrom(lines[type] || lines[person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
-}
 
-function getMarketMiracleLine(person) {
-  const type = person.speechType || determineSpeechType(person);
-  const lines = {
-    "普通Ｍ": ["呼ばれた気がして来てみれば、よい市が開けそうだ。品を見ていってくれ。", "奇跡に招かれる商いとは珍しいな。まずは値を確かめてくれ。"],
-    "普通Ｆ": ["不思議な導きで参りました。よい品を揃えていますので、どうぞご覧ください。", "この村に市を開けるとは光栄です。必要なものがあれば声をかけてください。"],
-    "丁寧Ｍ": ["お招きにあずかったようです。食料も資材も、きちんとお売りいたします。", "市の支度は整っております。ご入り用のものをお申し付けください。"],
-    "丁寧Ｆ": ["奇跡のお導きでしょうか。食料と資材をお持ちしましたので、ご覧くださいませ。", "市を開く支度はできております。村のお役に立てましたら幸いです。"],
-    "強気Ｍ": ["奇跡に呼ばれたなら、商いで応えるだけだ。いい品を持ってきたぞ。", "値切りはほどほどにな。だが品の良さは保証する。"],
-    "強気Ｆ": ["呼ばれたからには、半端な商いはしないわ。必要なものを選びなさい。", "いい市にしましょう。こちらも村の特産には期待しているわ。"],
-    "内気": ["あ、あの……品物を持ってきました。よければ見てください。", "不思議な光に導かれて……ここで市を開けばいいんですよね。"],
-    "陰気": ["……奇跡で呼ばれる商いか。妙な縁だが、品は確かだ。", "……食料と資材はある。必要なら買っていけ。"],
-    "お調子者": ["いやー、奇跡で出店とは景気がいいっすね！どんどん見てってほしいっす！", "市が立つなら声出していくっすよ！食料も資材もありますって！"],
-    "快活": ["市だね！いい品を持ってきたから、みんなで見に来て！", "奇跡で呼ばれるなんて楽しいね。今日はにぎやかに売るよ！"],
-    "お嬢様": ["まあ、奇跡に招かれて市を開くとは、なんとも優雅ですわ。品定めをどうぞ。", "村の皆様のお役に立てる品を揃えておりますわ。"],
-    "クールＭ": ["市場形成の機会と判断した。食料と資材を取引可能だ。", "招致の経緯は不明だが、商取引は成立する。品目を確認してくれ。"],
-    "クールＦ": ["市場の成立を確認したわ。食料と資材、どちらも取引できる。", "奇跡の経路は不明だけれど、商いには支障ないわ。品を見て。"],
-    "老人": ["ほう、奇跡に呼ばれて市を開くとはのう。古い品も新しい品も見ていきなされ。", "長く商いをしてきたが、神に呼ばれる市は珍しいわい。さあ、見ておくれ。"],
-    "乱暴": ["呼ばれて来たからには売るぞ。冷やかしは勘弁な。", "食い物も資材もある。持ってけ、値は正直につけてるぜ。"],
-    "蓮っ葉": ["いい市になりそうじゃないの。さあ、見ていっとくれ。", "呼ばれた以上は損はさせないよ。品を見ておくれ。"],
-    "おっとり": ["まあ、ここで市を開かせていただけるのですねえ。どうぞご覧ください。", "急ぎませんから、ゆっくりお選びくださいねえ。"],
-    "ぶりっこ": ["いい品を持ってきたよぉ。見ていってくれると嬉しいな。", "奇跡で呼ばれちゃった。せっかくだから買ってね？"],
-    "ギャル風": ["奇跡で呼ばれるとか、なかなかないっしょ。品はいいから見てって！", "食料も資材もあるよ。今日はお得だと思う。"],
-    "中性的": ["導かれて市を開くことになった。食料も資材も揃っているよ。", "経緯は不思議だけれど、商いはいつも通りだ。見ていってくれ。"]
-  };
-  return randFrom(lines[type] || lines[person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
-}
 
-function getDepartureMiracleLine(person) {
-  const type = person.speechType || determineSpeechType(person);
-  const lines = {
-    "普通Ｍ": ["行かなきゃならない気がするんだ。怖いけど、足はもう前を向いてる。", "世話になったな。いつか胸を張って、この旅の意味を話せるようにするよ。"],
-    "普通Ｆ": ["急でごめんなさい。でも、遠くから呼ばれているみたいなんです。", "別れは寂しいですけど、この旅にはきっと意味があるんだと思います。"],
-    "強気Ｍ": ["理由はうまく言えない。だが行く。止めても無駄だ。", "別れは苦手だが、俺には俺の道ができた。必ず生きて進む。"],
-    "強気Ｆ": ["胸の奥がうるさいの。行けって言うなら、行ってやるわ。", "泣かないで。私が選んだ旅よ。半端な覚悟で出ていくわけじゃない。"],
-    "内気": ["こ、怖いです……でも、ここにいたらいけない気がして……。", "皆さんと離れるのはつらいです。でも、行かなきゃって、ずっと聞こえるんです。"],
-    "陰気": ["……妙な衝動だ。俺らしくもないのに、外へ出ろと急かされる。", "別れの言葉は得意じゃない。……世話になった。"],
-    "お調子者": ["いやー、急に旅立ちっすよ。自分でもびっくりしてるっす。", "寂しくなるっすけど、土産話を山ほど抱えて戻るつもりっす！"],
-    "快活": ["わからないけど、行きたいんだ。胸がどきどきして止まらない！", "みんな、ありがとう！この先で何か見つけてくるね！"],
-    "お嬢様": ["名残惜しいですわ。けれど、この胸の導きを無視できませんの。", "皆様のご恩は忘れませんわ。私の旅路に、どうか祝福を。"],
-    "クールＭ": ["衝動の発生源は不明だ。だが、進むべき方向だけは明確だ。", "村を離れる。感傷はあるが、使命を優先する。"],
-    "クールＦ": ["説明しきれない感覚ね。けれど、行くべきだと判断したわ。", "別れは惜しいけれど、迷っている時間はない。旅立つわ。"],
-    "老人": ["この年でまた旅支度とはのう。奇跡とは人を落ち着かせてくれん。", "世話になったのう。残りの道を、もう少し歩いてみるとするか。"],
-    "丁寧Ｍ": ["急なことで申し訳ありません。行かねばならない気がするのです。", "皆様のご恩は忘れません。どうか、お達者で。"],
-    "丁寧Ｆ": ["突然のお別れをお許しください。遠くから、呼ばれている気がするのです。", "この村で過ごした日々は忘れません。ありがとうございました。"],
-    "乱暴": ["行くぜ。理由なんざ聞かれても答えられねえ。", "湿っぽいのは苦手だ。……達者でな。"],
-    "蓮っ葉": ["ここらが潮時だね。呼ばれてるうちに行くとするよ。", "泣くんじゃないよ。あたしが決めたことなんだから。"],
-    "おっとり": ["まあ、急なお話ですけれど……行かなくてはいけない気がするのです。", "皆さまとお別れするのは寂しいですねえ。……それでも、参ります。"],
-    "ぶりっこ": ["ごめんね、行かなきゃいけないみたいなの。", "寂しいけど……呼ばれちゃったんだもん。"],
-    "ギャル風": ["ごめん、なんか呼ばれてるっぽくてさ。行ってくるわ。", "泣かないでよ、湿っぽいの苦手だから。……ありがと。"],
-    "中性的": ["理由は言葉にできない。それでも、行き先だけは分かるんだ。", "別れは惜しい。けれど、留まる理由のほうが薄くなった。"]
-  };
-  return randFrom(lines[type] || lines[person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
-}
 
 // 反応を並べる人数の上限。村人全員を対象にする奇跡でも、この人数までを代表として表示する。
 const MIRACLE_RESULT_MAX_SPEAKERS = 4;
@@ -1665,32 +1542,12 @@ export function showMiracleResultModal(village, miracleName, message, people = [
 }
 
 function getMarriageMiracleLine(person, partner, miracleName) {
-  const childLine = getChildlikeMiracleLine(person);
-  if (childLine) return childLine;
-  const type = person.speechType || determineSpeechType(person);
-  const lines = {
-    "普通Ｍ": [`${partner.name}と夫婦か……不思議だけど、悪くないな。`, "急な話だけど、ちゃんと向き合うよ。"],
-    "普通Ｆ": [`${partner.name}さんと夫婦になるんですね。大切にします。`, "驚きましたけど、嬉しいです。"],
-    "強気Ｍ": [`${partner.name}を守る。それだけだ。`, "奇跡だろうが何だろうが、覚悟は決めた。"],
-    "強気Ｆ": [`${partner.name}となら悪くないわ。私が支えるから。`, "いきなりだけど、逃げる気はないわ。"],
-    "内気": [`${partner.name}さんと……緊張します。でも、頑張ります。`, "急でびっくりしました……でも、嫌ではないです。"],
-    "陰気": [`……${partner.name}と夫婦か。奇跡とは妙なものだ。`, "……こうなったなら、捨て置けないな。"],
-    "お調子者": [`${partner.name}と結婚っすか！？いやー、奇跡ってすごいっすね！`, "これはもう盛り上げるしかないっす！"],
-    "快活": [`${partner.name}と夫婦だね！よろしく！`, "びっくりしたけど、なんだか楽しくなってきた！"],
-    "お嬢様": [`${partner.name}様と結ばれるとは……奇跡とは優雅なものですわ。`, "突然ではありますけれど、心を込めて歩みますわ。"],
-    "クールＭ": [`${miracleName}の結果は理解した。${partner.name}との関係を大切にする。`, "状況は急だが、責任は果たす。"],
-    "クールＦ": [`${partner.name}と夫婦ね。冷静に受け止めるわ。`, "奇跡の結果なら、これからを考えるだけよ。"],
-    "老人": [`${partner.name}と夫婦になるとはのう。奇跡に導かれた縁、大事にしよう。`, "新たな家族を得るとはな。わしも心を決めよう。"],
-    "丁寧Ｍ": [`${partner.name}さんと夫婦になるのですね。誠実に努めます。`, "急なことですが、この縁を大切にいたします。"],
-    "丁寧Ｆ": [`${partner.name}さんと夫婦に……。驚きましたが、嬉しく思います。`, "至らぬ身ですが、精一杯お支えいたします。"],
-    "乱暴": [`${partner.name}と夫婦だと！？ ……まあ、悪い話じゃねえ。`, "面倒は嫌いだが、決まったなら守るだけだ。"],
-    "蓮っ葉": [`${partner.name}と夫婦かい。まあ、悪くない相手だね。`, "こうなったら腹をくくるよ。よろしく頼むね。"],
-    "おっとり": [`まあ、${partner.name}さんと夫婦に。……ふふ、悪くありませんねえ。`, "急なことですけれど、ゆっくり馴染んでいきましょうねえ。"],
-    "ぶりっこ": [`${partner.name}とけっこん……？ えへへ、なんだか照れちゃう。`, "びっくりしたけど、いやじゃないよ？"],
-    "ギャル風": [`え、${partner.name}と結婚！？ 展開が早すぎでしょ！`, "まあ、決まったなら仲良くやってこ。よろしくね！"],
-    "中性的": [`${partner.name}と夫婦か。急な話だけれど、逃げる気はないよ。`, "縁というのは、選ぶより先に来るものらしいね。"]
-  };
-  return randFrom(lines[type] || lines[person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ"]);
+  return getDialogueLine({
+    character: person,
+    scene: "miracle",
+    key: "marriage",
+    context: { partnerName: partner.name, miracleName }
+  });
 }
 
 export function showMarriageMiracleModal(village, miracleName, pairs, options = {}) {
@@ -1735,6 +1592,7 @@ function randFrom(lines) {
 }
 
 function getBodyExchangeLineKey(person) {
+  if (isSaltPillar(person)) return SALT_PILLAR_TRAIT;
   const raiderTypes = ["野盗", "ゴブリン", "狼", "キュクロプス", "ハーピー"];
   if (person.mindTraits && person.mindTraits.includes("襲撃者")) {
     const raiderType = raiderTypes.find(type => person.name.includes(type));

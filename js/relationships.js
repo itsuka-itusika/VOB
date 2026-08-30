@@ -5,6 +5,7 @@ import { getPortraitSpriteHtml } from "./data/portraitAtlas.js";
 import { recordLoverHistory, recordMarriageHistory, recordSocialRelationHistory } from "./history.js";
 import { runAfterFestivalModals } from "./festivalModal.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
+import { addVillageRecord, updateVillageRecordMax } from "./records.js";
 
 const FRIENDSHIP_MIN = -100;
 const FRIENDSHIP_MAX = 100;
@@ -49,14 +50,15 @@ export function doLoverCheck(village, options = {}) {
     && !hasMindTrait(x, "野生")
   );
   // 相手候補が1人もいない者を除いてからAを抽選する。候補なしの空振りを防ぐ。
-  candidatesA = candidatesA.filter(x => village.villagers.some(b => isLoverCandidate(x, b)));
+  const lineageIndex = createLineageIndex(village);
+  candidatesA = candidatesA.filter(x => village.villagers.some(b => isLoverCandidate(lineageIndex, x, b)));
   if (candidatesA.length===0) {
     village.log("恋人判定:対象者なし");
     return false;
   }
 
   let a = randChoice(candidatesA);
-  let candidatesB = village.villagers.filter(b=>isLoverCandidate(a, b));
+  let candidatesB = village.villagers.filter(b=>isLoverCandidate(lineageIndex, a, b));
   let b = randChoice(candidatesB);
   let sc = getLoverSuccessRate(a, b);
   if (Math.random()<=sc) {
@@ -89,6 +91,11 @@ export function hasLoverRelationship(person) {
   return hasRelationshipPrefix(person, LOVER_RELATION_PREFIXES);
 }
 
+/** 配偶者がいるか。「元夫」「元妻」を含めないよう、前置きで判定する。 */
+export function hasSpouseRelationship(person) {
+  return hasRelationshipPrefix(person, SPOUSE_RELATION_PREFIXES);
+}
+
 /** 今の趣味の仲間がいるか。余暇のメンタル回復1.5倍の判定に使う。 */
 export function hasHobbyMateRelationship(person) {
   const hobby = person?.hobby;
@@ -102,8 +109,8 @@ function getOppositeSex(sex) {
   return null;
 }
 
-function getParentKeys(person) {
-  return getRelationshipEntries(person)
+function getParentKeys(person, lineage) {
+  const keys = getRelationshipEntries(person)
     .filter(entry => PARENT_RELATION_PREFIXES.has(entry.prefix))
     .map(entry => {
       if (entry.targetId != null) return `id:${entry.targetId}`;
@@ -111,16 +118,103 @@ function getParentKeys(person) {
       return entry.targetName && entry.targetName !== "不明" ? `name:${entry.targetName}` : "";
     })
     .filter(Boolean);
+  // 親が村を去ると本人側の関係が消えるため、過去帳から組み直した系譜の親も足す。
+  if (person?.id != null) {
+    (lineage?.parents?.get(person.id) || []).forEach(parentId => keys.push(`id:${parentId}`));
+  }
+  return keys;
 }
 
-/** きょうだいか。両者の間に直接の関係がないため、親をたどって判定する。 */
-export function areSiblings(a, b) {
-  const parentsOfB = new Set(getParentKeys(b));
+/**
+ * きょうだいか。両者の間に直接の関係がないため、親をたどって判定する。
+ * 共通の親が村を去った後も判定が残るよう、系譜の索引も併せて見る。
+ */
+export function areSiblings(lineage, a, b) {
+  const parentsOfB = new Set(getParentKeys(b, lineage));
   if (parentsOfB.size === 0) return false;
-  return getParentKeys(a).some(key => parentsOfB.has(key));
+  return getParentKeys(a, lineage).some(key => parentsOfB.has(key));
 }
 
-function isLoverCandidate(a, b) {
+// 系譜をさかのぼる上限。関係が壊れていても止まるようにする。
+const LINEAGE_MAX_DEPTH = 12;
+// 系譜としてさかのぼる親。遺伝上の親は家系ではないため、ここには入れない。
+const LINEAGE_PARENT_RELATION_PREFIXES = new Set(["母", "父"]);
+
+/**
+ * 血縁をたどるための索引。
+ *
+ * 祖父母から上は家系（母・父）だけをたどる。遺伝上の母・父は本人の一代分だけを
+ * 血縁として持ち、その先へは進まない。こうすると祖父母は多くても4人に収まり、
+ * 呼び名も母・父、遺伝上の母・父、祖父母、先祖だけで足りる。
+ *
+ * 家系の辺は、親を指す関係と子を指す関係の双方から集める。
+ * 村人が去ると clearRelationshipsForDepartedVillager が生存者側の関係を消すため、
+ * 生きている者の親をたどるだけでは間の代が死んだ時点で系譜が切れるが、
+ * 過去帳には去った時点の関係が残るので、両側から集め直せばつながる。
+ *
+ * 過去帳は長期プレイで伸びるため、判定のたびに作らず呼び出し側で使い回す。
+ */
+export function createLineageIndex(village) {
+  const parents = new Map();
+  const geneticParents = new Map();
+  const link = (map, childId, parentId) => {
+    if (childId == null || parentId == null || childId === parentId) return;
+    if (!map.has(childId)) map.set(childId, new Set());
+    map.get(childId).add(parentId);
+  };
+
+  [
+    ...(Array.isArray(village?.villagers) ? village.villagers : []),
+    ...(Array.isArray(village?.departedVillagers) ? village.departedVillagers : [])
+  ].forEach(person => {
+    if (person?.id == null) return;
+    getRelationshipEntries(person).forEach(entry => {
+      if (entry.targetId == null) return;
+      if (LINEAGE_PARENT_RELATION_PREFIXES.has(entry.prefix)) link(parents, person.id, entry.targetId);
+      else if (entry.prefix === "子") link(parents, entry.targetId, person.id);
+      else if (GENETIC_RELATION_PREFIXES.has(entry.prefix)) link(geneticParents, person.id, entry.targetId);
+    });
+  });
+  return { parents, geneticParents };
+}
+
+/**
+ * descendant から見て ancestor が何代前の先祖かを返す。家系でつながらなければ 0。
+ * 1代前が母・父、2代前が祖父母。近い代を優先するため、代ごとに横へ広げて探す。
+ */
+function getAncestorDepth(lineage, ancestor, descendant) {
+  if (!ancestor || !descendant || ancestor === descendant) return 0;
+  if (ancestor.id == null || descendant.id == null) return 0;
+  const seen = new Set([descendant.id]);
+  let current = [descendant.id];
+  for (let depth = 1; depth <= LINEAGE_MAX_DEPTH && current.length > 0; depth++) {
+    const next = [];
+    for (const id of current) {
+      for (const parentId of lineage.parents.get(id) || []) {
+        if (parentId === ancestor.id) return depth;
+        if (seen.has(parentId)) continue;
+        seen.add(parentId);
+        next.push(parentId);
+      }
+    }
+    current = next;
+  }
+  return 0;
+}
+
+/** parent が child の遺伝上の母・父か。ここから先の代はたどらない。 */
+function isGeneticParent(lineage, parent, child) {
+  if (!parent || !child || parent.id == null || child.id == null) return false;
+  return (lineage.geneticParents.get(child.id) || new Set()).has(parent.id);
+}
+
+/** 家系でつながる親子・祖父母と孫・先祖と子孫、または遺伝上の親子か。 */
+export function isDirectLineage(lineage, a, b) {
+  return getAncestorDepth(lineage, a, b) > 0 || getAncestorDepth(lineage, b, a) > 0
+    || isGeneticParent(lineage, a, b) || isGeneticParent(lineage, b, a);
+}
+
+function isLoverCandidate(lineageIndex, a, b) {
   if (!a || !b || a === b) return false;
   if (isSaltPillar(a) || isSaltPillar(b)) return false;
   if (hasMindTrait(a, "神聖") || hasMindTrait(b, "神聖")) return false;
@@ -128,7 +222,8 @@ function isLoverCandidate(a, b) {
   if (!expectedBodySex) return false;
   return isSingle(b)
     && !hasLoverBlockingRelationship(a, b)
-    && !areSiblings(a, b)
+    && !areSiblings(lineageIndex, a, b)
+    && !isDirectLineage(lineageIndex, a, b)
     && !hasBodyTrait(b, "四足歩行")
     && !hasBodyTrait(b, "人面獣身")
     && getPairFriendshipMinimum(a, b) >= 30
@@ -884,18 +979,19 @@ const BONDING_BLOCKING_RELATION_PREFIXES = new Set([
   "親友"
 ]);
 
-function isBondingPartnerCandidate(a, b, friendshipThreshold) {
+function isBondingPartnerCandidate(lineageIndex, a, b, friendshipThreshold) {
   if (!a || !b || a === b) return false;
   if (isSaltPillar(a) || isSaltPillar(b)) return false;
   if (hasRelationshipTo(a, b, BONDING_BLOCKING_RELATION_PREFIXES) ||
       hasRelationshipTo(b, a, BONDING_BLOCKING_RELATION_PREFIXES)) return false;
-  if (areSiblings(a, b)) return false;
+  if (areSiblings(lineageIndex, a, b)) return false;
   return getPairFriendshipMinimum(a, b) >= friendshipThreshold;
 }
 
 // 恋人になれる組み合わせか。なれなければ親友になる。
-function canBecomeLoversByBonding(a, b) {
+function canBecomeLoversByBonding(village, a, b) {
   return !!a.spiritSex && !!b.bodySex && a.spiritSex !== b.bodySex
+    && !isDirectLineage(createLineageIndex(village), a, b)
     && isSingle(a) && isSingle(b)
     && !hasBodyTrait(b, "四足歩行")
     && b.bodyAge >= 16;
@@ -903,16 +999,17 @@ function canBecomeLoversByBonding(a, b) {
 
 function pickBondingPair(village, friendshipThreshold) {
   const villagers = Array.isArray(village?.villagers) ? village.villagers : [];
+  const lineageIndex = createLineageIndex(village);
   const withCandidates = villagers.filter(a =>
-    villagers.some(b => isBondingPartnerCandidate(a, b, friendshipThreshold)));
+    villagers.some(b => isBondingPartnerCandidate(lineageIndex, a, b, friendshipThreshold)));
   if (withCandidates.length === 0) return null;
   const a = randChoice(withCandidates);
-  const b = randChoice(villagers.filter(x => isBondingPartnerCandidate(a, x, friendshipThreshold)));
+  const b = randChoice(villagers.filter(x => isBondingPartnerCandidate(lineageIndex, a, x, friendshipThreshold)));
   return { a, b };
 }
 
 function formBond(village, a, b, { source, happinessGain = 0, friendshipGain = 0 }) {
-  if (canBecomeLoversByBonding(a, b)) {
+  if (canBecomeLoversByBonding(village, a, b)) {
     addRelationship(a, "恋人", b);
     addRelationship(b, "恋人", a);
     if (happinessGain) {
@@ -931,6 +1028,7 @@ function formBond(village, a, b, { source, happinessGain = 0, friendshipGain = 0
 
   addRelationship(a, "親友", b);
   addRelationship(b, "親友", a);
+  [a, b].forEach(person => updateVillageRecordMax(village, person, "bestFriends", countBestFriends(person)));
   if (friendshipGain) adjustMutualFriendship(a, b, friendshipGain);
   recordSocialRelationHistory(village, a, b, "親友", { source });
   village.log(`【${source}】${a.name}と${b.name}が親友になりました`);
@@ -1053,6 +1151,11 @@ function showBreakupModal(village, a, b) {
   ]);
 }
 
+/** その人物が今持っている親友の数。歴代記録では最高値を残す。 */
+function countBestFriends(person) {
+  return getRelationshipEntries(person).filter(entry => entry.prefix === "親友").length;
+}
+
 export function processFriendshipRelationChanges(village) {
   if (!village || !Array.isArray(village.villagers)) return;
   const handledBreakups = new Set();
@@ -1068,6 +1171,8 @@ export function processFriendshipRelationChanges(village) {
       b.happiness = clampValue(b.happiness - 30, 0, 100);
       addRelationship(a, "元恋人", b);
       addRelationship(b, "元恋人", a);
+      addVillageRecord(village, a, "heartbreak", 1);
+      addVillageRecord(village, b, "heartbreak", 1);
       recordSocialRelationHistory(village, a, b, "元恋人", { source: "破局" });
       showBreakupModal(village, a, b);
     }
@@ -1112,11 +1217,19 @@ function getRelationshipDisplayLabel(person, other, entry) {
   }
 }
 
-function collectRelationshipLabels(village, person, other) {
+function collectRelationshipLabels(village, person, other, lineageIndex) {
   const labels = [];
   getRelationshipEntries(person).forEach(entry => {
     if (entryMatchesPerson(entry, other)) labels.push(getRelationshipDisplayLabel(person, other, entry));
   });
+
+  // 祖父母から上の代は関係として持たないため、系譜をたどって呼び名を出す。
+  const ancestorDepth = getAncestorDepth(lineageIndex, other, person);
+  if (ancestorDepth === 2) labels.push(other.bodySex === "女" ? "祖母" : "祖父");
+  else if (ancestorDepth >= 3) labels.push("先祖");
+  const descendantDepth = getAncestorDepth(lineageIndex, person, other);
+  if (descendantDepth === 2) labels.push("孫");
+  else if (descendantDepth >= 3) labels.push("子孫");
 
   const spouseId = getRelationshipTargetId(person, "夫") ?? getRelationshipTargetId(person, "妻");
   const spouse = getVillagerById(village, spouseId);
@@ -1194,6 +1307,14 @@ function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
+// 好感度の高い順から始め、見出しを押すたびに 降順 → 昇順 → 村人順 と切り替える。
+const FRIENDSHIP_SORT_ORDERS = ["desc", "asc", "default"];
+const FRIENDSHIP_SORT_HEADERS = {
+  default: { label: "好感度", aria: "none" },
+  desc: { label: "好感度 ▼", aria: "descending" },
+  asc: { label: "好感度 ▲", aria: "ascending" }
+};
+
 export function openFriendshipDetailModal(village, person) {
   if (typeof document === "undefined" || !village || !person) return;
   ensureVillageFriendships(village, 0);
@@ -1201,18 +1322,21 @@ export function openFriendshipDetailModal(village, person) {
   document.getElementById("friendshipDetailModal")?.remove();
 
   const others = (Array.isArray(village.villagers) ? village.villagers : []).filter(other => other !== person);
+  const lineageIndex = createLineageIndex(village);
   const rows = others.map((other, index) => {
     const score = getFriendshipScore(person, other);
-    const relationLabels = collectRelationshipLabels(village, person, other);
+    const relationLabels = collectRelationshipLabels(village, person, other, lineageIndex);
     const specialLabels = collectSpecialRelationshipLabels(person, other);
     const exchangeLabels = collectExchangeLabels(person, other);
     const friendshipLabel = formatFriendshipScore(score);
     const fixedRelationLabels = relationLabels.length > 0 ? relationLabels : ["村の一員"];
     const labels = [...fixedRelationLabels, ...specialLabels, ...exchangeLabels].join(" / ");
-    return `
+    return {
+      score,
+      html: `
       <tr>
         <td class="friendship-detail-person">
-          <button type="button" class="friendship-detail-portrait-button" data-open-friendship-person="${index}" aria-label="${escapeHtml(other.name)}の個人記録を見る">
+          <button type="button" class="friendship-detail-portrait-button" data-open-friendship-person="${index}" aria-label="${escapeHtml(other.name)}の人間関係を見る">
             ${getPortraitSpriteHtml(other, { alt: other.name })}
           </button>
           <span>${escapeHtml(other.name)}</span>
@@ -1220,8 +1344,18 @@ export function openFriendshipDetailModal(village, person) {
         <td>${escapeHtml(friendshipLabel)}</td>
         <td>${escapeHtml(labels)}</td>
       </tr>
-    `;
-  }).join("");
+    `
+    };
+  });
+
+  const emptyRowHtml = `<tr><td colspan="3" class="friendship-detail-empty">表示できる相手がいません。</td></tr>`;
+  let sortOrder = FRIENDSHIP_SORT_ORDERS[0];
+  const buildRowsHtml = () => {
+    const sorted = sortOrder === "default"
+      ? rows
+      : [...rows].sort((a, b) => (sortOrder === "desc" ? b.score - a.score : a.score - b.score));
+    return sorted.map(row => row.html).join("") || emptyRowHtml;
+  };
 
   const overlay = document.createElement("div");
   overlay.id = "friendshipDetailOverlay";
@@ -1230,7 +1364,10 @@ export function openFriendshipDetailModal(village, person) {
   modal.id = "friendshipDetailModal";
   modal.className = "friendship-detail-modal";
   modal.innerHTML = `
-    <div class="modal-header">${escapeHtml(person.name)}の好感度</div>
+    <div class="modal-header friendship-detail-header">
+      ${getPortraitSpriteHtml(person, { alt: person.name })}
+      <span>${escapeHtml(person.name)}の人間関係</span>
+    </div>
     <div class="friendship-detail-content">
       <table class="friendship-detail-table">
         <colgroup>
@@ -1241,12 +1378,14 @@ export function openFriendshipDetailModal(village, person) {
         <thead>
           <tr>
             <th>相手</th>
-            <th>好感度</th>
+            <th aria-sort="${FRIENDSHIP_SORT_HEADERS[sortOrder].aria}" data-friendship-sort-header>
+              <button type="button" class="friendship-detail-sort-button" data-sort-friendship>${FRIENDSHIP_SORT_HEADERS[sortOrder].label}</button>
+            </th>
             <th>関係</th>
           </tr>
         </thead>
         <tbody>
-          ${rows || `<tr><td colspan="3" class="friendship-detail-empty">表示できる相手がいません。</td></tr>`}
+          ${buildRowsHtml()}
         </tbody>
       </table>
     </div>
@@ -1261,14 +1400,25 @@ export function openFriendshipDetailModal(village, person) {
     overlay.remove();
     modal.remove();
   };
-  modal.querySelectorAll("[data-open-friendship-person]").forEach(button => {
-    button.addEventListener("click", async () => {
-      const target = others[Number(button.dataset.openFriendshipPerson)];
-      if (!target) return;
-      const { openPersonalHistoryModal } = await import("./history.js");
-      close();
-      openPersonalHistoryModal(village, target);
-    });
+  const tbody = modal.querySelector(".friendship-detail-table tbody");
+  // 並べ替えで行を作り直すため、個別ボタンではなく tbody 側で受ける。
+  tbody.addEventListener("click", event => {
+    const button = event.target.closest("[data-open-friendship-person]");
+    if (!button) return;
+    const target = others[Number(button.dataset.openFriendshipPerson)];
+    if (!target) return;
+    // 開き直す側で今のモーダルを消すため、ここでは閉じない。
+    openFriendshipDetailModal(village, target);
+  });
+  const sortHeader = modal.querySelector("[data-friendship-sort-header]");
+  const sortButton = modal.querySelector("[data-sort-friendship]");
+  sortButton.addEventListener("click", () => {
+    const nextIndex = (FRIENDSHIP_SORT_ORDERS.indexOf(sortOrder) + 1) % FRIENDSHIP_SORT_ORDERS.length;
+    sortOrder = FRIENDSHIP_SORT_ORDERS[nextIndex];
+    const header = FRIENDSHIP_SORT_HEADERS[sortOrder];
+    sortButton.textContent = header.label;
+    sortHeader.setAttribute("aria-sort", header.aria);
+    tbody.innerHTML = buildRowsHtml();
   });
   modal.querySelector("[data-close-friendship-detail]").addEventListener("click", close);
   overlay.addEventListener("click", close);

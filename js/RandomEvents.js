@@ -1,20 +1,24 @@
 // RandomEvents.js
 
 import { randInt, clampValue, round3 } from "./util.js";
-import { adjustMutualFriendship, areSiblings, doHitItOffEvent, doLoverCheck, addRelationship as addCategorizedRelationship, getFriendshipScore, getPairFriendshipMaximum, getPairFriendshipMinimum, getRelationshipEntries, isSingle, setFriendshipScore } from "./relationships.js";
+import { adjustMutualFriendship, areSiblings, createLineageIndex, doHitItOffEvent, doLoverCheck, addRelationship as addCategorizedRelationship, getFriendshipScore, getPairFriendshipMaximum, getPairFriendshipMinimum, getRelationshipEntries, isDirectLineage, isSingle, setFriendshipScore } from "./relationships.js";
 import { canExchangeBody, doExchange } from "./exchange.js";
 import { showRandomEventModal } from "./randomEventModal.js";
 import { HobbyEffects } from "./HobbyEffects.js";
 import {
   canReceiveGoldenRainPregnancy,
   createWolfFoundling,
+  growPersonToAdultAge,
   matureBodyToAdultOnly,
   scheduleGoldenRainPregnancy
 } from "./reproduction.js";
 import { refreshJobTable } from "./domain/jobTables.js";
+import { isOriginalBodyOwner } from "./domain/portraitHistory.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { getActiveVillagers, getVillagersIncludingSaltPillar } from "./domain/apocalypseRules.js";
+import { getCaptives } from "./captives.js";
+import { damageRandomBuilding } from "./buildings.js";
 import { addAcquiredStat, syncEffectiveStats } from "./domain/statLayers.js";
 import { recordEpidemicHistory, recordHobbyAwakeningHistory, recordLoverHistory, recordMythicEventHistory, recordSocialRelationHistory, recordVillagerJoinHistory } from "./history.js";
 import { updateUI } from "./ui.js";
@@ -33,6 +37,7 @@ import {
   EVENT_POOLS,
   EVENT_SECOND_LINE_BASES,
   EVENT_SUBJECTS,
+  FORCED_SPEAKER_ONLY_EVENTS,
   SINGLE_SPEAKER_EVENTS
 } from "./data/randomEventData.js";
 import { WOLF_FOUNDLING_LINES } from "./data/dialogue/randomEventLines.js";
@@ -43,6 +48,9 @@ const VILLAGER_STATE_KEYS = [
   "bodyTraits", "mindTraits", "relationships", "friendships", "friendshipStats", "hobby",
   "bodySex", "bodyAge", "bodyOwner", "race", "portraitFile"
 ];
+// 時空のうねりで到達する年齢の幅。
+const TIME_RIPPLE_MIN_AGE = 16;
+const TIME_RIPPLE_MAX_AGE = 20;
 const YURI_BLOCKING_RELATION_PREFIXES = ["天敵", "母", "父", "子", "夫", "妻", "恋人"];
 const THUNDERBOLT_LOVE_BLOCKING_RELATION_PREFIXES = ["恋人", "夫", "妻", "母", "父", "子"];
 const FIGHT_ALLOWED_RELATION_PREFIXES = new Set(["村設立の同志", "仕事仲間"]);
@@ -60,6 +68,8 @@ function snapshotVillager(person) {
  */
 export class RandomEvents {
   static _forcedSpeakers = [];
+  // 役割ごとにセリフを決めるイベント用。話者に割り当てるセリフを覚えておく。
+  static _forcedSpeakerLines = new Map();
 
   static announce(title, message, participants = []) {
     showRandomEventModal({ title, message, participants });
@@ -138,12 +148,13 @@ export class RandomEvents {
     });
   }
 
-  static addForcedSpeaker(character) {
+  static addForcedSpeaker(character, line = null) {
     if (!character) return;
     if (!Array.isArray(this._forcedSpeakers)) this._forcedSpeakers = [];
     if (!this._forcedSpeakers.includes(character)) {
       this._forcedSpeakers.push(character);
     }
+    if (line) this._forcedSpeakerLines.set(character, line);
   }
 
   static runWithAnnouncement(village, phase, kind, runEvent) {
@@ -151,6 +162,7 @@ export class RandomEvents {
     const originalLog = village.log.bind(village);
     const logs = [];
     this._forcedSpeakers = [];
+    this._forcedSpeakerLines = new Map();
 
     village.log = (msg) => {
       logs.push(String(msg));
@@ -176,6 +188,10 @@ export class RandomEvents {
     if (SINGLE_SPEAKER_EVENTS.has(eventKey) && speakers.length > 1) {
       speakers = [this.randChoice(speakers)];
     }
+    // 当事者以外が当事者向けのセリフを話さないよう、指定した話者だけに絞る。
+    if (FORCED_SPEAKER_ONLY_EVENTS.has(eventKey) && this._forcedSpeakers.length > 0) {
+      speakers = [...this._forcedSpeakers];
+    }
     const title = EVENT_SUBJECTS[eventKey] || EVENT_KIND_TITLES[kind] || "ランダムイベント";
     const message = logs.length > 0 ? logs.join("\n") : `${phase}ランダムイベントが発生しました。`;
 
@@ -184,7 +200,8 @@ export class RandomEvents {
       const participants = speakers
         .map((p, index) => this.participant(
           p,
-          this.createEventLine(kind, p, eventKey, speakers.length > 1 ? index : null)
+          this._forcedSpeakerLines.get(p)
+            || this.createEventLine(kind, p, eventKey, speakers.length > 1 ? index : null)
         ));
       this.announce(title, message, participants);
     } catch (error) {
@@ -256,6 +273,7 @@ export class RandomEvents {
   static collectThunderboltLovePairs(v) {
     const villagers = getActiveVillagers(v);
     const pairs = [];
+    const lineageIndex = createLineageIndex(v);
     villagers.forEach(a => {
       if (!isSingle(a) || Number(a.spiritAge) < 12) return;
       villagers.forEach(b => {
@@ -264,7 +282,8 @@ export class RandomEvents {
         if (Number(b.bodyAge) < 16) return;
         if (getFriendshipScore(a, b) > 19) return;
         if (this.hasPairRelationship(a, b, THUNDERBOLT_LOVE_BLOCKING_RELATION_PREFIXES)) return;
-        if (areSiblings(a, b)) return;
+        if (areSiblings(lineageIndex, a, b)) return;
+        if (isDirectLineage(lineageIndex, a, b)) return;
         pairs.push([a, b]);
       });
     });
@@ -306,8 +325,17 @@ export class RandomEvents {
     // 怪しい薬は巫女系と違い、狼以外の全種族が対象。
     const growthPotionCandidates = getActiveVillagers(v)
       .filter(person => (person.race || "人間") !== "狼" && Number(person.bodyAge) <= 9);
-    if (growthPotionCandidates.length > 0 && Math.random() < 0.2) {
+    if (growthPotionCandidates.length > 0) {
       cands.push({ type: "strangeGrowthPotion", vill: this.randChoice(growthPotionCandidates) });
+    }
+
+    // 時空のうねりは、幼い精神を持ち、肉体交換をしていない村人だけに起こる。
+    const timeRippleCandidates = getActiveVillagers(v).filter(person =>
+      Number(person.spiritAge) <= 9 &&
+      isOriginalBodyOwner(person.name, person.bodyOwner) &&
+      !hasMindTrait(person, "野生"));
+    if (timeRippleCandidates.length > 0) {
+      cands.push({ type: "timeRipple", vill: this.randChoice(timeRippleCandidates) });
     }
 
     // 突然の恋は2人組で成立するため、成立し得る組を1つだけ候補に載せる。
@@ -353,6 +381,15 @@ export class RandomEvents {
         if (!matureBodyToAdultOnly(p, v)) return null;
         this.addForcedSpeaker(p);
         v.log(`怪しい薬:${p.name}は怪しい薬を頭からかぶり、肉体だけが急成長した。肉体年齢${beforeAge}歳→16歳、肉体能力が潜在値まで成長`);
+        break;
+      }
+      case "timeRipple": {
+        const beforeBodyAge = Number(p.bodyAge) || 0;
+        const beforeSpiritAge = Number(p.spiritAge) || 0;
+        const grownAge = randInt(TIME_RIPPLE_MIN_AGE, TIME_RIPPLE_MAX_AGE);
+        if (!growPersonToAdultAge(p, v, { targetAge: grownAge })) return null;
+        this.addForcedSpeaker(p);
+        v.log(`時空のうねり:${p.name}は時空のうねりに巻き込まれ成長した姿で現れた。肉体年齢${beforeBodyAge}歳→${p.bodyAge}歳、精神年齢${beforeSpiritAge}歳→${p.spiritAge}歳`);
         break;
       }
       case "thunderboltLove": {
@@ -679,8 +716,16 @@ export class RandomEvents {
         if (candidates.length === 0) return null;
 
         const a = this.randChoice(candidates);
-        v.log(`ナンパイベント:${a.name}${HobbyEffects.applyPickup(a, v, rules)}`);
+        const pickup = HobbyEffects.runPickup(a, v, rules);
+        v.log(`ナンパイベント:${a.name}${pickup.text}`);
         this.addForcedSpeaker(a);
+        // 相手の返事は受諾か拒否かで変わるため、ここでセリフを決めて渡す。
+        if (pickup.target) {
+          this.addForcedSpeaker(
+            pickup.target,
+            this.createEventLine("good", pickup.target, pickup.accepted ? "pickupAccept" : "pickupReject")
+          );
+        }
         break;
       }
       case "selfPleasure": {
@@ -754,6 +799,8 @@ export class RandomEvents {
     switch (eventKey) {
       case "storm":
         return season === "春" ? 1 : 0;
+      case "greatStorm":
+        return season === "夏" || season === "秋" ? 1 : 0;
       case "downpour":
         return season === "夏" || season === "秋" ? 1 : 0;
       case "heat":
@@ -809,6 +856,11 @@ export class RandomEvents {
         v.log(`春の嵐:食料-${loss}`);
         break;
       }
+      case "greatStorm": {
+        // 黄金像は damageRandomBuilding 側で損壊対象から除外されている。
+        damageRandomBuilding(v);
+        break;
+      }
       case "downpour": {
         let loss = Math.floor(v.food * 0.1);
         v.food = clampValue(v.food - loss, 0, 99999);
@@ -851,11 +903,17 @@ export class RandomEvents {
         break;
       }
       case "lightning2": {
-        const candidates = getVillagersIncludingSaltPillar(v).filter(canExchangeBody);
+        // 交換の奇跡と同じく、村人だけでなく捕虜も雷に打たれる。
+        const candidates = getVillagersIncludingSaltPillar(v)
+          .concat(getCaptives(v))
+          .filter(canExchangeBody);
         if (candidates.length >= 2) {
           let a = this.randChoice(candidates);
           let b = this.randChoice(candidates.filter(x => x !== a));
           doExchange(a, b, v, true);
+          // 捕虜は collectChangedVillagers が拾わないため、当事者を話者として登録する。
+          this.addForcedSpeaker(a);
+          this.addForcedSpeaker(b);
           v.log(`落雷2:${a.name}と${b.name}の肉体交換`);
         }
         break;

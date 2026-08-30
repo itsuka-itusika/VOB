@@ -15,8 +15,8 @@ import { avoidCurrentRaidWithMessengerPass, canAvoidCurrentRaidWithMessengerPass
 import { addRelationship, removeRelationship, addSpouseRelationships, raiseMutualFriendshipTo } from "./relationships.js";
 import {
   canUseAnnunciationPaintingOn,
-  scheduleAnnunciationPaintingPregnancy,
-  updateChildGrowthStage
+  growPersonToAdultAge,
+  scheduleAnnunciationPaintingPregnancy
 } from "./reproduction.js";
 import { clampValue, round3 } from "./util.js";
 import { applyPortraitToElement } from "./data/portraitAtlas.js";
@@ -28,7 +28,7 @@ import { getCaptives } from "./captives.js";
 import { DESPAIR_TRAIT, DISAPPOINTMENT_TRAIT } from "./domain/despair.js";
 import { getDialogueLine } from "./dialogue/dialogueEngine.js";
 import { getActiveVillagers, getVillagersIncludingSaltPillar } from "./domain/apocalypseRules.js";
-import { FOUR_LEGGED_TRAIT, syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
+import { FOUR_LEGGED_TRAIT } from "./domain/speciesTraits.js";
 
 const SEASON_TRAITS_TO_REMOVE = ["夏", "秋", "冬", "冷夏", "飛蝗", "厳冬"];
 const BAD_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "凍え", "疫病", "産褥", "危篤"];
@@ -239,21 +239,7 @@ function applyGrotesquePortrait(village, target) {
 }
 
 function growToSixteen(person, village) {
-  const oldBodyAge = Number(person.bodyAge) || 0;
-  const oldSpiritAge = Number(person.spiritAge) || 0;
-  if (oldBodyAge > 15 && oldSpiritAge > 15) return;
-  const hasPotential = !!(person.potentialStats || person.bodyPotentialStats || person.mindPotentialStats);
-
-  if (oldBodyAge <= 15) person.bodyAge = 16;
-  if (oldSpiritAge <= 15) person.spiritAge = 16;
-  updateChildGrowthStage(person, village, { announce: true });
-  syncWolfSpeciesTraits(person);
-  if (!hasPotential) {
-    person.bodyTraits = (person.bodyTraits || []).filter(trait => !["赤子", "幼児", "少年", "少女"].includes(trait));
-    person.mindTraits = (person.mindTraits || []).filter(trait => !["無垢", "萌芽", "思春期"].includes(trait));
-  }
-  syncEffectiveStats(person);
-  refreshJobTable(person, village);
+  if (!growPersonToAdultAge(person, village, { targetAge: 16, announce: true })) return;
   village.log(`【秘宝】クロノスの秘薬により${person.name}は16歳まで成長しました`);
   showSecretTreasureResult(village, "クロノスの秘薬", `${person.name}は急速に成長し、若い姿を得ました。`, [person]);
 }
@@ -353,7 +339,7 @@ export const SECRET_TREASURES = [
   {
     id: "armless_angel",
     name: "腕の無い天使像",
-    desc: "村人全員に1ヶ月の間、精神特性「ニケ」を付与する。ニケ: 勇気+10。",
+    desc: "村人全員に1ヶ月の間、精神特性「ニケ」を付与する。ニケ: 勇気+5。",
     sellPrice: SECRET_TREASURE_SELL_PRICES.armless_angel,
     canUse: (village) => getVillagers(village).length > 0,
     blockedReason: "村人がいません",

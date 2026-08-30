@@ -1,6 +1,6 @@
 // saveLoad.js
 import { Village, Villager } from "./classes.js";
-import { determineSpeechType, registerUsedName } from "./createVillagers.js";
+import { determineSpeechType } from "./createVillagers.js";
 import { ACTION_NONE, isPreferredActionCandidate, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
 import { getPermanentStat, hydrateStatLayersFromObject, syncEffectiveStats } from "./domain/statLayers.js";
 import { syncGoblinSpeciesTraits, syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
@@ -13,7 +13,9 @@ import { normalizeTutorialState } from "./tutorial.js";
 import { getInitialScaleStageIndex } from "./villageScale.js";
 import { ensureCaptiveReleaseDeadline, normalizeCaptive } from "./captives.js";
 import { normalizeBuildingRequestState } from "./buildingRequests.js";
-import { normalizeWishState } from "./wishes.js";
+import { normalizeWishListState, normalizeWishLog, normalizeWishState } from "./wishes.js";
+import { normalizeManagementGoals } from "./managementGoals.js";
+import { normalizeVillageRecords } from "./records.js";
 import { normalizeAutoAssignSettings } from "./autoAssignSettings.js";
 import { normalizeDamagedBuildings, recalculateBuildingDerivedState } from "./domain/buildingState.js";
 import { normalizeVillageRoleForPerson, normalizeVillageRoles } from "./domain/villageRoles.js";
@@ -247,7 +249,12 @@ function convertVillageToObject(village) {
     secretTreasures: normalizeSecretTreasures(village),
     buildingRequest: normalizeBuildingRequestState(village.buildingRequest),
     hasStartedBuildingRequest: !!village.hasStartedBuildingRequest || !!normalizeBuildingRequestState(village.buildingRequest),
-    wish: normalizeWishState(village.wish),
+    // 単数の wish は古い保存を読む版のために残す。正はこちらの配列。
+    wishes: normalizeWishListState(village.wishes, village.wish),
+    wish: normalizeWishState(village.wishes?.[0] ?? village.wish),
+    wishLog: normalizeWishLog(village.wishLog),
+    managementGoals: normalizeManagementGoals(village.managementGoals),
+    villageRecords: normalizeVillageRecords(village.villageRecords),
     festivalFlags: normalizeFestivalFlags(village.festivalFlags),
     tutorial: normalizeTutorialState(village.tutorial),
     autoAssignSettings: normalizeAutoAssignSettings(village.autoAssignSettings),
@@ -316,6 +323,8 @@ function convertVillagerToObject(vill) {
   return {
     id: ensurePersonId(vill),
     name: vill.name,
+    // 訪問者の肩書を除いた素の名前。名前の予約判定で使う。
+    givenName: vill.givenName || "",
     bodySex: vill.bodySex,
     bodyAge: vill.bodyAge,
     hp: vill.hp,
@@ -453,7 +462,11 @@ function convertObjectToVillage(dataObj) {
   v.secretTreasures = normalizeSecretTreasures(dataObj);
   v.buildingRequest = normalizeBuildingRequestState(dataObj.buildingRequest);
   v.hasStartedBuildingRequest = !!dataObj.hasStartedBuildingRequest || !!v.buildingRequest;
-  v.wish = normalizeWishState(dataObj.wish);
+  v.wishes = normalizeWishListState(dataObj.wishes, dataObj.wish);
+  v.wish = v.wishes[0] || null;
+  v.wishLog = normalizeWishLog(dataObj.wishLog);
+  v.managementGoals = normalizeManagementGoals(dataObj.managementGoals);
+  v.villageRecords = normalizeVillageRecords(dataObj.villageRecords);
   v.festivalFlags = normalizeFestivalFlags(dataObj.festivalFlags);
   v.tutorial = normalizeTutorialState(dataObj.tutorial);
   v.autoAssignSettings = normalizeAutoAssignSettings(dataObj.autoAssignSettings);
@@ -716,13 +729,13 @@ function convertObjectToVillager(obj) {
   vill.criticalCause = String(obj.criticalCause || "");
   vill.pendingEpidemicInfection = !!obj.pendingEpidemicInfection;
   ensureTitleState(vill);
-  registerUsedName(vill.name);
 
   setPreferredAction(vill, migratePreferredAction(obj));
   vill.jobTable = Array.isArray(obj.jobTable) ? [...obj.jobTable] : [];
   vill.assignmentLocked = !!obj.assignmentLocked;
   vill.action = obj.action || ACTION_NONE;
   vill.actionTable = Array.isArray(obj.actionTable) ? [...obj.actionTable] : [];
+  vill.givenName = String(obj.givenName || "");
   vill.bodyOwner = obj.bodyOwner || obj.name;
   vill.bodyOwnerId = normalizePersonId(obj.bodyOwnerId);
 

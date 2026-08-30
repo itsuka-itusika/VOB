@@ -262,6 +262,7 @@ function createRaidEnemy(village, raiderType, existingNames, enemyGroup = null) 
     minAge: raiderType.ageRange.min,
     maxAge: raiderType.ageRange.max,
     existingNames,
+    village,
     params: {
       ...raiderType.params,
       race: raiderType.race
@@ -457,7 +458,6 @@ function createMessengerPassAvoidanceOption(village) {
   return {
     type: "messengerPass",
     label: "伝令神の手形を使う",
-    detail: "秘宝「伝令神の手形」を使うと、この襲撃をなかったことにします。",
     disabled: blockedByApocalypse,
     disabledReason: blockedByApocalypse ? "黙示録の第六・第七の災厄では使用できません" : ""
   };
@@ -541,6 +541,7 @@ export function resetRaidUiAfterAvoidance() {
   const nextBtn = document.getElementById("nextTurnButton");
   if (nextBtn) {
     nextBtn.textContent = "次の月へ";
+    nextBtn.style.display = "";
     nextBtn.disabled = false;
     nextBtn.title = "";
   }
@@ -554,6 +555,12 @@ export function resetRaidUiAfterAvoidance() {
   if (warCouncilBtn) {
     warCouncilBtn.style.display = "none";
   }
+}
+
+// 襲撃名の多くは「〜の襲撃」「〜の来襲」で終わるため、そのまま「の襲撃」を足すと重なる。
+function formatRaidEventName(raidDefinition) {
+  const name = raidDefinition?.name || "襲撃";
+  return /襲撃|来襲/.test(name) ? name : `${name}の襲撃`;
 }
 
 function formatAvoidancePaidResources(option) {
@@ -583,7 +590,7 @@ function endRaidByAvoidance(village, raidDefinition, option) {
 
   village.villagers.forEach(person => refreshJobTable(person, village));
   if (option.type === "messengerPass") {
-    village.log(`【秘宝】伝令神の手形を使い、${raidDefinition.name}の襲撃をなかったことにしました。`);
+    village.log(`【秘宝】伝令神の手形を使い、${formatRaidEventName(raidDefinition)}をなかったことにしました。`);
   } else if (option.type === "sphinxRiddle") {
     village.log("スフィンクスは問答に満足し去っていった。");
   } else {
@@ -626,6 +633,11 @@ function executeRaidAvoidance(village, raidDefinition, option = null) {
   }
 
   if (option.type === "messengerPass") {
+    // 秘宝画面と違い、襲撃発生モーダルは選ぶと即座に手形を失うため、直前に確認する。
+    if (typeof window !== "undefined" &&
+      !window.confirm(`秘宝「伝令神の手形」を使い、${formatRaidEventName(raidDefinition)}をなかったことにします。\n手形は失われます。よろしいですか？`)) {
+      return false;
+    }
     if (!consumeMessengerPass(village)) return false;
   } else {
     const payments = Array.isArray(option.resourcePayments) && option.resourcePayments.length > 0
@@ -754,8 +766,9 @@ export function startRaidEvent(village, options = {}) {
     let nextBtn = document.getElementById("nextTurnButton");
     if (nextBtn) {
       nextBtn.textContent = "次の月へ";
+      nextBtn.style.display = "none";
       nextBtn.disabled = true;
-      nextBtn.title = "襲撃中は作戦会議から迎撃を始めます";
+      nextBtn.title = "";
     }
     let autoAssignBtn = document.getElementById("autoAssignButton");
     if (autoAssignBtn) {

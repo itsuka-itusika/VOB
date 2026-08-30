@@ -52,7 +52,7 @@ import { showDictionaryEntry } from "./dictionary.js";
 import { combinedDictionaryData } from "./data/dictionaryData.js";
 import { getVillagerFoodConsumption } from "./util.js";
 import { applyPortraitToElement } from "./data/portraitAtlas.js";
-import { hasHobbyMateRelationship } from "./relationships.js";
+import { hasHobbyMateRelationship, hasLoverRelationship, hasSpouseRelationship } from "./relationships.js";
 import { getCaptives } from "./captives.js";
 import { getTutorialWarnings } from "./tutorial.js";
 import { applyVillageScaleArtClass, getVillageScaleProgressLabel, getVillageScaleTitle } from "./villageScale.js";
@@ -85,6 +85,7 @@ import {
   VILLAGE_ROLE_PRIEST,
   assignVillageRole,
   canAssignVillageRole,
+  getVillageRoleHolder,
   getUnlockedVillageRoles,
   isAdultMindForVillageRole,
   normalizeVillageRoleForPerson
@@ -147,12 +148,115 @@ function getTermTooltip(label, category) {
   return lines.join("\n");
 }
 
+// 行動が奪われ、療養などへ固定される状態異常。身体か精神かを問わず赤の太字で示す。
+// js/domain/jobTables.js の applyForcedActionRestriction が縛る特性と揃える。
+const INCAPACITATING_TRAITS = new Set([
+  "塩の柱", "危篤", "重体", "負傷", "疫病", "過労", "産褥", "抑鬱"
+]);
+// 動けはするが放置できない状態異常。青の太字で示す。
+const IMPAIRING_TRAITS = new Set([
+  "疲労", "飢餓", "凍え", "曝露", "臨月", "心労", "失望", "絶望"
+]);
+
+function getTraitEmphasisClass(label) {
+  if (INCAPACITATING_TRAITS.has(label)) return "trait-incapacitated";
+  if (IMPAIRING_TRAITS.has(label)) return "trait-impaired";
+  return "";
+}
+
+// 村人一覧の絞り込み。傷病は、赤と青で強調している状態異常をまとめて拾う。
+const AILMENT_FILTER_TRAITS = new Set([...INCAPACITATING_TRAITS, ...IMPAIRING_TRAITS]);
+
+function getFilterValue(id) {
+  return document.getElementById(id)?.value || "";
+}
+
+function isFilterChecked(id) {
+  return document.getElementById(id)?.checked === true;
+}
+
+function hasAilmentTrait(person) {
+  const traits = [...(person?.bodyTraits || []), ...(person?.mindTraits || [])];
+  return traits.some(trait => AILMENT_FILTER_TRAITS.has(trait));
+}
+
+/** 自由入力の特性検索。肉体特性と精神特性のどれかに含まれれば拾う。 */
+function matchesTraitQuery(person, query) {
+  const traits = [...(person?.bodyTraits || []), ...(person?.mindTraits || [])];
+  return traits.some(trait => String(trait).includes(query));
+}
+
+function getVillagerJobLabel(person) {
+  return getActionDisplayName(person?.action) || "なし";
+}
+
+/** 今いる村人から選択肢を作り直す。選んでいた値が消えたら「すべて」へ戻す。 */
+function refreshFilterOptions(selectId, values, allLabel) {
+  const select = document.getElementById(selectId);
+  if (!select) return;
+  const current = select.value;
+  const options = [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, "ja"));
+  select.innerHTML = "";
+  const allOption = document.createElement("option");
+  allOption.value = "";
+  allOption.textContent = allLabel;
+  select.appendChild(allOption);
+  options.forEach(value => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = value;
+    select.appendChild(option);
+  });
+  select.value = options.includes(current) ? current : "";
+}
+
+function filterVillagers(villagers) {
+  const bodySex = getFilterValue("filterBodySex");
+  const spiritSex = getFilterValue("filterSpiritSex");
+  const race = getFilterValue("filterRace");
+  const job = getFilterValue("filterJob");
+  const traitQuery = getFilterValue("filterTrait").trim();
+  const needsAilment = isFilterChecked("filterAilment");
+  const needsLover = isFilterChecked("filterLover");
+  const needsSpouse = isFilterChecked("filterMarried");
+
+  return villagers.filter(person => {
+    if (bodySex && person.bodySex !== bodySex) return false;
+    if (spiritSex && person.spiritSex !== spiritSex) return false;
+    if (race && (person.race || "人間") !== race) return false;
+    if (job && getVillagerJobLabel(person) !== job) return false;
+    if (traitQuery && !matchesTraitQuery(person, traitQuery)) return false;
+    if (needsAilment && !hasAilmentTrait(person)) return false;
+    if (needsLover && !hasLoverRelationship(person)) return false;
+    if (needsSpouse && !hasSpouseRelationship(person)) return false;
+    return true;
+  });
+}
+
+/** 絞り込みを解除する。呼び出し側で updateUI を回して表を引き直す。 */
+export function resetVillagerFilter() {
+  ["filterBodySex", "filterSpiritSex", "filterRace", "filterJob"].forEach(id => {
+    const select = document.getElementById(id);
+    if (select) select.value = "";
+  });
+  ["filterAilment", "filterLover", "filterMarried"].forEach(id => {
+    const checkbox = document.getElementById(id);
+    if (checkbox) checkbox.checked = false;
+  });
+  const traitInput = document.getElementById("filterTrait");
+  if (traitInput) traitInput.value = "";
+}
+
 function appendDictionaryTerm(parent, term, options = {}) {
   const label = String(term || "").trim();
   if (!label) return;
 
   const span = document.createElement("span");
   span.className = "dictionary-term";
+  if (options.category === "trait") {
+    const emphasis = getTraitEmphasisClass(label);
+    if (emphasis) span.classList.add(emphasis);
+  }
   span.tabIndex = 0;
   span.textContent = label;
   span.title = getTermTooltip(label, options.category);
@@ -292,7 +396,7 @@ function buildWarningMessages(village) {
   if (despairingVillagers.length > 0) {
     warnings.push({
       level: "danger",
-      text: `${formatWarningNames(despairingVillagers)}が絶望しています。酒杯・宴会・狂宴・蛇の巻き付いた杖で解除しないまま次の月を迎えると村を去ります。`
+      text: `${formatWarningNames(despairingVillagers)}が絶望しています。奇跡や秘宝で解除しないまま次の月を迎えると村を去ります。`
     });
   }
 
@@ -781,8 +885,8 @@ function appendTextCell(row, value, className = "") {
   return cell;
 }
 
-function appendNumberCell(row, value) {
-  return appendTextCell(row, Math.floor(Number(value) || 0));
+function appendNumberCell(row, value, className = "") {
+  return appendTextCell(row, Math.floor(Number(value) || 0), className);
 }
 
 function appendPortraitCell(row, person) {
@@ -816,6 +920,18 @@ function getSpecialRaiderRowClass(person) {
   return "";
 }
 
+// 精神側の列は、肉体性別ではなく精神性別の色にする。
+function applySpiritSexColor(cell, person) {
+  if (!cell) return;
+  cell.classList.remove("male-basic", "female-basic");
+  if (person.uiSexDisplay) return;
+  if (person.spiritSex === "男") {
+    cell.classList.add("male-basic");
+  } else if (person.spiritSex === "女") {
+    cell.classList.add("female-basic");
+  }
+}
+
 function appendIdentityCells(row, person) {
   appendPortraitCell(row, person);
 
@@ -828,13 +944,8 @@ function appendIdentityCells(row, person) {
   // bodySex/bodyAge と spiritSex/spiritAge は別仕様。表示時も統合しない。
   appendTextCell(row, person.uiSexDisplay || person.bodySex);
   appendTextCell(row, person.uiAgeDisplay || person.bodyAge);
-  const spiritSexCell = appendTextCell(row, person.uiSexDisplay || person.spiritSex, "spirit-column");
-  if (!person.uiSexDisplay && person.spiritSex === "男") {
-    spiritSexCell.classList.add("male-basic");
-  } else if (!person.uiSexDisplay && person.spiritSex === "女") {
-    spiritSexCell.classList.add("female-basic");
-  }
-  appendTextCell(row, person.uiAgeDisplay || person.spiritAge, "spirit-column");
+  applySpiritSexColor(appendTextCell(row, person.uiSexDisplay || person.spiritSex, "spirit-column"), person);
+  applySpiritSexColor(appendTextCell(row, person.uiAgeDisplay || person.spiritAge, "spirit-column"), person);
   appendNumberCell(row, person.hp);
   appendNumberCell(row, person.mp);
   appendTextCell(row, Math.floor(Number(person.happiness) || 0), "happiness-cell");
@@ -900,6 +1011,9 @@ function appendActionCell(row, person, village, editable) {
     }
     person.action = newAction;
     if (isPreferredActionCandidate(newAction)) {
+      // 手で仕事を選び直したら、その選択を優先して固定を解く。
+      // 休養・余暇や襲撃行動は一時的な行動なので、固定は保ったままにする。
+      person.assignmentLocked = false;
       setPreferredAction(person, newAction);
     }
     showDictionaryEntry(getActionDisplayName(newAction));
@@ -910,7 +1024,7 @@ function appendActionCell(row, person, village, editable) {
   const lockButton = document.createElement("button");
   lockButton.type = "button";
   lockButton.className = `assignment-lock-toggle ${person.assignmentLocked ? "is-locked" : "is-auto"}`;
-  lockButton.title = "通常行動を固定します。自動割り振りで変更されません。";
+  lockButton.title = "通常行動を固定します。自動割り振りで変更されません。手で仕事を選び直すと解除されます。";
   lockButton.setAttribute("aria-label", person.assignmentLocked ? "固定中" : "自動割り振り対象");
   lockButton.setAttribute("aria-pressed", person.assignmentLocked ? "true" : "false");
   const lockIcon = document.createElement("span");
@@ -986,7 +1100,9 @@ function appendVillageRoleCell(row, person, village, editable) {
   roles.forEach(role => {
     const option = document.createElement("option");
     option.value = role;
-    option.textContent = role;
+    // 別の村人が就いている役職は、選ぶと交代になる。誰から引き継ぐのかを添える。
+    const holder = role === VILLAGE_ROLE_NONE ? null : getVillageRoleHolder(village, role, person);
+    option.textContent = holder ? `${role}（現：${holder.name}）` : role;
     const title = getVillageRoleDescription(role);
     if (title) option.title = title;
     if (role === currentRole) option.selected = true;
@@ -999,8 +1115,16 @@ function appendVillageRoleCell(row, person, village, editable) {
   cell.title = select.title;
   select.onchange = () => {
     const nextRole = select.value;
+    const previousHolder = nextRole === VILLAGE_ROLE_NONE
+      ? null
+      : getVillageRoleHolder(village, nextRole, person);
     if (assignVillageRole(village, person, nextRole)) {
       syncEffectiveStats(person);
+      if (previousHolder) {
+        // 前任者の役職補正も外す。
+        syncEffectiveStats(previousHolder);
+        village.log(`${previousHolder.name}に代わり、${person.name}が${nextRole}になった`);
+      }
       if (nextRole !== VILLAGE_ROLE_NONE) showDictionaryEntry(nextRole);
       updateUI(village);
       return;
@@ -1013,9 +1137,9 @@ function appendVillageRoleCell(row, person, village, editable) {
 }
 
 function appendStatCells(row, person, village) {
-  ["str", "vit", "dex", "mag", "chr"].forEach(stat => appendNumberCell(row, person[stat]));
+  ["str", "vit", "dex", "mag", "chr"].forEach(stat => appendNumberCell(row, person[stat], "stat-column"));
   appendDictionaryCell(row, person.bodyTraits, { category: "trait" });
-  ["int", "ind", "eth", "cou", "sexdr"].forEach(stat => appendNumberCell(row, person[stat]));
+  ["int", "ind", "eth", "cou", "sexdr"].forEach(stat => appendNumberCell(row, person[stat], "stat-column"));
   const displayedMindTraits = getSpecialRaiderRowClass(person)
     ? (person.mindTraits || []).filter(trait => trait !== "襲撃者")
     : person.mindTraits;
@@ -1031,15 +1155,8 @@ function applyPersonRowStyle(row, person) {
     if (!cell) continue;
     cell.classList.add(person.bodySex === "男" ? "male-basic" : "female-basic");
   }
-  const spiritSexCell = row.cells[6];
-  if (spiritSexCell) {
-    spiritSexCell.classList.remove("male-basic", "female-basic");
-    if (!person.uiSexDisplay && person.spiritSex === "男") {
-      spiritSexCell.classList.add("male-basic");
-    } else if (!person.uiSexDisplay && person.spiritSex === "女") {
-      spiritSexCell.classList.add("female-basic");
-    }
-  }
+  applySpiritSexColor(row.cells[6], person);
+  applySpiritSexColor(row.cells[7], person);
   if (person.hp <= 33 && row.cells[8]) row.cells[8].classList.add("low-hpmp");
   if (person.mp <= 33 && row.cells[9]) row.cells[9].classList.add("low-hpmp");
   applyStatusHighlights(row, person);
@@ -1138,16 +1255,28 @@ export function updateUI(v) {
     if (warCouncilButton) {
       warCouncilButton.style.display = raidMode ? "" : "none";
     }
-    // 襲撃中に月を進める操作は作戦会議の「迎撃開始」へ寄せる。
+    // 襲撃中に月を進める操作は作戦会議の「迎撃開始」へ寄せるため、ボタンごと隠す。
     const nextTurnButton = document.getElementById("nextTurnButton");
     if (nextTurnButton && !v.isRaidFinalizing) {
+      nextTurnButton.style.display = raidMode ? "none" : "";
       nextTurnButton.disabled = raidMode;
-      nextTurnButton.title = raidMode ? "襲撃中は作戦会議から迎撃を始めます" : "";
+      nextTurnButton.title = "";
     }
   }
 
+  const villagers = Array.isArray(v.villagers) ? v.villagers : [];
+  refreshFilterOptions("filterRace", villagers.map(person => person.race || "人間"), "種族：すべて");
+  refreshFilterOptions("filterJob", villagers.map(getVillagerJobLabel), "仕事：すべて");
+  const shownVillagers = filterVillagers(villagers);
+  const filterCount = document.getElementById("villagerFilterCount");
+  if (filterCount) {
+    filterCount.textContent = shownVillagers.length === villagers.length
+      ? ""
+      : `${shownVillagers.length}/${villagers.length}人`;
+  }
+
   const tb = document.querySelector("#villagersTable tbody");
-  renderPeopleTable(tb, v.villagers || [], v, { editable: true });
+  renderPeopleTable(tb, shownVillagers, v, { editable: true });
 
   const captives = getCaptives(v);
   setSectionVisible(document.getElementById("captivesSection"), captives.length > 0);
@@ -1180,8 +1309,8 @@ let sortState = {
 };
 
 // 列番号は index.html の村人一覧テーブルと対応する。列を増減したら両方を合わせること。
-// 行動と役職はプルダウンのため、並べ替えの対象にしない。
-const SORTABLE_VILLAGER_COLUMNS = [4, 5, 6, 7, 8, 9, 10, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23];
+// 行動と役職はプルダウンだが、選ばれている項目の名前で並べ替える。
+const SORTABLE_VILLAGER_COLUMNS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23];
 const NUMERIC_VILLAGER_COLUMNS = [5, 7, 8, 9, 10, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23];
 
 /**
@@ -1215,6 +1344,17 @@ function setupTableSort() {
 }
 
 /**
+ * 並べ替えに使う文字列。行動・役職はプルダウンなので、選ばれている項目の名前を取る。
+ * セルの textContent には選択肢の全文が入ってしまうため、直接は使えない。
+ */
+function getSortText(cell) {
+  if (!cell) return "";
+  const select = cell.querySelector("select");
+  if (select) return select.options[select.selectedIndex]?.textContent?.trim() ?? "";
+  return cell.textContent.trim();
+}
+
+/**
  * テーブルのソート実行
  */
 function sortVillagerTable(colIndex, isAsc) {
@@ -1225,18 +1365,21 @@ function sortVillagerTable(colIndex, isAsc) {
   const rows = Array.from(tbody.querySelectorAll("tr"));
 
   rows.sort((a, b) => {
-    let aVal = a.cells[colIndex]?.textContent ?? "";
-    let bVal = b.cells[colIndex]?.textContent ?? "";
+    const aText = getSortText(a.cells[colIndex]);
+    const bText = getSortText(b.cells[colIndex]);
 
     // 数値の場合は数値としてソート
     if (NUMERIC_VILLAGER_COLUMNS.includes(colIndex)) {
-      aVal = Number(aVal);
-      bVal = Number(bVal);
+      const aNum = Number(aText);
+      const bNum = Number(bText);
+      if (aNum < bNum) return isAsc ? -1 : 1;
+      if (aNum > bNum) return isAsc ? 1 : -1;
+      return 0;
     }
 
-    if (aVal < bVal) return isAsc ? -1 : 1;
-    if (aVal > bVal) return isAsc ? 1 : -1;
-    return 0;
+    // 名前・肉体・種族などは五十音順で並べる。
+    const diff = aText.localeCompare(bText, "ja");
+    return isAsc ? diff : -diff;
   });
 
   // ソート後のテーブルを再構築

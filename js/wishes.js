@@ -9,7 +9,10 @@ import { DEFAULT_PORTRAIT_KEY } from "./data/portraitPaths.js";
 import { addDivineMight } from "./divineMight.js";
 import { getActiveVillagers } from "./domain/apocalypseRules.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
+import { getPermanentStat } from "./domain/statLayers.js";
 import {
+  areSiblings,
+  createLineageIndex,
   getFriendshipScore,
   getRelationshipEntries,
   getRelationshipTargetId
@@ -21,6 +24,8 @@ const WISH_OVERLAY_ID = "wishOverlay";
 const WISH_COMPLETE_MODAL_ID = "wishCompleteModal";
 const WISH_COMPLETE_OVERLAY_ID = "wishCompleteOverlay";
 const CHILD_BODY_TRAITS = new Set(["赤子", "幼児", "少年", "少女"]);
+// 願望の能力条件は、狂乱や火星の加護のような当月限りの増減を除いた永続値で見る。
+const stat = (person, key) => getPermanentStat(person, key);
 const MONSTER_RACES = new Set(["ゴブリン", "ハーピー", "スフィンクス", "ミノタウロス", "キュクロプス", "サイクロプス"]);
 const RARE_RACES = new Set([
   "レア種族",
@@ -38,6 +43,12 @@ const RARE_RACES = new Set([
 ]);
 const RESEARCH_MIND_TRAITS = new Set(["マッド", "天才肌", "学者肌", "好奇心旺盛"]);
 const WISH_REQUESTER_EXCLUDED_MIND_TRAITS = new Set(["野生", "無垢", "神聖"]);
+// 「救って」の対象になる続柄。きょうだいは続柄を持たないため areSiblings で見る。
+const RESCUE_RELATION_PREFIXES = ["母", "父", "子", "恋人", "夫", "妻"];
+const RESCUE_MIN_FRIENDSHIP = 60;
+const CRITICAL_BODY_TRAIT = "危篤";
+// 戦いを拒む、または戦列に並べない精神特性。殊勲は狙えない。
+const DISTINCTION_BLOCKING_MIND_TRAITS = new Set(["野生", "非戦主義", "不殺"]);
 const HUMANOID_RACES = new Set([
   "人間",
   "ゴブリン",
@@ -107,8 +118,8 @@ export function normalizeWishState(source = null) {
   const targetId = Number.isInteger(source.targetId) && source.targetId > 0 ? source.targetId : null;
   const targetName = String(source.targetName || "").trim();
   const context = { targetName };
-  const defaultName = id === "get_closer" && targetName
-    ? `${targetName}と近づきたい`
+  const defaultName = definition.buildName && targetName
+    ? definition.buildName({ targetName })
     : definition.name;
   return {
     id,
@@ -126,28 +137,125 @@ export function normalizeWishState(source = null) {
   };
 }
 
+/** 同時に抱えられる願望の数。 */
+export const MAX_ACTIVE_WISHES = 3;
+/** 台帳に残す、決着した願望の最大件数。 */
+const WISH_LOG_LIMIT = 60;
+
+/** 保存データの願望を配列へ揃える。古い保存の単数フィールドも取り込む。 */
+export function normalizeWishListState(source, legacySingle = null) {
+  const raw = Array.isArray(source)
+    ? source
+    : (source && typeof source === "object" ? [source] : []);
+  const list = raw.length > 0 ? raw : (legacySingle ? [legacySingle] : []);
+  const seen = new Set();
+  return list
+    .map(entry => normalizeWishState(entry))
+    .filter(Boolean)
+    .filter(wish => {
+      const key = `${wish.id}:${wish.requesterId ?? wish.requesterName}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, MAX_ACTIVE_WISHES);
+}
+
+export function getActiveWishes(village) {
+  if (!village) return [];
+  const list = normalizeWishListState(village.wishes, village.wish);
+  village.wishes = list;
+  // 古い保存形式でも読めるよう、単数フィールドは先頭の願望を映しておく。
+  village.wish = list[0] || null;
+  return list;
+}
+
 export function getActiveWish(village) {
-  if (!village) return null;
-  const wish = normalizeWishState(village.wish);
-  village.wish = wish;
-  return wish;
+  return getActiveWishes(village)[0] || null;
+}
+
+function setActiveWishes(village, list) {
+  village.wishes = list.slice(0, MAX_ACTIVE_WISHES);
+  village.wish = village.wishes[0] || null;
+}
+
+/** 決着した願望の記録。台帳の願望画面で振り返る。 */
+export function getWishLog(village) {
+  if (!Array.isArray(village?.wishLog)) return [];
+  return village.wishLog;
+}
+
+export function normalizeWishLog(source) {
+  if (!Array.isArray(source)) return [];
+  return source
+    .map(entry => {
+      const name = String(entry?.name || "").trim();
+      const requesterName = String(entry?.requesterName || "").trim();
+      if (!name || !requesterName) return null;
+      return {
+        id: String(entry?.id || ""),
+        name,
+        requesterName,
+        requesterId: Number.isInteger(entry?.requesterId) && entry.requesterId > 0 ? entry.requesterId : null,
+        requesterRace: String(entry?.requesterRace || "人間"),
+        requesterBodySex: String(entry?.requesterBodySex || ""),
+        requesterBodyAge: normalizeOptionalNumber(entry?.requesterBodyAge),
+        requesterPortraitFile: String(entry?.requesterPortraitFile || DEFAULT_PORTRAIT_KEY),
+        line: String(entry?.line || ""),
+        targetName: String(entry?.targetName || ""),
+        outcome: ["achieved", "expired", "lost"].includes(entry?.outcome) ? entry.outcome : "expired",
+        year: normalizeOptionalNumber(entry?.year) ?? 0,
+        month: normalizeOptionalNumber(entry?.month) ?? 1
+      };
+    })
+    .filter(Boolean)
+    .slice(-WISH_LOG_LIMIT);
+}
+
+function recordWishOutcome(village, wish, outcome) {
+  if (!village || !wish) return;
+  if (!Array.isArray(village.wishLog)) village.wishLog = [];
+  village.wishLog.push({
+    id: wish.id,
+    name: wish.name,
+    requesterName: wish.requesterName,
+    requesterId: wish.requesterId ?? null,
+    requesterRace: wish.requesterRace || "人間",
+    requesterBodySex: wish.requesterBodySex || "",
+    requesterBodyAge: wish.requesterBodyAge ?? null,
+    requesterPortraitFile: wish.requesterPortraitFile || DEFAULT_PORTRAIT_KEY,
+    // 台帳から発生時のモーダルを開き直すため、そのときのセリフも残す。
+    line: wish.line || "",
+    targetName: wish.targetName || "",
+    outcome,
+    year: Number(village.year) || 0,
+    month: Number(village.month) || 1
+  });
+  if (village.wishLog.length > WISH_LOG_LIMIT) {
+    village.wishLog = village.wishLog.slice(-WISH_LOG_LIMIT);
+  }
 }
 
 export function getWishWarnings(village) {
-  const wish = getActiveWish(village);
-  if (!wish) return [];
-  const targetText = wish.targetName && wish.id !== "get_closer" ? `（対象: ${wish.targetName}）` : "";
-  return [{
-    level: "request",
-    text: `願望: ${wish.requesterName}「${wish.name}」${targetText} 残り${wish.monthsLeft}か月。`
-  }];
+  return getActiveWishes(village).map(wish => {
+    const targetText = wish.targetName && wish.id !== "get_closer" ? `（対象: ${wish.targetName}）` : "";
+    return {
+      level: "request",
+      text: `願望: ${wish.requesterName}「${wish.name}」${targetText} 残り${wish.monthsLeft}か月。`
+    };
+  });
 }
 
 export function tryStartWish(village) {
-  if (!village || getActiveWish(village)) return null;
+  if (!village) return null;
+  const active = getActiveWishes(village);
+  if (active.length >= MAX_ACTIVE_WISHES) return null;
   if (!hasActiveBuildingFlag(village, "hasChurch", "church")) return null;
 
-  const candidates = getWishCandidates(village);
+  // 1人が複数の願望を抱えると台帳が偏るため、願望者は1人1件までにする。
+  const busyRequesters = new Set(active.map(wish => wish.requesterId ?? wish.requesterName));
+  const candidates = getWishCandidates(village)
+    .filter(candidate => !busyRequesters.has(candidate.requester.id ?? candidate.requester.name));
   if (candidates.length === 0 || Math.random() >= WISH_START_CHANCE) return null;
 
   const candidate = randChoice(candidates);
@@ -157,7 +265,7 @@ export function tryStartWish(village) {
   const targetName = target?.name || "";
   const wish = {
     id: definition.id,
-    name: definition.id === "get_closer" ? `${targetName}と近づきたい` : definition.name,
+    name: definition.buildName && targetName ? definition.buildName({ targetName }) : definition.name,
     requesterId: requester.id,
     requesterName: requester.name,
     requesterRace: requester.race || "人間",
@@ -170,70 +278,89 @@ export function tryStartWish(village) {
     monthsLeft: WISH_DURATION_MONTHS
   };
 
-  village.wish = wish;
+  setActiveWishes(village, [...active, wish]);
   village.log(`願望発生: ${wish.requesterName}「${wish.name}」（${WISH_DURATION_MONTHS}か月）`);
   showWishStartModal(wish);
   return wish;
 }
 
 export function advanceWishMonth(village) {
-  const wish = getActiveWish(village);
-  if (!wish) return null;
-  if (checkWishCompletion(village)) return null;
+  if (!village) return [];
+  checkWishCompletion(village);
 
-  const requester = findWishRequester(getVillageResidents(village), wish);
-  if (!requester) {
-    village.wish = null;
-    village.log(`願望消失: ${wish.requesterName}が村にいないため「${wish.name}」は消失しました。`);
-    return null;
-  }
+  const residents = getVillageResidents(village);
+  const remaining = [];
+  getActiveWishes(village).forEach(wish => {
+    if (!findWishRequester(residents, wish)) {
+      recordWishOutcome(village, wish, "lost");
+      village.log(`願望消失: ${wish.requesterName}が村にいないため「${wish.name}」は消失しました。`);
+      return;
+    }
+    // 相手あっての願いは、相手が村を去れば叶わないまま消える。
+    if (WISH_DEFINITION_BY_ID.get(wish.id)?.losesWithoutTarget &&
+      !findWishTargetPerson(residents, wish)) {
+      recordWishOutcome(village, wish, "lost");
+      village.log(`願望消失: ${wish.targetName}が村にいないため、${wish.requesterName}の「${wish.name}」は消失しました。`);
+      return;
+    }
+    wish.monthsLeft -= 1;
+    if (wish.monthsLeft <= 0) {
+      recordWishOutcome(village, wish, "expired");
+      village.log(`願望消失: ${wish.requesterName}の「${wish.name}」は期限を迎えました。`);
+      return;
+    }
+    remaining.push(wish);
+  });
 
-  wish.monthsLeft -= 1;
-  if (wish.monthsLeft <= 0) {
-    village.wish = null;
-    village.log(`願望消失: ${wish.requesterName}の「${wish.name}」は期限を迎えました。`);
-    return null;
-  }
-
-  village.wish = wish;
-  return wish;
+  setActiveWishes(village, remaining);
+  return remaining;
 }
 
 export function checkWishCompletion(village, context = {}) {
-  const wish = getActiveWish(village);
-  if (!wish) return null;
-
+  if (!village) return [];
   const villagers = getVillageResidents(village);
-  const requester = findWishRequester(villagers, wish);
-  if (!requester) {
-    village.wish = null;
-    village.log(`願望消失: ${wish.requesterName}が村にいないため「${wish.name}」は消失しました。`);
-    return { wish, requester: null, canceled: true };
-  }
+  const remaining = [];
+  const completed = [];
 
-  const reason = getWishCompletionReason(wish, requester, villagers, context);
-  if (!reason) return null;
+  getActiveWishes(village).forEach(wish => {
+    const requester = findWishRequester(villagers, wish);
+    if (!requester) {
+      recordWishOutcome(village, wish, "lost");
+      village.log(`願望消失: ${wish.requesterName}が村にいないため「${wish.name}」は消失しました。`);
+      return;
+    }
 
-  const definition = WISH_DEFINITION_BY_ID.get(wish.id);
-  const currentTargetName = wish.id === "want_child"
-    ? getSpouse(requester, villagers)?.name || wish.targetName
-    : wish.targetName;
-  const completionLine = resolveWishLine(definition?.completionLines?.[reason], {
-    requester,
-    targetName: currentTargetName
-  }, requester, "complete");
+    const reason = getWishCompletionReason(wish, requester, villagers, context);
+    if (!reason) {
+      remaining.push(wish);
+      return;
+    }
 
-  requester.happiness = clampValue((Number(requester.happiness) || 0) + 30, 0, 100);
-  village.wish = null;
-  addDivineMight(village, 10);
-  village.log(`願望達成: ${wish.requesterName}「${wish.name}」。幸福度+30、神威+10`);
-  showWishCompletionModal({ ...wish, completionLine, reason }, requester);
-  return { wish, requester, reason };
+    const definition = WISH_DEFINITION_BY_ID.get(wish.id);
+    const currentTargetName = wish.id === "want_child"
+      ? getSpouse(requester, villagers)?.name || wish.targetName
+      : wish.targetName;
+    const completionLine = resolveWishLine(definition?.completionLines?.[reason], {
+      requester,
+      targetName: currentTargetName
+    }, requester, "complete");
+
+    requester.happiness = clampValue((Number(requester.happiness) || 0) + 30, 0, 100);
+    addDivineMight(village, 10);
+    recordWishOutcome(village, wish, "achieved");
+    village.log(`願望達成: ${wish.requesterName}「${wish.name}」。幸福度+30、神威+10`);
+    showWishCompletionModal({ ...wish, completionLine, reason }, requester);
+    completed.push({ wish, requester, reason });
+  });
+
+  setActiveWishes(village, remaining);
+  return completed;
 }
 
 function getWishCandidates(village) {
   const villagers = getActiveVillagers(village);
   const residents = getVillageResidents(village);
+  const lineageIndex = createLineageIndex(village);
   const candidates = [];
   const hasMonster = residents.some(isMonster);
   const hasRareRace = residents.some(isRareRace);
@@ -248,7 +375,7 @@ function getWishCandidates(village) {
       .filter(Boolean)
       .forEach(target => candidates.push({ id: "avoid_enemy", requester, target }));
 
-    if (requester.spiritSex === "男" && Number(requester.sexdr) >= 20 && Number(requester.chr) <= 14) {
+    if (requester.spiritSex === "男" && stat(requester, "sexdr") >= 20 && stat(requester, "chr") <= 14) {
       candidates.push({ id: "be_popular", requester });
     }
 
@@ -258,19 +385,32 @@ function getWishCandidates(village) {
       }
     });
 
-    if (Number(requester.vit) <= 13) candidates.push({ id: "be_healthy", requester });
-    if (Number(requester.str) <= 13) candidates.push({ id: "be_strong", requester });
+    if (stat(requester, "vit") <= 13) candidates.push({ id: "be_healthy", requester });
+    if (stat(requester, "str") <= 13) candidates.push({ id: "be_strong", requester });
     if (hasMindTrait(requester, "萌芽") && Number(requester.bodyAge) <= 14) {
       candidates.push({ id: "grow_up", requester });
     }
     if (hasMindTrait(requester, "思春期") && Number(requester.bodyAge) <= 14) {
       candidates.push({ id: "be_full_fledged", requester });
     }
-    if (Number(requester.bodyAge) >= 16 && Number(requester.ind) <= 14) {
+    if (Number(requester.spiritAge) >= 16 && stat(requester, "cou") >= 20 &&
+      !hasAnyMindTrait(requester, DISTINCTION_BLOCKING_MIND_TRAITS)) {
+      candidates.push({ id: "win_distinction", requester });
+    }
+    if (Number(requester.bodyAge) >= 16 && stat(requester, "ind") <= 14) {
       candidates.push({ id: "be_child_again", requester });
     }
     if (Number(requester.spiritAge) >= 16 && !hasPartner(requester)) {
       candidates.push({ id: "want_partner", requester });
+    }
+    if (Number(requester.spiritAge) >= 16) {
+      villagers.forEach(target => {
+        if (target === requester) return;
+        if (!isCriticalCondition(target)) return;
+        if (getFriendshipScore(requester, target) < RESCUE_MIN_FRIENDSHIP) return;
+        if (!isCloseFamily(lineageIndex, requester, target)) return;
+        candidates.push({ id: "save_someone", requester, target });
+      });
     }
     if (hasAnyBodyTrait(requester, ["中年", "老人"])) {
       candidates.push({ id: "regain_youth", requester });
@@ -295,27 +435,30 @@ function getWishCandidates(village) {
 }
 
 function getWishCompletionReason(wish, requester, villagers, context = {}) {
-  const target = villagers.find(person =>
-    wish.targetId != null ? person.id === wish.targetId : person.name === wish.targetName);
+  const target = findWishTargetPerson(villagers, wish);
   switch (wish.id) {
     case "avoid_enemy":
       if (!target) return "targetGone";
       return hasTargetRelationship(requester, "天敵", target) ? null : "rivalryResolved";
     case "be_popular":
       if (hasPartner(requester)) return "partner";
-      return Number(requester.chr) >= 20 ? "charm" : null;
+      return stat(requester, "chr") >= 20 ? "charm" : null;
     case "get_closer":
       if (hasPartnerWith(requester, getWishTarget(wish))) return "partner";
       return isWishTargetBody(requester, wish) ? "exchangedBody" : null;
     case "be_healthy":
-      return Number(requester.vit) >= 20 ? "healthy" : null;
+      return stat(requester, "vit") >= 20 ? "healthy" : null;
     case "be_strong":
-      return Number(requester.str) >= 20 ? "strong" : null;
+      return stat(requester, "str") >= 20 ? "strong" : null;
     case "grow_up":
     case "be_full_fledged":
       return Number(requester.bodyAge) >= 16 ? "adultBody" : null;
     case "be_child_again":
       return hasAnyBodyTrait(requester, CHILD_BODY_TRAITS) ? "childBody" : null;
+    case "save_someone":
+      // 相手が村にいる間だけ叶う。危篤が解けたその月に達成となる。
+      if (!target) return null;
+      return isCriticalCondition(target) ? null : "rescued";
     case "want_partner":
       return hasPartner(requester) ? "partner" : null;
     case "regain_youth":
@@ -326,6 +469,9 @@ function getWishCompletionReason(wish, requester, villagers, context = {}) {
       return villagers.some(isRareRace) ? "rareRacePresent" : null;
     case "celebrate":
       return ["4", "5"].includes(String(context.miracleId || "")) ? "celebration" : null;
+    case "win_distinction":
+      return Array.isArray(context.distinguishedIds) &&
+        context.distinguishedIds.includes(requester.id) ? "distinguished" : null;
     case "want_child": {
       if (hasPregnancy(requester)) return "requesterPregnant";
       const spouse = getSpouse(requester, villagers);
@@ -355,6 +501,22 @@ function findWishRequester(villagers, wish) {
 // 願望の相手参照。ID優先で、旧セーブは名前で読み替える。
 function getWishTarget(wish) {
   return { id: wish?.targetId ?? null, name: wish?.targetName || "" };
+}
+
+// 願望の相手を村人から引く。IDを優先し、旧セーブは名前で読み替える。
+function findWishTargetPerson(villagers, wish) {
+  return villagers.find(person =>
+    wish?.targetId != null ? person.id === wish.targetId : person.name === wish?.targetName) || null;
+}
+
+function isCriticalCondition(person) {
+  return Array.isArray(person?.bodyTraits) && person.bodyTraits.includes(CRITICAL_BODY_TRAIT);
+}
+
+/** 親子・恋人・配偶者は続柄で、きょうだいは共通の親をたどって判定する。 */
+function isCloseFamily(lineageIndex, person, target) {
+  return RESCUE_RELATION_PREFIXES.some(prefix => hasTargetRelationship(person, prefix, target)) ||
+    areSiblings(lineageIndex, person, target);
 }
 
 function isWishTargetBody(requester, wish) {
@@ -444,6 +606,33 @@ function showWishStartModal(wish) {
   showPendingWishModalWhenReady();
 }
 
+/**
+ * 台帳から、その願望が発生したときのモーダルを開き直す。
+ * 決着済みの願望は残り月数がないため、代わりの一文を detailText で渡す。
+ */
+export function openWishStartModal(source, { detailText = "" } = {}) {
+  if (typeof document === "undefined" || !source) return false;
+  const line = String(source.line || "").trim();
+  if (!line) return false;
+
+  pendingStartModal = {
+    id: String(source.id || ""),
+    name: String(source.name || ""),
+    requesterName: String(source.requesterName || ""),
+    requesterRace: String(source.requesterRace || "人間"),
+    requesterBodySex: String(source.requesterBodySex || ""),
+    requesterBodyAge: normalizeOptionalNumber(source.requesterBodyAge),
+    requesterPortraitFile: String(source.requesterPortraitFile || DEFAULT_PORTRAIT_KEY),
+    targetName: String(source.targetName || ""),
+    monthsLeft: Math.floor(Number(source.monthsLeft)) || 0,
+    line,
+    detailText
+  };
+  closeModal(WISH_OVERLAY_ID, WISH_MODAL_ID);
+  showPendingWishModalWhenReady();
+  return true;
+}
+
 function showWishCompletionModal(wish, requester) {
   if (typeof document === "undefined") return;
   pendingCompletionModal = {
@@ -526,7 +715,8 @@ function renderWishModal(wish, isCompletion) {
     detail.appendChild(reward);
   } else {
     const targetText = wish.targetName && wish.id !== "get_closer" ? ` / 対象: ${wish.targetName}` : "";
-    detail.textContent = `願望「${wish.name}」${targetText} / 残り${wish.monthsLeft}か月`;
+    const tailText = wish.detailText || `残り${wish.monthsLeft}か月`;
+    detail.textContent = `願望「${wish.name}」${targetText} / ${tailText}`;
     const reward = document.createElement("div");
     reward.textContent = `達成時: ${wish.requesterName}の幸福度+30、神威+10`;
     detail.appendChild(reward);

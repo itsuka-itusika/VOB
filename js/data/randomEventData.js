@@ -12,11 +12,14 @@ export const EVENT_KIND_TITLES = {
 
 export const EVENT_POOLS = {
   good: ["wolfChild", "cat", "gold", "strangeRain", "fireworks", "hotSpring", "bathPerk", "hobbyFriends", "thaw", "menFriendship", "lover", "hitItOff", "pickup", "yuri", "tattoo", "fashion", "muscle", "selfPleasure"],
-  bad: ["storm", "downpour", "heat", "fire", "thief", "rats", "lightning1", "lightning2", "snow", "fight", "loverArgument", "argument", "drunk", "epidemic"]
+  bad: ["storm", "greatStorm", "downpour", "heat", "fire", "thief", "rats", "lightning1", "lightning2", "snow", "fight", "loverArgument", "argument", "drunk", "epidemic"]
 };
 
 // 村全体へ一律に効くイベント。同じ状況を何人も語る意味がないため、代表1人だけが反応する。
 export const SINGLE_SPEAKER_EVENTS = new Set(["fireworks", "hotSpring", "heat", "snow"]);
+
+// 当事者だけが話すイベント。周囲の好感度が動いた村人まで当事者向けのセリフを話さないようにする。
+export const FORCED_SPEAKER_ONLY_EVENTS = new Set(["pickup"]);
 
 export const EVENT_SUBJECTS = {
   "狩猟神": "狩女神の祝福",
@@ -25,6 +28,7 @@ export const EVENT_SUBJECTS = {
   "地母神": "地母神の慈愛",
   goldenRain: "黄金の雨",
   strangeGrowthPotion: "怪しい薬の急成長",
+  timeRipple: "時空のうねり",
   thunderboltLove: "突然の恋",
   wolfChild: "狼の子供",
   cat: "猫との出会い",
@@ -45,6 +49,7 @@ export const EVENT_SUBJECTS = {
   muscle: "筋トレ",
   selfPleasure: "自家発電にはまった",
   storm: "春の嵐",
+  greatStorm: "大嵐",
   downpour: "豪雨",
   heat: "猛暑",
   fire: "ボヤ",
@@ -67,6 +72,7 @@ export const EVENT_MOODS = {
   "地母神": "mythic",
   goldenRain: "mythic",
   strangeGrowthPotion: "selfChange",
+  timeRipple: "mythic",
   thunderboltLove: "romance",
   wolfChild: "happy",
   cat: "happy",
@@ -86,6 +92,7 @@ export const EVENT_MOODS = {
   muscle: "selfChange",
   selfPleasure: "selfChange",
   storm: "loss",
+  greatStorm: "loss",
   downpour: "loss",
   heat: "hardship",
   fire: "loss",
@@ -316,6 +323,7 @@ export const EVENT_SECOND_LINE_BASES = {
   "戦女神": "次に取るべき道がはっきり見える",
   "地母神": "足元から力が満ちてくる",
   strangeGrowthPotion: "体が一気に大人びた",
+  timeRipple: "自分より幼い顔ぶれの村に立っている",
   thunderboltLove: "あの人の姿が目に焼きついて離れない",
   cat: "この子を見ていると肩の力が抜ける",
   gold: "思わぬ拾い物で村に余裕ができる",
@@ -332,6 +340,7 @@ export const EVENT_SECOND_LINE_BASES = {
   fashion: "装いひとつで見える景色まで変わる",
   muscle: "鍛えた分だけ体が応えてくれる",
   storm: "嵐の後片付けから始めるしかない",
+  greatStorm: "壊れた建物を見上げると、途方に暮れてしまう",
   downpour: "濡れた食料を分けて、使えるものを残したい",
   heat: "この暑さでは立っているだけで体力を削られる",
   fire: "煙の匂いがまだ残っていて落ち着かない",

@@ -3,7 +3,6 @@ import { randChoice, randInt, clampValue, randFloat } from "./util.js";
 import { getPortraitSpriteHtml } from "./data/portraitAtlas.js";
 import {
   generateRandomName,
-  registerUsedName,
   isNameReserved,
   createRandomVillager,
   assignBodyMindTraits,
@@ -569,7 +568,7 @@ export function createWolfFoundling(village) {
     sex,
     minAge: 0,
     maxAge: 0,
-    existingNames: village.villagers.map(person => person.name),
+    village,
     params: {
       ...wolfType.params,
       race: wolfType.race
@@ -600,6 +599,7 @@ export function updateChildGrowthStage(child, village, { announce = false } = {}
       syncEffectiveStats(child);
       setChildPortrait(child);
       refreshJobTable(child, village);
+      if (announce) announceWolfMaturity(village, child);
     }
     return;
   }
@@ -658,12 +658,41 @@ export function updateChildGrowthStage(child, village, { announce = false } = {}
     } else if (child.bodyAge === 16 || child.spiritAge === 16) {
       village.log(`${child.name}は成人しました`);
     }
-    if (child.spiritAge === 16 && !child.adultModalShown) {
+    if (child.race === "狼") {
+      announceWolfMaturity(village, child);
+    } else if (child.spiritAge === 16 && !child.adultModalShown) {
       recordAdulthoodHistory(village, child);
       child.adultModalShown = true;
       showAdultModal(village, child);
     }
   }
+}
+
+/**
+ * 子どもを一気に成人の年齢まで進める。肉体と精神の両方を動かす。
+ * 潜在能力を持たない村人には成長段階が働かないため、子ども特性だけを外す。
+ * 進めるものが無い場合は false を返す。
+ */
+export function growPersonToAdultAge(person, village, { targetAge = 16, announce = false } = {}) {
+  if (!person) return false;
+  const oldBodyAge = Number(person.bodyAge) || 0;
+  const oldSpiritAge = Number(person.spiritAge) || 0;
+  if (oldBodyAge > 15 && oldSpiritAge > 15) return false;
+
+  const age = Math.max(16, Math.floor(Number(targetAge) || 16));
+  const hasPotential = !!(person.potentialStats || person.bodyPotentialStats || person.mindPotentialStats);
+
+  if (oldBodyAge <= 15) person.bodyAge = age;
+  if (oldSpiritAge <= 15) person.spiritAge = age;
+  updateChildGrowthStage(person, village, { announce });
+  syncWolfSpeciesTraits(person);
+  if (!hasPotential) {
+    person.bodyTraits = removeTraits(person.bodyTraits, CHILD_BODY_TRAITS);
+    person.mindTraits = removeTraits(person.mindTraits, CHILD_MIND_TRAITS);
+  }
+  syncEffectiveStats(person);
+  refreshJobTable(person, village);
+  return true;
 }
 
 export function matureBodyToAdultOnly(character, village) {
@@ -854,11 +883,27 @@ function startPregnancy(village, mother, father, options = {}) {
   showPregnancyModal(village, mother, father);
 }
 
+/**
+ * 出産直後の母体の変化。命名を待つ間に肉体交換が起きると身体側の妊娠が相手へ移り、
+ * 同じ妊娠から二度出産してしまうため、身体に関わる分はここで確定させる。
+ */
+function applyPostpartumToMother(mother) {
+  mother.pregnancy = null;
+  mother.bodyTraits = mother.bodyTraits.filter(trait => trait !== "妊娠" && trait !== "臨月");
+  mother.hp = Math.floor(mother.hp * 0.25);
+  addUnique(mother.bodyTraits, "産褥");
+  mother.postpartumMonths = POSTPARTUM_MONTHS;
+  syncEffectiveStats(mother);
+  mother.action = "療養";
+  mother.actionTable = ["療養"];
+}
+
 function giveBirth(village, mother) {
   const data = mother.pregnancy;
   if (!data) return;
 
-  // 命名が決まるまで村へは加えない。母側の出産処理も finalizeBirth へまとめる。
+  // 命名が決まるまで村へは加えない。母体の変化だけは先に確定させる。
+  applyPostpartumToMother(mother);
   const child = createNewbornChild(village, data);
   showBirthModal(village, mother, getSpouse(mother, village), child, childName => {
     finalizeBirth(village, mother, data, child, childName);
@@ -900,10 +945,6 @@ function finalizeBirth(village, mother, data, child, childName) {
   child.name = childName;
   child.bodyOwner = childName;
   child.bodyOwnerId = child.id;
-  registerUsedName(childName);
-
-  mother.bodyTraits = mother.bodyTraits.filter(trait => trait !== "妊娠" && trait !== "臨月");
-  syncEffectiveStats(mother);
 
   addRelationship(child, "母", mother);
   addRelationship(mother, "子", child);
@@ -927,18 +968,11 @@ function finalizeBirth(village, mother, data, child, childName) {
   }
 
   mother.happiness = clampValue(mother.happiness + 50, 0, 100);
-  mother.hp = Math.floor(mother.hp * 0.25);
-  addUnique(mother.bodyTraits, "産褥");
-  mother.postpartumMonths = POSTPARTUM_MONTHS;
-  syncEffectiveStats(mother);
-  mother.action = "療養";
-  mother.actionTable = ["療養"];
 
   if (spouse) {
     spouse.happiness = clampValue(spouse.happiness + 30, 0, 100);
   }
 
-  mother.pregnancy = null;
   addNonHousePopLimitBonus(village, 1);
   village.villagers.push(child);
   recordBirthHistory(village, mother, child, {
@@ -1030,19 +1064,37 @@ function showPregnancyModal(village, mother, father) {
   });
 }
 
+/**
+ * 狼は精神年齢1歳で「未成熟」が外れ、一人前として扱われる。
+ * 人間の成人と同じ節目なので、同じ形の告知モーダルを出す。
+ */
+function announceWolfMaturity(village, child) {
+  if (!village || child?.race !== "狼") return;
+  if ((Number(child.spiritAge) || 0) !== 1 || child.adultModalShown) return;
+
+  village.log(`${child.name}は一人前になりました`);
+  recordAdulthoodHistory(village, child, { source: "成長", label: "成狼" });
+  child.adultModalShown = true;
+  showAdultModal(village, child, {
+    title: "一人前",
+    message: `${child.name}は一人前になりました。`
+  });
+}
+
 function getAdultLine(character) {
   return getDialogueLine({ character, scene: "reproduction", key: "adult" }) || "";
 }
 
-function showAdultModal(village, character) {
+function showAdultModal(village, character, { title = "成人", message = "" } = {}) {
+  const bodyText = message || `${character.name}が成人しました。`;
   enqueueReproductionModal(onClosed => {
     const overlay = document.createElement("div");
     overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;";
     const modal = document.createElement("div");
     modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;max-width:560px;width:calc(100% - 32px);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
     modal.innerHTML = `
-      <h2>成人</h2>
-      <p>${character.name}が成人しました。</p>
+      <h2>${title}</h2>
+      <p>${bodyText}</p>
       ${renderPortraitLine(character, getAdultLine(character))}
       <button type="button" data-close-reproduction-modal>閉じる</button>
     `;
@@ -1067,7 +1119,7 @@ function getBirthLine(character, role) {
 
 const CHILD_NAME_MAX_LENGTH = 8;
 // 関係文字列とログが名前をそのまま埋め込むため、使える文字を絞る。
-const CHILD_NAME_PATTERN = /^[0-9A-Za-z\u3041-\u3096\u30A1-\u30FA\u30FC\u4E00-\u9FFF々・]+$/;
+const CHILD_NAME_PATTERN = /^[0-9A-Za-z\u3041-\u3096\u30A1-\u30FA\u30FC\u4E00-\u9FFF々・＝]+$/;
 
 /** 未命名の赤子の呼び名 */
 function getUnnamedChildLabel(child) {
@@ -1075,11 +1127,10 @@ function getUnnamedChildLabel(child) {
 }
 
 /** オートネームの候補。確定するまで使用済みには登録しない。 */
-function rollChildName(village, mother, child, excludedName = "") {
+function rollChildName(village, child, excludedName = "") {
   return generateRandomName(child.bodySex, {
-    existingNames: [...village.villagers.map(person => person.name), excludedName].filter(Boolean),
-    fallbackParentName: mother.name,
-    register: false
+    existingNames: [excludedName].filter(Boolean),
+    village
   });
 }
 
@@ -1088,11 +1139,10 @@ function getChildNameError(name, village) {
   const trimmed = String(name || "").trim();
   if (!trimmed) return "名を入力してください。";
   if ([...trimmed].length > CHILD_NAME_MAX_LENGTH) return `名は${CHILD_NAME_MAX_LENGTH}文字までです。`;
-  if (!CHILD_NAME_PATTERN.test(trimmed)) return "使えるのは かな・カタカナ・漢字・英数字・「ー」「・」だけです。";
+  if (!CHILD_NAME_PATTERN.test(trimmed)) return "使えるのは かな・カタカナ・漢字・英数字・「ー」「・」「＝」だけです。";
   if (/の(母|父|息子|娘)$/.test(trimmed)) return "「〜の母」「〜の娘」などで終わる名は、続柄と紛れるため使えません。";
   if (trimmed === "既婚") return "その名は使えません。";
-  const taken = isNameReserved(trimmed) ||
-    village.villagers.some(person => person.name === trimmed);
+  const taken = isNameReserved(trimmed, village);
   if (taken) return "同じ名の者がすでにいます。";
   return "";
 }
@@ -1135,7 +1185,7 @@ function showBirthModal(village, mother, father, child, onNamed) {
     };
 
     modal.querySelector("[data-leave-name]").onclick = () => {
-      decideName(rollChildName(village, mother, child));
+      decideName(rollChildName(village, child));
     };
     modal.querySelector("[data-name-child]").onclick = () => {
       choiceArea.hidden = true;
@@ -1144,7 +1194,7 @@ function showBirthModal(village, mother, father, child, onNamed) {
     };
     // 押すたびに、今入っている名前とは別の候補を入れる。
     modal.querySelector("[data-auto-name]").onclick = () => {
-      nameInput.value = rollChildName(village, mother, child, nameInput.value.trim());
+      nameInput.value = rollChildName(village, child, nameInput.value.trim());
       errorText.hidden = true;
       nameInput.focus();
     };

@@ -47,6 +47,8 @@ import { applyRaidFriendshipResults, recordRaidFriendshipDamage, startRaidFriend
 import { handleApocalypseRaidResult } from "./apocalypse.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
 import { grantTitle } from "./titles.js";
+import { addVillageRecord } from "./records.js";
+import { checkWishCompletion } from "./wishes.js";
 
 const RAID_CLOSE_DELAY_MS = 700;
 const RAID_ACTION_SETTLE_DELAY_MS = 780;
@@ -764,6 +766,7 @@ function doOneTrapAction(action, village) {
   if (hasTrait(e, "飛行")) dmg = Math.floor(dmg * 0.5);
   const saltPillarShattered = applyRaidDamage(e, dmg);
   recordRaidFriendshipDamage(village, p, dmg);
+  addVillageRecord(village, p, "raidDamage", dmg);
   addRaidDamageAnimation(result, p, e, dmg, false, "罠発動");
   addRaidActionLog(result, `【罠作成】${p.name}→${e.name}に${dmg}ダメージ`);
   if (saltPillarShattered) addSaltPillarShatterLog(result, e);
@@ -954,6 +957,7 @@ function doOneCombatAction(action, village) {
   const saltPillarShattered = applyRaidDamage(target, dmg);
   if (!isEnemyUnit(actor, village)) {
     recordRaidFriendshipDamage(village, actor, dmg);
+    addVillageRecord(village, actor, "raidDamage", dmg);
   }
   addRaidDamageAnimation(result, actor, target, dmg, false, getAttackActionPopLabel(attackResult, isRanged));
   addRaidActionLog(result, `${label}${actor.name}の${atkTypeText}→${target.name}に ${dmg}ダメージ`);
@@ -995,7 +999,7 @@ function calcRangedDamage(atk, def) {
       attackText: "遠距離魔法"
     };
   }
-  const damage = Math.max(0, Math.floor(((atk.dex * atk.cou) / 400) * 40 - def.vit * 1.2));
+  const damage = Math.max(0, Math.floor(((atk.dex * atk.cou) / 400) * 50 - def.vit * 1.2));
   return {
     damage: Math.floor(damage * getShootingTraitMultiplier(atk)),
     isMagic: false,
@@ -1069,6 +1073,7 @@ function doCounterAttack(counterActor, target, village, result) {
   const saltPillarShattered = applyRaidDamage(target, rdmg);
   if (!isEnemyUnit(counterActor, village)) {
     recordRaidFriendshipDamage(village, counterActor, rdmg);
+    addVillageRecord(village, counterActor, "raidDamage", rdmg);
   }
   addRaidDamageAnimation(result, counterActor, target, rdmg, true, ret.isMagic ? "魔法で反撃" : "反撃");
   addRaidActionLog(result, `　　→ 反撃(${retTypeText}):${counterActor.name}→${target.name}に${rdmg}ダメージ`);
@@ -1210,6 +1215,33 @@ function grantSoloDefenderTitle(village) {
   village.log(`【称号】${hero.name}は${stance}、「一騎当千」を得た`);
 }
 
+/** 結果モーダルに殊勲として出た村人へ、殊勲を1回ずつ記録する。 */
+function recordDistinguishedService(village, distinguishedIds) {
+  distinguishedIds.forEach(id => {
+    const person = village.villagers.find(v => v.id === id);
+    if (person) addVillageRecord(village, person, "distinguished", 1);
+  });
+}
+
+/** 前衛・中衛として戦い、防衛に成功した村人へ勝利を1回ずつ記録する。 */
+function recordRaidVictories(village) {
+  [...getActiveRaidFrontliners(village), ...getActiveRaidMiddleliners(village)]
+    .forEach(person => addVillageRecord(village, person, "raidWins", 1));
+}
+
+/**
+ * 前衛も中衛も立てず、罠だけで敵を全滅させたとき、罠を張った村人へ「トラッパー」を贈る。
+ * 一騎当千と同じく、襲撃者を片付ける前に呼ぶ。
+ */
+function grantTrapperTitles(village) {
+  if (getActiveRaidFrontliners(village).length > 0) return;
+  if (getActiveRaidMiddleliners(village).length > 0) return;
+  const trapMakers = getActiveRaidTrapMakers(village);
+  const awarded = trapMakers.filter(person => grantTitle(person, "trapper"));
+  if (awarded.length === 0) return;
+  village.log(`【称号】${awarded.map(person => person.name).join("、")}は罠だけで襲撃者を退け、「トラッパー」を得た`);
+}
+
 /** 襲撃終了処理 */
 function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
   if (village.isRaidFinalizing || village.isRaidProcessDone) return;
@@ -1240,9 +1272,11 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
     }
     // 結果モーダル用の集計。敵リストの破棄や敗北ペナルティで情報が消える前に行う。
     const resultInfo = collectRaidResultInfo(village, isSuccess, isPartSuccess, options.resultReason);
+    if (isSuccess) recordRaidVictories(village);
     if (isSuccess && !isPartSuccess) {
       resultInfo.capturedName = tryCaptureRaidPrisoner(village)?.name || "";
       grantSoloDefenderTitle(village);
+      grantTrapperTitles(village);
     }
     village.raidEnemies=[];
     clearDefeatedRaidEnemies(village);
@@ -1310,6 +1344,9 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
     }
 
     const severeInjuryResult = rollRaidSevereInjuryCheck(village, raidRules);
+    // 殊勲の願望と殿堂は、結果モーダルに殊勲として出る村人と同じ条件で扱う。
+    checkWishCompletion(village, { distinguishedIds: resultInfo.mvp?.ids || [] });
+    recordDistinguishedService(village, resultInfo.mvp?.ids || []);
     applyRaidFriendshipResults(village);
     handleApocalypseRaidResult(village, completedRaidId, isSuccess);
     village.isRaidProcessDone=true;
@@ -1319,6 +1356,7 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
     let btn=document.getElementById("nextTurnButton");
     if (btn) {
       btn.textContent="次の月へ";
+      btn.style.display = "";
       btn.disabled = false;
       btn.title = "";
     }
@@ -1389,6 +1427,24 @@ function collectRaidResultInfo(village, isSuccess, isPartSuccess, resultReason =
     .filter(person => person && Number(person.hp) <= 0)
     .map(person => person.name);
 
+  // 戦果詳細用。参加した村人を全員並べ、与ダメージの多い順にする。
+  const damageByKey = village.raidFriendshipDamage || {};
+  const damageBreakdown = [...new Set(participantIds)]
+    .map(id => village.villagers.find(v => v.id === Number(id)))
+    .filter(Boolean)
+    .map(person => ({
+      name: person.name,
+      action: String(person.action || ""),
+      damage: Math.floor(Number(damageByKey[String(person.id)]) || 0),
+      portrait: {
+        name: person.name,
+        portraitFile: person.portraitFile,
+        adultPortraitFile: person.adultPortraitFile,
+        bodyTraits: Array.isArray(person.bodyTraits) ? [...person.bodyTraits] : []
+      }
+    }))
+    .sort((a, b) => b.damage - a.damage || a.name.localeCompare(b.name, "ja"));
+
   let mvp = null;
   if (isSuccess) {
     const damageEntries = Object.entries(village.raidFriendshipDamage || {})
@@ -1400,6 +1456,7 @@ function collectRaidResultInfo(village, isSuccess, isPartSuccess, resultReason =
         .map(([id]) => id);
       mvp = {
         damage: topDamage,
+        ids: topIds.map(id => Number(id)).filter(Number.isFinite),
         people: topIds.map(id => {
           const person = village.villagers.find(v => v.id === Number(id));
           return {
@@ -1424,6 +1481,7 @@ function collectRaidResultInfo(village, isSuccess, isPartSuccess, resultReason =
     survivingCount,
     fallenNames,
     mvp,
+    damageBreakdown,
     capturedName: "",
     happinessGain: 0,
     divineGain: 0,
@@ -1501,6 +1559,26 @@ function showRaidResultModal(info) {
       </div>`
     : "";
 
+  // 戦果詳細。与ダメージの多い順に、参加した村人を全員並べる。
+  const breakdown = Array.isArray(info.damageBreakdown) ? info.damageBreakdown : [];
+  const breakdownHtml = breakdown.length > 0
+    ? `<div class="raid-result-breakdown" data-raid-result-breakdown hidden>
+        <table class="raid-result-breakdown-table">
+          <thead><tr><th>順</th><th>顔</th><th>名前</th><th>行動</th><th>与ダメージ</th></tr></thead>
+          <tbody>
+            ${breakdown.map((entry, index) => `
+              <tr>
+                <td class="raid-result-breakdown-rank">${index + 1}</td>
+                <td>${getPortraitSpriteHtml(entry.portrait, { size: 32, alt: entry.name })}</td>
+                <td>${escapeRaidResultText(entry.name)}</td>
+                <td>${escapeRaidResultText(entry.action)}</td>
+                <td class="raid-result-breakdown-damage">${Math.floor(entry.damage)}</td>
+              </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>`
+    : "";
+
   const overlay = document.createElement("div");
   overlay.id = RAID_RESULT_OVERLAY_ID;
   overlay.className = "event-modal-overlay raid-result-overlay";
@@ -1515,7 +1593,9 @@ function showRaidResultModal(info) {
       <h3>${escapeRaidResultText(title)}${reasonText ? `<span class="raid-result-reason">${escapeRaidResultText(reasonText)}</span>` : ""}</h3>
       ${mvpHtml}
       ${lines.map(line => `<p>${line}</p>`).join("")}
+      ${breakdownHtml}
       <div class="event-modal-buttons">
+        ${breakdown.length > 0 ? '<button type="button" data-toggle-raid-breakdown>戦果詳細</button>' : ""}
         <button type="button" data-close-raid-result>閉じる</button>
       </div>
     </div>
@@ -1525,6 +1605,15 @@ function showRaidResultModal(info) {
     overlay.remove();
     modal.remove();
   };
+  const toggleButton = modal.querySelector("[data-toggle-raid-breakdown]");
+  if (toggleButton) {
+    const panel = modal.querySelector("[data-raid-result-breakdown]");
+    toggleButton.onclick = () => {
+      const willShow = panel.hidden;
+      panel.hidden = !willShow;
+      toggleButton.textContent = willShow ? "戦果詳細を閉じる" : "戦果詳細";
+    };
+  }
   modal.querySelector("[data-close-raid-result]").onclick = close;
   overlay.onclick = close;
   document.body.appendChild(overlay);

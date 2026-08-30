@@ -10,6 +10,10 @@ export const BODY_EXCHANGE_SOURCE_RACE_LINE_KEYS = {
 };
 
 export const BODY_EXCHANGE_REACTION_LINES = {
+  // 塩と化した身体は声を出せない。交換で塩の柱を受け取った側が沈黙する。
+  "塩の柱": [
+    "……"
+  ],
   "赤子": [
     "あう……？（手足を見つめている）",
     "んぅ……。（もぞもぞしている）",

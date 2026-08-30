@@ -73,14 +73,14 @@
     <div class="top-actions">
       <div class="action-buttons">
         <!-- 保存/読込/説明メニュー -->
-        <button id="autoAssignButton" onclick="onAutoAssignJobs()">自動割り振り</button>
         <button id="warCouncilButton" class="war-council-button" onclick="openWarCouncil()" style="display:none;">作戦会議</button>
         <button id="nextTurnButton" onclick="onNextTurn()">次の月へ</button>
+        <button id="autoAssignButton" onclick="onAutoAssignJobs()">自動割り振り</button>
         <div class="special-action-buttons">
           <button onclick="openMiracleModal()">奇跡の行使</button>
           <button onclick="openBuildingModal()">建築</button>
           <button onclick="openSecretTreasureModal()">秘宝</button>
-          <button onclick="openHistoryModal()">村史</button>
+          <button onclick="openLedgerModal()">台帳</button>
         </div>
         <div class="utility-actions">
           <select id="utilityActionSelect" aria-label="保存・読込操作">
@@ -90,7 +90,6 @@
             <option value="save-local">ローカル保存</option>
             <option value="load-local">ローカル読込</option>
             <option value="auto-assign-settings">自動割り振り詳細設定</option>
-            <option value="pastbook">過去帳</option>
             <option value="opening">オープニングを見る</option>
             <option value="readme">更新履歴・説明</option>
             <option value="debug">デバッグ用</option>
@@ -106,7 +105,33 @@
     <input type="file" id="fileInput" style="display:none;" accept=".json">
   </section>
   <section>
-    <h2>村人一覧</h2>
+    <div class="section-header">
+      <h2>村人一覧</h2>
+      <div class="villager-filter" id="villagerFilter">
+        <select id="filterBodySex" onchange="onVillagerFilterChange()" aria-label="肉体性別で絞り込み">
+          <option value="">肉体：すべて</option>
+          <option value="男">肉体：男</option>
+          <option value="女">肉体：女</option>
+        </select>
+        <select id="filterSpiritSex" onchange="onVillagerFilterChange()" aria-label="精神性別で絞り込み">
+          <option value="">精神：すべて</option>
+          <option value="男">精神：男</option>
+          <option value="女">精神：女</option>
+        </select>
+        <select id="filterRace" onchange="onVillagerFilterChange()" aria-label="種族で絞り込み">
+          <option value="">種族：すべて</option>
+        </select>
+        <select id="filterJob" onchange="onVillagerFilterChange()" aria-label="仕事で絞り込み">
+          <option value="">仕事：すべて</option>
+        </select>
+        <input type="search" id="filterTrait" oninput="onVillagerFilterChange()" placeholder="特性を検索" aria-label="肉体特性・精神特性で絞り込み">
+        <label><input type="checkbox" id="filterAilment" onchange="onVillagerFilterChange()"> 傷病</label>
+        <label><input type="checkbox" id="filterLover" onchange="onVillagerFilterChange()"> 恋人あり</label>
+        <label><input type="checkbox" id="filterMarried" onchange="onVillagerFilterChange()"> 既婚</label>
+        <button type="button" onclick="clearVillagerFilter()">解除</button>
+        <span class="villager-filter-count" id="villagerFilterCount"></span>
+      </div>
+    </div>
     <table id="villagersTable">
       <thead>
         <tr>
@@ -123,17 +148,17 @@
           <th>幸福</th>      <!--10-->
           <th>行動</th>      <!--11-->
           <th>役職</th>      <!--12-->
-          <th>筋力</th>      <!--13-->
-          <th>耐久</th>      <!--14-->
-          <th>器用</th>      <!--15-->
-          <th>魔力</th>      <!--16-->
-          <th>魅力</th>      <!--17-->
+          <th class="stat-column">筋力</th> <!--13-->
+          <th class="stat-column">耐久</th> <!--14-->
+          <th class="stat-column">器用</th> <!--15-->
+          <th class="stat-column">魔力</th> <!--16-->
+          <th class="stat-column">魅力</th> <!--17-->
           <th>肉体特性</th>  <!--18-->
-          <th>知力</th>      <!--19-->
-          <th>勤勉</th>      <!--20-->
-          <th>倫理</th>      <!--21-->
-          <th>勇気</th>      <!--22-->
-          <th>好色</th>      <!--23-->
+          <th class="stat-column">知力</th> <!--19-->
+          <th class="stat-column">勤勉</th> <!--20-->
+          <th class="stat-column">倫理</th> <!--21-->
+          <th class="stat-column">勇気</th> <!--22-->
+          <th class="stat-column">好色</th> <!--23-->
           <th>精神特性</th>  <!--24-->
           <th>趣味</th>      <!--25-->
         </tr>
@@ -143,6 +168,7 @@
     </table>
     <div class="table-tools">
       <label><input type="checkbox" id="spiritColumnsToggle" onchange="toggleSpiritColumns(this.checked)"> 精神性別、精神年齢を表示</label>
+      <label><input type="checkbox" id="statColumnsToggle" onchange="toggleStatColumns(this.checked)" checked> ステータスを表示</label>
     </div>
   </section>
   <section id="captivesSection" style="display:none;">
@@ -163,17 +189,17 @@
           <th>幸福</th>      <!--10-->
           <th>行動</th>      <!--11-->
           <th>役職</th>      <!--12-->
-          <th>筋力</th>      <!--13-->
-          <th>耐久</th>      <!--14-->
-          <th>器用</th>      <!--15-->
-          <th>魔力</th>      <!--16-->
-          <th>魅力</th>      <!--17-->
+          <th class="stat-column">筋力</th> <!--13-->
+          <th class="stat-column">耐久</th> <!--14-->
+          <th class="stat-column">器用</th> <!--15-->
+          <th class="stat-column">魔力</th> <!--16-->
+          <th class="stat-column">魅力</th> <!--17-->
           <th>肉体特性</th>  <!--18-->
-          <th>知力</th>      <!--19-->
-          <th>勤勉</th>      <!--20-->
-          <th>倫理</th>      <!--21-->
-          <th>勇気</th>      <!--22-->
-          <th>好色</th>      <!--23-->
+          <th class="stat-column">知力</th> <!--19-->
+          <th class="stat-column">勤勉</th> <!--20-->
+          <th class="stat-column">倫理</th> <!--21-->
+          <th class="stat-column">勇気</th> <!--22-->
+          <th class="stat-column">好色</th> <!--23-->
           <th>精神特性</th>  <!--24-->
           <th>趣味</th>      <!--25-->
         </tr>
@@ -200,17 +226,17 @@
           <th>幸福</th>      <!--10-->
           <th>行動</th>      <!--11-->
           <th>役職</th>      <!--12-->
-          <th>筋力</th>      <!--13-->
-          <th>耐久</th>      <!--14-->
-          <th>器用</th>      <!--15-->
-          <th>魔力</th>      <!--16-->
-          <th>魅力</th>      <!--17-->
+          <th class="stat-column">筋力</th> <!--13-->
+          <th class="stat-column">耐久</th> <!--14-->
+          <th class="stat-column">器用</th> <!--15-->
+          <th class="stat-column">魔力</th> <!--16-->
+          <th class="stat-column">魅力</th> <!--17-->
           <th>肉体特性</th>  <!--18-->
-          <th>知力</th>      <!--19-->
-          <th>勤勉</th>      <!--20-->
-          <th>倫理</th>      <!--21-->
-          <th>勇気</th>      <!--22-->
-          <th>好色</th>      <!--23-->
+          <th class="stat-column">知力</th> <!--19-->
+          <th class="stat-column">勤勉</th> <!--20-->
+          <th class="stat-column">倫理</th> <!--21-->
+          <th class="stat-column">勇気</th> <!--22-->
+          <th class="stat-column">好色</th> <!--23-->
           <th>精神特性</th>  <!--24-->
           <th>趣味</th>      <!--25-->
         </tr>
@@ -237,17 +263,17 @@
           <th>幸福</th>      <!--10-->
           <th>行動</th>      <!--11-->
           <th>役職</th>      <!--12-->
-          <th>筋力</th>      <!--13-->
-          <th>耐久</th>      <!--14-->
-          <th>器用</th>      <!--15-->
-          <th>魔力</th>      <!--16-->
-          <th>魅力</th>      <!--17-->
+          <th class="stat-column">筋力</th> <!--13-->
+          <th class="stat-column">耐久</th> <!--14-->
+          <th class="stat-column">器用</th> <!--15-->
+          <th class="stat-column">魔力</th> <!--16-->
+          <th class="stat-column">魅力</th> <!--17-->
           <th>肉体特性</th>  <!--18-->
-          <th>知力</th>      <!--19-->
-          <th>勤勉</th>      <!--20-->
-          <th>倫理</th>      <!--21-->
-          <th>勇気</th>      <!--22-->
-          <th>好色</th>      <!--23-->
+          <th class="stat-column">知力</th> <!--19-->
+          <th class="stat-column">勤勉</th> <!--20-->
+          <th class="stat-column">倫理</th> <!--21-->
+          <th class="stat-column">勇気</th> <!--22-->
+          <th class="stat-column">好色</th> <!--23-->
           <th>精神特性</th>  <!--24-->
           <th>趣味</th>      <!--25-->
         </tr>
@@ -439,13 +465,51 @@
   </div>
 </div>
 
+<!-- モーダル: 台帳 -->
+<div id="ledgerOverlay"></div>
+<div id="ledgerModal">
+  <div class="modal-header">台帳</div>
+  <div id="ledgerContent" class="modal-content"></div>
+  <div class="modal-buttons">
+    <button onclick="closeLedgerModal()">閉じる</button>
+  </div>
+</div>
+
+<!-- モーダル: 選挙記録 -->
+<div id="electionRecordOverlay"></div>
+<div id="electionRecordModal">
+  <div class="modal-header">選挙記録</div>
+  <div id="electionRecordContent" class="modal-content"></div>
+</div>
+
+<!-- モーダル: 願望 -->
+<div id="wishLedgerOverlay"></div>
+<div id="wishLedgerModal">
+  <div class="modal-header">願望</div>
+  <div id="wishLedgerContent" class="modal-content"></div>
+</div>
+
+<!-- モーダル: 殿堂 -->
+<div id="rankingOverlay"></div>
+<div id="rankingModal">
+  <div class="modal-header">殿堂</div>
+  <div id="rankingContent" class="modal-content"></div>
+</div>
+
+<!-- モーダル: 経営目標 -->
+<div id="managementGoalsOverlay"></div>
+<div id="managementGoalsModal">
+  <div class="modal-header">経営目標</div>
+  <div id="managementGoalsContent" class="modal-content"></div>
+</div>
+
 <!-- モーダル: 村史 -->
 <div id="historyOverlay"></div>
 <div id="historyModal">
   <div class="modal-header">村史</div>
   <div id="historyContent" class="modal-content"></div>
   <div class="modal-buttons">
-    <button onclick="closeHistoryModal()">閉じる</button>
+    <button type="button" data-history-back>台帳へ戻る</button>
   </div>
 </div>
 

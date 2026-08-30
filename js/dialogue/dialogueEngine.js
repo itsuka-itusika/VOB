@@ -37,13 +37,13 @@ import {
   expandEventVillagerLines,
   findLineByKeys
 } from "../data/dialogue/randomEventLines.js";
-import { BODY_EXCHANGE_SOURCE_RACE_LINE_KEYS } from "../data/dialogue/exchangeLines.js";
+import { BODY_EXCHANGE_SOURCE_RACE_LINE_KEYS, BODY_EXCHANGE_REACTION_LINES } from "../data/dialogue/exchangeLines.js";
 import {
   CAPTIVE_JOIN_LINES,
   CAPTIVE_RELEASE_LINES,
   FORMER_CAPTIVE_LINES
 } from "../data/dialogue/captiveLines.js";
-import { isApocalypseActive } from "../domain/apocalypseRules.js";
+import { isApocalypseActive, isSaltPillar, SALT_PILLAR_TRAIT } from "../domain/apocalypseRules.js";
 import { FORMER_CAPTIVE_ADJUSTMENT_MONTHS } from "../captives.js";
 
 export { resolveDialogueTone, resolveStoredSpeechType } from "../data/dialogue/toneProfiles.js";
@@ -182,6 +182,10 @@ function pickLineByVariant(value, variantIndex) {
 
 function getRandomEventLine(character, eventKey, { kind = null, subject = null, mood = null, variantIndex = null } = {}) {
   const isBodyExchangeEvent = eventKey === "lightning2";
+  // 塩と化した身体は声を出せない。落雷の交換でも交換の奇跡と同じ沈黙を返す。
+  if (isBodyExchangeEvent && isSaltPillar(character)) {
+    return pickDialogueLine(BODY_EXCHANGE_REACTION_LINES[SALT_PILLAR_TRAIT]);
+  }
   if (!isBodyExchangeEvent) {
     const childLine = getChildlikeRandomEventLine(character, { eventKey, kind, mood });
     if (childLine) return childLine;

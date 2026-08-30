@@ -3,7 +3,15 @@ import { openBuildingModal, closeBuildingModal, unlockAllBuildings } from "./bui
 import { createRandomVillager, createRandomVisitor, getVisitorTypeChoices } from "./createVillagers.js";
 import "./dictionary.js";
 import { addNonHousePopLimitBonus } from "./domain/buildingState.js";
-import { closeHistoryModal, closePersonalHistoryModal, openHistoryModal, openPastBookModal } from "./history.js";
+import { closeHistoryModal, closePersonalHistoryModal } from "./history.js";
+import {
+  closeElectionRecordModal,
+  closeLedgerModal,
+  closeManagementGoalsModal,
+  closeRankingModal,
+  closeWishLedgerModal,
+  openLedgerModal
+} from "./ledger.js";
 import { theVillage, onNextTurn } from "./main.js";
 import {
   closeExchangeModal,
@@ -24,7 +32,7 @@ import {
 } from "./saveLoad.js";
 import { closeDryadFruitModal, closeSecretTreasureModal, openSecretTreasureModal, SECRET_TREASURES } from "./secretTreasures.js";
 import { RAID_MODULES } from "./data/raidData.js";
-import { updateUI } from "./ui.js";
+import { resetVillagerFilter, updateUI } from "./ui.js";
 import { getCaptives } from "./captives.js";
 import { setBalanceSimulationOptions } from "./balance/simulationOptions.js";
 import { enterGame, initOpeningScreen, replayOpeningStory } from "./openingScreen.js";
@@ -147,7 +155,8 @@ function prepareApocalypseDebugState() {
         str: [20, 25], vit: [20, 25], dex: [20, 25], mag: [20, 25], chr: [20, 25],
         int: [20, 25], ind: [20, 25], eth: [20, 25], cou: [20, 25], sexdr: [20, 25]
       },
-      existingNames: getExistingNames()
+      existingNames: getExistingNames(),
+      village: theVillage
     });
     theVillage.villagers.push(villager);
     addedVillagers.push(villager);
@@ -301,8 +310,6 @@ function runUtilityAction() {
     }
   } else if (action === "auto-assign-settings") {
     openAutoAssignSettingsModal(theVillage, { onApplied: () => updateUI(theVillage) });
-  } else if (action === "pastbook") {
-    openPastBookModal(theVillage);
   } else if (action === "opening") {
     replayOpeningStory();
   } else if (action === "readme") {
@@ -320,6 +327,15 @@ function setSpiritColumnsVisibility(visible) {
     if (table) table.classList.toggle("show-spirit-columns", Boolean(visible));
   });
   const checkbox = document.getElementById("spiritColumnsToggle");
+  if (checkbox) checkbox.checked = Boolean(visible);
+}
+
+function setStatColumnsVisibility(visible) {
+  ["villagersTable", "captivesTable", "visitorsTable", "raidEnemiesTable"].forEach(id => {
+    const table = document.getElementById(id);
+    if (table) table.classList.toggle("hide-stat-columns", !visible);
+  });
+  const checkbox = document.getElementById("statColumnsToggle");
   if (checkbox) checkbox.checked = Boolean(visible);
 }
 
@@ -342,9 +358,9 @@ function bindGlobalHandlers() {
     openSecretTreasureModal: () => openSecretTreasureModal(theVillage),
     closeSecretTreasureModal,
     closeDryadFruitModal,
-    openHistoryModal: () => openHistoryModal(theVillage),
-    closeHistoryModal,
     closePersonalHistoryModal,
+    openLedgerModal: () => openLedgerModal(theVillage),
+    closeLedgerModal,
     onAutoAssignJobs: () => {
       autoAssignJobs(theVillage);
       updateUI(theVillage);
@@ -357,14 +373,20 @@ function bindGlobalHandlers() {
     },
     openWarCouncil: () => openWarCouncilModal(theVillage, {
       onStart: onNextTurn,
-      onAutoAssign: () => {
-        autoAssignRaidActions(theVillage);
+      onAutoAssign: mode => {
+        autoAssignRaidActions(theVillage, { mode });
         updateUI(theVillage);
       },
       onMiracle: () => openMiracleModal(theVillage)
     }),
     closeWarCouncil: closeWarCouncilModal,
     toggleSpiritColumns: setSpiritColumnsVisibility,
+    toggleStatColumns: setStatColumnsVisibility,
+    onVillagerFilterChange: () => updateUI(theVillage),
+    clearVillagerFilter: () => {
+      resetVillagerFilter();
+      updateUI(theVillage);
+    },
     closeConversationModal: async () => {
       const { closeConversationModal } = await import("./conversation.js");
       closeConversationModal();
@@ -434,6 +456,11 @@ function bindModalOverlayClickClose() {
   bindOverlayClickClose("dryadFruitOverlay", closeDryadFruitModal);
   bindOverlayClickClose("historyOverlay", closeHistoryModal);
   bindOverlayClickClose("personalHistoryOverlay", closePersonalHistoryModal);
+  bindOverlayClickClose("ledgerOverlay", closeLedgerModal);
+  bindOverlayClickClose("electionRecordOverlay", closeElectionRecordModal);
+  bindOverlayClickClose("wishLedgerOverlay", closeWishLedgerModal);
+  bindOverlayClickClose("rankingOverlay", closeRankingModal);
+  bindOverlayClickClose("managementGoalsOverlay", closeManagementGoalsModal);
 }
 
 bindGlobalHandlers();

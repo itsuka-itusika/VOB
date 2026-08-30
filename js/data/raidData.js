@@ -2,6 +2,16 @@ function numberedPortraits(prefix, count) {
   return Array.from({ length: count }, (_, index) => `${prefix}${index + 1}.png`);
 }
 
+// 翼人兵と上位翼人が共有する趣味。天と光、翼、信仰に寄せる。
+const WINGED_RAIDER_HOBBIES = [
+  // 信仰そのもの
+  "祈り", "聖句誦唱", "瞑想", "滝行",
+  // 天と翼
+  "羽づくろい", "光輪磨き", "飛翔", "日光浴", "天体観測",
+  // 天から地を眺め、書き、歌う
+  "歌唱", "詩作", "読書", "占い", "人間観察", "手芸"
+];
+
 export const RAIDER_TYPES = [
   {
     type: "野盗",
@@ -24,6 +34,8 @@ export const RAIDER_TYPES = [
     ],
     ranges: {
       hp: [50, 70],
+      mp: [34, 55],
+      happiness: [10, 30],
       str: [15, 21],
       vit: [8, 25],
       dex: [10, 20],
@@ -65,6 +77,8 @@ export const RAIDER_TYPES = [
     ],
     ranges: {
       hp: [65, 85],
+      mp: [55, 75],
+      happiness: [35, 55],
       str: [18, 24],
       vit: [14, 28],
       dex: [12, 22],
@@ -102,6 +116,8 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("BAN", 20),
     ranges: {
       hp: [55, 75],
+      mp: [55, 75],
+      happiness: [35, 55],
       str: [14, 20],
       vit: [10, 20],
       dex: [18, 24],
@@ -139,6 +155,8 @@ export const RAIDER_TYPES = [
     ],
     ranges: {
       hp: [30, 50],
+      mp: [40, 60],
+      happiness: [55, 80],
       str: [12, 18],
       vit: [5, 15],
       dex: [18, 25],
@@ -178,6 +196,8 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("GOB", 13),
     ranges: {
       hp: [50, 70],
+      mp: [50, 70],
+      happiness: [65, 88],
       str: [15, 21],
       vit: [10, 20],
       dex: [18, 26],
@@ -214,6 +234,8 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("GOB", 13),
     ranges: {
       hp: [35, 55],
+      mp: [40, 60],
+      happiness: [55, 80],
       str: [10, 16],
       vit: [6, 16],
       dex: [24, 32],
@@ -245,6 +267,8 @@ export const RAIDER_TYPES = [
     raidPosition: "front",
     ranges: {
       hp: [30, 50],
+      mp: [50, 70],
+      happiness: [40, 60],
       str: [15, 20],
       vit: [8, 16],
       dex: [3, 8],
@@ -288,6 +312,8 @@ export const RAIDER_TYPES = [
     raidPosition: "front",
     ranges: {
       hp: [30, 50],
+      mp: [34, 45],
+      happiness: [5, 20],
       str: [15, 20],
       vit: [8, 16],
       dex: [3, 8],
@@ -331,6 +357,8 @@ export const RAIDER_TYPES = [
     raidPosition: "front",
     ranges: {
       hp: [90, 120],
+      mp: [55, 80],
+      happiness: [45, 70],
       str: [23, 30],
       vit: [23, 30],
       dex: [5, 15],
@@ -376,6 +404,8 @@ export const RAIDER_TYPES = [
     ],
     ranges: {
       hp: [50, 70],
+      mp: [50, 70],
+      happiness: [65, 90],
       str: [16, 22],
       vit: [8, 18],
       dex: [1, 5],
@@ -421,6 +451,8 @@ export const RAIDER_TYPES = [
     ],
     ranges: {
       hp: [70, 90],
+      mp: [60, 80],
+      happiness: [75, 95],
       str: [18, 24],
       vit: [12, 22],
       dex: [2, 7],
@@ -460,6 +492,8 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("NOMAD", 20),
     ranges: {
       hp: [45, 60],
+      mp: [45, 65],
+      happiness: [20, 40],
       str: [18, 24],
       vit: [16, 23],
       dex: [18, 26],
@@ -495,6 +529,8 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("ELITE_NOMAD", 20),
     ranges: {
       hp: [70, 90],
+      mp: [60, 80],
+      happiness: [45, 65],
       str: [20, 25],
       vit: [18, 23],
       dex: [20, 25],
@@ -530,6 +566,8 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("CENTAUR", 9),
     ranges: {
       hp: [80, 100],
+      mp: [60, 80],
+      happiness: [50, 70],
       str: [18, 23],
       vit: [18, 23],
       dex: [18, 28],
@@ -564,6 +602,8 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("KNIGHT", 26),
     ranges: {
       hp: [75, 95],
+      mp: [55, 75],
+      happiness: [30, 50],
       str: [19, 24],
       vit: [17, 24],
       dex: [12, 20],
@@ -597,6 +637,8 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("ARMORED", 8),
     ranges: {
       hp: [80, 100],
+      mp: [60, 80],
+      happiness: [35, 55],
       str: [20, 25],
       vit: [20, 28],
       dex: [8, 15],
@@ -631,6 +673,8 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("ELITE", 22),
     ranges: {
       hp: [70, 90],
+      mp: [70, 88],
+      happiness: [50, 70],
       str: [22, 25],
       vit: [20, 25],
       dex: [18, 24],
@@ -665,6 +709,8 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("HOLY_KNIGHT", 8),
     ranges: {
       hp: [80, 100],
+      mp: [80, 95],
+      happiness: [55, 75],
       str: [22, 25],
       vit: [20, 25],
       dex: [18, 24],
@@ -700,6 +746,8 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("SAINT", 21),
     ranges: {
       hp: [60, 90],
+      mp: [85, 98],
+      happiness: [60, 80],
       str: [8, 15],
       vit: [12, 20],
       dex: [12, 20],
@@ -737,19 +785,21 @@ export const RAIDER_TYPES = [
     },
     ranges: {
       hp: [160, 200],
+      mp: [80, 95],
+      happiness: [40, 60],
       str: [25, 32],
       vit: [25, 32],
       dex: [18, 28],
-      mag: [34, 46],
+      mag: [28, 38],
       chr: [16, 24],
       int: [28, 36],
       ind: [18, 30],
       eth: [5, 18],
-      cou: [20, 32],
+      cou: [16, 24],
       sexdr: [5, 12]
     },
     forcedBodyTraits: ["人面獣身", "飛行"],
-    mindTraits: ["古代知識"],
+    mindTraits: ["古代知識", "魔法障壁"],
     hobbies: ["月光浴", "読書", "詩作", "祈り", "謎掛け", "瞑想", "人間観察", "自由研究", "天体観測", "占い"],
     dialogues: [
       "問いに答えよ。沈黙もまた答えとして扱おう。",
@@ -774,6 +824,8 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("ANGEL_FIGHTER", 16),
     ranges: {
       hp: [70, 90],
+      mp: [85, 97],
+      happiness: [55, 75],
       str: [16, 23],
       vit: [16, 23],
       dex: [16, 23],
@@ -785,6 +837,7 @@ export const RAIDER_TYPES = [
       cou: [22, 26],
       sexdr: [3, 8]
     },
+    hobbies: WINGED_RAIDER_HOBBIES,
     forcedBodyTraits: ["飛行", "光輪"],
     mindTraits: ["神聖", "狂信"],
     dialogues: [
@@ -810,17 +863,20 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("ARCHANGEL", 13),
     ranges: {
       hp: [80, 100],
+      mp: [90, 99],
+      happiness: [65, 85],
       str: [18, 25],
       vit: [18, 25],
-      dex: [16, 23],
+      dex: [16, 22],
       mag: [28, 36],
       chr: [25, 35],
-      int: [22, 30],
+      int: [24, 30],
       ind: [20, 28],
       eth: [25, 35],
       cou: [22, 30],
       sexdr: [3, 10]
     },
+    hobbies: WINGED_RAIDER_HOBBIES,
     forcedBodyTraits: ["飛行", "光輪"],
     mindTraits: ["神聖", "狂信", "歴戦"],
     dialogues: [
@@ -846,6 +902,8 @@ export const RAIDER_TYPES = [
     portraits: numberedPortraits("ELITE_NOMAD", 20),
     ranges: {
       hp: [85, 110],
+      mp: [65, 85],
+      happiness: [40, 60],
       str: [22, 28],
       vit: [18, 25],
       dex: [22, 30],
@@ -882,7 +940,9 @@ export const RAIDER_TYPES = [
     exchangeImmune: true,
     uncapturable: true,
     ranges: {
-      hp: [350, 350],
+      hp: [420, 420],
+      mp: [100, 100],
+      happiness: [100, 100],
       str: [28, 28],
       vit: [18, 18],
       dex: [28, 28],
@@ -924,7 +984,9 @@ export const RAIDER_TYPES = [
     exchangeImmune: true,
     uncapturable: true,
     ranges: {
-      hp: [280, 280],
+      hp: [360, 360],
+      mp: [100, 100],
+      happiness: [100, 100],
       str: [45, 45],
       vit: [35, 35],
       dex: [21, 21],
@@ -1057,12 +1119,24 @@ export const FALLBACK_RAID_RULES = {
   failurePenalty: cloneRaidRules(DEFAULT_RAID_FAILURE_PENALTY)
 };
 
+// 逸れハーピーの襲撃はハーピーの襲撃と同じ告知にする。
+const HARPY_RAID_INTRO_DIALOGUES = [
+  "キャハハ！上から見ていたのよ。いい村を見つけちゃった！",
+  "屋根の隙間から、光るものが覗いているわ。頂きに来たの。",
+  "空から降りてくるものに、備えなんてしていないでしょう？"
+];
+
 export const RAID_MODULES = [
   createExistingRaiderRaid("bandit", "野盗", {
     failurePenalty: {
       foodRate: 0.2,
       fundsRate: 0.2
-    }
+    },
+    introDialogues: [
+      "村を見つけたぞ。柵の内にあるものは、今日から俺たちのものだ。",
+      "おとなしくしていれば命は取らん。蔵の鍵を出せ。",
+      "隣の村では取り損ねてな。ここで埋め合わせさせてもらう。"
+    ]
   }),
   createCompositeRaiderRaid({
     id: "mercenary-band",
@@ -1104,23 +1178,39 @@ export const RAID_MODULES = [
   createExistingRaiderRaid("goblin", "ゴブリン", {
     failurePenalty: {
       foodRate: 0.25
-    }
+    },
+    introDialogues: [
+      "キヒヒ！人間の巣を見つけたのだ！",
+      "柵は低い、見張りは眠い！今夜は食い放題なのだ！",
+      "食い物も光るものも、みんな持って帰るのだ！"
+    ]
   }),
   createExistingRaiderRaid("wolf", "狼", {
     failurePenalty: {
       foodRate: 0.2
-    }
+    },
+    introDialogues: [
+      "ウォォォン！（森を出た群れが、村の匂いを追ってきた）",
+      "グルルル...（柵の隙間から中をうかがっている）",
+      "ハァハァ...（家畜の鳴き声に牙をむいている）"
+    ]
   }),
   createExistingRaiderRaid("cyclops", "キュクロプス", {
     failurePenalty: {
       foodRate: 0.2,
       buildingDamage: true
-    }
+    },
+    introDialogues: [
+      "ウオォォ！小さい家がたくさんある...全部踏み潰す...！",
+      "腹が減った...人間の蓄えを、まとめて食う...",
+      "山を下りてきた。この村は、俺の通り道だ。"
+    ]
   }),
   createExistingRaiderRaid("harpy", "ハーピー", {
     failurePenalty: {
       fundsRate: 0.25
-    }
+    },
+    introDialogues: HARPY_RAID_INTRO_DIALOGUES
   }),
   createCompositeRaiderRaid({
     id: "stray-harpy",
@@ -1133,7 +1223,8 @@ export const RAID_MODULES = [
     ],
     failurePenalty: {
       fundsRate: 0.15
-    }
+    },
+    introDialogues: HARPY_RAID_INTRO_DIALOGUES
   }),
   createCompositeRaiderRaid({
     id: "harpy-swarm",
@@ -1142,12 +1233,17 @@ export const RAID_MODULES = [
     weight: 14,
     representative: { raiderType: "ハーピーの長", role: "leader" },
     enemyGroups: [
-      { raiderType: "ハーピー", minCount: 3, maxCount: 4 },
+      { raiderType: "ハーピー", minCount: 4, maxCount: 5 },
       { raiderType: "ハーピーの長", minCount: 1, maxCount: 1 }
     ],
     failurePenalty: {
       fundsRate: 0.35
-    }
+    },
+    introDialogues: [
+      "キャハハ！空が私たちで埋まっているのが見えて？",
+      "下の子たち、村を囲みなさい。逃げ道は残さないの。",
+      "一羽ずつ追い払える数ではないわ。諦めて差し出しなさい。"
+    ]
   }),
   createCompositeRaiderRaid({
     id: "goblin-army",
@@ -1181,7 +1277,12 @@ export const RAID_MODULES = [
     ],
     failurePenalty: {
       foodRate: 0.3
-    }
+    },
+    introDialogues: [
+      "ウォォォン！（飢えた群れが、村を囲むように散っていく）",
+      "グルルル...（いくつもの目が、柵の向こうを見ている）",
+      "ハァハァ...（骨まで食うつもりで牙を鳴らしている）"
+    ]
   }),
   createCompositeRaiderRaid({
     id: "cyclops-band",
@@ -1194,7 +1295,12 @@ export const RAID_MODULES = [
     failurePenalty: {
       foodRate: 0.3,
       buildingDamage: true
-    }
+    },
+    introDialogues: [
+      "ウオォォ！仲間を連れてきた。今日は村ごと潰す...！",
+      "家も柵も、まとめて踏み倒す。数は足りている...",
+      "腹が減った仲間が、後ろにもいる...全部食う..."
+    ]
   }),
   createCompositeRaiderRaid({
     id: "monster-stampede",
@@ -1300,7 +1406,7 @@ export const RAID_MODULES = [
       resource: "funds",
       label: "巡礼の寄付を払う",
       rate: 0.5,
-      minAmount: 500
+      minAmount: 200
     },
     representative: [
       { raiderType: "上級騎士" },

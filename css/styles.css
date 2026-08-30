@@ -935,9 +935,9 @@ body.apocalypse-mode #villageInfoHeading {
 }
 
 tr.apocalypse-conquest-row > td {
-  background: #fff !important;
-  border-color: #d4af37 !important;
-  color: #211805;
+  background: linear-gradient(180deg, #f6e3a1 0%, #e3c463 55%, #c9a544 100%) !important;
+  border-color: #a8801f !important;
+  color: #2b2005;
 }
 
 tr.apocalypse-war-row > td {
@@ -954,12 +954,13 @@ tr.apocalypse-war-row > td {
   background: #f9d8e9;
 }
 
-tr td:nth-child(14),
-tr td:nth-child(15),
-tr td:nth-child(16),
-tr td:nth-child(17),
-tr td:nth-child(18),
-tr td:nth-child(19) {
+/* 作戦会議表は列構成が違うため、この列色は当てない。 */
+table:not(.wc-table) tr td:nth-child(14),
+table:not(.wc-table) tr td:nth-child(15),
+table:not(.wc-table) tr td:nth-child(16),
+table:not(.wc-table) tr td:nth-child(17),
+table:not(.wc-table) tr td:nth-child(18),
+table:not(.wc-table) tr td:nth-child(19) {
   background: #faf2d3;
 }
 
@@ -987,6 +988,16 @@ tr td:nth-child(25) {
   font-weight: bold;
 }
 
+/* 行動を奪う状態異常は赤、動けるが深刻な状態異常は青で太字にする。 */
+.dictionary-term.trait-incapacitated {
+  color: #c62828;
+  font-weight: bold;
+}
+.dictionary-term.trait-impaired {
+  color: #1565c0;
+  font-weight: bold;
+}
+
 .dictionary-term {
   color: inherit;
   cursor: help;
@@ -1010,9 +1021,52 @@ tr td:nth-child(25) {
 table.show-spirit-columns .spirit-column {
   display: table-cell;
 }
+/* ステータス列は既定で表示し、チェックを外した時だけ隠す。 */
+table.hide-stat-columns .stat-column {
+  display: none;
+}
 .table-tools {
   margin: 2px 0 6px;
   font-size: 0.85rem;
+}
+/* 見出しの右へ絞り込みを並べる。表の幅は狭めない。 */
+.section-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+.section-header > h2 {
+  margin-right: 4px;
+}
+.villager-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 0.85rem;
+}
+.villager-filter select {
+  height: 24px;
+  padding: 1px 4px;
+  font-size: 0.85rem;
+}
+.villager-filter input[type="search"] {
+  width: 96px;
+  height: 24px;
+  box-sizing: border-box;
+  padding: 1px 4px;
+  font-size: 0.85rem;
+}
+.villager-filter label {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+.villager-filter-count {
+  color: #8a2d1f;
+  font-weight: bold;
 }
 .table-tools label {
   cursor: pointer;
@@ -1190,7 +1244,7 @@ table.show-spirit-columns .spirit-column {
 }
 .raid-battle-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   padding: 10px 12px 0;
   max-height: calc(100vh - 280px);
@@ -1490,7 +1544,12 @@ section h2 {
 #secretTreasureOverlay,
 #dryadFruitOverlay,
 #historyOverlay,
-#personalHistoryOverlay {
+#personalHistoryOverlay,
+#ledgerOverlay,
+#electionRecordOverlay,
+#wishLedgerOverlay,
+#rankingOverlay,
+#managementGoalsOverlay {
   position: fixed;
   top:0; left:0;
   width:100%; height:100%;
@@ -1502,7 +1561,12 @@ section h2 {
 #secretTreasureModal,
 #dryadFruitModal,
 #historyModal,
-#personalHistoryModal {
+#personalHistoryModal,
+#ledgerModal,
+#electionRecordModal,
+#wishLedgerModal,
+#rankingModal,
+#managementGoalsModal {
   position: fixed;
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
@@ -1534,11 +1598,20 @@ section h2 {
 #buildingContent,
 #secretTreasureContent,
 #historyContent,
-#personalHistoryContent {
+#personalHistoryContent,
+#ledgerContent,
+#electionRecordContent,
+#wishLedgerContent,
+#managementGoalsContent {
   margin-top: 5px;
 }
 #historyModal,
-#personalHistoryModal {
+#personalHistoryModal,
+#ledgerModal,
+#electionRecordModal,
+#wishLedgerModal,
+#rankingModal,
+#managementGoalsModal {
   background: #f7f0e3;
   border: 1px solid #9b875d;
   box-shadow: 0 18px 48px rgba(28, 20, 10, 0.38);
@@ -1546,7 +1619,12 @@ section h2 {
   font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", "Times New Roman", serif;
 }
 #historyModal .modal-header,
-#personalHistoryModal .modal-header {
+#personalHistoryModal .modal-header,
+#ledgerModal .modal-header,
+#electionRecordModal .modal-header,
+#wishLedgerModal .modal-header,
+#rankingModal .modal-header,
+#managementGoalsModal .modal-header {
   margin-bottom: 10px;
   padding-bottom: 8px;
   border-bottom: 3px double #bba575;
@@ -1663,7 +1741,7 @@ section h2 {
 }
 .personal-history-profile-table {
   display: grid;
-  grid-template-columns: 6em max-content max-content max-content max-content max-content;
+  grid-template-columns: 6em max-content max-content max-content max-content max-content max-content;
   justify-content: start;
   gap: 3px 10px;
   align-items: baseline;
@@ -1685,10 +1763,12 @@ section h2 {
 }
 .personal-history-profile-label.is-body,
 .personal-history-profile-label.is-spirit,
+.personal-history-profile-label.is-appearance,
 .personal-history-profile-label.is-personality,
 .personal-history-profile-label.is-hobby,
 .personal-history-profile-value.is-body,
 .personal-history-profile-value.is-spirit,
+.personal-history-profile-value.is-appearance,
 .personal-history-profile-value.is-personality,
 .personal-history-profile-value.is-hobby {
   margin-left: 10px;
@@ -1704,7 +1784,7 @@ section h2 {
   padding: 7px 0;
   border-bottom: 1px solid #d9ccb0;
 }
-.personal-history-profile-field span {
+.personal-history-profile-field > span {
   display: block;
   color: #6d5b34;
   font-size: 0.76rem;
@@ -1717,12 +1797,23 @@ section h2 {
   font-size: 0.9rem;
   line-height: 1.45;
 }
-.personal-history-profile-field.is-detail span,
-.personal-history-profile-field.is-detail strong {
+.personal-history-profile-field.is-detail > span,
+.personal-history-profile-field.is-detail > strong {
   line-height: 1.55;
 }
 .personal-history-relationship-text {
   display: block;
+}
+.personal-history-relation-line {
+  display: block;
+}
+/* 名前は本文と同じ見た目のまま、押せることだけを伝える。 */
+.history-person-link {
+  cursor: pointer;
+}
+.history-person-link:hover,
+.history-person-link:focus {
+  text-decoration: underline;
 }
 .personal-history-detail-row {
   display: block;
@@ -1772,6 +1863,19 @@ section h2 {
   font-size: 1.12rem;
   font-weight: bold;
 }
+.friendship-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.friendship-detail-header .portrait-sprite {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  object-fit: cover;
+  border: 1px solid #bda978;
+  background: #e8dfcb;
+}
 .friendship-detail-content {
   overflow: auto;
   border: 1px solid #e0d1ad;
@@ -1808,6 +1912,18 @@ section h2 {
   color: #3d321f;
   white-space: nowrap;
   z-index: 1;
+}
+.friendship-detail-sort-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.friendship-detail-sort-button:hover,
+.friendship-detail-sort-button:focus {
+  text-decoration: underline;
 }
 .friendship-detail-person {
   display: grid;
@@ -2137,6 +2253,52 @@ section h2 {
   color: #8a6d1d;
   font-size: 0.9rem;
 }
+.raid-result-breakdown {
+  margin: 10px 0 4px;
+  max-height: 38vh;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+.raid-result-breakdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.raid-result-breakdown-table th,
+.raid-result-breakdown-table td {
+  padding: 4px 8px;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+  vertical-align: middle;
+}
+.raid-result-breakdown-table th {
+  position: sticky;
+  top: 0;
+  background: #f4efe4;
+  font-weight: bold;
+}
+.raid-result-breakdown-table tr:last-child td {
+  border-bottom: none;
+}
+.raid-result-breakdown-table .portrait-sprite {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+}
+.raid-result-breakdown-rank {
+  width: 2.5em;
+  color: #777;
+}
+.raid-result-breakdown-damage {
+  text-align: right;
+  font-weight: bold;
+  color: #8a6d1d;
+}
+.event-modal-buttons > button + button {
+  margin-left: 8px;
+}
 .event-modal-buttons {
   margin-top: 14px;
   text-align: right;
@@ -2148,7 +2310,7 @@ section h2 {
 
 .adventurer-quest-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -3807,7 +3969,7 @@ section h2 {
   left: 50%;
   transform: translate(-50%, -50%);
   box-sizing: border-box;
-  width: min(1180px, calc(100vw - 24px));
+  width: min(1360px, calc(100vw - 24px));
   max-height: 90vh;
   background: #fffdf7;
   border: 1px solid #b8a36d;
@@ -3879,6 +4041,7 @@ section h2 {
   color: #a3261b;
 }
 .wc-content {
+  overflow-x: auto;
   overflow-y: auto;
   min-height: 0;
 }
@@ -3905,12 +4068,21 @@ section h2 {
   color: #2b3036;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
 }
-.wc-col-portrait { width: 48px; }
+/* 全能力欄を出すと列が増えるため、狭い画面では横スクロールで幅を確保する。 */
+.wc-villager-table { min-width: 1240px; }
+.wc-col-portrait { width: 44px; }
 .wc-col-name { width: 150px; }
-.wc-col-hp { width: 52px; }
-.wc-col-stats { width: 190px; }
-.wc-col-task { width: 84px; }
-.wc-col-estimate { width: 240px; }
+.wc-col-stat { width: 32px; }
+/* 2文字の見出しが折り返さない範囲まで、簡易能力の列を詰める。 */
+.wc-table .wc-col-stat,
+.wc-table .wc-stat-value {
+  padding-left: 1px;
+  padding-right: 1px;
+}
+.wc-table .wc-col-stat { font-size: 0.73rem; }
+.wc-col-stats { width: 180px; }
+.wc-col-task { width: 78px; }
+.wc-col-estimate { width: 230px; }
 .wc-action-head { width: 54px; }
 .wc-portrait-cell { padding: 2px; cursor: pointer; }
 .wc-name-cell { text-align: left; }
@@ -3930,8 +4102,32 @@ section h2 {
   margin: 0 3px;
   color: #8b8478;
 }
-.wc-hp { font-variant-numeric: tabular-nums; }
+.wc-stat-value { font-variant-numeric: tabular-nums; }
+/* 村人一覧と同じ色分け。肉体側の能力は薄黄、精神側の能力は薄緑。 */
+.wc-stat-value.is-body { background: #faf2d3; }
+.wc-stat-value.is-mind { background: #e2f9d8; }
+/* 並び替えできる見出し。今の基準は矢印で示す。 */
+.wc-sortable { cursor: pointer; }
+.wc-sortable.is-sorted { color: #1f4f8b; }
+.wc-sort-mark {
+  margin-left: 2px;
+  font-size: 0.6rem;
+}
 .wc-stats { text-align: left; }
+/* 幸福度は他の能力と性質が違うため、色で分ける。 */
+.wc-stat-happiness { color: #d97706; }
+/* 見出し行の中央寄せより優先させ、チェックは行の左端に置く。 */
+.wc-table td.wc-slot-toggle {
+  text-align: left;
+  font-weight: normal;
+}
+.wc-full-stats-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
 .wc-stat-line {
   display: block;
   font-size: 0.72rem;
@@ -3989,7 +4185,8 @@ section h2 {
 }
 .wc-enemy-table {
   table-layout: fixed;
-  width: min(100%, 520px);
+  width: max-content;
+  max-width: 100%;
 }
 @media (max-width: 860px) {
   .wc-table th,
@@ -3999,4 +4196,263 @@ section h2 {
   }
   .wc-col-stats { width: 150px; }
   .wc-col-estimate { width: 170px; }
+}
+
+/* ---------------- 台帳 ---------------- */
+/* 殿堂は項目ごとの小さな帳面を並べる */
+.ledger-rank-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+}
+.ledger-rank-card {
+  border: 1px solid #c9b892;
+  border-radius: 4px;
+  background: rgba(255, 253, 245, 0.65);
+  padding: 8px 10px 10px;
+}
+.ledger-rank-title {
+  margin: 0 0 6px;
+  font-size: 0.85rem;
+  color: #6b5a3a;
+  border-bottom: 1px solid #d9c9a4;
+  padding-bottom: 4px;
+}
+.ledger-rank-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ledger-rank-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+  font-size: 0.8rem;
+}
+.ledger-rank-place {
+  flex: none;
+  width: 1.6em;
+  text-align: center;
+  font-weight: bold;
+  color: #8b7a55;
+}
+.ledger-rank-place.is-1 { color: #b8860b; }
+.ledger-rank-place.is-2 { color: #8c8c8c; }
+.ledger-rank-place.is-3 { color: #a0672d; }
+.ledger-rank-portrait-button {
+  flex: none;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  line-height: 0;
+  cursor: pointer;
+}
+.ledger-rank-portrait-button:hover .portrait-sprite,
+.ledger-rank-portrait-button:focus .portrait-sprite {
+  outline: 2px solid #8b6d31;
+  outline-offset: 1px;
+}
+.ledger-rank-name {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ledger-rank-value {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  font-weight: bold;
+}
+.ledger-rank-empty {
+  padding: 3px 0;
+  font-size: 0.78rem;
+  color: #8b8478;
+}
+.ledger-lead {
+  margin: 0 0 12px;
+  color: #6b5a3a;
+  font-size: 0.95rem;
+}
+.ledger-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+/*
+ * 台帳のカードは、A4の紙を横に寝かせた帳面に見立てる。
+ * 紙面の内側へ二重罫（細い実線と、その内側の刻み罫）を引くだけの簡素な作り。
+ */
+.ledger-card {
+  position: relative;
+  display: block;
+  aspect-ratio: 297 / 210;
+  padding: 12px 14px;
+  border: 1px solid #b09566;
+  border-radius: 2px;
+  background: linear-gradient(178deg, #f7f1dc, #efe6ca);
+  box-shadow:
+    0 2px 5px rgba(60, 44, 18, 0.2),
+    /* 重ねた紙の断面 */
+    2px 2px 0 -1px #e8dab8,
+    4px 4px 0 -2px #ded0aa;
+  color: #3b2f19;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+  text-align: left;
+  cursor: pointer;
+}
+/* 二重罫の外側。細い実線。 */
+.ledger-card::before {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border: 1px solid #33405f;
+  pointer-events: none;
+}
+/* 二重罫の内側。細かい刻みの罫。 */
+.ledger-card::after {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  background:
+    repeating-linear-gradient(90deg, #33405f 0 1.4px, rgba(0, 0, 0, 0) 1.4px 3.6px) top left / 100% 3px no-repeat,
+    repeating-linear-gradient(90deg, #33405f 0 1.4px, rgba(0, 0, 0, 0) 1.4px 3.6px) bottom left / 100% 3px no-repeat,
+    repeating-linear-gradient(180deg, #33405f 0 1.4px, rgba(0, 0, 0, 0) 1.4px 3.6px) top left / 3px 100% no-repeat,
+    repeating-linear-gradient(180deg, #33405f 0 1.4px, rgba(0, 0, 0, 0) 1.4px 3.6px) top right / 3px 100% no-repeat;
+  pointer-events: none;
+}
+.ledger-card:hover {
+  border-color: #a1853f;
+  background: linear-gradient(178deg, #fdf7e6, #f4e9cd);
+}
+.ledger-card-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  height: 100%;
+  padding: 0 10px;
+}
+.ledger-card-title {
+  font-size: 1.18rem;
+  font-weight: bold;
+  letter-spacing: 0.14em;
+  color: #22283a;
+}
+.ledger-card-note {
+  color: #5d5340;
+  font-size: 0.82rem;
+}
+.ledger-back-row {
+  margin-top: 14px;
+  text-align: right;
+}
+.ledger-section + .ledger-section {
+  margin-top: 16px;
+}
+.ledger-section-title {
+  margin: 0 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #cbb98a;
+  color: #3b2f19;
+  font-size: 1rem;
+}
+/* 願望の一覧 */
+.ledger-wish-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+  border-bottom: 1px solid #e0d3b4;
+}
+.ledger-wish-row:last-child {
+  border-bottom: none;
+}
+.ledger-wish-row .portrait-sprite {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border: 1px solid #c9b98a;
+  border-radius: 3px;
+}
+/* 顔を押すと、その願望が起きたときのモーダルを開き直す。 */
+.ledger-wish-portrait {
+  flex: none;
+  padding: 0;
+  border: none;
+  background: none;
+  line-height: 0;
+  cursor: pointer;
+}
+.ledger-wish-portrait:hover .portrait-sprite {
+  border-color: #8a6d1d;
+  box-shadow: 0 0 0 2px rgba(138, 109, 29, 0.3);
+}
+.ledger-wish-body {
+  min-width: 0;
+}
+.ledger-wish-name {
+  margin-left: 4px;
+}
+.ledger-wish-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 2px;
+  color: #6d5c3c;
+  font-size: 0.85rem;
+}
+.ledger-wish-status.is-active { color: #8a6d1d; font-weight: bold; }
+.ledger-wish-status.is-achieved { color: #2f6b3a; font-weight: bold; }
+.ledger-wish-status.is-expired,
+.ledger-wish-status.is-lost { color: #8a5a4a; }
+/* 経営目標 */
+.ledger-goal-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.ledger-goal-table th,
+.ledger-goal-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #e0d3b4;
+  text-align: left;
+}
+.ledger-goal-table thead th {
+  color: #6d5c3c;
+  font-size: 0.85rem;
+}
+.ledger-goal-input {
+  width: 7em;
+  padding: 3px 6px;
+  border: 1px solid #bda772;
+  border-radius: 3px;
+  background: #fffdf6;
+  text-align: right;
+}
+.ledger-goal-suffix {
+  margin-left: 4px;
+  color: #6d5c3c;
+  font-size: 0.85rem;
+}
+.ledger-goal-current {
+  color: #6d5c3c;
+  text-align: right;
+}
+.ledger-goal-actions {
+  margin-top: 12px;
+  text-align: right;
+}
+.ledger-goal-note {
+  margin: 10px 0 0;
+  color: #6d5c3c;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+.ledger-goal-status {
+  margin: 6px 0 0;
+  color: #8a6d1d;
+  font-size: 0.85rem;
+  min-height: 1.2em;
 }

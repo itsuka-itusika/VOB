@@ -43,6 +43,11 @@ export class Village {
     this.buildingRequest = null;
     this.hasStartedBuildingRequest = false;
     this.wish = null;
+    this.wishes = [];
+    this.wishLog = [];
+    this.managementGoals = null;
+    // 台帳の殿堂用。死亡・出立しても残る歴代記録。
+    this.villageRecords = {};
     this.festivalFlags = {
       pineconeStaffIntroShown: false
     };

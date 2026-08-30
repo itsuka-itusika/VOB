@@ -12,6 +12,7 @@ import { openPersonalHistoryModal, recordVillagerJoinHistory } from "./history.j
 import { getVisitorLineKey, MERCHANT_SECRET_TREASURE_LINES, VISITOR_JOIN_LINES } from "./data/dialogue/visitorLines.js";
 import { getCaptiveConversationLines, getCaptiveGroupKey } from "./data/dialogue/captiveLines.js";
 import { incrementTitleCounter, TITLE_COUNTER_KEYS } from "./titles.js";
+import { addVillageRecord } from "./records.js";
 import { initializeNewVillagerFriendships, openFriendshipDetailModal } from "./relationships.js";
 import { isAtPopulationLimit } from "./domain/speciesTraits.js";
 import {
@@ -800,6 +801,7 @@ function handleCaptiveSocialSuccess(captive, actor, successRate, source) {
     1,
     { getPermanentStat }
   );
+  addVillageRecord(theVillage, actor, source === "誘惑" ? "seduction" : "recruitment", 1);
   recordVillagerJoinHistory(theVillage, captive, { recruiter: actor, source });
   refreshJobTable(captive, theVillage);
   theVillage.log(`${actor.name}の${source}により、${captive.name}が村人になりました。(成功率: ${Math.floor(successRate)}%)`);
@@ -1080,6 +1082,7 @@ function handleRecruitmentSuccess(visitor, recruiter, successRate = 0, source = 
     1,
     { getPermanentStat }
   );
+  addVillageRecord(theVillage, recruiter, source === "誘惑" ? "seduction" : "recruitment", 1);
   recordVillagerJoinHistory(theVillage, visitor, { recruiter, source });
 
   // 行動テーブルを更新

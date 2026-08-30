@@ -68,7 +68,7 @@ const TEMP_MIND_TRAIT_EFFECTS = Object.freeze({
   "狂乱": { mul: { eth: 0.2 }, add: { sexdr: 15 } },
   "酩酊": { mul: { eth: 0.2 }, add: { sexdr: 10 } },
   "火星の加護": { mul: { int: 0.2, ind: 0.2, eth: 0.2 }, add: { str: 7, vit: 7, cou: 7 } },
-  "ニケ": { add: { cou: 10 } }
+  "ニケ": { add: { cou: 5 } }
 });
 
 const LEGACY_TEMP_BODY_TRAIT_EFFECTS = Object.freeze({

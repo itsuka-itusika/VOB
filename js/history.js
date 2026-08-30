@@ -6,6 +6,9 @@ import { SPEECH_TYPE_MAPPING } from "./data/villagerData.js";
 import { showDictionaryEntry } from "./dictionary.js";
 import { combinedDictionaryData } from "./data/dictionaryData.js";
 import { getRelationshipEntries } from "./relationships.js";
+import { syncTitleCountRecord } from "./records.js";
+import { findPersonEverywhereById, normalizePersonId } from "./domain/personId.js";
+import { EXCLUSIVE_BODY_TRAITS } from "./createVillagers.js";
 
 export const HISTORY_EVENT_TYPES = Object.freeze({
   ARCHIVE_GAP: "archiveGap",
@@ -58,13 +61,39 @@ const HISTORY_SCOPES = Object.freeze({
   PERSON: "person"
 });
 
+// 成狼の記録を成人と区別するタグ。表示側もこの値で文言を切り替える。
+const ADULTHOOD_WOLF_TAG = "成狼";
+// 里長選挙の得票を残すタグ。「得票:名前0票、…」の形で持つ。
+const ELECTION_COUNTS_TAG_PREFIX = "得票:";
+
+// 得票のない選挙（無投票）と、同数のくじ引きを見分けるためのタグ。
+const ELECTION_RESULT_TAG_PREFIX = "結果:";
+const ELECTION_RESULT_NOTES = Object.freeze({
+  uncontested: "候補者は1人で、無投票だった。",
+  lottery: "得票が並び、くじ引きで決まった。"
+});
+
+function getElectionResultNote(event) {
+  const tag = (Array.isArray(event?.tags) ? event.tags : [])
+    .find(value => String(value).startsWith(ELECTION_RESULT_TAG_PREFIX));
+  const result = tag ? String(tag).slice(ELECTION_RESULT_TAG_PREFIX.length) : "";
+  return ELECTION_RESULT_NOTES[result] || "";
+}
+
+function getElectionCounts(event) {
+  const tag = (Array.isArray(event?.tags) ? event.tags : [])
+    .find(value => String(value).startsWith(ELECTION_COUNTS_TAG_PREFIX));
+  return tag ? String(tag).slice(ELECTION_COUNTS_TAG_PREFIX.length) : "";
+}
+
 const MYTHIC_EVENT_TEXTS = Object.freeze({
   "狩猟神": personName => `${personName}が狩女神の祝福を受けた。`,
   "太陽神": personName => `${personName}が太陽神の寵愛を受けた。`,
   "戦女神": personName => `${personName}が戦女神の啓示を受けた。`,
   "地母神": personName => `${personName}が地母神の慈愛を受けた。`,
   goldenRain: personName => `黄金の雨が降り、${personName}に神秘の兆しが宿った。`,
-  strangeGrowthPotion: personName => `怪しい薬により、${personName}の身体が急速に成長した。`
+  strangeGrowthPotion: personName => `怪しい薬により、${personName}の身体が急速に成長した。`,
+  timeRipple: personName => `${personName}は時空のうねりに巻き込まれ、成長した姿で現れた。`
 });
 
 function ensureHistoryEvents(village) {
@@ -202,13 +231,16 @@ export function recordScaleTitleHistory(village, stage) {
 }
 
 export function recordHeadmanElectionHistory(village, winner, options = {}) {
-  const counts = options.counts ? ` 得票は${options.counts}。` : "";
+  const countsText = String(options.counts || "").trim();
+  const counts = countsText ? ` 得票は${countsText}。` : "";
+  const countsTags = countsText ? [`${ELECTION_COUNTS_TAG_PREFIX}${countsText}`] : [];
+  const resultTags = options.result ? [`${ELECTION_RESULT_TAG_PREFIX}${options.result}`] : [];
   if (!winner) {
     addHistoryEvent(village, {
       type: HISTORY_EVENT_TYPES.HEADMAN_ELECTION,
       title: "里長選挙、不成立",
       text: "里長選挙は不成立となった。",
-      tags: ["里長選挙"]
+      tags: ["里長選挙", ...countsTags, ...resultTags]
     });
     return;
   }
@@ -221,7 +253,7 @@ export function recordHeadmanElectionHistory(village, winner, options = {}) {
       ? `${winner.name}が里長を続けることになった。`
       : `${winner.name}が里長に選ばれた。${counts}`.trim(),
     people: [winner],
-    tags: ["里長選挙"]
+    tags: ["里長選挙", ...countsTags, ...resultTags]
   });
 }
 
@@ -362,14 +394,16 @@ export function recordBirthHistory(village, mother, child, options = {}) {
 export function recordAdulthoodHistory(village, person, options = {}) {
   if (!person) return;
   const source = options.source || "成長";
+  // 狼は「成人」ではなく「成狼」として記録する。表示側もこのタグで文言を分ける。
+  const isWolfMaturity = options.label === ADULTHOOD_WOLF_TAG;
   addHistoryEvent(village, {
     type: HISTORY_EVENT_TYPES.ADULTHOOD,
-    title: `${person.name}、成人する`,
-    text: `${person.name}が成人した。`,
+    title: isWolfMaturity ? `${person.name}、成狼になる` : `${person.name}、成人する`,
+    text: isWolfMaturity ? `${person.name}が成狼になった。` : `${person.name}が成人した。`,
     people: [person],
     importance: "minor",
     scope: HISTORY_SCOPES.PERSON,
-    tags: ["成人", source],
+    tags: [isWolfMaturity ? ADULTHOOD_WOLF_TAG : "成人", source],
     dedupeKey: `adulthood:${person.name}`
   });
 }
@@ -574,11 +608,15 @@ function getVillageHistoryText(event) {
       const scaleTitle = event.tags[1] || event.title.match(/「(.+)」/)?.[1] || "";
       return scaleTitle ? `「${scaleTitle}」と呼ばれる規模になった。` : cleanRecordText(event.text || event.title);
     }
-    case HISTORY_EVENT_TYPES.HEADMAN_ELECTION:
+    case HISTORY_EVENT_TYPES.HEADMAN_ELECTION: {
       if (!personA) return "里長選挙は不成立となった。";
-      return event.title.includes("続ける")
+      const base = event.title.includes("続ける")
         ? `${personA}が里長を続けることになった。`
         : `${personA}が里長に選ばれた。`;
+      const counts = getElectionCounts(event);
+      const note = getElectionResultNote(event);
+      return [base, counts ? `得票は${counts}。` : "", note].filter(Boolean).join(" ");
+    }
     case HISTORY_EVENT_TYPES.VILLAGER_JOIN: {
       const source = normalizeJoinSource(getEventSource(event));
       if (personA && personB) return `${personB}の${source}で、${personA}が村に加わった。`;
@@ -620,7 +658,11 @@ function getVillageHistoryText(event) {
       if (personA) return event.text.includes("神秘") ? `${personA}に神秘の子が宿った。` : `${personA}が子を身ごもった。`;
       break;
     case HISTORY_EVENT_TYPES.ADULTHOOD:
-      if (personA) return `${personA}が成人した。`;
+      if (personA) {
+        return event.tags.includes(ADULTHOOD_WOLF_TAG)
+          ? `${personA}が成狼になった。`
+          : `${personA}が成人した。`;
+      }
       break;
     case HISTORY_EVENT_TYPES.CRITICAL:
       if (personA) return `${personA}が危篤となった。`;
@@ -682,7 +724,7 @@ function getPersonalHistoryText(event, personName, personId = null) {
         ? `${getEventSource(event)}により村での生を終えた。`
         : "村での生を終えた。";
     case HISTORY_EVENT_TYPES.ADULTHOOD:
-      return "成人した。";
+      return event.tags.includes(ADULTHOOD_WOLF_TAG) ? "成狼になった。" : "成人した。";
     case HISTORY_EVENT_TYPES.CRITICAL:
       return "危篤となった。";
     case HISTORY_EVENT_TYPES.EPIDEMIC:
@@ -694,7 +736,31 @@ function getPersonalHistoryText(event, personName, personId = null) {
   }
 }
 
-function renderHistoryEntry(event, options = {}) {
+/** 本文に出てくる登場人物の名前を、その人物の記録への入口にする。 */
+function renderHistoryText(text, event, { village = null, personId = null } = {}) {
+  const escaped = escapeHtml(text);
+  if (!village) return escaped;
+
+  const links = new Map();
+  (Array.isArray(event.people) ? event.people : []).forEach((name, index) => {
+    if (!name) return;
+    const rawId = Array.isArray(event.peopleIds) ? event.peopleIds[index] : null;
+    const linkId = resolveLinkablePersonId(village, rawId);
+    // 開いている記録の本人は、押しても動かないので入口にしない。
+    if (linkId == null || linkId === personId) return;
+    links.set(escapeHtml(name), linkId);
+  });
+  if (links.size === 0) return escaped;
+
+  // 長い名前から当てて、短い名前が別の名前の一部に一致するのを防ぐ。
+  const pattern = new RegExp(
+    [...links.keys()].sort((a, b) => b.length - a.length).map(escapeRegExp).join("|"),
+    "g"
+  );
+  return escaped.replace(pattern, matched => renderPersonLink(matched, links.get(matched)));
+}
+
+export function renderHistoryEntry(event, options = {}) {
   const text = options.personName
     ? getPersonalHistoryText(event, options.personName, options.personId ?? null)
     : getVillageHistoryText(event);
@@ -702,10 +768,28 @@ function renderHistoryEntry(event, options = {}) {
     <article class="history-entry history-entry-${escapeHtml(event.type)}">
       <p class="history-record-line">
         <time class="history-date">${escapeHtml(formatHistoryDate(event))}</time>
-        <span class="history-record-text">${escapeHtml(text)}</span>
+        <span class="history-record-text">${renderHistoryText(text, event, options)}</span>
       </p>
     </article>
   `;
+}
+
+/** 名前から、その人物の記録へ移る。個人記録の中では開き直すだけなので beforeOpen は要らない。 */
+export function bindPersonLinks(content, village, { beforeOpen = null } = {}) {
+  content.querySelectorAll("[data-open-person-id]").forEach(element => {
+    const open = () => {
+      const person = findPersonEverywhereById(village, element.dataset.openPersonId);
+      if (!person) return;
+      if (typeof beforeOpen === "function") beforeOpen();
+      openPersonalHistoryModal(village, person, { archived: Boolean(person.departure) });
+    };
+    element.addEventListener("click", open);
+    element.addEventListener("keydown", event => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      open();
+    });
+  });
 }
 
 function includesPerson(event, personName, personId = null) {
@@ -724,29 +808,77 @@ function hasArchiveGap(village) {
   return normalizeHistoryEvents(village?.historyEvents).some(event => event.type === HISTORY_EVENT_TYPES.ARCHIVE_GAP);
 }
 
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// 記録に出てくる名前は、その人物の記録への入口にする。見た目は本文のままにする。
+function renderPersonLink(escapedName, personId) {
+  return `<span class="history-person-link" role="button" tabindex="0" data-open-person-id="${personId}">${escapedName}</span>`;
+}
+
+/** 村にいる者と過去帳に載る者だけをつなぐ。訪問者や襲撃者には記録がないため入口にしない。 */
+function resolveLinkablePersonId(village, id) {
+  const personId = normalizePersonId(id);
+  if (personId == null) return null;
+  return findPersonEverywhereById(village, personId) ? personId : null;
+}
+
 function parsePersonalRelationship(entry) {
   const prefix = String(entry?.prefix || "").trim();
   if (!prefix) return null;
-  if (prefix === "既婚") return { category: "family", label: "既婚" };
+  if (prefix === "既婚") return { category: "family", prefix, target: "", targetId: null };
 
   const target = String(entry?.targetName || "").trim();
-  const label = target ? `${prefix}：${target}` : prefix;
+  const targetId = entry?.targetId ?? null;
 
   if (["夫", "妻", "母", "父", "子"].includes(prefix)) {
-    return { category: "family", label };
+    return { category: "family", prefix, target, targetId };
   }
   if (["遺伝母", "遺伝父"].includes(prefix)) {
-    return { category: "genetic", label };
+    return { category: "genetic", prefix, target, targetId };
   }
-  return { category: "social", label };
+  return { category: "social", prefix, target, targetId };
 }
 
-function formatRelationshipCategory(person, category) {
-  const labels = getRelationshipEntries(person)
+// 人間関係を並べる順。趣味仲間は「推し活仲間」のように趣味名が入るため、まとめて同じ位置に置く。
+const SOCIAL_RELATION_ORDER = ["恋人", "親友", "戦友", "仕事仲間", "趣味仲間", "天敵"];
+
+function getSocialRelationOrder(prefix) {
+  const key = prefix !== "仕事仲間" && prefix.endsWith("仲間") ? "趣味仲間" : prefix;
+  const index = SOCIAL_RELATION_ORDER.indexOf(key);
+  // 元恋人・かつての天敵など、順を決めていない続柄は後ろへ回す。
+  return index >= 0 ? index : SOCIAL_RELATION_ORDER.length;
+}
+
+// 同じ続柄をひとつにまとめ、「戦友：リッツ、ランスロット」の形で1行ずつ返す。
+function formatRelationshipGroups(person, category) {
+  const groups = new Map();
+  getRelationshipEntries(person)
     .map(parsePersonalRelationship)
-    .filter(item => item?.category === category && !item.label.startsWith("村設立の同志："))
-    .map(item => item.label);
-  return labels.length > 0 ? [...new Set(labels)].join("、") : "なし";
+    .filter(item => item?.category === category && item.prefix !== "村設立の同志")
+    .forEach(item => {
+      if (!groups.has(item.prefix)) groups.set(item.prefix, new Map());
+      if (item.target) groups.get(item.prefix).set(item.target, item.targetId);
+    });
+  const entries = [...groups.entries()];
+  if (category === "social") {
+    entries.sort((a, b) => getSocialRelationOrder(a[0]) - getSocialRelationOrder(b[0]));
+  }
+  return entries.map(([prefix, targets]) => ({ prefix, targets: [...targets.entries()] }));
+}
+
+function renderRelationshipLines(village, person, category) {
+  const groups = formatRelationshipGroups(person, category);
+  if (groups.length === 0) return "なし";
+  return groups.map(({ prefix, targets }) => {
+    const names = targets.map(([name, targetId]) => {
+      const linkId = resolveLinkablePersonId(village, targetId);
+      return linkId != null ? renderPersonLink(escapeHtml(name), linkId) : escapeHtml(name);
+    }).join("、");
+    const body = names ? `${escapeHtml(prefix)}：${names}` : escapeHtml(prefix);
+    return `<span class="personal-history-relation-line">${body}</span>`;
+  }).join("");
 }
 
 function renderPersonalTitleSummary(person) {
@@ -755,6 +887,12 @@ function renderPersonalTitleSummary(person) {
   return titles.map(title => (
     `<span class="dictionary-term" title="${escapeHtml(title.description || "")}">${escapeHtml(title.name)}</span>`
   )).join("、");
+}
+
+// 排他の身体特性は1つだけ付くため、見つかったものをそのまま外見として出す。
+function getAppearanceTrait(person) {
+  const bodyTraits = Array.isArray(person?.bodyTraits) ? person.bodyTraits : [];
+  return bodyTraits.find(trait => EXCLUSIVE_BODY_TRAITS.includes(trait)) || "特徴なし";
 }
 
 function getPersonalityTrait(person) {
@@ -795,9 +933,13 @@ function makePortraitStep(portraitFile, caption) {
   };
 }
 
-function makeCurrentPortraitStep(person) {
+// 過去帳の人物はもう村にいないため、今の姿ではなく去った時点の姿として見せる。
+const CURRENT_PORTRAIT_CAPTION = "現在の姿";
+const ARCHIVED_PORTRAIT_CAPTION = "往時の姿";
+
+function makeCurrentPortraitStep(person, { archived = false } = {}) {
   return {
-    ...makePortraitStep(person?.portraitFile, "現在の姿"),
+    ...makePortraitStep(person?.portraitFile, archived ? ARCHIVED_PORTRAIT_CAPTION : CURRENT_PORTRAIT_CAPTION),
     character: {
       name: person?.name,
       portraitFile: person?.portraitFile,
@@ -819,8 +961,8 @@ function getPastPortraitSequence(person) {
   return pastPortraits.some(step => step.portraitFile !== currentKey) ? pastPortraits.reverse() : [];
 }
 
-function renderPastPortraitControls(person) {
-  const currentPortrait = makeCurrentPortraitStep(person);
+function renderPastPortraitControls(person, options = {}) {
+  const currentPortrait = makeCurrentPortraitStep(person, options);
   const pastPortraits = getPastPortraitSequence(person);
   if (pastPortraits.length === 0) return "";
 
@@ -838,8 +980,8 @@ function renderPastPortraitControls(person) {
   `;
 }
 
-function renderPortraitFrame(person) {
-  const currentPortrait = makeCurrentPortraitStep(person);
+function renderPortraitFrame(person, options = {}) {
+  const currentPortrait = makeCurrentPortraitStep(person, options);
   const hiddenAttr = currentPortrait.hasImage ? "" : " hidden";
   const unknownHiddenAttr = currentPortrait.hasImage ? " hidden" : "";
   const unknownClass = currentPortrait.hasImage ? "" : " is-unknown";
@@ -900,7 +1042,8 @@ function bindPastPortraitControls(content) {
   const renderPortraitStep = () => {
     const step = portraitSteps[portraitIndex];
     setPersonalHistoryPortrait(frame, portrait, unknown, step);
-    caption.textContent = step.caption || (portraitIndex === 0 ? "現在の姿" : "過去の姿");
+    caption.textContent = step.caption ||
+      (portraitIndex === 0 ? currentPortrait.caption || CURRENT_PORTRAIT_CAPTION : "過去の姿");
     olderButton.disabled = portraitIndex >= portraitSteps.length - 1;
     newerButton.disabled = portraitIndex <= 0;
   };
@@ -918,28 +1061,29 @@ function bindPastPortraitControls(content) {
   renderPortraitStep();
 }
 
-function renderPersonalHistorySummary(person, options = {}) {
+function renderPersonalHistorySummary(village, person, options = {}) {
   const profileFields = [
     { label: "名前", value: person.name || "不明", className: "is-name" },
     { label: "種族", valueHtml: renderDictionaryTerm(person.race || "人間"), className: "is-race" },
     { label: "肉体", value: `${person.bodyAge ?? "?"}歳/${person.bodySex || "不明"}`, className: "is-body" },
     { label: "精神", value: `${person.spiritAge ?? "?"}歳/${person.spiritSex || "不明"}`, className: "is-spirit" },
+    { label: "外見", value: getAppearanceTrait(person), className: "is-appearance" },
     { label: "性格", value: getPersonalityTrait(person), className: "is-personality" },
     { label: "趣味", value: person.hobby || "なし", className: "is-hobby" }
   ];
-  const familyRelations = formatRelationshipCategory(person, "family");
-  const socialRelations = formatRelationshipCategory(person, "social");
+  const familyRelations = renderRelationshipLines(village, person, "family");
+  const socialRelations = renderRelationshipLines(village, person, "social");
   // 過去帳の人物は好感度が残っていないため、詳細ボタンを出さない。
   const detailButtonHtml = options.archived ? "" : `
         <span class="personal-history-detail-row">
           <button type="button" class="personal-history-detail-button" data-open-friendship-detail>詳細</button>
         </span>`;
   const relationshipFields = [
-    { label: "家族関係", value: familyRelations },
+    { label: "家族関係", valueHtml: familyRelations },
     {
       label: "人間関係",
       valueHtml: `
-        <span class="personal-history-relationship-text">${escapeHtml(socialRelations)}</span>${detailButtonHtml}
+        <span class="personal-history-relationship-text">${socialRelations}</span>${detailButtonHtml}
       `
     }
   ];
@@ -954,8 +1098,8 @@ function renderPersonalHistorySummary(person, options = {}) {
   return `
     <section class="personal-history-summary">
       <div class="personal-history-portrait-area">
-        ${renderPortraitFrame(person)}
-        ${renderPastPortraitControls(person)}
+        ${renderPortraitFrame(person, options)}
+        ${renderPastPortraitControls(person, options)}
       </div>
       <div class="personal-history-profile">
         <div class="personal-history-profile-grid">
@@ -989,15 +1133,20 @@ export function openPersonalHistoryModal(village, person, options = {}) {
 
   title.textContent = `${person.name}の記録`;
   content.innerHTML = `
-    ${renderPersonalHistorySummary(person, options)}
+    ${renderPersonalHistorySummary(village, person, options)}
     ${archiveGapNote}
     ${events.length > 0
-      ? `<div class="history-list">${events.map(event => renderHistoryEntry(event, { personName: person.name, personId: person.id ?? null })).join("")}</div>`
+      ? `<div class="history-list">${events.map(event => renderHistoryEntry(event, {
+        personName: person.name,
+        personId: person.id ?? null,
+        village
+      })).join("")}</div>`
       : `<div class="history-empty">この人物の歩みは、まだ村の帳面には記されていない。</div>`}
   `;
   bindPersonalHistoryPortrait(content, person);
   bindPastPortraitControls(content);
   bindDictionaryTerms(content);
+  bindPersonLinks(content, village);
   content.querySelector("[data-open-friendship-detail]")?.addEventListener("click", async () => {
     const { openFriendshipDetailModal } = await import("./relationships.js");
     openFriendshipDetailModal(village, person);
@@ -1027,6 +1176,7 @@ function formatDepartureSentence(departure) {
  */
 export function recordDepartedVillager(village, person, reason) {
   if (!village || !person) return;
+  syncTitleCountRecord(village, person);
   if (!Array.isArray(village.departedVillagers)) village.departedVillagers = [];
   const snapshot = JSON.parse(JSON.stringify(person));
   snapshot.departure = {
@@ -1037,7 +1187,7 @@ export function recordDepartedVillager(village, person, reason) {
   village.departedVillagers.push(snapshot);
 }
 
-export function openPastBookModal(village) {
+export function openPastBookModal(village, { onBack = null } = {}) {
   if (typeof document === "undefined" || !village) return;
   document.getElementById("pastBookOverlay")?.remove();
   document.getElementById("pastBookModal")?.remove();
@@ -1081,7 +1231,7 @@ export function openPastBookModal(village) {
       </table>
     </div>
     <div class="modal-buttons">
-      <button type="button" data-close-past-book>閉じる</button>
+      <button type="button" data-past-book-back>台帳へ戻る</button>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -1099,11 +1249,15 @@ export function openPastBookModal(village) {
       openPersonalHistoryModal(village, person, { archived: true });
     });
   });
-  modal.querySelector("[data-close-past-book]").addEventListener("click", close);
+  // ボタンは台帳へ戻し、オーバーレイのクリックは閉じるだけにする。
+  modal.querySelector("[data-past-book-back]").addEventListener("click", () => {
+    close();
+    if (typeof onBack === "function") onBack();
+  });
   overlay.addEventListener("click", close);
 }
 
-export function openHistoryModal(village) {
+export function openHistoryModal(village, { onBack = null } = {}) {
   const overlay = document.getElementById("historyOverlay");
   const modal = document.getElementById("historyModal");
   const content = document.getElementById("historyContent");
@@ -1112,8 +1266,19 @@ export function openHistoryModal(village) {
   const events = normalizeHistoryEvents(village?.historyEvents)
     .filter(event => event.scope !== HISTORY_SCOPES.PERSON);
   content.innerHTML = events.length > 0
-    ? `<div class="history-list">${events.map(renderHistoryEntry).join("")}</div>`
+    ? `<div class="history-list">${events.map(event => renderHistoryEntry(event, { village })).join("")}</div>`
     : `<div class="history-empty">この村について記すべき出来事は、まだ帳面には残されていない。</div>`;
+  // 過去帳や殿堂と同じく、村史は閉じてからその人物の記録を開く。
+  bindPersonLinks(content, village, { beforeOpen: closeHistoryModal });
+
+  // ボタンは台帳へ戻し、オーバーレイのクリックは閉じるだけにする。
+  const backButton = modal.querySelector("[data-history-back]");
+  if (backButton) {
+    backButton.onclick = () => {
+      closeHistoryModal();
+      if (typeof onBack === "function") onBack();
+    };
+  }
 
   overlay.style.display = "block";
   modal.style.display = "block";

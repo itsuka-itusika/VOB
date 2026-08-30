@@ -61,6 +61,7 @@ import {
 import { getCaptives } from "./captives.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
 import { getAutoAssignSettings, getStageMultiplier, hasStagedStock, resolveStageKey } from "./autoAssignSettings.js";
+import { getManagementGoalMultiplier, getManagementGoals } from "./managementGoals.js";
 
 // 勝ち目を測るときの想定戦闘ターン数。
 const RAID_WIN_ESTIMATE_TURNS = 3;
@@ -84,6 +85,17 @@ const SELF_RECOVERY_ACTION_SET = new Set([
   "\u4f11\u990a",
   "\u4f59\u6687"
 ]);
+
+// 通常職から外して回復へ回す境目。体力は休養、メンタルは余暇で戻す。
+const SELF_RECOVERY_HP_LIMIT = 50;
+const SELF_RECOVERY_MP_LIMIT = 50;
+// 食料か資材が危険段階の間は、多少弱っていても働いてもらう。従来の基準に戻す。
+const SUPPLY_CRISIS_RECOVERY_HP_LIMIT = 33;
+const SUPPLY_CRISIS_RECOVERY_MP_LIMIT = 33;
+// 襲撃が予見されている月は、戦列に立てるだけの体力を残しておく。
+const RAID_WARNING_REST_HP_LIMIT = 60;
+// 備蓄が尽きかけていると見なす段階。
+const SUPPLY_CRISIS_STAGE = "danger";
 
 // 職の評価は jobMath.js の期待成果をそのまま使う。ここに計算式は持たない。
 // 産出する資源軸ごとの基本重みと、村が困っているときの効き幅だけを定める。
@@ -196,6 +208,7 @@ function buildVillagePriorityContext(village) {
 
   return {
     settings,
+    managementGoals: getManagementGoals(village),
     severityByAxis: {
       recovery: recoverySeverity,
       happiness: happinessSeverity
@@ -319,17 +332,24 @@ function getAxisWeight(axis, context) {
   const base = AXIS_BASE_WEIGHTS[axis] || 0;
   if (!context) return base;
 
+  // 経営目標は段階や困窮度とは別に、目標未達を押し上げ過剰を抑える。
+  const goalMultiplier = getManagementGoalMultiplier(
+    axis,
+    context.village?.[axis],
+    context.managementGoals
+  );
+
   const stage = context.stageByAxis?.[axis];
   if (stage) {
     const dualShortageBoost = axis === "materials" && context.materialsPreferred
       ? MATERIALS_DUAL_SHORTAGE_MULTIPLIER
       : 1;
-    return base * getStageMultiplier(axis, stage, context.settings) * dualShortageBoost;
+    return base * getStageMultiplier(axis, stage, context.settings) * dualShortageBoost * goalMultiplier;
   }
 
   const urgency = AXIS_URGENCY[axis];
-  if (!urgency) return base;
-  return base * (1 + (context.severityByAxis[axis] || 0) * urgency);
+  if (!urgency) return base * goalMultiplier;
+  return base * (1 + (context.severityByAxis[axis] || 0) * urgency) * goalMultiplier;
 }
 
 function scoreJob(person, job, context) {
@@ -381,12 +401,13 @@ function chooseWorkAction(person, actionTable, preferredAction) {
   return nonRecoveryAction || actionTable[0] || preferredAction || JOB_NONE;
 }
 
-function chooseRecoveryAction(person, actionTable, currentAction) {
+function chooseRecoveryAction(person, actionTable, currentAction, limits) {
   if (isTemporaryAction(currentAction) && actionTable.includes(currentAction)) {
     return currentAction;
   }
 
-  if ((Number(person.hp) || 0) <= (Number(person.mp) || 0)) {
+  // 体力が基準を割っていれば休養。体力とメンタルの両方が低い場合も休養から入る。
+  if ((Number(person.hp) || 0) <= limits.hp) {
     return firstAvailable([JOB_REST, JOB_LEISURE], actionTable) || currentAction;
   }
   return firstAvailable([JOB_LEISURE, JOB_REST], actionTable) || currentAction;
@@ -420,10 +441,12 @@ function chooseAssignment(person, village, context) {
   const bestPreferred = chooseBestJob(person, context);
   const nextPreferred = bestPreferred !== JOB_NONE ? bestPreferred : currentPreferred;
 
-  if ((person.hp <= 33 || person.mp <= 33) && (actionTable.includes(JOB_REST) || actionTable.includes(JOB_LEISURE))) {
+  const recoveryLimits = getSelfRecoveryLimits(village, context);
+  if ((person.hp <= recoveryLimits.hp || person.mp <= recoveryLimits.mp) &&
+    (actionTable.includes(JOB_REST) || actionTable.includes(JOB_LEISURE))) {
     return {
       preferredAction: nextPreferred,
-      action: chooseRecoveryAction(person, actionTable, currentAction)
+      action: chooseRecoveryAction(person, actionTable, currentAction, recoveryLimits)
     };
   }
 
@@ -435,6 +458,31 @@ function chooseAssignment(person, village, context) {
 
 function canUseAction(person, action) {
   return Array.isArray(person.actionTable) && person.actionTable.includes(action);
+}
+
+/** 食料か資材が危険段階か。尽きかけている間は休ませる基準を厳しくする。 */
+function isSupplyCrisis(context) {
+  const stages = context?.stageByAxis || {};
+  return stages.food === SUPPLY_CRISIS_STAGE || stages.materials === SUPPLY_CRISIS_STAGE;
+}
+
+/**
+ * 来月の襲撃が村へ知らされているか。
+ * 予言が出ていない襲撃予約で判断を変えると、画面に出ていない情報が漏れる。
+ */
+function hasRaidWarning(village) {
+  return !!village?.pendingRaid?.prophecyNotified;
+}
+
+/** その村人を回復へ回す境目。備蓄の危機と襲撃予告で変わる。 */
+function getSelfRecoveryLimits(village, context) {
+  if (isSupplyCrisis(context)) {
+    return { hp: SUPPLY_CRISIS_RECOVERY_HP_LIMIT, mp: SUPPLY_CRISIS_RECOVERY_MP_LIMIT };
+  }
+  return {
+    hp: hasRaidWarning(village) ? RAID_WARNING_REST_HP_LIMIT : SELF_RECOVERY_HP_LIMIT,
+    mp: SELF_RECOVERY_MP_LIMIT
+  };
 }
 
 /** 手で火砲に就けた村人か。手動の配置を尊重し、割り振りで動かさない。 */
@@ -458,7 +506,7 @@ function chooseRaidFallbackAction(person, currentPreferred, currentAction) {
 }
 
 /**
- * 迎撃の想定ダメージ。tools/balance の測定からも参照する。
+ * 迎撃の想定ダメージ。
  * useBaseStats は、一時的な増減を除いた素の能力で比べたいときに使う。
  */
 export function getExpectedDefenderDamage(person, { useBaseStats = false } = {}) {
@@ -556,6 +604,15 @@ function getRaidAssignmentProfile(person, village) {
 // 反撃は威力半分で、狙われた回にしか出ないため、想定ターンぶんをさらに割り引く。
 const RAID_FORTIFY_FIREPOWER_RATE = 0.25;
 
+// 防衛割り振りの方針。通常は迎撃中心、堅忍は籠城で持久、省力は勝てる最低限だけ出す。
+export const RAID_ASSIGN_MODE = {
+  DEFEND: "defend",
+  FORTIFY: "fortify",
+  ECONOMY: "economy"
+};
+// 省力で人を減らすときに残す火力の余裕。見込みが外れても押し切れる幅を持たせる。
+const RAID_ECONOMY_SAFETY_RATE = 1.25;
+
 /** 想定ターン数ぶんの火力へ均す。罠は1度きりなので、そのまま数える。 */
 function toRaidFirepower(action, damage) {
   if (action === ACTION_TRAP) return damage;
@@ -592,7 +649,7 @@ const RAID_ACTION_TIE_ORDER = [ACTION_SHOOT, ACTION_CANNON, ACTION_TRAP, ACTION_
 
 /**
  * 割り振り対象外の村人が、すでに占めている枠と出している火力。
- * 行動固定中の村人と、手で火砲に就けた村人は動かせないため、その枠を空きとして数えない。
+ * 手で火砲に就けた村人は動かせないため、その枠を空きとして数えない。
  */
 function getReservedRaidLines(village, targets) {
   const villagers = Array.isArray(village?.villagers) ? village.villagers : [];
@@ -616,7 +673,7 @@ function getReservedRaidLines(village, targets) {
  * 見込みダメージの高い組から順に枠を埋めるため、役の優先順ではなく本人の得意で決まる。
  * 枠に入れなかった者は通常職へ残す。
  */
-function fillRaidRoles(village, profiles, assignments, reservedSlots) {
+function fillRaidRoles(village, profiles, assignments, reservedSlots, mode) {
   const budget = {
     front: Math.max(0, getRaidFrontlinerSlotCount(village) - reservedSlots.front),
     middle: Math.max(0, getRaidMiddleSlotCount(village) - reservedSlots.middle),
@@ -667,19 +724,22 @@ function fillRaidRoles(village, profiles, assignments, reservedSlots) {
   if (firstFront) place(firstFront);
   candidates.forEach(place);
 
-  applyFortifyPreference(village, assignments, frontPicked);
+  applyFortifyPreference(village, assignments, frontPicked, mode);
   return { assigned, budget };
 }
 
 /**
  * 守りを固めるべき場面では、前衛を籠城へ回す。
- * 前衛が1人しかいないとき、または人数で押せていても敵が強いときに切り替える。
+ * 堅忍は常に籠城。通常は前衛が1人のときだけ切り替え、強敵でも迎撃を続ける。
+ * 省力は被害を抑えたいので、通常の条件に敵の強さも加える。
  */
-function applyFortifyPreference(village, assignments, frontPicked) {
+function applyFortifyPreference(village, assignments, frontPicked, mode) {
   if (frontPicked.length === 0) return;
   const enemyCount = Array.isArray(village?.raidEnemies) ? village.raidEnemies.length : 0;
-  const shouldFortify = frontPicked.length === 1 ||
-    (frontPicked.length > enemyCount && hasStrongRaidEnemies(village, frontPicked));
+  const shouldFortify = mode === RAID_ASSIGN_MODE.FORTIFY ||
+    frontPicked.length === 1 ||
+    (mode === RAID_ASSIGN_MODE.ECONOMY &&
+      frontPicked.length > enemyCount && hasStrongRaidEnemies(village, frontPicked));
   if (!shouldFortify) return;
 
   frontPicked.forEach(profile => {
@@ -690,15 +750,46 @@ function applyFortifyPreference(village, assignments, frontPicked) {
   });
 }
 
-function buildRaidAssignments(village, targets) {
+/**
+ * 勝てる見込みを保ったまま、火力の小さい者から外す。
+ * 前衛が誰もいないと村人全体が的になるため、前衛は最低1人残す。
+ */
+function trimToMinimumForce(village, profiles, assignments, reserved) {
+  const required = getEnemyTotalHp(village) * RAID_ECONOMY_SAFETY_RATE;
+  const members = profiles
+    .filter(profile => isRaidAction(assignments.get(profile.person)?.action))
+    .map(profile => {
+      const action = assignments.get(profile.person).action;
+      return { profile, action, firepower: toRaidFirepower(action, profile.damage[action] || 0) };
+    })
+    .sort((a, b) => a.firepower - b.firepower);
+
+  let total = estimateVillageFirepower(village, profiles, assignments, reserved.firepower);
+  let frontCount = reserved.used.front +
+    members.filter(member => RAID_ACTION_SLOTS[member.action] === "front").length;
+
+  members.forEach(member => {
+    if (total - member.firepower < required) return;
+    const isFront = RAID_ACTION_SLOTS[member.action] === "front";
+    if (isFront && frontCount <= 1) return;
+    assignments.set(member.profile.person, member.profile.fallback);
+    total -= member.firepower;
+    if (isFront) frontCount -= 1;
+  });
+}
+
+function buildRaidAssignments(village, targets, mode) {
   const profiles = targets.map(person => getRaidAssignmentProfile(person, village));
   const assignments = new Map();
   profiles.forEach(profile => assignments.set(profile.person, profile.fallback));
   const reserved = getReservedRaidLines(village, targets);
 
   // まず安全に戦える者だけで組む。
-  const { assigned, budget } = fillRaidRoles(village, profiles, assignments, reserved.used);
+  const { assigned, budget } = fillRaidRoles(village, profiles, assignments, reserved.used, mode);
   if (hasWinningChance(village, profiles, assignments, reserved.firepower)) {
+    if (mode === RAID_ASSIGN_MODE.ECONOMY) {
+      trimToMinimumForce(village, profiles, assignments, reserved);
+    }
     return { assignments, hasChance: true };
   }
 
@@ -760,17 +851,25 @@ export function autoAssignJobs(village) {
   village.log(`自動割り振り: ${changed}人の行動を更新しました。固定${lockedCount}人は除外`);
 }
 
-export function autoAssignRaidActions(village) {
+const RAID_ASSIGN_MODE_LABELS = {
+  [RAID_ASSIGN_MODE.DEFEND]: "防衛割り振り",
+  [RAID_ASSIGN_MODE.FORTIFY]: "防衛割り振り（堅忍）",
+  [RAID_ASSIGN_MODE.ECONOMY]: "防衛割り振り（省力）"
+};
+
+export function autoAssignRaidActions(village, { mode = RAID_ASSIGN_MODE.DEFEND } = {}) {
   if (!isRaidActive(village)) {
     village.log("襲撃は発生していません。");
     return;
   }
 
+  const resolvedMode = RAID_ASSIGN_MODE_LABELS[mode] ? mode : RAID_ASSIGN_MODE.DEFEND;
   let changed = 0;
   const allVillagers = Array.isArray(village.villagers) ? village.villagers : [];
-  // 固定中の村人と、手で火砲に就けた村人はそのままにする。
-  const targets = allVillagers.filter(person => !person.assignmentLocked && !isManualCannoneer(person, village));
-  const { assignments, hasChance } = buildRaidAssignments(village, targets);
+  // 防衛は村の存亡に関わるため、行動固定中の村人も割り振りの対象にする。
+  // 手で火砲に就けた村人だけは、その配置を尊重してそのままにする。
+  const targets = allVillagers.filter(person => !isManualCannoneer(person, village));
+  const { assignments, hasChance } = buildRaidAssignments(village, targets, resolvedMode);
 
   targets.forEach(person => {
     const currentPreferred = person.preferredAction || person.job || JOB_NONE;
@@ -795,5 +894,5 @@ export function autoAssignRaidActions(village) {
     `不参加${Math.max(0, allVillagers.length - readiness.participantCount)}人`
   ];
   const note = hasChance ? "" : "（勝ち目薄。撤退も一考）";
-  village.log(`防衛割り振り: ${changed}人を更新しました。${parts.join("、")}${note}`);
+  village.log(`${RAID_ASSIGN_MODE_LABELS[resolvedMode]}: ${changed}人を更新しました。${parts.join("、")}${note}`);
 }

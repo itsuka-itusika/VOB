@@ -36,6 +36,9 @@ const RAID_BODY_BLOCK_REASONS = [
 ];
 const RAID_TRIPLE_DAMAGE_BODY_TRAITS = ["赤子", YOUNG_WOLF_TRAIT, "危篤", "重体"];
 const RAID_DOUBLE_DAMAGE_BODY_TRAITS = ["疫病", "負傷", "過労", "産褥"];
+// 魔力の膜で身を守る精神特性。受けるダメージを減らす。
+export const MAGIC_BARRIER_MIND_TRAIT = "魔法障壁";
+export const MAGIC_BARRIER_INCOMING_DAMAGE_MULTIPLIER = 0.8;
 const HUMAN_BEAST_TRAIT = "人面獣身";
 const RAID_LINE_LABELS = {
   [ACTION_DEFEND]: "前衛",
@@ -145,9 +148,13 @@ export function getRaidActionSkipMessage(person, action = "戦闘", options = {}
 
 export function getRaiderIncomingDamageMultiplier(person) {
   const bodyTraits = traitList(person, "bodyTraits");
-  if (hasAnyTrait(bodyTraits, RAID_TRIPLE_DAMAGE_BODY_TRAITS)) return 3;
-  if (hasAnyTrait(bodyTraits, RAID_DOUBLE_DAMAGE_BODY_TRAITS)) return 2;
-  return 1;
+  let multiplier = 1;
+  if (hasAnyTrait(bodyTraits, RAID_TRIPLE_DAMAGE_BODY_TRAITS)) multiplier = 3;
+  else if (hasAnyTrait(bodyTraits, RAID_DOUBLE_DAMAGE_BODY_TRAITS)) multiplier = 2;
+  if (traitList(person, "mindTraits").includes(MAGIC_BARRIER_MIND_TRAIT)) {
+    multiplier *= MAGIC_BARRIER_INCOMING_DAMAGE_MULTIPLIER;
+  }
+  return multiplier;
 }
 
 /** 戦いを拒む精神特性を持つか。籠城以外の襲撃行動を選べない。 */
@@ -216,7 +223,7 @@ export function estimateRaidActionDamage(person, action, village = null) {
     const magical = Math.max(0, Math.floor((stat("mag") * stat("cou") / 400) * 25));
     base = Math.max(physical, magical);
   } else if (action === ACTION_SHOOT) {
-    base = Math.max(0, Math.floor((stat("dex") * stat("cou") / 400) * 40 - averageVitality * 1.2));
+    base = Math.max(0, Math.floor((stat("dex") * stat("cou") / 400) * 50 - averageVitality * 1.2));
     base = Math.floor(base * getShootingTraitMultiplier(person));
   } else if (action === ACTION_CANNON) {
     base = Math.max(0, Math.floor((stat("mag") * stat("int") / 400) * 20));
@@ -282,7 +289,7 @@ export function getAverageEnemyAttack(village) {
       if (enemy.raidAttackType === RAID_ATTACK_RANGED_MAGIC) {
         return sum + Math.max(0, (stat("mag") * stat("cou") / 400) * 20);
       }
-      return sum + Math.max(0, (stat("dex") * stat("cou") / 400) * 40 - averageVitality * 1.2);
+      return sum + Math.max(0, (stat("dex") * stat("cou") / 400) * 50 - averageVitality * 1.2);
     }
     const physical = Math.max(0, (stat("str") * stat("cou") / 400) * 50 - averageVitality);
     const magical = Math.max(0, (stat("mag") * stat("cou") / 400) * 25);
