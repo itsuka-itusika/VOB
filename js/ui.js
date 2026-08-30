@@ -293,7 +293,7 @@ function buildWarningMessages(village) {
   if (despairingVillagers.length > 0) {
     warnings.push({
       level: "danger",
-      text: `${formatWarningNames(despairingVillagers)}が絶望しています。酒杯・宴会・狂宴・蛇の巻き付いた杖で解除しないまま次の月を迎えると村を去ります。`
+      text: `${formatWarningNames(despairingVillagers)}が絶望しています。奇跡や秘宝で解除しないまま次の月を迎えると村を去ります。`
     });
   }
 
