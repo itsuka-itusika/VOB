@@ -1112,7 +1112,12 @@ export const RAID_MODULES = [
     failurePenalty: {
       foodRate: 0.2,
       fundsRate: 0.2
-    }
+    },
+    introDialogues: [
+      "村を見つけたぞ。柵の内にあるものは、今日から俺たちのものだ。",
+      "おとなしくしていれば命は取らん。蔵の鍵を出せ。",
+      "隣の村では取り損ねてな。ここで埋め合わせさせてもらう。"
+    ]
   }),
   createCompositeRaiderRaid({
     id: "mercenary-band",
@@ -1154,23 +1159,43 @@ export const RAID_MODULES = [
   createExistingRaiderRaid("goblin", "ゴブリン", {
     failurePenalty: {
       foodRate: 0.25
-    }
+    },
+    introDialogues: [
+      "キヒヒ！人間の巣を見つけたのだ！",
+      "柵は低い、見張りは眠い！今夜は食い放題なのだ！",
+      "食い物も光るものも、みんな持って帰るのだ！"
+    ]
   }),
   createExistingRaiderRaid("wolf", "狼", {
     failurePenalty: {
       foodRate: 0.2
-    }
+    },
+    introDialogues: [
+      "ウォォォン！（森を出た群れが、村の匂いを追ってきた）",
+      "グルルル...（柵の隙間から中をうかがっている）",
+      "ハァハァ...（家畜の鳴き声に牙をむいている）"
+    ]
   }),
   createExistingRaiderRaid("cyclops", "キュクロプス", {
     failurePenalty: {
       foodRate: 0.2,
       buildingDamage: true
-    }
+    },
+    introDialogues: [
+      "ウオォォ！小さい家がたくさんある...全部踏み潰す...！",
+      "腹が減った...人間の蓄えを、まとめて食う...",
+      "山を下りてきた。この村は、俺の通り道だ。"
+    ]
   }),
   createExistingRaiderRaid("harpy", "ハーピー", {
     failurePenalty: {
       fundsRate: 0.25
-    }
+    },
+    introDialogues: [
+      "キャハハ！上から見ていたのよ。いい村を見つけちゃった！",
+      "屋根の隙間から、光るものが覗いているわ。頂きに来たの。",
+      "空から降りてくるものに、備えなんてしていないでしょう？"
+    ]
   }),
   createCompositeRaiderRaid({
     id: "stray-harpy",
@@ -1183,7 +1208,12 @@ export const RAID_MODULES = [
     ],
     failurePenalty: {
       fundsRate: 0.15
-    }
+    },
+    introDialogues: [
+      "キャハ...群れとはぐれちゃった。でも、一羽でも足りるわ。",
+      "手ぶらでは巣に帰れないの。少しだけ頂くわね。",
+      "一羽だからと侮らないで。空にいるのは私だけよ。"
+    ]
   }),
   createCompositeRaiderRaid({
     id: "harpy-swarm",
@@ -1197,7 +1227,12 @@ export const RAID_MODULES = [
     ],
     failurePenalty: {
       fundsRate: 0.35
-    }
+    },
+    introDialogues: [
+      "キャハハ！空が私たちで埋まっているのが見えて？",
+      "下の子たち、村を囲みなさい。逃げ道は残さないの。",
+      "一羽ずつ追い払える数ではないわ。諦めて差し出しなさい。"
+    ]
   }),
   createCompositeRaiderRaid({
     id: "goblin-army",
@@ -1231,7 +1266,12 @@ export const RAID_MODULES = [
     ],
     failurePenalty: {
       foodRate: 0.3
-    }
+    },
+    introDialogues: [
+      "ウォォォン！（飢えた群れが、村を囲むように散っていく）",
+      "グルルル...（いくつもの目が、柵の向こうを見ている）",
+      "ハァハァ...（骨まで食うつもりで牙を鳴らしている）"
+    ]
   }),
   createCompositeRaiderRaid({
     id: "cyclops-band",
@@ -1244,7 +1284,12 @@ export const RAID_MODULES = [
     failurePenalty: {
       foodRate: 0.3,
       buildingDamage: true
-    }
+    },
+    introDialogues: [
+      "ウオォォ！仲間を連れてきた。今日は村ごと潰す...！",
+      "家も柵も、まとめて踏み倒す。数は足りている...",
+      "腹が減った仲間が、後ろにもいる...全部食う..."
+    ]
   }),
   createCompositeRaiderRaid({
     id: "monster-stampede",
