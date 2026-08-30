@@ -91,6 +91,11 @@ export function hasLoverRelationship(person) {
   return hasRelationshipPrefix(person, LOVER_RELATION_PREFIXES);
 }
 
+/** 配偶者がいるか。「元夫」「元妻」を含めないよう、前置きで判定する。 */
+export function hasSpouseRelationship(person) {
+  return hasRelationshipPrefix(person, SPOUSE_RELATION_PREFIXES);
+}
+
 /** 今の趣味の仲間がいるか。余暇のメンタル回復1.5倍の判定に使う。 */
 export function hasHobbyMateRelationship(person) {
   const hobby = person?.hobby;

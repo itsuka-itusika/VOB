@@ -52,7 +52,7 @@ import { showDictionaryEntry } from "./dictionary.js";
 import { combinedDictionaryData } from "./data/dictionaryData.js";
 import { getVillagerFoodConsumption } from "./util.js";
 import { applyPortraitToElement } from "./data/portraitAtlas.js";
-import { hasHobbyMateRelationship } from "./relationships.js";
+import { hasHobbyMateRelationship, hasLoverRelationship, hasSpouseRelationship } from "./relationships.js";
 import { getCaptives } from "./captives.js";
 import { getTutorialWarnings } from "./tutorial.js";
 import { applyVillageScaleArtClass, getVillageScaleProgressLabel, getVillageScaleTitle } from "./villageScale.js";
@@ -157,6 +157,79 @@ function getTraitEmphasisClass(label) {
   if (INJURY_BODY_TRAITS.has(label)) return "trait-injury";
   if (DESPAIR_MIND_TRAITS.has(label)) return "trait-despair";
   return "";
+}
+
+// 村人一覧の絞り込み。傷病は、赤と青で強調している状態異常をまとめて拾う。
+const AILMENT_FILTER_TRAITS = new Set([...INJURY_BODY_TRAITS, ...DESPAIR_MIND_TRAITS]);
+
+function getFilterValue(id) {
+  return document.getElementById(id)?.value || "";
+}
+
+function isFilterChecked(id) {
+  return document.getElementById(id)?.checked === true;
+}
+
+function hasAilmentTrait(person) {
+  const traits = [...(person?.bodyTraits || []), ...(person?.mindTraits || [])];
+  return traits.some(trait => AILMENT_FILTER_TRAITS.has(trait));
+}
+
+function getVillagerJobLabel(person) {
+  return getActionDisplayName(person?.action) || "なし";
+}
+
+/** 今いる村人から選択肢を作り直す。選んでいた値が消えたら「すべて」へ戻す。 */
+function refreshFilterOptions(selectId, values, allLabel) {
+  const select = document.getElementById(selectId);
+  if (!select) return;
+  const current = select.value;
+  const options = [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, "ja"));
+  select.innerHTML = "";
+  const allOption = document.createElement("option");
+  allOption.value = "";
+  allOption.textContent = allLabel;
+  select.appendChild(allOption);
+  options.forEach(value => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = value;
+    select.appendChild(option);
+  });
+  select.value = options.includes(current) ? current : "";
+}
+
+function filterVillagers(villagers) {
+  const bodySex = getFilterValue("filterBodySex");
+  const spiritSex = getFilterValue("filterSpiritSex");
+  const race = getFilterValue("filterRace");
+  const job = getFilterValue("filterJob");
+  const needsAilment = isFilterChecked("filterAilment");
+  const needsLover = isFilterChecked("filterLover");
+  const needsSpouse = isFilterChecked("filterMarried");
+
+  return villagers.filter(person => {
+    if (bodySex && person.bodySex !== bodySex) return false;
+    if (spiritSex && person.spiritSex !== spiritSex) return false;
+    if (race && (person.race || "人間") !== race) return false;
+    if (job && getVillagerJobLabel(person) !== job) return false;
+    if (needsAilment && !hasAilmentTrait(person)) return false;
+    if (needsLover && !hasLoverRelationship(person)) return false;
+    if (needsSpouse && !hasSpouseRelationship(person)) return false;
+    return true;
+  });
+}
+
+/** 絞り込みを解除する。呼び出し側で updateUI を回して表を引き直す。 */
+export function resetVillagerFilter() {
+  ["filterBodySex", "filterSpiritSex", "filterRace", "filterJob"].forEach(id => {
+    const select = document.getElementById(id);
+    if (select) select.value = "";
+  });
+  ["filterAilment", "filterLover", "filterMarried"].forEach(id => {
+    const checkbox = document.getElementById(id);
+    if (checkbox) checkbox.checked = false;
+  });
 }
 
 function appendDictionaryTerm(parent, term, options = {}) {
@@ -1176,8 +1249,19 @@ export function updateUI(v) {
     }
   }
 
+  const villagers = Array.isArray(v.villagers) ? v.villagers : [];
+  refreshFilterOptions("filterRace", villagers.map(person => person.race || "人間"), "種族：すべて");
+  refreshFilterOptions("filterJob", villagers.map(getVillagerJobLabel), "仕事：すべて");
+  const shownVillagers = filterVillagers(villagers);
+  const filterCount = document.getElementById("villagerFilterCount");
+  if (filterCount) {
+    filterCount.textContent = shownVillagers.length === villagers.length
+      ? ""
+      : `${shownVillagers.length}/${villagers.length}人`;
+  }
+
   const tb = document.querySelector("#villagersTable tbody");
-  renderPeopleTable(tb, v.villagers || [], v, { editable: true });
+  renderPeopleTable(tb, shownVillagers, v, { editable: true });
 
   const captives = getCaptives(v);
   setSectionVisible(document.getElementById("captivesSection"), captives.length > 0);
@@ -1211,7 +1295,7 @@ let sortState = {
 
 // 列番号は index.html の村人一覧テーブルと対応する。列を増減したら両方を合わせること。
 // 行動と役職はプルダウンのため、並べ替えの対象にしない。
-const SORTABLE_VILLAGER_COLUMNS = [4, 5, 6, 7, 8, 9, 10, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23];
+const SORTABLE_VILLAGER_COLUMNS = [3, 4, 5, 6, 7, 8, 9, 10, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23];
 const NUMERIC_VILLAGER_COLUMNS = [5, 7, 8, 9, 10, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23];
 
 /**

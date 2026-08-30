@@ -32,7 +32,7 @@ import {
 } from "./saveLoad.js";
 import { closeDryadFruitModal, closeSecretTreasureModal, openSecretTreasureModal, SECRET_TREASURES } from "./secretTreasures.js";
 import { RAID_MODULES } from "./data/raidData.js";
-import { updateUI } from "./ui.js";
+import { resetVillagerFilter, updateUI } from "./ui.js";
 import { getCaptives } from "./captives.js";
 import { setBalanceSimulationOptions } from "./balance/simulationOptions.js";
 import { enterGame, initOpeningScreen, replayOpeningStory } from "./openingScreen.js";
@@ -373,8 +373,8 @@ function bindGlobalHandlers() {
     },
     openWarCouncil: () => openWarCouncilModal(theVillage, {
       onStart: onNextTurn,
-      onAutoAssign: () => {
-        autoAssignRaidActions(theVillage);
+      onAutoAssign: mode => {
+        autoAssignRaidActions(theVillage, { mode });
         updateUI(theVillage);
       },
       onMiracle: () => openMiracleModal(theVillage)
@@ -382,6 +382,11 @@ function bindGlobalHandlers() {
     closeWarCouncil: closeWarCouncilModal,
     toggleSpiritColumns: setSpiritColumnsVisibility,
     toggleStatColumns: setStatColumnsVisibility,
+    onVillagerFilterChange: () => updateUI(theVillage),
+    clearVillagerFilter: () => {
+      resetVillagerFilter();
+      updateUI(theVillage);
+    },
     closeConversationModal: async () => {
       const { closeConversationModal } = await import("./conversation.js");
       closeConversationModal();

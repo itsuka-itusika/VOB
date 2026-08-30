@@ -105,7 +105,32 @@
     <input type="file" id="fileInput" style="display:none;" accept=".json">
   </section>
   <section>
-    <h2>村人一覧</h2>
+    <div class="section-header">
+      <h2>村人一覧</h2>
+      <div class="villager-filter" id="villagerFilter">
+        <select id="filterBodySex" onchange="onVillagerFilterChange()" aria-label="肉体性別で絞り込み">
+          <option value="">肉体：すべて</option>
+          <option value="男">肉体：男</option>
+          <option value="女">肉体：女</option>
+        </select>
+        <select id="filterSpiritSex" onchange="onVillagerFilterChange()" aria-label="精神性別で絞り込み">
+          <option value="">精神：すべて</option>
+          <option value="男">精神：男</option>
+          <option value="女">精神：女</option>
+        </select>
+        <select id="filterRace" onchange="onVillagerFilterChange()" aria-label="種族で絞り込み">
+          <option value="">種族：すべて</option>
+        </select>
+        <select id="filterJob" onchange="onVillagerFilterChange()" aria-label="仕事で絞り込み">
+          <option value="">仕事：すべて</option>
+        </select>
+        <label><input type="checkbox" id="filterAilment" onchange="onVillagerFilterChange()"> 傷病</label>
+        <label><input type="checkbox" id="filterLover" onchange="onVillagerFilterChange()"> 恋人あり</label>
+        <label><input type="checkbox" id="filterMarried" onchange="onVillagerFilterChange()"> 既婚</label>
+        <button type="button" onclick="clearVillagerFilter()">解除</button>
+        <span class="villager-filter-count" id="villagerFilterCount"></span>
+      </div>
+    </div>
     <table id="villagersTable">
       <thead>
         <tr>

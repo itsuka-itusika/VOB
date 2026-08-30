@@ -604,6 +604,15 @@ function getRaidAssignmentProfile(person, village) {
 // 反撃は威力半分で、狙われた回にしか出ないため、想定ターンぶんをさらに割り引く。
 const RAID_FORTIFY_FIREPOWER_RATE = 0.25;
 
+// 防衛割り振りの方針。通常は迎撃中心、堅忍は籠城で持久、省力は勝てる最低限だけ出す。
+export const RAID_ASSIGN_MODE = {
+  DEFEND: "defend",
+  FORTIFY: "fortify",
+  ECONOMY: "economy"
+};
+// 省力で人を減らすときに残す火力の余裕。見込みが外れても押し切れる幅を持たせる。
+const RAID_ECONOMY_SAFETY_RATE = 1.25;
+
 /** 想定ターン数ぶんの火力へ均す。罠は1度きりなので、そのまま数える。 */
 function toRaidFirepower(action, damage) {
   if (action === ACTION_TRAP) return damage;
@@ -664,7 +673,7 @@ function getReservedRaidLines(village, targets) {
  * 見込みダメージの高い組から順に枠を埋めるため、役の優先順ではなく本人の得意で決まる。
  * 枠に入れなかった者は通常職へ残す。
  */
-function fillRaidRoles(village, profiles, assignments, reservedSlots) {
+function fillRaidRoles(village, profiles, assignments, reservedSlots, mode) {
   const budget = {
     front: Math.max(0, getRaidFrontlinerSlotCount(village) - reservedSlots.front),
     middle: Math.max(0, getRaidMiddleSlotCount(village) - reservedSlots.middle),
@@ -715,19 +724,22 @@ function fillRaidRoles(village, profiles, assignments, reservedSlots) {
   if (firstFront) place(firstFront);
   candidates.forEach(place);
 
-  applyFortifyPreference(village, assignments, frontPicked);
+  applyFortifyPreference(village, assignments, frontPicked, mode);
   return { assigned, budget };
 }
 
 /**
  * 守りを固めるべき場面では、前衛を籠城へ回す。
- * 前衛が1人しかいないとき、または人数で押せていても敵が強いときに切り替える。
+ * 堅忍は常に籠城。通常は前衛が1人のときだけ切り替え、強敵でも迎撃を続ける。
+ * 省力は被害を抑えたいので、通常の条件に敵の強さも加える。
  */
-function applyFortifyPreference(village, assignments, frontPicked) {
+function applyFortifyPreference(village, assignments, frontPicked, mode) {
   if (frontPicked.length === 0) return;
   const enemyCount = Array.isArray(village?.raidEnemies) ? village.raidEnemies.length : 0;
-  const shouldFortify = frontPicked.length === 1 ||
-    (frontPicked.length > enemyCount && hasStrongRaidEnemies(village, frontPicked));
+  const shouldFortify = mode === RAID_ASSIGN_MODE.FORTIFY ||
+    frontPicked.length === 1 ||
+    (mode === RAID_ASSIGN_MODE.ECONOMY &&
+      frontPicked.length > enemyCount && hasStrongRaidEnemies(village, frontPicked));
   if (!shouldFortify) return;
 
   frontPicked.forEach(profile => {
@@ -738,15 +750,46 @@ function applyFortifyPreference(village, assignments, frontPicked) {
   });
 }
 
-function buildRaidAssignments(village, targets) {
+/**
+ * 勝てる見込みを保ったまま、火力の小さい者から外す。
+ * 前衛が誰もいないと村人全体が的になるため、前衛は最低1人残す。
+ */
+function trimToMinimumForce(village, profiles, assignments, reserved) {
+  const required = getEnemyTotalHp(village) * RAID_ECONOMY_SAFETY_RATE;
+  const members = profiles
+    .filter(profile => isRaidAction(assignments.get(profile.person)?.action))
+    .map(profile => {
+      const action = assignments.get(profile.person).action;
+      return { profile, action, firepower: toRaidFirepower(action, profile.damage[action] || 0) };
+    })
+    .sort((a, b) => a.firepower - b.firepower);
+
+  let total = estimateVillageFirepower(village, profiles, assignments, reserved.firepower);
+  let frontCount = reserved.used.front +
+    members.filter(member => RAID_ACTION_SLOTS[member.action] === "front").length;
+
+  members.forEach(member => {
+    if (total - member.firepower < required) return;
+    const isFront = RAID_ACTION_SLOTS[member.action] === "front";
+    if (isFront && frontCount <= 1) return;
+    assignments.set(member.profile.person, member.profile.fallback);
+    total -= member.firepower;
+    if (isFront) frontCount -= 1;
+  });
+}
+
+function buildRaidAssignments(village, targets, mode) {
   const profiles = targets.map(person => getRaidAssignmentProfile(person, village));
   const assignments = new Map();
   profiles.forEach(profile => assignments.set(profile.person, profile.fallback));
   const reserved = getReservedRaidLines(village, targets);
 
   // まず安全に戦える者だけで組む。
-  const { assigned, budget } = fillRaidRoles(village, profiles, assignments, reserved.used);
+  const { assigned, budget } = fillRaidRoles(village, profiles, assignments, reserved.used, mode);
   if (hasWinningChance(village, profiles, assignments, reserved.firepower)) {
+    if (mode === RAID_ASSIGN_MODE.ECONOMY) {
+      trimToMinimumForce(village, profiles, assignments, reserved);
+    }
     return { assignments, hasChance: true };
   }
 
@@ -808,18 +851,25 @@ export function autoAssignJobs(village) {
   village.log(`自動割り振り: ${changed}人の行動を更新しました。固定${lockedCount}人は除外`);
 }
 
-export function autoAssignRaidActions(village) {
+const RAID_ASSIGN_MODE_LABELS = {
+  [RAID_ASSIGN_MODE.DEFEND]: "防衛割り振り",
+  [RAID_ASSIGN_MODE.FORTIFY]: "防衛割り振り（堅忍）",
+  [RAID_ASSIGN_MODE.ECONOMY]: "防衛割り振り（省力）"
+};
+
+export function autoAssignRaidActions(village, { mode = RAID_ASSIGN_MODE.DEFEND } = {}) {
   if (!isRaidActive(village)) {
     village.log("襲撃は発生していません。");
     return;
   }
 
+  const resolvedMode = RAID_ASSIGN_MODE_LABELS[mode] ? mode : RAID_ASSIGN_MODE.DEFEND;
   let changed = 0;
   const allVillagers = Array.isArray(village.villagers) ? village.villagers : [];
   // 防衛は村の存亡に関わるため、行動固定中の村人も割り振りの対象にする。
   // 手で火砲に就けた村人だけは、その配置を尊重してそのままにする。
   const targets = allVillagers.filter(person => !isManualCannoneer(person, village));
-  const { assignments, hasChance } = buildRaidAssignments(village, targets);
+  const { assignments, hasChance } = buildRaidAssignments(village, targets, resolvedMode);
 
   targets.forEach(person => {
     const currentPreferred = person.preferredAction || person.job || JOB_NONE;
@@ -844,5 +894,5 @@ export function autoAssignRaidActions(village) {
     `不参加${Math.max(0, allVillagers.length - readiness.participantCount)}人`
   ];
   const note = hasChance ? "" : "（勝ち目薄。撤退も一考）";
-  village.log(`防衛割り振り: ${changed}人を更新しました。${parts.join("、")}${note}`);
+  village.log(`${RAID_ASSIGN_MODE_LABELS[resolvedMode]}: ${changed}人を更新しました。${parts.join("、")}${note}`);
 }

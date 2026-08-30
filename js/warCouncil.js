@@ -501,7 +501,9 @@ export function openWarCouncilModal(village, { onStart = null, onAutoAssign = nu
     <div class="wc-header">
       <h2 id="${MODAL_ID}Title">作戦会議</h2>
       <div class="wc-header-buttons">
-        <button type="button" data-wc-auto>防衛割り振り</button>
+        <button type="button" data-wc-auto="defend">防衛割り振り</button>
+        <button type="button" data-wc-auto="fortify" title="籠城を中心に組み、持久戦で凌ぎます">防衛割り振り（堅忍）</button>
+        <button type="button" data-wc-auto="economy" title="勝てる見込みを保てる最低限の人数だけ出します">防衛割り振り（省力）</button>
         <button type="button" data-wc-miracle>奇跡の行使</button>
         <button type="button" data-wc-close>戻る</button>
         <button type="button" class="wc-start" data-wc-start>迎撃開始</button>
@@ -522,10 +524,12 @@ export function openWarCouncilModal(village, { onStart = null, onAutoAssign = nu
   bindCouncilInputs();
 
   modal.querySelector("[data-wc-close]").onclick = closeWarCouncilModal;
-  modal.querySelector("[data-wc-auto]").onclick = () => {
-    if (typeof onAutoAssign === "function") onAutoAssign();
-    refreshCouncilBody();
-  };
+  modal.querySelectorAll("[data-wc-auto]").forEach(button => {
+    button.onclick = () => {
+      if (typeof onAutoAssign === "function") onAutoAssign(button.dataset.wcAuto);
+      refreshCouncilBody();
+    };
+  });
   modal.querySelector("[data-wc-clear]").onclick = () => {
     getCouncilVillagers(councilVillage)
       .filter(person => ALL_COUNCIL_ACTIONS.includes(person.action))

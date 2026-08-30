@@ -1017,6 +1017,38 @@ table.hide-stat-columns .stat-column {
   margin: 2px 0 6px;
   font-size: 0.85rem;
 }
+/* 見出しの右へ絞り込みを並べる。表の幅は狭めない。 */
+.section-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+.section-header > h2 {
+  margin-right: 4px;
+}
+.villager-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 0.85rem;
+}
+.villager-filter select {
+  height: 24px;
+  padding: 1px 4px;
+  font-size: 0.85rem;
+}
+.villager-filter label {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+.villager-filter-count {
+  color: #8a2d1f;
+  font-weight: bold;
+}
 .table-tools label {
   cursor: pointer;
   user-select: none;
