@@ -19,6 +19,7 @@ import { getActiveVillagers, isSaltPillar, SALT_PILLAR_TRAIT } from "./domain/ap
 import { getSelectableRaidTables, startRaidEvent } from "./raidStart.js";
 import { getRaiderIncomingDamageMultiplier } from "./raidRules.js";
 import { completeTutorialTask } from "./tutorial.js";
+import { isWarCouncilOpen, refreshWarCouncil } from "./warCouncil.js";
 import { getCaptives, normalizeCaptive } from "./captives.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { getVillageRole, VILLAGE_ROLE_DOCTOR } from "./domain/villageRoles.js";
@@ -1261,6 +1262,8 @@ export function performMiracle(village) {
   checkWishCompletion(village, { miracleId: mid });
   completeTutorialTask(village, "use_miracle");
   updateUI(village);
+  // 作戦会議から行使された場合は、奇跡の結果を反映した表に引き直す。
+  if (isWarCouncilOpen()) refreshWarCouncil();
   closeMiracleModal();
 }
 

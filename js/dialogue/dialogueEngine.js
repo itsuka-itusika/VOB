@@ -16,7 +16,7 @@ import { JOB_LINES } from "../data/dialogue/jobLines.js";
 import { REPRODUCTION_LINES } from "../data/dialogue/reproductionLines.js";
 import { EXCHANGE_SITUATION_LINES } from "../data/dialogue/exchangeSituationLines.js";
 import { SECRET_TREASURE_LINES } from "../data/dialogue/secretTreasureLines.js";
-import { MIRACLE_RESULT_LINES } from "../data/dialogue/miracleLines.js";
+import { MIRACLE_RESULT_LINES, THUNDERBOLT_RAIDER_LINES } from "../data/dialogue/miracleLines.js";
 import { TUTORIAL_LINES } from "../data/dialogue/tutorialLines.js";
 import {
   getVisitorLineKey,
@@ -112,6 +112,15 @@ function selectToneLines(group, character, context = {}) {
   const keys = getToneLookupKeys(tone, character);
   const key = keys.find(candidate => group[candidate]);
   return key ? asLineArray(group[key], context) : [];
+}
+
+// 雷霆は襲撃者だけを撃つ。口調の共通セリフより、襲撃者の種別ごとの反応を優先する。
+function getMiracleLines(character, key, context = {}) {
+  if (key === "thunderbolt") {
+    const raiderLines = THUNDERBOLT_RAIDER_LINES[character?.raiderType];
+    if (raiderLines) return asLineArray(raiderLines, context);
+  }
+  return selectToneLines(MIRACLE_RESULT_LINES[key], character, context);
 }
 
 function getStatusLines(character, status, context = {}) {
@@ -271,7 +280,7 @@ export function getDialogueLines({ character, scene, key, context = {} }) {
     case "secretTreasure":
       return selectToneLines(SECRET_TREASURE_LINES[key], character, context);
     case "miracle":
-      return selectToneLines(MIRACLE_RESULT_LINES[key], character, context);
+      return getMiracleLines(character, key, context);
     case "tutorial":
       return selectToneLines(TUTORIAL_LINES[key], character, context);
     case "captiveJoin":
