@@ -12,8 +12,8 @@ import { syncEffectiveStats } from "./domain/statLayers.js";
 import { recordDepartedVillager, recordMarriageHistory, recordVillagerLeaveHistory } from "./history.js";
 import { clearHopeLossTraits, DESPAIR_TRAIT, DISAPPOINTMENT_TRAIT } from "./domain/despair.js";
 import { resolveDialogueTone } from "./data/dialogue/toneProfiles.js";
-import { getDialogueLine } from "./dialogue/dialogueEngine.js";
-import { BODY_EXCHANGE_SOURCE_RACE_LINE_KEYS, BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
+import { getBodyExchangeSourceRaceLines, getDialogueLine } from "./dialogue/dialogueEngine.js";
+import { BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
 import { getVisitorArrivalLine } from "./data/dialogue/visitorLines.js";
 import { getActiveVillagers, isSaltPillar, SALT_PILLAR_TRAIT } from "./domain/apocalypseRules.js";
 import { getSelectableRaidTables, startRaidEvent } from "./raidStart.js";
@@ -1601,11 +1601,6 @@ function getBodyExchangeLineKey(person) {
     const raiderType = raiderTypes.find(type => person.name.includes(type));
     if (raiderType) return raiderType;
   }
-  const sourceRace = person.lastBodyExchangeSourceRace;
-  if (sourceRace && sourceRace !== person.race) {
-    const sourceRaceKey = BODY_EXCHANGE_SOURCE_RACE_LINE_KEYS[sourceRace];
-    if (sourceRaceKey) return sourceRaceKey;
-  }
   return resolveDialogueTone(person);
 }
 
@@ -1623,6 +1618,9 @@ function pickLineAvoidingUsed(lines, usedLines) {
 }
 
 function getBodyExchangeReactionLine(person, usedLines = null) {
+  // 生まれ持った肉体が特殊種族だった場合は、口調ごとの種族セリフを優先する。
+  const raceLines = getBodyExchangeSourceRaceLines(person);
+  if (raceLines.length > 0) return pickLineAvoidingUsed(raceLines, usedLines);
   const type = getBodyExchangeLineKey(person);
   const fallbackType = person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ";
   const lines = BODY_EXCHANGE_REACTION_LINES[type] ||

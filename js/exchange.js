@@ -87,7 +87,7 @@ function refreshAssignmentAfterExchange(person, village) {
   refreshJobTable(person, village);
 }
 
-function markBodyExchangeSourceRace(person, fromRace, toRace) {
+function markBodyExchangeSourceRace(person, fromRace, toRace, fromOwnBody = false) {
   Object.defineProperties(person, {
     lastBodyExchangeSourceRace: {
       configurable: true,
@@ -97,6 +97,12 @@ function markBodyExchangeSourceRace(person, fromRace, toRace) {
     lastBodyExchangeTargetRace: {
       configurable: true,
       value: toRace || "人間",
+      writable: true
+    },
+    // 生まれ持った肉体から出たときだけ、種族固有の反応を出す。
+    lastBodyExchangeFromOwnBody: {
+      configurable: true,
+      value: !!fromOwnBody,
       writable: true
     }
   });
@@ -114,6 +120,9 @@ export function doExchange(a, b, v, isLightning = false, historySource = null, o
   ensureStatLayers(b);
   const sourceRaceA = a.race || "人間";
   const sourceRaceB = b.race || "人間";
+  // 交換前に自分の肉体だったかを控える。交換後は bodyOwner も入れ替わるため、ここで見る。
+  const fromOwnBodyA = isOriginalBodyPortrait(a);
+  const fromOwnBodyB = isOriginalBodyPortrait(b);
   const saltPillarMonthsB = getSaltPillarMonths(b);
   const exchangeSource = historySource || (isLightning ? "落雷" : "奇跡");
   if (a.portraitFile !== b.portraitFile) {
@@ -202,8 +211,8 @@ export function doExchange(a, b, v, isLightning = false, historySource = null, o
   evaluateTitles(b, { getPermanentStat });
   refreshAssignmentAfterExchange(a, v);
   refreshAssignmentAfterExchange(b, v);
-  markBodyExchangeSourceRace(a, sourceRaceA, a.race);
-  markBodyExchangeSourceRace(b, sourceRaceB, b.race);
+  markBodyExchangeSourceRace(a, sourceRaceA, a.race, fromOwnBodyA);
+  markBodyExchangeSourceRace(b, sourceRaceB, b.race, fromOwnBodyB);
 
   if (!isLightning) {
     v.log(`【交換の奇跡】${a.name}と${b.name}の肉体を交換しました`);

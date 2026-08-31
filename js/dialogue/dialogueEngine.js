@@ -37,7 +37,7 @@ import {
   expandEventVillagerLines,
   findLineByKeys
 } from "../data/dialogue/randomEventLines.js";
-import { BODY_EXCHANGE_SOURCE_RACE_LINE_KEYS, BODY_EXCHANGE_REACTION_LINES } from "../data/dialogue/exchangeLines.js";
+import { BODY_EXCHANGE_SOURCE_RACE_LINES, BODY_EXCHANGE_REACTION_LINES } from "../data/dialogue/exchangeLines.js";
 import {
   CAPTIVE_JOIN_LINES,
   CAPTIVE_RELEASE_LINES,
@@ -190,6 +190,18 @@ function pickLineByVariant(value, variantIndex) {
   return pickDialogueLine(value[variantIndex % value.length]);
 }
 
+/**
+ * 生まれ持った肉体が特殊種族だった者が、その体を離れた直後の反応。
+ * 借りていただけの肉体では出さないため、口調のセリフがそのまま残る。
+ */
+export function getBodyExchangeSourceRaceLines(character, context = {}) {
+  if (!character?.lastBodyExchangeFromOwnBody) return [];
+  const sourceRace = character?.lastBodyExchangeSourceRace;
+  if (!sourceRace || sourceRace === character?.race) return [];
+  const group = BODY_EXCHANGE_SOURCE_RACE_LINES[sourceRace];
+  return group ? selectToneLines(group, character, context) : [];
+}
+
 function getRandomEventLine(character, eventKey, { kind = null, subject = null, mood = null, variantIndex = null } = {}) {
   const isBodyExchangeEvent = eventKey === "lightning2";
   // 塩と化した身体は声を出せない。落雷の交換でも交換の奇跡と同じ沈黙を返す。
@@ -202,13 +214,11 @@ function getRandomEventLine(character, eventKey, { kind = null, subject = null, 
   }
 
   const speechType = isBodyExchangeEvent ? resolveDialogueTone(character) : resolveStoredSpeechType(character);
-  const sourceRace = character?.lastBodyExchangeSourceRace;
-  const sourceRaceLineKey = sourceRace && sourceRace !== character?.race
-    ? BODY_EXCHANGE_SOURCE_RACE_LINE_KEYS[sourceRace]
-    : null;
-  const eventLine = selectRandomEventLineBySpeechType(EVENT_LINES_BY_SPEECH_TYPE[eventKey], speechType, character, {
-    extraKeys: isBodyExchangeEvent && !isChildlikeDialogueTone(speechType) ? [sourceRaceLineKey] : []
-  });
+  if (isBodyExchangeEvent) {
+    const raceLines = getBodyExchangeSourceRaceLines(character);
+    if (raceLines.length > 0) return pickLineByVariant(raceLines, variantIndex) || pickDialogueLine(raceLines);
+  }
+  const eventLine = selectRandomEventLineBySpeechType(EVENT_LINES_BY_SPEECH_TYPE[eventKey], speechType, character);
   if (eventLine) return pickLineByVariant(eventLine, variantIndex) || pickDialogueLine(eventLine);
 
   if (isBodyExchangeEvent) {
