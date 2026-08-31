@@ -397,7 +397,7 @@ function getWishCandidates(village) {
       !hasAnyMindTrait(requester, DISTINCTION_BLOCKING_MIND_TRAITS)) {
       candidates.push({ id: "win_distinction", requester });
     }
-    if (Number(requester.bodyAge) >= 16 && stat(requester, "ind") <= 14) {
+    if (Number(requester.bodyAge) >= 16 && stat(requester, "ind") <= 14 && (Number(requester.mp) || 0) <= 49) {
       candidates.push({ id: "be_child_again", requester });
     }
     if (Number(requester.spiritAge) >= 16 && !hasPartner(requester)) {
