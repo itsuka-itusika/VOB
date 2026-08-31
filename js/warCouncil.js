@@ -6,6 +6,7 @@ import { getPortraitSpriteHtml } from "./data/portraitAtlas.js";
 import { ACTION_NONE, refreshJobTable } from "./domain/jobTables.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
+import { getTraitEmphasisClass } from "./domain/traitEmphasis.js";
 import {
   ACTION_CANNON,
   ACTION_DEFEND,
@@ -206,15 +207,24 @@ function getSortedCouncilVillagers(village) {
 }
 
 // 肉体特性と精神特性は色で分け、同じ側は「・」、肉体と精神の間は「/」で区切る。
+// 状態異常だけは、村人一覧と同じ赤（行動不能）・青（要注意）の太字で上書きする。
+function renderTraitGroup(traits, className) {
+  const inner = traits.map(trait => {
+    const emphasis = getTraitEmphasisClass(trait);
+    return emphasis ? `<span class="${emphasis}">${escapeHtml(trait)}</span>` : escapeHtml(trait);
+  }).join("・");
+  return `<span class="${className}">${inner}</span>`;
+}
+
 function renderTraits(person) {
   const body = Array.isArray(person?.bodyTraits) ? person.bodyTraits : [];
   const mind = Array.isArray(person?.mindTraits) ? person.mindTraits : [];
   const groups = [];
   if (body.length > 0) {
-    groups.push(`<span class="wc-body-trait">${escapeHtml(body.join("・"))}</span>`);
+    groups.push(renderTraitGroup(body, "wc-body-trait"));
   }
   if (mind.length > 0) {
-    groups.push(`<span class="wc-mind-trait">${escapeHtml(mind.join("・"))}</span>`);
+    groups.push(renderTraitGroup(mind, "wc-mind-trait"));
   }
   return groups.length > 0 ? groups.join('<span class="wc-trait-sep">/</span>') : "—";
 }

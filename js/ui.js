@@ -48,6 +48,7 @@ import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { getWinterMaterialRequirement } from "./domain/winterMaterials.js";
 import { getPopulationCount, getUncountedPopulationCount } from "./domain/speciesTraits.js";
 import { isUnassignedActionVillager } from "./domain/rules.js";
+import { IMPAIRING_TRAITS, INCAPACITATING_TRAITS, getTraitEmphasisClass } from "./domain/traitEmphasis.js";
 import { showDictionaryEntry } from "./dictionary.js";
 import { combinedDictionaryData } from "./data/dictionaryData.js";
 import { getVillagerFoodConsumption } from "./util.js";
@@ -147,22 +148,6 @@ function getTermTooltip(label, category) {
     if (hobbyEffect) lines.push(hobbyEffect);
   }
   return lines.join("\n");
-}
-
-// 行動が奪われ、療養などへ固定される状態異常。身体か精神かを問わず赤の太字で示す。
-// js/domain/jobTables.js の applyForcedActionRestriction が縛る特性と揃える。
-const INCAPACITATING_TRAITS = new Set([
-  "塩の柱", "危篤", "重体", "負傷", "疫病", "過労", "産褥", "抑鬱"
-]);
-// 動けはするが放置できない状態異常。青の太字で示す。
-const IMPAIRING_TRAITS = new Set([
-  "疲労", "飢餓", "凍え", "曝露", "臨月", "心労", "失望", "絶望"
-]);
-
-function getTraitEmphasisClass(label) {
-  if (INCAPACITATING_TRAITS.has(label)) return "trait-incapacitated";
-  if (IMPAIRING_TRAITS.has(label)) return "trait-impaired";
-  return "";
 }
 
 // 村人一覧の絞り込み。傷病は、赤と青で強調している状態異常をまとめて拾う。

@@ -4226,6 +4226,17 @@ section h2 {
   margin: 0 3px;
   color: #8b8478;
 }
+/* 状態異常は村人一覧と同じく、行動を奪うものを赤、動けるが深刻なものを青の太字にする。 */
+.wc-body-trait .trait-incapacitated,
+.wc-mind-trait .trait-incapacitated {
+  color: #c62828;
+  font-weight: bold;
+}
+.wc-body-trait .trait-impaired,
+.wc-mind-trait .trait-impaired {
+  color: #1565c0;
+  font-weight: bold;
+}
 .wc-stat-value { font-variant-numeric: tabular-nums; }
 /* 村人一覧と同じ色分け。肉体側の能力は薄黄、精神側の能力は薄緑。 */
 .wc-stat-value.is-body { background: #faf2d3; }
