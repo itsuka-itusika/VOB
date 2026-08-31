@@ -1,6 +1,7 @@
 // main.js
 
 // (従来の import群。ここでは例示のみ)
+import { runAutosave } from "./gameSettings.js";
 import { Village } from "./classes.js";
 import { createInitialVillagers } from "./createVillagers.js";
 import { updateUI } from "./ui.js";
@@ -167,4 +168,5 @@ export function onNextTurn() {
   runMonthStartPhase(theVillage);
 
   updateUI(theVillage);
+  runAutosave(theVillage);
 }

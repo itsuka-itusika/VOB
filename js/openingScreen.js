@@ -15,6 +15,7 @@ let isReplayMode = false;
 let messageIndex = -1;
 let pendingTimerIds = [];
 let loadHandlers = {};
+let newGameHandler = null;
 
 function getElement(id) {
   return document.getElementById(id);
@@ -261,18 +262,21 @@ export function replayOpeningStory() {
   setOpeningView("story");
 }
 
-export function initOpeningScreen({ onLoadLocal, onLoadJson, getLocalSaveLabel } = {}) {
+export function initOpeningScreen({ onLoadLocal, onLoadJson, onNewGame, onOpenSettings, getLocalSaveLabel } = {}) {
   const screen = getElement("openingScreen");
   if (!screen) return;
 
   loadHandlers = { onLoadLocal, onLoadJson };
+  newGameHandler = onNewGame;
   document.body.classList.add("opening-active");
   applyLocalSaveState(getLocalSaveLabel);
   applyVersionLabel();
   getElement("openingNewGameButton")?.addEventListener("click", () => {
     isReplayMode = false;
+    newGameHandler?.();
     setOpeningView("story");
   });
+  getElement("openingSettingsButton")?.addEventListener("click", () => onOpenSettings?.());
   getElement("openingStorySkipButton")?.addEventListener("click", () => enterGame());
   getElement("openingStoryContinueButton")?.addEventListener("click", finishOpeningStory);
   getElement("openingLoadLocalButton")?.addEventListener("click", () => loadHandlers.onLoadLocal?.());

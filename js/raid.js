@@ -1097,7 +1097,6 @@ function handleCombatDefeat(target, village, result) {
   }
   addRaidActionLog(result, `　　→ ${target.name}は負傷離脱(HP0)`);
   if (!target.bodyTraits.includes(TRAIT_INJURED)) target.bodyTraits.push(TRAIT_INJURED);
-  if (isHardMode(village)) applyHardModeDefeatWounds(target, result);
   addRaidDepartureAnimation(result, target, "負傷離脱");
   markRaidDeparture(target);
 }
@@ -1111,29 +1110,39 @@ const RAID_AFTEREFFECT_TRAITS = [
 ];
 
 /**
- * 高難易度では、負傷離脱の際に低確率で致命傷か後遺症が残る。
- * 致命傷は翌月の月初に危篤へ悪化する。後遺症は治らない。
+ * 高難易度では、どの襲撃でも終了時に体力0で倒れている村人ごとに
+ * 低確率で致命傷か後遺症の判定を行う。致命傷は翌月の月初に危篤へ悪化し、
+ * 後遺症は治らない。戦闘の負傷離脱も、迎撃失敗ペナルティの体力0も対象。
  */
-function applyHardModeDefeatWounds(target, result) {
-  if (Math.random() < HARD_FATAL_WOUND_CHANCE) {
-    if (!target.bodyTraits.includes(TRAIT_FATAL_WOUND)) {
-      target.bodyTraits.push(TRAIT_FATAL_WOUND);
-      addRaidActionLog(result, `　　→ ${target.name}は致命傷を負った……`);
+function applyHardModeRaidWounds(village) {
+  if (!isHardMode(village)) return;
+  (village.villagers || []).forEach(person => {
+    if (isSaltPillar(person)) return;
+    if ((Number(person.hp) || 0) > 0) return;
+    if (!Array.isArray(person.bodyTraits)) person.bodyTraits = [];
+    if (!Array.isArray(person.mindTraits)) person.mindTraits = [];
+
+    if (Math.random() < HARD_FATAL_WOUND_CHANCE) {
+      if (!person.bodyTraits.includes(TRAIT_FATAL_WOUND)) {
+        person.bodyTraits.push(TRAIT_FATAL_WOUND);
+        village.log(`致命傷判定:${person.name}は致命傷を負った……`);
+      }
+      return;
     }
-    return;
-  }
-  if (Math.random() >= HARD_AFTEREFFECT_CHANCE) return;
+    if (Math.random() >= HARD_AFTEREFFECT_CHANCE) return;
 
-  const candidates = RAID_AFTEREFFECT_TRAITS.filter(effect => {
-    const list = effect.body ? target.bodyTraits : target.mindTraits;
-    return Array.isArray(list) && !list.includes(effect.trait);
+    const candidates = RAID_AFTEREFFECT_TRAITS.filter(effect => {
+      const list = effect.body ? person.bodyTraits : person.mindTraits;
+      return !list.includes(effect.trait);
+    });
+    if (candidates.length === 0) return;
+
+    const effect = candidates[Math.floor(Math.random() * candidates.length)];
+    (effect.body ? person.bodyTraits : person.mindTraits).push(effect.trait);
+    if (effect.body) syncEffectiveStats(person);
+    refreshJobTable(person, village);
+    village.log(`後遺症判定:${person.name}に後遺症「${effect.trait}」が残った……`);
   });
-  if (candidates.length === 0) return;
-
-  const effect = candidates[Math.floor(Math.random() * candidates.length)];
-  (effect.body ? target.bodyTraits : target.mindTraits).push(effect.trait);
-  if (effect.body) syncEffectiveStats(target);
-  addRaidActionLog(result, `　　→ ${target.name}に後遺症「${effect.trait}」が残った……`);
 }
 
 function calcAttackDamage(atk, def, isCounter) {
@@ -1383,6 +1392,7 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
     }
 
     const severeInjuryResult = rollRaidSevereInjuryCheck(village, raidRules);
+    applyHardModeRaidWounds(village);
     // 殊勲の願望と殿堂は、結果モーダルに殊勲として出る村人と同じ条件で扱う。
     checkWishCompletion(village, { distinguishedIds: resultInfo.mvp?.ids || [] });
     recordDistinguishedService(village, resultInfo.mvp?.ids || []);

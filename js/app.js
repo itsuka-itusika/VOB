@@ -41,6 +41,7 @@ import { DIVINE_MIGHT_LEVELS } from "./divineMight.js";
 import { resumePendingHeresyInquisition } from "./heresyInquisition.js";
 import { openAutoAssignSettingsModal } from "./autoAssignSettings.js";
 import { closeWarCouncilModal, isWarCouncilOpen, openWarCouncilModal, refreshWarCouncil } from "./warCouncil.js";
+import { getStartingDifficulty, openGameSettingsModal } from "./gameSettings.js";
 
 const APOCALYPSE_DEBUG_VILLAGER_COUNT = 15;
 const APOCALYPSE_DEBUG_RESOURCE_AMOUNT = 10000;
@@ -470,6 +471,9 @@ bindDebugTitleActions();
 initOpeningScreen({
   onLoadLocal: loadFromLocalStorage,
   onLoadJson: openJsonLoadDialog,
+  // 「はじめから」の開始時だけ、設定の難易度を新しい村へ適用する。
+  onNewGame: () => { theVillage.difficulty = getStartingDifficulty(); },
+  onOpenSettings: openGameSettingsModal,
   getLocalSaveLabel: () => {
     const summary = getLocalSaveSummary();
     if (!summary) return "";
