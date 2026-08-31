@@ -37,7 +37,7 @@ export const RAIDER_TYPES = [
       mp: [34, 55],
       happiness: [10, 30],
       str: [15, 21],
-      vit: [14, 22],
+      vit: [8, 25],
       dex: [10, 20],
       mag: [5, 12],
       chr: [3, 15],
