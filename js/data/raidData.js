@@ -16,8 +16,8 @@ export const RAIDER_TYPES = [
   {
     type: "野盗",
     weight: 30,  // 出現率30%
-    minCount: 2,
-    maxCount: 3,
+    minCount: 3,
+    maxCount: 4,
     race: "人間",
     forcedSex: "男",  // 性別を男に固定
     ageRange: { min: 18, max: 45 },  // 青年～中年
@@ -1151,20 +1151,9 @@ export const RAID_MODULES = [
       minAmount: 200
     },
     representative: { raiderType: "傭兵団" },
-    enemyGroupVariants: [
-      {
-        weight: 70,
-        enemyGroups: [
-          { raiderType: "傭兵団", minCount: 3, maxCount: 4 }
-        ]
-      },
-      {
-        weight: 30,
-        enemyGroups: [
-          { raiderType: "傭兵団", minCount: 3, maxCount: 4 },
-          { raiderType: "傭兵射手", minCount: 1, maxCount: 1 }
-        ]
-      }
+    enemyGroups: [
+      { raiderType: "傭兵団", minCount: 2, maxCount: 3 },
+      { raiderType: "傭兵射手", minCount: 2, maxCount: 2 }
     ],
     failurePenalty: {
       fundsRate: 0.3
