@@ -80,7 +80,7 @@ export const RAIDER_TYPES = [
       mp: [55, 75],
       happiness: [35, 55],
       str: [18, 24],
-      vit: [14, 28],
+      vit: [16, 24],
       dex: [12, 22],
       mag: [5, 13],
       chr: [5, 16],
@@ -126,7 +126,7 @@ export const RAIDER_TYPES = [
       int: [10, 20],
       ind: [10, 20],
       eth: [2, 10],
-      cou: [18, 25],
+      cou: [16, 21],
       sexdr: [10, 22]
     },
     dialogues: [
