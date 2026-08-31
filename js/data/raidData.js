@@ -154,10 +154,10 @@ export const RAIDER_TYPES = [
       "GOB6.png", "GOB7.png", "GOB8.png", "GOB9.png", "GOB10.png", "GOB11.png", "GOB12.png", "GOB13.png"
     ],
     ranges: {
-      hp: [30, 50],
+      hp: [40, 60],
       mp: [40, 60],
       happiness: [55, 80],
-      str: [12, 18],
+      str: [14, 17],
       vit: [5, 15],
       dex: [18, 25],
       mag: [5, 11],
@@ -266,10 +266,10 @@ export const RAIDER_TYPES = [
     },
     raidPosition: "front",
     ranges: {
-      hp: [30, 50],
+      hp: [40, 60],
       mp: [50, 70],
       happiness: [40, 60],
-      str: [15, 20],
+      str: [16, 21],
       vit: [8, 16],
       dex: [3, 8],
       mag: [10, 15],
@@ -311,10 +311,10 @@ export const RAIDER_TYPES = [
     },
     raidPosition: "front",
     ranges: {
-      hp: [30, 50],
+      hp: [40, 60],
       mp: [34, 45],
       happiness: [5, 20],
-      str: [15, 20],
+      str: [16, 21],
       vit: [8, 16],
       dex: [3, 8],
       mag: [10, 15],
