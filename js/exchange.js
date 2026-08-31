@@ -8,7 +8,6 @@ import { recordBodyExchangeHistory } from "./history.js";
 import { evaluateTitles } from "./titles.js";
 import { isCaptive, normalizeCaptive } from "./captives.js";
 import { SALT_PILLAR_TRAIT, isSaltPillar } from "./domain/apocalypseRules.js";
-import { isRaidActive, liftZeroHpForRaid } from "./raidRules.js";
 
 const RAID_JOBS = ["野盗", "ゴブリン", "狼", "キュクロプス", "ハーピー"];
 
@@ -25,6 +24,16 @@ function getSaltPillarMonths(person) {
   return bodyTraits.includes(SALT_PILLAR_TRAIT)
     ? Math.max(0, Number(person?.saltPillarMonths) || 0)
     : 0;
+}
+
+/**
+ * 体力0の村人と肉体を交換した襲撃者は、そのまま襲撃を続けるため体力1にする。
+ * 交換で受け取った肉体が体力0だった時だけの下限で、倒された襲撃者の復活ではない。
+ */
+function liftZeroHpRaidEnemy(person, village) {
+  if (!isRaidEnemy(person, village)) return;
+  if ((Number(person.hp) || 0) > 0) return;
+  person.hp = 1;
 }
 
 function isRaidEnemy(person, village) {
@@ -199,8 +208,8 @@ export function doExchange(a, b, v, isLightning = false, historySource = null, o
 
   syncEffectiveStats(a);
   syncEffectiveStats(b);
-  // 襲撃中の交換で体力0の肉体へ移った者も、体力1で戦列に立てるようにする。
-  if (isRaidActive(v)) liftZeroHpForRaid(v);
+  liftZeroHpRaidEnemy(a, v);
+  liftZeroHpRaidEnemy(b, v);
   evaluateTitles(a, { getPermanentStat });
   evaluateTitles(b, { getPermanentStat });
   refreshAssignmentAfterExchange(a, v);

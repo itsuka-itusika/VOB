@@ -7,7 +7,6 @@ import {
   RAID_SCALE_TABLES
 } from "./data/raidData.js";
 import { refreshJobTable } from "./domain/jobTables.js";
-import { liftZeroHpForRaid } from "./raidRules.js";
 import { getRaiderSpeechType } from "./domain/raiderSpeechTypes.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
 import { syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
@@ -753,7 +752,6 @@ export function startRaidEvent(village, options = {}) {
   village.currentActionIndex = 0;
   village.raidActionQueue = [];
   village.raidPhase = "";
-  liftZeroHpForRaid(village);
   village.villagers.forEach(person => refreshJobTable(person, village));
 
   // 襲撃者の数に応じてメッセージを変更
