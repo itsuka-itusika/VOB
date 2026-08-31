@@ -34,10 +34,16 @@ let pendingVillage = null;
 let priorityModalObserver = null;
 let priorityRetryTimer = null;
 
+// もてなしの費用。発生条件（規模250・神威180）で下限の300になり、
+// そこから発展に応じて上がる。下限があるぶん、発展初期の跳ね上がりは緩い。
+const HOSPITALITY_COST_COEFFICIENT = 200;
+const HOSPITALITY_COST_MINIMUM = 300;
+
 export function getHeresyInquisitionHospitalityCost(village) {
   const scale = Math.max(0, Number(village?.building) || 0);
   const divineMight = Math.max(0, Number(village?.divineMight) || 0);
-  return Math.ceil(300 * (scale / 250) * (divineMight / 180));
+  const scaled = Math.ceil(HOSPITALITY_COST_COEFFICIENT * (scale / 250) * (divineMight / 180));
+  return Math.max(scaled, HOSPITALITY_COST_MINIMUM);
 }
 
 export function canTriggerHeresyInquisition(village) {
