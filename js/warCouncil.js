@@ -4,7 +4,6 @@
 
 import { getPortraitSpriteHtml } from "./data/portraitAtlas.js";
 import { ACTION_NONE, refreshJobTable } from "./domain/jobTables.js";
-import { isSaltPillar } from "./domain/apocalypseRules.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { getTraitEmphasisClass } from "./domain/traitEmphasis.js";
 import {
@@ -112,9 +111,10 @@ function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
+// 塩の柱や過労で動けない者も、戦えない理由が分かるように隠さず並べる。
+// 並び替えで村の並び順を崩さないよう、複製を返す。
 function getCouncilVillagers(village) {
-  const villagers = Array.isArray(village?.villagers) ? village.villagers : [];
-  return villagers.filter(person => !isSaltPillar(person));
+  return Array.isArray(village?.villagers) ? [...village.villagers] : [];
 }
 
 /** その戦列に今何人就いているか。枠と突き合わせて表示する。 */

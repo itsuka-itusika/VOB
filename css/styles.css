@@ -1363,7 +1363,8 @@ table.hide-stat-columns .stat-column {
 }
 .raid-battle-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* 村側と襲撃者の2枚。空き列を作らず、横幅を使い切って行の高さを抑える。 */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   padding: 10px 12px 0;
   max-height: calc(100vh - 280px);
@@ -1511,6 +1512,21 @@ table.hide-stat-columns .stat-column {
   color: #2e5d34;
   font-size: 0.7rem;
   line-height: 1.25;
+}
+/* 負傷や過労などで戦えなくなっている状態のバッジ。行動・特性のバッジと区別する。 */
+.raid-unit-blocked {
+  display: inline-block;
+  padding: 1px 4px;
+  border: 1px solid #d79a9a;
+  border-radius: 4px;
+  background: #fbecec;
+  color: #a12727;
+  font-size: 0.7rem;
+  line-height: 1.25;
+  font-weight: bold;
+}
+.raid-unit-table tr.is-incapacitated {
+  opacity: 0.75;
 }
 .raid-unit-action-note {
   display: inline-block;

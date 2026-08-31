@@ -35,6 +35,7 @@ import {
   getActiveRaidFrontliners,
   getActiveRaidMiddleliners,
   getActiveRaidTrapMakers,
+  getRaidBlockingBodyTrait,
   getRaidFrontlinerSlotCount,
   getRaidMiddleSlotCount,
   applyOffensiveTraitDamage,
@@ -83,6 +84,8 @@ const TRAIT_CRITICAL = "危篤";
 const TRAIT_EXPOSURE = "曝露";
 const TRAIT_FATAL_WOUND = "致命傷";
 const pendingRaidDepartures = new WeakSet();
+// 戦列ごとに一度でも並んだ者。負傷などで戦えなくなっても、行を消さずに状態を見せるために持つ。
+const raidLineRosters = new Map();
 const settlingRaidVillages = new WeakSet();
 const raidUnitRenderIds = new WeakMap();
 let nextRaidUnitRenderId = 1;
@@ -627,6 +630,7 @@ function shouldSkipDefeatedEnemyAction(actor, village) {
  * 迎撃モーダルを開く (nextTurnから呼ばれる)
  */
 export function openRaidModal(village) {
+  raidLineRosters.clear();
   document.getElementById("raidOverlay").style.display="block";
   document.getElementById("raidModal").style.display="block";
   setRaidActionButtonState(false, "次のステップ");
@@ -1697,24 +1701,41 @@ export function updateRaidTables(village) {
   renderRaidUnits({
     tableSelector: "#defenderTable tbody",
     sectionId: "raidRearSection",
-    units: trapMakers,
+    units: keepIncapacitatedInLine("rear", trapMakers, village),
     village
   });
   renderRaidUnits({
     tableSelector: "#shootersTable tbody",
     sectionId: "raidMiddleSection",
-    units: middleliners,
+    units: keepIncapacitatedInLine("middle", middleliners, village),
     village
   });
   renderRaidUnits({
     tableSelector: "#raidersTable tbody",
     sectionId: "raidFrontSection",
-    units: frontliners,
+    units: keepIncapacitatedInLine("front", frontliners, village),
     village
   });
   renderEnemyRaidUnits(village);
   updateRaidStatusLine(village);
   scrollRaidLogToLatest();
+}
+
+/**
+ * 一度その戦列に並んだ者は、負傷や重体で戦えなくなっても行に残す。
+ * 戦闘の判定には使わず、表示だけをまとめる。
+ */
+function keepIncapacitatedInLine(lineId, units, village) {
+  const villagers = Array.isArray(village?.villagers) ? village.villagers : [];
+  const known = raidLineRosters.get(lineId) || [];
+  const fallen = known.filter(unit =>
+    !units.includes(unit) &&
+    villagers.includes(unit) &&
+    getRaidBlockingBodyTrait(unit)
+  );
+  const merged = units.concat(fallen);
+  raidLineRosters.set(lineId, merged);
+  return merged;
 }
 
 function setRaidSectionVisible(sectionId, visible) {
@@ -1759,6 +1780,7 @@ function createRaidUnitRow(unit, village = null) {
   if (unit?.raiderType === "黙示録の騎士・支配") row.classList.add("apocalypse-conquest-row");
   if (unit?.raiderType === "黙示録の騎士・戦争") row.classList.add("apocalypse-war-row");
   row.dataset.raidUnitId = getRaidUnitRenderId(unit);
+  if (getRaidBlockingBodyTrait(unit)) row.classList.add("is-incapacitated");
   if (isPendingRaidDeparture(unit)) row.classList.add("is-leaving");
   if (isRearRetreatingUnit(unit, village)) {
     row.classList.add("is-leaving", "is-retreating");
@@ -1816,10 +1838,13 @@ function appendRaidNameCell(row, unit, village = null) {
   const meta = document.createElement("div");
   meta.className = "raid-unit-meta";
 
+  // 戦えなくなっている者は、行動のバッジを出さずに状態だけを見せる。
+  const blockingTrait = getRaidBlockingBodyTrait(unit);
+
   // 敵の中衛は攻撃手段のバッジを出すため、「襲撃」のバッジは省略する。
   const isEnemyMiddleUnit = Boolean(village) && isEnemyUnit(unit, village) &&
     getCombatPosition(unit, village) === RAID_POSITION_MIDDLE;
-  if (unit?.action && !isEnemyMiddleUnit) {
+  if (unit?.action && !isEnemyMiddleUnit && !blockingTrait) {
     const action = document.createElement("span");
     action.className = "raid-unit-action";
     action.textContent = unit.action;
@@ -1851,6 +1876,14 @@ function appendRaidNameCell(row, unit, village = null) {
     meta.appendChild(action);
     appendRaidUnitNote(meta, cannon ? "前衛より後攻" : "前衛に先制");
     appendRaidUnitNote(meta, `被弾${cannon ? RAID_CANNON_INCOMING_DAMAGE_MULTIPLIER : RAID_MIDDLE_INCOMING_DAMAGE_MULTIPLIER}倍`);
+  }
+
+  if (blockingTrait) {
+    const blocked = document.createElement("span");
+    blocked.className = "raid-unit-blocked";
+    blocked.textContent = blockingTrait;
+    blocked.title = `${blockingTrait}のため戦えない`;
+    meta.appendChild(blocked);
   }
 
   // 戦闘に効く特性はバッジで見せる。行動バッジと区別できる配色にする。

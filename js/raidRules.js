@@ -35,6 +35,12 @@ const RAID_BODY_BLOCK_REASONS = [
   "過労",
   "産褥"
 ];
+/** 戦えなくなっている身体特性。見つかればその名前を返す。 */
+export function getRaidBlockingBodyTrait(person) {
+  const traits = Array.isArray(person?.bodyTraits) ? person.bodyTraits : [];
+  return RAID_BODY_BLOCK_REASONS.find(trait => traits.includes(trait)) || "";
+}
+
 const RAID_TRIPLE_DAMAGE_BODY_TRAITS = ["赤子", YOUNG_WOLF_TRAIT, "危篤", "重体"];
 const RAID_DOUBLE_DAMAGE_BODY_TRAITS = ["疫病", "負傷", "過労", "産褥"];
 // 魔力の膜で身を守る精神特性。受けるダメージを減らす。
