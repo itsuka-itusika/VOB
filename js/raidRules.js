@@ -22,7 +22,8 @@ export const RAID_MIDDLE_INCOMING_DAMAGE_MULTIPLIER = 1.2;
 export const RAID_CANNON_INCOMING_DAMAGE_MULTIPLIER = 1.5;
 
 const RAID_COMMON_UNABLE_MIND_TRAITS = ["無垢", "萌芽", "襲撃者", "訪問者"];
-const RAID_DEFEND_UNABLE_MIND_TRAITS = [...RAID_COMMON_UNABLE_MIND_TRAITS, "思春期"];
+// トラウマは戦闘の後遺症。前衛・中衛には立てないが、狙われない罠作成は可能。
+const RAID_DEFEND_UNABLE_MIND_TRAITS = [...RAID_COMMON_UNABLE_MIND_TRAITS, "思春期", "トラウマ"];
 const RAID_BODY_BLOCK_REASONS = [
   "塩の柱",
   "赤子",
@@ -95,6 +96,7 @@ export function getRaidActionBlockReason(person, action = "", { ignoreRoleTraits
   if (!ignoreRoleTraits && mindTraits.includes("襲撃者")) return "襲撃者";
   if (!ignoreRoleTraits && mindTraits.includes("訪問者")) return "訪問者";
   if (action === ACTION_DEFEND && mindTraits.includes("思春期")) return "思春期";
+  if (action && action !== ACTION_TRAP && mindTraits.includes("トラウマ")) return "トラウマ";
   if (action && action !== ACTION_FORTIFY) {
     const pacifistReason = PACIFIST_MIND_TRAITS.find(trait => mindTraits.includes(trait));
     if (pacifistReason) return pacifistReason;
@@ -140,6 +142,7 @@ export function getRaidActionSkipMessage(person, action = "戦闘", options = {}
     "文明忌避": `${name}は文明の産物である${label}に触れようとしない。`,
     "不殺": `${name}は不殺の誓いを守り、${label}に加わらない。`,
     "非戦主義": `${name}は戦いを望まず、${label}に加わらない。`,
+    "トラウマ": `${name}は戦いの記憶に身がすくみ、${label}に加われない。`,
     "体力尽き": `${name}は体力が尽きており、行動できない。`,
     [RAID_STUN_EFFECT]: `${name}は足を取られ、身動きが取れない。`
   };

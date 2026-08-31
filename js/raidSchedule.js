@@ -1,3 +1,4 @@
+import { isHardMode } from "./domain/difficulty.js";
 import { showRandomEventModal } from "./randomEventModal.js";
 import { createPendingRaidReservation, startRaidEvent } from "./raidStart.js";
 
@@ -54,7 +55,8 @@ export function getRaidReservationChance(village) {
   if (village?.battleDebugMode) return 1;
 
   const monthsSinceRaid = normalizeNonNegativeInteger(village?.monthsSinceRaid, 0);
-  if (monthsSinceRaid < 2) return 0;
+  // 高難易度では連続襲撃の猶予がなく、直後でも低確率で次の襲撃が予約される。
+  if (monthsSinceRaid < 2 && !isHardMode(village)) return 0;
 
   const baseChance = Math.min(
     RAID_MAX_RESERVATION_CHANCE,
@@ -192,7 +194,8 @@ export function processRaidScheduleAtMonthStart(village, options = {}) {
 
   if (village.raidCooldown > 0) {
     village.raidCooldown = Math.max(0, village.raidCooldown - 1);
-    return;
+    // 高難易度では襲撃直後の猶予を待たず、同じ月から次の襲撃の抽選を行う。
+    if (!isHardMode(village)) return;
   }
 
   if (options.suspendReservation) return;

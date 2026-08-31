@@ -42,6 +42,8 @@ import {
   isRaidCombatAction
 } from "./raidRules.js";
 import { refreshJobTable } from "./domain/jobTables.js";
+import { HARD_AFTEREFFECT_CHANCE, HARD_FATAL_WOUND_CHANCE, isHardMode } from "./domain/difficulty.js";
+import { syncEffectiveStats } from "./domain/statLayers.js";
 import { updateUI } from "./ui.js";
 import { applyRaidFriendshipResults, recordRaidFriendshipDamage, startRaidFriendshipTracking } from "./relationships.js";
 import { handleApocalypseRaidResult } from "./apocalypse.js";
@@ -79,6 +81,7 @@ const TRAIT_INJURED = "負傷";
 const TRAIT_SERIOUS_INJURY = "重体";
 const TRAIT_CRITICAL = "危篤";
 const TRAIT_EXPOSURE = "曝露";
+const TRAIT_FATAL_WOUND = "致命傷";
 const pendingRaidDepartures = new WeakSet();
 const settlingRaidVillages = new WeakSet();
 const raidUnitRenderIds = new WeakMap();
@@ -398,7 +401,8 @@ function normalizeBodyTraits(person) {
 }
 
 function rollRaidSevereInjuryCheck(village, raidRules) {
-  if (raidRules.failurePenalty?.severeInjury !== true) return null;
+  // 通常は高難度襲撃だけが重体判定を持つが、高難易度では全襲撃で判定する。
+  if (raidRules.failurePenalty?.severeInjury !== true && !isHardMode(village)) return null;
 
   const candidates = (village.villagers || []).filter(person => {
     if (isSaltPillar(person)) return false;
@@ -1093,8 +1097,43 @@ function handleCombatDefeat(target, village, result) {
   }
   addRaidActionLog(result, `　　→ ${target.name}は負傷離脱(HP0)`);
   if (!target.bodyTraits.includes(TRAIT_INJURED)) target.bodyTraits.push(TRAIT_INJURED);
+  if (isHardMode(village)) applyHardModeDefeatWounds(target, result);
   addRaidDepartureAnimation(result, target, "負傷離脱");
   markRaidDeparture(target);
+}
+
+// 高難易度で負傷離脱に残りうる後遺症。bodyがfalseのものは精神特性。
+const RAID_AFTEREFFECT_TRAITS = [
+  { trait: "隻腕", body: true },
+  { trait: "隻眼", body: true },
+  { trait: "古傷", body: true },
+  { trait: "トラウマ", body: false }
+];
+
+/**
+ * 高難易度では、負傷離脱の際に低確率で致命傷か後遺症が残る。
+ * 致命傷は翌月の月初に危篤へ悪化する。後遺症は治らない。
+ */
+function applyHardModeDefeatWounds(target, result) {
+  if (Math.random() < HARD_FATAL_WOUND_CHANCE) {
+    if (!target.bodyTraits.includes(TRAIT_FATAL_WOUND)) {
+      target.bodyTraits.push(TRAIT_FATAL_WOUND);
+      addRaidActionLog(result, `　　→ ${target.name}は致命傷を負った……`);
+    }
+    return;
+  }
+  if (Math.random() >= HARD_AFTEREFFECT_CHANCE) return;
+
+  const candidates = RAID_AFTEREFFECT_TRAITS.filter(effect => {
+    const list = effect.body ? target.bodyTraits : target.mindTraits;
+    return Array.isArray(list) && !list.includes(effect.trait);
+  });
+  if (candidates.length === 0) return;
+
+  const effect = candidates[Math.floor(Math.random() * candidates.length)];
+  (effect.body ? target.bodyTraits : target.mindTraits).push(effect.trait);
+  if (effect.body) syncEffectiveStats(target);
+  addRaidActionLog(result, `　　→ ${target.name}に後遺症「${effect.trait}」が残った……`);
 }
 
 function calcAttackDamage(atk, def, isCounter) {

@@ -1,4 +1,5 @@
 // saveLoad.js
+import { normalizeDifficulty } from "./domain/difficulty.js";
 import { Village, Villager } from "./classes.js";
 import { determineSpeechType } from "./createVillagers.js";
 import { ACTION_NONE, isPreferredActionCandidate, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
@@ -283,6 +284,7 @@ function convertVillageToObject(village) {
     currentRaid: cloneNullableObject(village.currentRaid),
     monthsSinceRaid: normalizeFiniteNumber(village.monthsSinceRaid, 0),
     raidCooldown: normalizeFiniteNumber(village.raidCooldown, 0),
+    difficulty: normalizeDifficulty(village.difficulty),
     pendingRaid: cloneNullableDeepObject(village.pendingRaid),
     battleDebugMode: !!village.battleDebugMode,
     // raidEnemies (Villager互換配列)
@@ -552,6 +554,7 @@ function convertObjectToVillage(dataObj) {
   v.currentRaid = cloneNullableObject(dataObj.currentRaid);
   v.monthsSinceRaid = Math.max(0, Math.floor(normalizeFiniteNumber(dataObj.monthsSinceRaid, 0)));
   v.raidCooldown = Math.max(0, Math.floor(normalizeFiniteNumber(dataObj.raidCooldown, 0)));
+  v.difficulty = normalizeDifficulty(dataObj.difficulty);
   v.pendingRaid = cloneNullableDeepObject(dataObj.pendingRaid);
   v.battleDebugMode = !!dataObj.battleDebugMode;
   if (Array.isArray(dataObj.raidEnemies)) {

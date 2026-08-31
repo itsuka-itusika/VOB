@@ -78,6 +78,7 @@ const MIND_CONDITION_CANDIDATES = [
 // 戦いを拒む精神特性を持つ村人は、襲撃中の会話を本人の立場に合わせて差し替える。
 // より具体的な誓いである不殺を先に見る。
 const RAID_STATUS_KEYS_BY_MIND_TRAIT = [
+  { trait: "トラウマ", key: "raidTrauma" },
   { trait: "不殺", key: "raidNoKilling" },
   { trait: "非戦主義", key: "raidPacifist" }
 ];

@@ -131,6 +131,40 @@ function processSeriousInjuryMonthStart(village) {
   });
 }
 
+// 高難易度の後遺症・致命傷。致命傷は翌月に危篤へ悪化し、古傷は低確率でうずく。
+const TRAIT_FATAL_WOUND = "致命傷";
+const TRAIT_OLD_WOUND = "古傷";
+const OLD_WOUND_ACHE_CHANCE = 0.25;
+
+function processFatalWoundMonthStart(village) {
+  getPeopleForFoodAndWinterMaterials(village).forEach(person => {
+    if (isSaltPillar(person)) return;
+    if (!Array.isArray(person.bodyTraits) || !person.bodyTraits.includes(TRAIT_FATAL_WOUND)) return;
+
+    person.bodyTraits = person.bodyTraits.filter(trait =>
+      trait !== TRAIT_FATAL_WOUND && trait !== "負傷" && trait !== TRAIT_SERIOUS_INJURY);
+    if (!person.bodyTraits.includes(TRAIT_CRITICAL)) {
+      person.bodyTraits.push(TRAIT_CRITICAL);
+      person.criticalCause = TRAIT_FATAL_WOUND;
+      recordCriticalHistory(village, person, { reason: "致命傷" });
+    }
+    syncEffectiveStats(person);
+    refreshJobTable(person, village);
+    village.log(`${person.name}の致命傷が悪化し、危篤状態になった...`);
+  });
+}
+
+function processOldWoundAches(village) {
+  getPeopleForFoodAndWinterMaterials(village).forEach(person => {
+    if (isSaltPillar(person)) return;
+    if (!Array.isArray(person.bodyTraits) || !person.bodyTraits.includes(TRAIT_OLD_WOUND)) return;
+    if (Math.random() >= OLD_WOUND_ACHE_CHANCE) return;
+
+    person.hp = Math.max(1, (Number(person.hp) || 0) - 20);
+    village.log(`${person.name}の古傷がいたむ 体力-20`);
+  });
+}
+
 function processExposureMonthStart(village) {
   getPeopleForFoodAndWinterMaterials(village).forEach(person => {
     if (isSaltPillar(person)) return;
@@ -756,7 +790,9 @@ export function doMonthStartProcess(v, simulationOptions = {}) {
   processCaptiveReleaseDeadlines(v);
   processPendingEpidemicInfections(v);
   processSeriousInjuryMonthStart(v);
+  processFatalWoundMonthStart(v);
   processExposureMonthStart(v);
+  processOldWoundAches(v);
 
   // 治安30以下で荒廃状態に
   if (v.security <= 30 && !v.villageTraits.includes("荒廃")) {
