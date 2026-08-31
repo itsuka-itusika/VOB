@@ -7,7 +7,7 @@ import {
   RAID_SCALE_TABLES
 } from "./data/raidData.js";
 import { refreshJobTable } from "./domain/jobTables.js";
-import { getRaidBlockingBodyTrait } from "./raidRules.js";
+import { liftZeroHpForRaid } from "./raidRules.js";
 import { getRaiderSpeechType } from "./domain/raiderSpeechTypes.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
 import { syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
@@ -687,19 +687,6 @@ function consumeMessengerPass(village) {
 /**
  * 襲撃イベント開始を修正
  */
-/**
- * 体力0のまま襲撃を迎えた者は、体力1で戦列に立てるようにする。
- * 負傷などで元から戦えない者はそのままにする。
- */
-function liftZeroHpForRaid(village) {
-  const villagers = Array.isArray(village?.villagers) ? village.villagers : [];
-  villagers.forEach(person => {
-    if ((Number(person.hp) || 0) > 0) return;
-    if (getRaidBlockingBodyTrait(person)) return;
-    person.hp = 1;
-  });
-}
-
 export function startRaidEvent(village, options = {}) {
   const pendingRaid = options.pendingRaid || null;
   const raidDefinition = options.raidDefinition ||

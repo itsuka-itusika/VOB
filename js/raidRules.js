@@ -35,6 +35,19 @@ const RAID_BODY_BLOCK_REASONS = [
   "過労",
   "産褥"
 ];
+/**
+ * 体力0のまま襲撃に加わる者は、体力1で戦列に立てるようにする。
+ * 負傷などで元から戦えない者はそのままにする。
+ */
+export function liftZeroHpForRaid(village) {
+  const villagers = Array.isArray(village?.villagers) ? village.villagers : [];
+  villagers.forEach(person => {
+    if ((Number(person.hp) || 0) > 0) return;
+    if (getRaidBlockingBodyTrait(person)) return;
+    person.hp = 1;
+  });
+}
+
 /** 戦えなくなっている身体特性。見つかればその名前を返す。 */
 export function getRaidBlockingBodyTrait(person) {
   const traits = Array.isArray(person?.bodyTraits) ? person.bodyTraits : [];

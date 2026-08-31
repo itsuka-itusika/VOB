@@ -8,6 +8,7 @@ import { recordBodyExchangeHistory } from "./history.js";
 import { evaluateTitles } from "./titles.js";
 import { isCaptive, normalizeCaptive } from "./captives.js";
 import { SALT_PILLAR_TRAIT, isSaltPillar } from "./domain/apocalypseRules.js";
+import { isRaidActive, liftZeroHpForRaid } from "./raidRules.js";
 
 const RAID_JOBS = ["野盗", "ゴブリン", "狼", "キュクロプス", "ハーピー"];
 
@@ -198,6 +199,8 @@ export function doExchange(a, b, v, isLightning = false, historySource = null, o
 
   syncEffectiveStats(a);
   syncEffectiveStats(b);
+  // 襲撃中の交換で体力0の肉体へ移った者も、体力1で戦列に立てるようにする。
+  if (isRaidActive(v)) liftZeroHpForRaid(v);
   evaluateTitles(a, { getPermanentStat });
   evaluateTitles(b, { getPermanentStat });
   refreshAssignmentAfterExchange(a, v);
