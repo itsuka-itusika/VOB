@@ -627,10 +627,23 @@ function shouldSkipDefeatedEnemyAction(actor, village) {
 
 
 /**
+ * 迎撃開始の時点で体力0の襲撃者は、体力1で戦列に加える。
+ * 交換の奇跡で体力0の肉体を受け取った襲撃者を想定した下限で、戦闘中の復活ではない。
+ */
+function liftZeroHpEnemiesAtRaidStart(village) {
+  if (village?.raidPhase) return;
+  const enemies = Array.isArray(village?.raidEnemies) ? village.raidEnemies : [];
+  enemies.forEach(enemy => {
+    if ((Number(enemy.hp) || 0) <= 0) enemy.hp = 1;
+  });
+}
+
+/**
  * 迎撃モーダルを開く (nextTurnから呼ばれる)
  */
 export function openRaidModal(village) {
   raidLineRosters.clear();
+  liftZeroHpEnemiesAtRaidStart(village);
   document.getElementById("raidOverlay").style.display="block";
   document.getElementById("raidModal").style.display="block";
   setRaidActionButtonState(false, "次のステップ");

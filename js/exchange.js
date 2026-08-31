@@ -26,16 +26,6 @@ function getSaltPillarMonths(person) {
     : 0;
 }
 
-/**
- * 体力0の村人と肉体を交換した襲撃者は、そのまま襲撃を続けるため体力1にする。
- * 交換で受け取った肉体が体力0だった時だけの下限で、倒された襲撃者の復活ではない。
- */
-function liftZeroHpRaidEnemy(person, village) {
-  if (!isRaidEnemy(person, village)) return;
-  if ((Number(person.hp) || 0) > 0) return;
-  person.hp = 1;
-}
-
 function isRaidEnemy(person, village) {
   return Array.isArray(village?.raidEnemies) && village.raidEnemies.includes(person);
 }
@@ -208,8 +198,6 @@ export function doExchange(a, b, v, isLightning = false, historySource = null, o
 
   syncEffectiveStats(a);
   syncEffectiveStats(b);
-  liftZeroHpRaidEnemy(a, v);
-  liftZeroHpRaidEnemy(b, v);
   evaluateTitles(a, { getPermanentStat });
   evaluateTitles(b, { getPermanentStat });
   refreshAssignmentAfterExchange(a, v);
