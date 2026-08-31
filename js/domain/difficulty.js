@@ -16,5 +16,7 @@ export function isHardMode(village) {
 // 高難易度の係数。
 // 襲撃・重体まわりは確率の底上げではなく、
 // 「連続襲撃の猶予なし」「全襲撃で重体判定」という形で実装する。
-export const HARD_FATAL_WOUND_CHANCE = 0.1; // 負傷離脱時に致命傷が残る確率
-export const HARD_AFTEREFFECT_CHANCE = 0.1; // 負傷離脱時に後遺症が残る確率
+// 重体になった者の一部は、より重い致命傷として扱う。
+export const HARD_SEVERE_TO_FATAL_RATE = 0.2;
+// 襲撃終了時に体力0で倒れている村人ごとに、後遺症が残るかを引く。
+export const HARD_AFTEREFFECT_CHANCE = 0.03;

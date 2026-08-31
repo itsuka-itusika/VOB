@@ -42,7 +42,7 @@ import {
   isRaidCombatAction
 } from "./raidRules.js";
 import { refreshJobTable } from "./domain/jobTables.js";
-import { HARD_AFTEREFFECT_CHANCE, HARD_FATAL_WOUND_CHANCE, isHardMode } from "./domain/difficulty.js";
+import { HARD_AFTEREFFECT_CHANCE, HARD_SEVERE_TO_FATAL_RATE, isHardMode } from "./domain/difficulty.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
 import { updateUI } from "./ui.js";
 import { applyRaidFriendshipResults, recordRaidFriendshipDamage, startRaidFriendshipTracking } from "./relationships.js";
@@ -427,10 +427,18 @@ function applyRaidSevereInjuryResult(village, result) {
   const bodyTraits = normalizeBodyTraits(target);
   if (result.isSevere) {
     target.bodyTraits = bodyTraits.filter(trait => trait !== TRAIT_INJURED);
-    if (!target.bodyTraits.includes(TRAIT_SERIOUS_INJURY)) {
-      target.bodyTraits.push(TRAIT_SERIOUS_INJURY);
+    // 高難易度では、重体になった者の一部がより重い致命傷になる。
+    if (isHardMode(village) && Math.random() < HARD_SEVERE_TO_FATAL_RATE) {
+      if (!target.bodyTraits.includes(TRAIT_FATAL_WOUND)) {
+        target.bodyTraits.push(TRAIT_FATAL_WOUND);
+      }
+      village.log(`重体判定:${target.name}は致命傷を負った……`);
+    } else {
+      if (!target.bodyTraits.includes(TRAIT_SERIOUS_INJURY)) {
+        target.bodyTraits.push(TRAIT_SERIOUS_INJURY);
+      }
+      village.log(`重体判定:${target.name}は重体になった`);
     }
-    village.log(`重体判定:${target.name}は重体になった`);
   } else {
     if (!bodyTraits.includes(TRAIT_INJURED)) bodyTraits.push(TRAIT_INJURED);
     village.log(`重体判定:${target.name}は重体を免れ、負傷に留まった`);
@@ -1111,24 +1119,16 @@ const RAID_AFTEREFFECT_TRAITS = [
 
 /**
  * 高難易度では、どの襲撃でも終了時に体力0で倒れている村人ごとに
- * 低確率で致命傷か後遺症の判定を行う。致命傷は翌月の月初に危篤へ悪化し、
- * 後遺症は治らない。戦闘の負傷離脱も、迎撃失敗ペナルティの体力0も対象。
+ * 後遺症が残るかを引く。後遺症は治らない。
+ * 戦闘の負傷離脱も、迎撃失敗ペナルティの体力0も対象。
  */
-function applyHardModeRaidWounds(village) {
+function applyHardModeAftereffects(village) {
   if (!isHardMode(village)) return;
   (village.villagers || []).forEach(person => {
     if (isSaltPillar(person)) return;
     if ((Number(person.hp) || 0) > 0) return;
     if (!Array.isArray(person.bodyTraits)) person.bodyTraits = [];
     if (!Array.isArray(person.mindTraits)) person.mindTraits = [];
-
-    if (Math.random() < HARD_FATAL_WOUND_CHANCE) {
-      if (!person.bodyTraits.includes(TRAIT_FATAL_WOUND)) {
-        person.bodyTraits.push(TRAIT_FATAL_WOUND);
-        village.log(`致命傷判定:${person.name}は致命傷を負った……`);
-      }
-      return;
-    }
     if (Math.random() >= HARD_AFTEREFFECT_CHANCE) return;
 
     const candidates = RAID_AFTEREFFECT_TRAITS.filter(effect => {
@@ -1392,7 +1392,7 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
     }
 
     const severeInjuryResult = rollRaidSevereInjuryCheck(village, raidRules);
-    applyHardModeRaidWounds(village);
+    applyHardModeAftereffects(village);
     // 殊勲の願望と殿堂は、結果モーダルに殊勲として出る村人と同じ条件で扱う。
     checkWishCompletion(village, { distinguishedIds: resultInfo.mvp?.ids || [] });
     recordDistinguishedService(village, resultInfo.mvp?.ids || []);
