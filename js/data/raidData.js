@@ -37,7 +37,7 @@ export const RAIDER_TYPES = [
       mp: [34, 55],
       happiness: [10, 30],
       str: [15, 21],
-      vit: [8, 25],
+      vit: [14, 22],
       dex: [10, 20],
       mag: [5, 12],
       chr: [3, 15],
@@ -160,12 +160,12 @@ export const RAIDER_TYPES = [
       str: [14, 17],
       vit: [5, 15],
       dex: [18, 25],
-      mag: [5, 11],
+      mag: [3, 8],
       chr: [3, 10],
       int: [5, 12],
       ind: [5, 12],
       eth: [1, 5],
-      cou: [7, 15],
+      cou: [12, 16],
       sexdr: [18, 25]
     },
     dialogues: [
@@ -244,7 +244,7 @@ export const RAIDER_TYPES = [
       int: [7, 15],
       ind: [6, 14],
       eth: [1, 5],
-      cou: [15, 23],
+      cou: [16, 21],
       sexdr: [18, 25]
     },
     dialogues: [
@@ -349,7 +349,7 @@ export const RAIDER_TYPES = [
     maxCount: 1,
     race: "キュクロプス",
     forcedSex: "男",
-    ageRange: { min: 30, max: 60 },  // 成熟～老齢のキュクロプス
+    ageRange: { min: 28, max: 35 },  // 成熟～老齢のキュクロプス
     params: {
       job: "キュクロプス",
       action: "襲撃"
@@ -601,7 +601,7 @@ export const RAIDER_TYPES = [
     raidPosition: "front",
     portraits: numberedPortraits("KNIGHT", 26),
     ranges: {
-      hp: [75, 95],
+      hp: [70, 80],
       mp: [55, 75],
       happiness: [30, 50],
       str: [19, 24],
@@ -664,7 +664,7 @@ export const RAIDER_TYPES = [
     maxCount: 1,
     race: "人間",
     forcedSex: "男",
-    ageRange: { min: 25, max: 48 },
+    ageRange: { min: 30, max: 39 },
     params: {
       job: "上級騎士",
       action: "襲撃"
@@ -672,7 +672,7 @@ export const RAIDER_TYPES = [
     raidPosition: "front",
     portraits: numberedPortraits("ELITE", 22),
     ranges: {
-      hp: [70, 90],
+      hp: [75, 90],
       mp: [70, 88],
       happiness: [50, 70],
       str: [22, 25],
