@@ -1,7 +1,7 @@
 // events.js
 
 import { randInt, clampValue, round3, getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "./util.js";
-import { doLoverCheck, doMarriageCheck, doNaturalBondingCheck, clearRelationshipsForDepartedVillager, processMonthlyFriendship } from "./relationships.js";
+import { applyDepartureGrief, doLoverCheck, doMarriageCheck, doNaturalBondingCheck, clearRelationshipsForDepartedVillager, processMonthlyFriendship } from "./relationships.js";
 import { createRandomVillager, createRandomVisitor } from "./createVillagers.js";
 import { processRaidScheduleAtMonthStart } from "./raidSchedule.js";
 import { RandomEvents } from "./RandomEvents.js";
@@ -547,6 +547,8 @@ function leaveVillageByDespair(village, person) {
   village.log(`${person.name}は絶望のまま村を去りました`);
   const index = village.villagers.indexOf(person);
   if (index >= 0) {
+    // 関係を消す前に、残された村人の悲しみを適用する。
+    applyDepartureGrief(village, person, { closeLoss: 10, distantLoss: 5, reasonText: "が去り幸福度低下" });
     clearRelationshipsForDepartedVillager(village, person);
     village.villagers.splice(index, 1);
   }
@@ -656,6 +658,8 @@ export function endOfMonthProcess(v) {
           : "老衰";
       recordVillagerDeathHistory(v, p, { reason: deathReason });
       if (wasVillager) recordDepartedVillager(v, p, deathReason);
+      // 関係を消す前に、残された村人の悲しみを適用する。
+      applyDepartureGrief(v, p, { closeLoss: 20, distantLoss: 10, reasonText: "の死を悼み幸福度低下" });
       clearRelationshipsForDepartedVillager(v, p);
       v.log(`${p.name}は${deathReason}により死亡した...`);
     }

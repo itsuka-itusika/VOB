@@ -1424,6 +1424,52 @@ export function openFriendshipDetailModal(village, person) {
   overlay.addEventListener("click", close);
 }
 
+// 死別・離村で残された村人が受ける衝撃。関係の近さで2段階に分ける。
+// 血縁・伴侶・無二の友を重い側、共に働き戦い遊んだ相手を軽い側として扱う。
+const GRIEF_CLOSE_PREFIXES = new Set(["父", "母", "子", "夫", "妻", "恋人", "親友"]);
+
+/** 去った相手との関係の重さ。2=近しい、1=親しい、0=無関係。 */
+function getGriefWeight(person, departed) {
+  let weight = 0;
+  getRelationshipEntries(person).forEach(entry => {
+    if (weight === 2) return;
+    if (!entryMatchesPerson(entry, departed)) return;
+    if (GRIEF_CLOSE_PREFIXES.has(entry.prefix)) {
+      weight = 2;
+      return;
+    }
+    // 「仕事仲間」と趣味ごとの「○○仲間」をまとめて拾う。
+    if (entry.prefix === "戦友" || String(entry.prefix).endsWith("仲間")) {
+      weight = Math.max(weight, 1);
+    }
+  });
+  return weight;
+}
+
+/**
+ * 死別・絶望離村で残された村人の幸福度を下げる。
+ * 一人の相手に複数の関係があっても、最も重いものだけを一度だけ適用する。
+ * clearRelationshipsForDepartedVillager が関係を消す前に呼ぶこと。
+ */
+export function applyDepartureGrief(village, departed, { closeLoss, distantLoss, reasonText }) {
+  if (!village || !Array.isArray(village.villagers) || !departed) return;
+
+  const grieved = [];
+  village.villagers.forEach(person => {
+    if (person === departed || isSaltPillar(person)) return;
+    const weight = getGriefWeight(person, departed);
+    if (weight === 0) return;
+    const loss = weight === 2 ? closeLoss : distantLoss;
+    if (loss <= 0) return;
+    person.happiness = clampValue((Number(person.happiness) || 0) - loss, 0, 100);
+    grieved.push(`${person.name}-${loss}`);
+  });
+
+  if (grieved.length > 0) {
+    village.log(`${departed.name}${reasonText}:${grieved.join("、")}`);
+  }
+}
+
 /**
  * 村人が死亡・出立などで村を去る時、残った村人側の関係を整理する
  */
