@@ -195,7 +195,7 @@ export const RAIDER_TYPES = [
     raidTargeting: "weakestHighChance",
     portraits: numberedPortraits("GOB", 13),
     ranges: {
-      hp: [50, 70],
+      hp: [60, 80],
       mp: [50, 70],
       happiness: [65, 88],
       str: [15, 21],
@@ -233,7 +233,7 @@ export const RAIDER_TYPES = [
     raidTargeting: "frontFirst",
     portraits: numberedPortraits("GOB", 13),
     ranges: {
-      hp: [35, 55],
+      hp: [45, 65],
       mp: [40, 60],
       happiness: [55, 80],
       str: [10, 16],
