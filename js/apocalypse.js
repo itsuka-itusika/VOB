@@ -505,7 +505,7 @@ function completeApocalypse(village) {
   queueApocalypseModal({
     title: "七つの災厄を越えて",
     message: "四騎士は傷ついた翼を翻し、割れた天の彼方へ退いていった。村には、長い災厄の後の静寂が戻った。",
-    effect: "七つの災厄は退けられ、天はこの村への更なる干渉を断念した。<br>「黙示録」「異端」「塩の柱」が解除され、神威Lv6が解放されました。"
+    effect: "七つの災厄は退けられ、天はこの村への更なる干渉を断念した。<br><span class=\"event-modal-emphasis\">「黙示録」「異端」「塩の柱」が解除され、神威Lv6が解放されました。</span>"
   });
 }
 

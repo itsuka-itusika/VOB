@@ -2322,6 +2322,11 @@ section h2 {
   font-weight: bold;
 }
 
+/* モーダル内で特に強調したい一文。 */
+.event-modal-emphasis {
+  color: #c62828;
+}
+
 /* 襲撃結果モーダル。月初イベント等のモーダルより前面に出す。 */
 .raid-result-overlay {
   z-index: 10050;
