@@ -940,7 +940,7 @@ export const RAIDER_TYPES = [
     exchangeImmune: true,
     uncapturable: true,
     ranges: {
-      hp: [420, 420],
+      hp: [490, 490],
       mp: [100, 100],
       happiness: [100, 100],
       str: [28, 28],
