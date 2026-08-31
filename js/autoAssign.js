@@ -45,6 +45,7 @@ import {
   canCannonInRaid,
   estimateRaidActionDamage,
   getAverageEnemyAttack,
+  getFortifyDamageMultiplier,
   getEnemyTotalHp,
   getRaidIncomingDamageMultiplier,
   canFortifyInRaid,
@@ -633,8 +634,78 @@ function estimateVillageFirepower(village, profiles, assignments, reservedFirepo
   return total;
 }
 
-function hasWinningChance(village, profiles, assignments, reservedFirepower = 0) {
-  return estimateVillageFirepower(village, profiles, assignments, reservedFirepower) >= getEnemyTotalHp(village);
+/** 割り振り対象と、対象外で既に防衛へ就いている村人を合わせた出撃メンバー。 */
+function collectRaidForceMembers(village, profiles, assignments) {
+  const targetSet = new Set(profiles.map(profile => profile.person));
+  const members = [];
+  profiles.forEach(profile => {
+    const action = assignments.get(profile.person)?.action;
+    if (!isRaidAction(action)) return;
+    members.push({ person: profile.person, action, damage: profile.damage[action] || 0 });
+  });
+  (Array.isArray(village?.villagers) ? village.villagers : []).forEach(person => {
+    if (targetSet.has(person) || !isRaidAction(person.action)) return;
+    members.push({ person, action: person.action, damage: estimateRaidActionDamage(person, person.action, village) });
+  });
+  return members;
+}
+
+/**
+ * 想定ターンぶんの荒い戦闘シミュレーション。
+ * 火力の合計だけで判定すると、少人数の前衛が敵の集中攻撃で先に崩れる場合を
+ * 見逃すため、敵の削れ具合と前衛の消耗を1ターンずつ突き合わせて勝ち目を測る。
+ */
+function simulateRaidOutcome(village, members) {
+  const enemies = Array.isArray(village?.raidEnemies)
+    ? village.raidEnemies.filter(enemy => (Number(enemy.hp) || 0) > 0)
+    : [];
+  if (enemies.length === 0) return true;
+
+  const perHit = getAverageEnemyAttack(village);
+  const averageEnemyHp = Math.max(1, getEnemyTotalHp(village) / enemies.length);
+  const fortifyMultiplier = getFortifyDamageMultiplier(village);
+
+  let enemyHp = getEnemyTotalHp(village);
+  // 行動順に合わせて、先制の射撃・敵の攻撃後に出る前衛と火砲を分けて数える。
+  let shootDamage = 0;
+  let lateDamage = 0;
+  // 前衛の受け皿。敵の攻撃は前衛に集中するため、被弾倍率で割り引いた体力を合算する。
+  let frontPool = 0;
+  members.forEach(member => {
+    if (member.action === ACTION_TRAP) {
+      enemyHp -= member.damage;
+      return;
+    }
+    if (member.action === ACTION_SHOOT) {
+      shootDamage += member.damage;
+      return;
+    }
+    const rate = member.action === ACTION_FORTIFY ? RAID_FORTIFY_FIREPOWER_RATE : 1;
+    lateDamage += member.damage * rate;
+    if (member.action === ACTION_DEFEND || member.action === ACTION_FORTIFY) {
+      const multiplier = member.action === ACTION_FORTIFY ? fortifyMultiplier : 1;
+      frontPool += (Number(member.person.hp) || 0) / Math.max(0.1, multiplier);
+    }
+  });
+  if (enemyHp <= 0) return true;
+  if (shootDamage + lateDamage <= 0) return false;
+
+  for (let turn = 0; turn < RAID_WIN_ESTIMATE_TURNS; turn++) {
+    // 射撃は敵より先に撃つ。
+    enemyHp -= shootDamage;
+    if (enemyHp <= 0) return true;
+    // 生き残った敵が前衛を殴る。前衛が持たなければ中衛が的になり崩れるとみなす。
+    frontPool -= Math.ceil(enemyHp / averageEnemyHp) * perHit;
+    if (frontPool <= 0) return false;
+    // 前衛の攻撃・反撃と火砲は敵の攻撃と前後するため、後段でまとめて数える。
+    enemyHp -= lateDamage;
+    if (enemyHp <= 0) return true;
+  }
+  return false;
+}
+
+function hasWinningChance(village, profiles, assignments) {
+  return simulateRaidOutcome(village, collectRaidForceMembers(village, profiles, assignments));
 }
 
 const RAID_ACTION_SLOTS = {
@@ -772,7 +843,13 @@ function trimToMinimumForce(village, profiles, assignments, reserved) {
     if (total - member.firepower < required) return;
     const isFront = RAID_ACTION_SLOTS[member.action] === "front";
     if (isFront && frontCount <= 1) return;
+    // 外した結果、前衛が敵の集中攻撃を持ちこたえられなくなるなら取り消す。
+    const kept = assignments.get(member.profile.person);
     assignments.set(member.profile.person, member.profile.fallback);
+    if (!hasWinningChance(village, profiles, assignments)) {
+      assignments.set(member.profile.person, kept);
+      return;
+    }
     total -= member.firepower;
     if (isFront) frontCount -= 1;
   });
@@ -786,7 +863,7 @@ function buildRaidAssignments(village, targets, mode) {
 
   // まず安全に戦える者だけで組む。
   const { assigned, budget } = fillRaidRoles(village, profiles, assignments, reserved.used, mode);
-  if (hasWinningChance(village, profiles, assignments, reserved.firepower)) {
+  if (hasWinningChance(village, profiles, assignments)) {
     if (mode === RAID_ASSIGN_MODE.ECONOMY) {
       trimToMinimumForce(village, profiles, assignments, reserved);
     }
@@ -813,7 +890,7 @@ function buildRaidAssignments(village, targets, mode) {
     assignments.set(profile.person, { preferredAction: profile.fallback.preferredAction, action });
     budget.front -= 1;
     added.push(profile);
-    if (hasWinningChance(village, profiles, assignments, reserved.firepower)) {
+    if (hasWinningChance(village, profiles, assignments)) {
       return { assignments, hasChance: true };
     }
   }
