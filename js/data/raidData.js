@@ -256,8 +256,8 @@ export const RAIDER_TYPES = [
   {
     type: "狼",
     weight: 20,
-    minCount: 2,
-    maxCount: 3,
+    minCount: 3,
+    maxCount: 4,
     race: "狼",
     ageRange: { min: 3, max: 8 },  // 若い～成熟した狼
     params: {
@@ -711,7 +711,7 @@ export const RAIDER_TYPES = [
       hp: [80, 100],
       mp: [80, 95],
       happiness: [55, 75],
-      str: [22, 25],
+      str: [24, 29],
       vit: [20, 25],
       dex: [18, 24],
       mag: [18, 25],
@@ -722,7 +722,7 @@ export const RAIDER_TYPES = [
       cou: [22, 30],
       sexdr: [3, 12]
     },
-    mindTraits: ["狂信", "秘蹟：剣", "秘蹟：盾", "歴戦"],
+    mindTraits: ["狂信", "秘蹟：盾", "歴戦"],
     dialogues: [
       "異端の村よ。剣の前に悔い改めよ。",
       "古き神の奇跡は、ここで断つ。",
@@ -1222,7 +1222,7 @@ export const RAID_MODULES = [
     weight: 14,
     representative: { raiderType: "ハーピーの長", role: "leader" },
     enemyGroups: [
-      { raiderType: "ハーピー", minCount: 4, maxCount: 5 },
+      { raiderType: "ハーピー", minCount: 5, maxCount: 6 },
       { raiderType: "ハーピーの長", minCount: 1, maxCount: 1 }
     ],
     failurePenalty: {
@@ -1262,7 +1262,7 @@ export const RAID_MODULES = [
     warningName: "餓狼の群れ",
     weight: 18,
     enemyGroups: [
-      { raiderType: "餓狼", minCount: 3, maxCount: 4 }
+      { raiderType: "餓狼", minCount: 4, maxCount: 5 }
     ],
     failurePenalty: {
       foodRate: 0.3
@@ -1445,7 +1445,7 @@ export const RAID_MODULES = [
     weight: 5,
     representative: { raiderType: "スフィンクス" },
     enemyGroups: [
-      { raiderType: "スフィンクス", minCount: 1, maxCount: 1 }
+      { raiderType: "スフィンクス", minCount: 2, maxCount: 2 }
     ],
     failurePenalty: {
       manaRate: 0.2,
@@ -1466,8 +1466,8 @@ export const RAID_MODULES = [
     enemyGroups: [
       {
         raiderType: "翼人兵",
-        minCount: 4,
-        maxCount: 4,
+        minCount: 5,
+        maxCount: 5,
         mindTraits: ["神聖"],
         excludedBodyTraits: ["聖女の輝き"]
       }
@@ -1599,7 +1599,7 @@ export const RAID_MODULES = [
         raiderType: "聖騎士",
         minCount: 1,
         maxCount: 1,
-        mindTraits: ["歴戦", "秘蹟：剣"]
+        mindTraits: ["歴戦"]
       }
     ],
     defense: { surviveTurns: 5 },
@@ -1747,7 +1747,7 @@ export const RAID_MODULES = [
     enemyGroups: [
       { raiderType: "重装兵", minCount: 2, maxCount: 2, mindTraits: ["歴戦", "秘蹟：盾"] },
       { raiderType: "聖女", minCount: 1, maxCount: 1, mindTraits: ["歴戦", "狂信"] },
-      { raiderType: "聖騎士", minCount: 1, maxCount: 1, mindTraits: ["歴戦", "狂信", "秘蹟：剣"] },
+      { raiderType: "聖騎士", minCount: 1, maxCount: 1, mindTraits: ["歴戦", "狂信"] },
       {
         raiderType: "上位翼人",
         minCount: 1,
@@ -1828,8 +1828,7 @@ export const RAID_SCALE_TABLES = [
       { raidId: "grassland-people", weight: 5 },
       { raidId: "pilgrimage-knights", weight: 10 },
       { raidId: "harpy-swarm", weight: 5 },
-      { raidId: "cyclops", weight: 5 },
-      { raidId: "sphinx-visit", weight: 5 }
+      { raidId: "cyclops", weight: 5 }
     ]
   },
   {

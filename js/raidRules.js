@@ -373,7 +373,7 @@ export function getDefendDamageMultiplier(village) {
 
 /** 籠城の被ダメージ倍率。環濠の有無で変わるため、表示と計算で同じ値を使う。 */
 export function getFortifyDamageMultiplier(village) {
-  return hasActiveBuildingFlag(village, "hasMoat", "moat") ? 0.5 : 0.7;
+  return hasActiveBuildingFlag(village, "hasMoat", "moat") ? 0.4 : 0.7;
 }
 
 /** 前衛枠。建物では増えず、常に同じ人数までしか立てない。 */
