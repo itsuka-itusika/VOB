@@ -521,17 +521,23 @@ export function openWarCouncilModal(village, { onStart = null, onAutoAssign = nu
   modal.setAttribute("aria-labelledby", `${MODAL_ID}Title`);
   modal.innerHTML = `
     <div class="wc-header">
-      <h2 id="${MODAL_ID}Title">作戦会議</h2>
+      <div class="wc-header-main">
+        <h2 id="${MODAL_ID}Title">作戦会議</h2>
+        <div class="wc-policy">
+          <div class="wc-policy-row">
+            <span class="wc-policy-label">自動割り振り方針</span>
+            <button type="button" class="wc-policy-btn" data-wc-auto="defend">攻勢</button>
+            <button type="button" class="wc-policy-btn" data-wc-auto="fortify"${fortifyHidden}>堅忍</button>
+            <button type="button" class="wc-policy-btn" data-wc-auto="economy">省力</button>
+          </div>
+          <p class="wc-policy-note" data-wc-policy-note></p>
+        </div>
+      </div>
       <div class="wc-header-buttons">
-        <span class="wc-policy-label">自動割り振り方針</span>
-        <button type="button" class="wc-policy-btn" data-wc-auto="defend">攻勢</button>
-        <button type="button" class="wc-policy-btn" data-wc-auto="fortify"${fortifyHidden}>堅忍</button>
-        <button type="button" class="wc-policy-btn" data-wc-auto="economy">省力</button>
         <button type="button" data-wc-miracle>奇跡の行使</button>
         <button type="button" data-wc-close>戻る</button>
         <button type="button" class="wc-start" data-wc-start>迎撃開始</button>
       </div>
-      <p class="wc-policy-note" data-wc-policy-note></p>
     </div>
     <p class="wc-lead">
       <span>チェックで配置を決めます。チェック欄にマウスを合わせると、予想ダメージと被弾のしやすさが出ます。</span>

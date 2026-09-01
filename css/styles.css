@@ -4125,7 +4125,7 @@ section h2 {
   position: sticky;
   top: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
@@ -4152,29 +4152,81 @@ section h2 {
   color: #d81b10;
   font-weight: bold;
 }
-/* 自動割り振り方針。ラベル＋短いボタン3つで1組にする。 */
+/* 見出しの右に自動割り振り方針を置き、その真下へ説明文を出す。 */
+.wc-header-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: 0;
+}
+.wc-policy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.wc-policy-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .wc-policy-label {
-  align-self: center;
-  margin-right: 2px;
   color: #6b6152;
   font-size: 0.85rem;
   white-space: nowrap;
 }
-.wc-header-buttons .wc-policy-btn {
+.wc-policy-row .wc-policy-btn {
   min-width: 64px;
+  margin: 0;
+  padding: 5px 12px;
 }
-.wc-header-buttons .wc-policy-btn.is-selected {
-  background: #efe6d2;
-  border-color: #a98f5f;
-  box-shadow: inset 0 1px 2px rgba(90, 70, 30, 0.25);
+/* 選んだ方針は、押し込まれたプレートとして見せる。 */
+.wc-policy-row .wc-policy-btn.is-selected {
+  border-color: #a8aeb4 #eef1f3 #f5f7f8 #b7bdc3;
+  background-image:
+    linear-gradient(180deg, #d3d9de 0%, #dfe4e8 55%, #e9edf0 100%);
+  box-shadow:
+    inset 0 2px 4px rgba(55, 62, 70, 0.28),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.4);
+  font-weight: bold;
 }
 /* 方針の説明。高さを確保しておき、ホバーで文だけ差し替える。 */
 .wc-policy-note {
-  flex-basis: 100%;
   margin: 0;
   min-height: 1.25em;
   font-size: 0.82rem;
   color: #57492f;
+}
+/* 上部操作列と同じ軽銀のプレートに揃える。 */
+.wc-header-buttons button,
+.wc-policy-row .wc-policy-btn {
+  color: #2b3036;
+  border: 1px solid;
+  border-color: #f5f7f8 #b7bdc3 #a8aeb4 #eef1f3;
+  border-radius: 3px;
+  background-color: #e7ebef;
+  background-image:
+    linear-gradient(180deg, #f6f8f9 0%, #e7ebef 55%, #d9dfe4 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -2px 4px rgba(55, 62, 70, 0.10),
+    0 1px 2px rgba(55, 62, 70, 0.18);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+.wc-header-buttons button:hover,
+.wc-policy-row .wc-policy-btn:hover {
+  background-image:
+    linear-gradient(180deg, #fbfcfd 0%, #eef1f4 55%, #e1e6ea 100%);
+}
+.wc-header-buttons button:active,
+.wc-policy-row .wc-policy-btn:active {
+  border-color: #a8aeb4 #eef1f3 #f5f7f8 #b7bdc3;
+  background-image:
+    linear-gradient(180deg, #d3d9de 0%, #dfe4e8 55%, #e9edf0 100%);
+  box-shadow:
+    inset 0 2px 4px rgba(55, 62, 70, 0.28),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.4);
 }
 .wc-lead {
   margin: 8px 2px;
