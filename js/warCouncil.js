@@ -29,6 +29,13 @@ import {
   isPacifistFighter
 } from "./raidRules.js";
 
+// 自動割り振り方針の説明。ボタンのホバーと選択で、方針行の下に出す。
+const COUNCIL_POLICY_NOTES = {
+  defend: "攻勢：積極的に攻勢に出る。最も基本的な戦略。",
+  fortify: "堅忍：籠城等で耐えて部分勝利を狙う。格上に有効だが攻めるより被害が出ることも。",
+  economy: "省力：村の仕事を優先し最小限の人員で対応する。敵の強さを見誤らないよう注意。"
+};
+
 // 予想欄に出す、行動そのものの性質。参照ステと予想値は村人ごとに算出する。
 const COUNCIL_ACTION_NOTES = {
   [ACTION_DEFEND]: { order: "", counterOnly: false, note: "反撃あり" },
@@ -516,13 +523,15 @@ export function openWarCouncilModal(village, { onStart = null, onAutoAssign = nu
     <div class="wc-header">
       <h2 id="${MODAL_ID}Title">作戦会議</h2>
       <div class="wc-header-buttons">
-        <button type="button" data-wc-auto="defend">防衛割り振り</button>
-        <button type="button" data-wc-auto="fortify" title="籠城を中心に組み、持久戦で凌ぎます"${fortifyHidden}>防衛割り振り（堅忍）</button>
-        <button type="button" data-wc-auto="economy" title="勝てる見込みを保てる最低限の人数だけ出します">防衛割り振り（省力）</button>
+        <span class="wc-policy-label">自動割り振り方針</span>
+        <button type="button" class="wc-policy-btn" data-wc-auto="defend">攻勢</button>
+        <button type="button" class="wc-policy-btn" data-wc-auto="fortify"${fortifyHidden}>堅忍</button>
+        <button type="button" class="wc-policy-btn" data-wc-auto="economy">省力</button>
         <button type="button" data-wc-miracle>奇跡の行使</button>
         <button type="button" data-wc-close>戻る</button>
         <button type="button" class="wc-start" data-wc-start>迎撃開始</button>
       </div>
+      <p class="wc-policy-note" data-wc-policy-note></p>
     </div>
     <p class="wc-lead">
       <span>チェックで配置を決めます。チェック欄にマウスを合わせると、予想ダメージと被弾のしやすさが出ます。</span>
@@ -539,11 +548,24 @@ export function openWarCouncilModal(village, { onStart = null, onAutoAssign = nu
   bindCouncilInputs();
 
   modal.querySelector("[data-wc-close]").onclick = closeWarCouncilModal;
+  // 方針の説明はホバー中の方針を出し、離れたら最後に押した方針へ戻す。
+  const policyNote = modal.querySelector("[data-wc-policy-note]");
+  let selectedPolicy = "";
+  const showPolicyNote = mode => {
+    if (policyNote) policyNote.textContent = COUNCIL_POLICY_NOTES[mode] || "";
+  };
   modal.querySelectorAll("[data-wc-auto]").forEach(button => {
     button.onclick = () => {
+      selectedPolicy = button.dataset.wcAuto;
+      showPolicyNote(selectedPolicy);
+      modal.querySelectorAll("[data-wc-auto]").forEach(other => {
+        other.classList.toggle("is-selected", other === button);
+      });
       if (typeof onAutoAssign === "function") onAutoAssign(button.dataset.wcAuto);
       refreshCouncilBody();
     };
+    button.addEventListener("mouseenter", () => showPolicyNote(button.dataset.wcAuto));
+    button.addEventListener("mouseleave", () => showPolicyNote(selectedPolicy));
   });
   modal.querySelector("[data-wc-clear]").onclick = () => {
     getCouncilVillagers(councilVillage)

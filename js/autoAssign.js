@@ -929,9 +929,9 @@ export function autoAssignJobs(village) {
 }
 
 const RAID_ASSIGN_MODE_LABELS = {
-  [RAID_ASSIGN_MODE.DEFEND]: "防衛割り振り",
-  [RAID_ASSIGN_MODE.FORTIFY]: "防衛割り振り（堅忍）",
-  [RAID_ASSIGN_MODE.ECONOMY]: "防衛割り振り（省力）"
+  [RAID_ASSIGN_MODE.DEFEND]: "自動割り振り（攻勢）",
+  [RAID_ASSIGN_MODE.FORTIFY]: "自動割り振り（堅忍）",
+  [RAID_ASSIGN_MODE.ECONOMY]: "自動割り振り（省力）"
 };
 
 export function autoAssignRaidActions(village, { mode = RAID_ASSIGN_MODE.DEFEND } = {}) {

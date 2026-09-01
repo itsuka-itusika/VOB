@@ -4152,6 +4152,30 @@ section h2 {
   color: #d81b10;
   font-weight: bold;
 }
+/* 自動割り振り方針。ラベル＋短いボタン3つで1組にする。 */
+.wc-policy-label {
+  align-self: center;
+  margin-right: 2px;
+  color: #6b6152;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.wc-header-buttons .wc-policy-btn {
+  min-width: 64px;
+}
+.wc-header-buttons .wc-policy-btn.is-selected {
+  background: #efe6d2;
+  border-color: #a98f5f;
+  box-shadow: inset 0 1px 2px rgba(90, 70, 30, 0.25);
+}
+/* 方針の説明。高さを確保しておき、ホバーで文だけ差し替える。 */
+.wc-policy-note {
+  flex-basis: 100%;
+  margin: 0;
+  min-height: 1.25em;
+  font-size: 0.82rem;
+  color: #57492f;
+}
 .wc-lead {
   margin: 8px 2px;
   font-size: 0.8rem;
