@@ -69,6 +69,7 @@ import {
   ACTION_TRAP,
   estimateRaidActionDamage,
   estimateRaidCounterDamage,
+  getDefendDamageMultiplier,
   getFortifyDamageMultiplier,
   getRaidSlotLimitMessage,
   isRaidActionSlotAvailable
@@ -730,9 +731,13 @@ function getTaskEstimateParts(person, task, village) {
       parts = [`${resourceName(village, "食料")}+${brewingYield.food}`, `魔素+${brewingYield.mana}`, `体力-${jobBodyCost("醸造", person, village)}`, `メンタル-${jobMindCost("醸造", "ind", person, village)}`];
       break;
     }
-    case "迎撃":
-      parts = [`想定ダメージ${estimateRaidActionDamage(person, ACTION_DEFEND, village)}`, "反撃あり"];
+    case "迎撃": {
+      const defendMultiplier = getDefendDamageMultiplier(village);
+      parts = [`想定ダメージ${estimateRaidActionDamage(person, ACTION_DEFEND, village)}`];
+      if (defendMultiplier !== 1) parts.push(`被弾${defendMultiplier}倍`);
+      parts.push("反撃あり");
       break;
+    }
     case "籠城":
       parts = [`想定反撃ダメージ${estimateRaidCounterDamage(person, village)}`, `被弾${getFortifyDamageMultiplier(village)}倍`, "攻撃なし"];
       break;

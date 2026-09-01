@@ -45,6 +45,7 @@ import {
   canCannonInRaid,
   estimateRaidActionDamage,
   getAverageEnemyAttack,
+  getDefendDamageMultiplier,
   getFortifyDamageMultiplier,
   getEnemyTotalHp,
   getRaidIncomingDamageMultiplier,
@@ -664,6 +665,7 @@ function simulateRaidOutcome(village, members) {
   const perHit = getAverageEnemyAttack(village);
   const averageEnemyHp = Math.max(1, getEnemyTotalHp(village) / enemies.length);
   const fortifyMultiplier = getFortifyDamageMultiplier(village);
+  const defendMultiplier = getDefendDamageMultiplier(village);
 
   let enemyHp = getEnemyTotalHp(village);
   // 行動順に合わせて、先制の射撃・敵の攻撃後に出る前衛と火砲を分けて数える。
@@ -683,7 +685,7 @@ function simulateRaidOutcome(village, members) {
     const rate = member.action === ACTION_FORTIFY ? RAID_FORTIFY_FIREPOWER_RATE : 1;
     lateDamage += member.damage * rate;
     if (member.action === ACTION_DEFEND || member.action === ACTION_FORTIFY) {
-      const multiplier = member.action === ACTION_FORTIFY ? fortifyMultiplier : 1;
+      const multiplier = member.action === ACTION_FORTIFY ? fortifyMultiplier : defendMultiplier;
       frontPool += (Number(member.person.hp) || 0) / Math.max(0.1, multiplier);
     }
   });

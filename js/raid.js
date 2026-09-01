@@ -26,6 +26,7 @@ import {
   applyRaidStunEffect,
   canPerformRaidAction,
   clearRaidStunEffect,
+  getDefendDamageMultiplier,
   getFortifyDamageMultiplier,
   getRaidActionBlockReason,
   getRaidActionSkipMessage,
@@ -1077,6 +1078,9 @@ function applyIncomingDamageModifiers(damage, target, village) {
       ? RAID_CANNON_INCOMING_DAMAGE_MULTIPLIER
       : RAID_MIDDLE_INCOMING_DAMAGE_MULTIPLIER;
   }
+  if (!isEnemyUnit(target, village) && target.action === ACTION_DEFEND) {
+    multiplier *= getDefendDamageMultiplier(village);
+  }
   if (!isEnemyUnit(target, village) && target.action === ACTION_FORTIFY) {
     multiplier *= getFortifyDamageMultiplier(village);
   }
@@ -1866,6 +1870,9 @@ function appendRaidNameCell(row, unit, village = null) {
 
   // 籠城・射撃・火砲は見た目に効果が出ないため、行動順と実際の被ダメージ倍率を添える。
   const isVillageUnit = Boolean(village) && !isEnemyUnit(unit, village);
+  if (isVillageUnit && unit?.action === ACTION_DEFEND && getDefendDamageMultiplier(village) !== 1) {
+    appendRaidUnitNote(meta, `被弾${getDefendDamageMultiplier(village)}倍`);
+  }
   if (isVillageUnit && unit?.action === ACTION_FORTIFY) {
     appendRaidUnitNote(meta, `被弾${getFortifyDamageMultiplier(village)}倍`);
   }

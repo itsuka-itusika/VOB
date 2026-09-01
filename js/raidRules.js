@@ -309,7 +309,7 @@ export function getAverageEnemyAttack(village) {
 
 /** その襲撃行動でどれだけ被弾しやすいか。罠は狙われないため0。 */
 export function getRaidIncomingDamageMultiplier(action, village = null) {
-  if (action === ACTION_DEFEND) return 1;
+  if (action === ACTION_DEFEND) return getDefendDamageMultiplier(village);
   if (action === ACTION_FORTIFY) return getFortifyDamageMultiplier(village);
   if (action === ACTION_SHOOT) return RAID_MIDDLE_INCOMING_DAMAGE_MULTIPLIER;
   if (action === ACTION_CANNON) return RAID_CANNON_INCOMING_DAMAGE_MULTIPLIER;
@@ -366,16 +366,19 @@ function sortRaidTrapMakersByPriority(trapMakers) {
   });
 }
 
-/** 籠城の被ダメージ倍率。環濠の有無で変わるため、表示と計算で同じ値を使う。 */
-export function getFortifyDamageMultiplier(village) {
-  return hasActiveBuildingFlag(village, "hasMoat", "moat") ? 0.7 : 0.8;
+/** 迎撃の被ダメージ倍率。環濠があると前衛の被害が軽くなる。 */
+export function getDefendDamageMultiplier(village) {
+  return hasActiveBuildingFlag(village, "hasMoat", "moat") ? 0.9 : 1;
 }
 
+/** 籠城の被ダメージ倍率。環濠の有無で変わるため、表示と計算で同じ値を使う。 */
+export function getFortifyDamageMultiplier(village) {
+  return hasActiveBuildingFlag(village, "hasMoat", "moat") ? 0.5 : 0.7;
+}
+
+/** 前衛枠。建物では増えず、常に同じ人数までしか立てない。 */
 export function getRaidFrontlinerSlotCount(village = null) {
-  if (!village) return Number.POSITIVE_INFINITY;
-  const woodenFenceBonus = hasActiveBuildingFlag(village, "hasWoodenFence", "woodenFence") ? 1 : 0;
-  const moatBonus = hasActiveBuildingFlag(village, "hasMoat", "moat") ? 1 : 0;
-  return RAID_BASE_FRONTLINER_SLOTS + woodenFenceBonus + moatBonus;
+  return village ? RAID_BASE_FRONTLINER_SLOTS : Number.POSITIVE_INFINITY;
 }
 
 export function getRaidTrapMakerSlotCount(village = null) {
