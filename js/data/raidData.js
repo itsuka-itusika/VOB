@@ -356,7 +356,7 @@ export const RAIDER_TYPES = [
     },
     raidPosition: "front",
     ranges: {
-      hp: [90, 120],
+      hp: [140, 160],
       mp: [55, 80],
       happiness: [45, 70],
       str: [23, 30],
@@ -367,7 +367,7 @@ export const RAIDER_TYPES = [
       int: [3, 8],
       ind: [5, 15],
       eth: [5, 15],
-      cou: [20, 25],
+      cou: [23, 28],
       sexdr: [10, 20]
     },
     forcedBodyTraits: ["巨人", "単眼"],
@@ -1279,7 +1279,7 @@ export const RAID_MODULES = [
     warningName: "キュクロプス団",
     weight: 6,
     enemyGroups: [
-      { raiderType: "キュクロプス", minCount: 2, maxCount: 3 }
+      { raiderType: "キュクロプス", minCount: 2, maxCount: 2 }
     ],
     failurePenalty: {
       foodRate: 0.3,
@@ -1302,7 +1302,7 @@ export const RAID_MODULES = [
     ],
     enemyGroups: [
       { raiderType: "ゴブリンリーダー", minCount: 1, maxCount: 1 },
-      { raiderType: "ゴブリン射手", minCount: 2, maxCount: 2 },
+      { raiderType: "ゴブリン射手", minCount: 1, maxCount: 1 },
       { raiderType: "キュクロプス", minCount: 1, maxCount: 1 },
       { raiderType: "ハーピーの長", minCount: 1, maxCount: 1 },
       { raiderType: "餓狼", minCount: 2, maxCount: 2 }
@@ -1522,8 +1522,8 @@ export const RAID_MODULES = [
         enemyGroups: [
           {
             raiderType: "翼人兵",
-            minCount: 5,
-            maxCount: 5,
+            minCount: 4,
+            maxCount: 4,
             mindTraits: ["神聖", "戦慣れ"],
             excludedBodyTraits: ["聖女の輝き"]
           },
@@ -1539,8 +1539,8 @@ export const RAID_MODULES = [
         enemyGroups: [
           {
             raiderType: "翼人兵",
-            minCount: 5,
-            maxCount: 5,
+            minCount: 4,
+            maxCount: 4,
             mindTraits: ["神聖", "戦慣れ"],
             excludedBodyTraits: ["聖女の輝き"]
           },
