@@ -1466,8 +1466,8 @@ export const RAID_MODULES = [
     enemyGroups: [
       {
         raiderType: "翼人兵",
-        minCount: 5,
-        maxCount: 5,
+        minCount: 4,
+        maxCount: 4,
         mindTraits: ["神聖"],
         excludedBodyTraits: ["聖女の輝き"]
       }
@@ -1496,7 +1496,7 @@ export const RAID_MODULES = [
     enemyGroups: [
       { raiderType: "下級騎士", minCount: 2, maxCount: 2 },
       { raiderType: "重装兵", minCount: 2, maxCount: 2, mindTraits: [] },
-      { raiderType: "上級騎士", minCount: 2, maxCount: 2, mindTraits: ["歴戦"] },
+      { raiderType: "上級騎士", minCount: 1, maxCount: 1, mindTraits: ["歴戦"] },
       { raiderType: "聖女", minCount: 1, maxCount: 1, mindTraits: [] }
     ],
     failurePenalty: {
@@ -1579,15 +1579,14 @@ export const RAID_MODULES = [
     enemyGroups: [
       {
         raiderType: "重装兵",
-        minCount: 2,
-        maxCount: 2,
-        mindTraits: [],
-        mindTraitChances: [{ trait: "秘蹟：盾", chance: 0.2 }]
+        minCount: 3,
+        maxCount: 3,
+        mindTraits: []
       },
       {
         raiderType: "上級騎士",
-        minCount: 2,
-        maxCount: 2,
+        minCount: 1,
+        maxCount: 1,
         mindTraits: ["歴戦"]
       },
       {
@@ -1813,7 +1812,8 @@ export const RAID_SCALE_TABLES = [
       { raidId: "mercenary-band", weight: 10 },
       { raidId: "harpy", weight: 10 },
       { raidId: "grassland-people", weight: 10 },
-      { raidId: "pilgrimage-knights", weight: 5 }
+      { raidId: "pilgrimage-knights", weight: 5 },
+      { raidId: "cyclops", weight: 5 }
     ]
   },
   {
@@ -1828,7 +1828,8 @@ export const RAID_SCALE_TABLES = [
       { raidId: "grassland-people", weight: 5 },
       { raidId: "pilgrimage-knights", weight: 10 },
       { raidId: "harpy-swarm", weight: 5 },
-      { raidId: "cyclops", weight: 5 }
+      { raidId: "cyclops", weight: 5 },
+      { raidId: "sphinx-visit", weight: 5 }
     ]
   },
   {
@@ -1843,7 +1844,8 @@ export const RAID_SCALE_TABLES = [
       { raidId: "harpy-swarm", weight: 10 },
       { raidId: "starving-wolves", weight: 10 },
       { raidId: "horse-nomad-raid", weight: 10 },
-      { raidId: "cyclops", weight: 10 }
+      { raidId: "cyclops", weight: 10 },
+      { raidId: "sphinx-visit", weight: 5 }
     ]
   },
   {
@@ -1873,7 +1875,8 @@ export const RAID_SCALE_TABLES = [
       { raidId: "goblin-army", weight: 5 },
       { raidId: "harpy-swarm", weight: 10 },
       { raidId: "horse-nomad-raid", weight: 10 },
-      { raidId: "cyclops", weight: 10 }
+      { raidId: "cyclops", weight: 10 },
+      { raidId: "sphinx-visit", weight: 5 }
     ]
   },
   {

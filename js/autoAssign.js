@@ -613,7 +613,7 @@ export const RAID_ASSIGN_MODE = {
   ECONOMY: "economy"
 };
 // 省力で人を減らすときに残す火力の余裕。見込みが外れても押し切れる幅を持たせる。
-const RAID_ECONOMY_SAFETY_RATE = 1.25;
+const RAID_ECONOMY_SAFETY_RATE = 1.8;
 
 /** 想定ターン数ぶんの火力へ均す。罠は1度きりなので、そのまま数える。 */
 function toRaidFirepower(action, damage) {
