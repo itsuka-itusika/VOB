@@ -1747,7 +1747,7 @@ export const RAID_MODULES = [
     enemyGroups: [
       { raiderType: "重装兵", minCount: 2, maxCount: 2, mindTraits: ["歴戦", "秘蹟：盾"] },
       { raiderType: "聖女", minCount: 1, maxCount: 1, mindTraits: ["歴戦", "狂信"] },
-      { raiderType: "聖騎士", minCount: 1, maxCount: 1, mindTraits: ["歴戦", "狂信"] },
+      { raiderType: "聖騎士", minCount: 1, maxCount: 1, mindTraits: ["歴戦", "狂信", "秘蹟：剣"] },
       {
         raiderType: "上位翼人",
         minCount: 1,
@@ -1843,8 +1843,7 @@ export const RAID_SCALE_TABLES = [
       { raidId: "harpy-swarm", weight: 10 },
       { raidId: "starving-wolves", weight: 10 },
       { raidId: "horse-nomad-raid", weight: 10 },
-      { raidId: "cyclops", weight: 10 },
-      { raidId: "sphinx-visit", weight: 5 }
+      { raidId: "cyclops", weight: 10 }
     ]
   },
   {
@@ -1874,8 +1873,7 @@ export const RAID_SCALE_TABLES = [
       { raidId: "goblin-army", weight: 5 },
       { raidId: "harpy-swarm", weight: 10 },
       { raidId: "horse-nomad-raid", weight: 10 },
-      { raidId: "cyclops", weight: 10 },
-      { raidId: "sphinx-visit", weight: 5 }
+      { raidId: "cyclops", weight: 10 }
     ]
   },
   {
