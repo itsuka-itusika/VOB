@@ -77,7 +77,7 @@ const CONQUEST_JUDGMENT_LIGHT_RULES = new Map([
   [3, { statKey: "sexdr", pickHighest: true, cry: "姦淫する者、滅ぶべし", note: "最も好色の高い村人に天の裁き！" }],
   [5, { statKey: "happiness", pickHighest: true, cry: "高ぶる者、滅ぶべし", note: "最も幸福度の高い村人に天の裁き！" }]
 ]);
-const CONQUEST_JUDGMENT_LIGHT_DAMAGE = 200;
+const CONQUEST_JUDGMENT_LIGHT_DAMAGE = 300;
 const HOLY_ATTACK_IMMUNITY_TRAIT = "光輪";
 const TRAIT_INJURED = "負傷";
 const TRAIT_SERIOUS_INJURY = "重体";
