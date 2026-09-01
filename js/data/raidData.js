@@ -1517,42 +1517,18 @@ export const RAID_MODULES = [
     warningName: "翼人兵（強）",
     weight: 15,
     representative: { raiderType: "翼人兵" },
-    enemyGroupVariants: [
+    enemyGroups: [
       {
-        weight: 80,
-        enemyGroups: [
-          {
-            raiderType: "翼人兵",
-            minCount: 4,
-            maxCount: 4,
-            mindTraits: ["神聖", "戦慣れ"],
-            excludedBodyTraits: ["聖女の輝き"]
-          },
-          {
-            raiderType: "キュクロプス",
-            minCount: 1,
-            maxCount: 1
-          }
-        ]
+        raiderType: "翼人兵",
+        minCount: 4,
+        maxCount: 4,
+        mindTraits: ["神聖", "戦慣れ"],
+        excludedBodyTraits: ["聖女の輝き"]
       },
       {
-        weight: 20,
-        enemyGroups: [
-          {
-            raiderType: "翼人兵",
-            minCount: 4,
-            maxCount: 4,
-            mindTraits: ["神聖", "戦慣れ"],
-            excludedBodyTraits: ["聖女の輝き"]
-          },
-          {
-            raiderType: "上位翼人",
-            minCount: 1,
-            maxCount: 1,
-            mindTraits: ["神聖", "狂信", "歴戦"],
-            excludedBodyTraits: ["聖女の輝き"]
-          }
-        ]
+        raiderType: "キュクロプス",
+        minCount: 1,
+        maxCount: 1
       }
     ],
     defense: { surviveTurns: 5 },
