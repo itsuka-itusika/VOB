@@ -375,7 +375,8 @@ function getWishCandidates(village) {
       .filter(Boolean)
       .forEach(target => candidates.push({ id: "avoid_enemy", requester, target }));
 
-    if (requester.spiritSex === "男" && stat(requester, "sexdr") >= 20 && stat(requester, "chr") <= 14) {
+    if (requester.spiritSex === "男" && stat(requester, "sexdr") >= 20 && stat(requester, "chr") <= 14 &&
+      !hasPartner(requester)) {
       candidates.push({ id: "be_popular", requester });
     }
 
