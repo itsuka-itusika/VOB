@@ -1399,8 +1399,8 @@ table.hide-stat-columns .stat-column {
   font-weight: bold;
   font-size: 0.78rem;
 }
+/* 村側は戦列に並んだ全員をそのまま並べる。前衛は最大8人まで増えるため高さで切らない。 */
 .raid-table-scroll {
-  max-height: min(34vh, 330px);
   overflow: auto;
 }
 .raid-enemy-scroll {
