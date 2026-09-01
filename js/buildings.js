@@ -300,9 +300,9 @@ export const BUILDINGS = [
     materials: 50,
     funds: 50,
     tech: 100,
-    desc: "豊かな村で解放。木柵建設後に建設可能。迎撃の被ダメージを0.9倍、籠城の被ダメージを0.5倍にする。規模+30",
+    desc: "豊かな村で解放。木柵建設後に建設可能。迎撃の被ダメージを0.9倍、籠城の被ダメージを0.4倍にする。規模+30",
     ...requireScaleAndBuildings(180, ["woodenFence"]),
-    effect: standardBuildingEffect({ scale: 30, flag: "hasMoat", log: "環濠建設完了: 迎撃の被ダメージ0.9倍・籠城の被ダメージ0.5倍になりました、規模+30" })
+    effect: standardBuildingEffect({ scale: 30, flag: "hasMoat", log: "環濠建設完了: 迎撃の被ダメージ0.9倍・籠城の被ダメージ0.4倍になりました、規模+30" })
   },
   {
     id: "arcaneFoundry",
