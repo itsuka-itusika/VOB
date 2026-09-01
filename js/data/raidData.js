@@ -157,7 +157,7 @@ export const RAIDER_TYPES = [
       hp: [40, 60],
       mp: [40, 60],
       happiness: [55, 80],
-      str: [14, 17],
+      str: [16, 19],
       vit: [5, 15],
       dex: [18, 25],
       mag: [3, 8],
@@ -386,8 +386,8 @@ export const RAIDER_TYPES = [
   {
     type: "ハーピー",
     weight: 15,
-    minCount: 2,
-    maxCount: 3,
+    minCount: 3,
+    maxCount: 4,
     race: "ハーピー",
     forcedSex: "女",
     ageRange: { min: 16, max: 25 },  // 若い～成熟したハーピー
@@ -1824,10 +1824,9 @@ export const RAID_SCALE_TABLES = [
       { raidId: "starving-wolves", weight: 10 },
       { raidId: "goblin-army", weight: 10 },
       { raidId: "mercenary-band", weight: 10 },
-      { raidId: "harpy", weight: 5 },
       { raidId: "grassland-people", weight: 5 },
       { raidId: "pilgrimage-knights", weight: 10 },
-      { raidId: "harpy-swarm", weight: 5 },
+      { raidId: "harpy-swarm", weight: 10 },
       { raidId: "cyclops", weight: 5 }
     ]
   },
@@ -1843,7 +1842,7 @@ export const RAID_SCALE_TABLES = [
       { raidId: "harpy-swarm", weight: 10 },
       { raidId: "starving-wolves", weight: 10 },
       { raidId: "horse-nomad-raid", weight: 10 },
-      { raidId: "cyclops", weight: 10 }
+      { raidId: "cyclops-band", weight: 10 }
     ]
   },
   {
@@ -1873,7 +1872,7 @@ export const RAID_SCALE_TABLES = [
       { raidId: "goblin-army", weight: 5 },
       { raidId: "harpy-swarm", weight: 10 },
       { raidId: "horse-nomad-raid", weight: 10 },
-      { raidId: "cyclops", weight: 10 }
+      { raidId: "cyclops-band", weight: 10 }
     ]
   },
   {
