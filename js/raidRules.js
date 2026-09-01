@@ -194,12 +194,18 @@ export function estimateRaidCounterDamage(person, village = null) {
   return applyOffensiveTraitDamage(person, Math.floor(Math.max(physical, magical) * 0.5));
 }
 
-/** 月の巫女・月の加護は射撃の与ダメージを伸ばす。想定表示と実戦闘で同じ値を使う。 */
-export function getShootingTraitMultiplier(person) {
-  const bodyTraits = traitList(person, "bodyTraits");
+/**
+ * 中衛の与ダメージを伸ばす特性の倍率。想定表示と実戦闘で同じ値を使う。
+ * 月の巫女・月の加護は射撃だけ、狙撃心得は射撃と火砲の両方に乗る。
+ */
+export function getRangedTraitMultiplier(person, action) {
   let multiplier = 1;
-  if (bodyTraits.includes("月の巫女")) multiplier *= 1.5;
-  if (bodyTraits.includes("月の加護")) multiplier *= 1.2;
+  if (action === ACTION_SHOOT) {
+    const bodyTraits = traitList(person, "bodyTraits");
+    if (bodyTraits.includes("月の巫女")) multiplier *= 1.5;
+    if (bodyTraits.includes("月の加護")) multiplier *= 1.2;
+  }
+  if (traitList(person, "mindTraits").includes("狙撃心得")) multiplier *= 1.2;
   return multiplier;
 }
 
@@ -233,9 +239,10 @@ export function estimateRaidActionDamage(person, action, village = null) {
     base = Math.max(physical, magical);
   } else if (action === ACTION_SHOOT) {
     base = Math.max(0, Math.floor((stat("dex") * stat("cou") / 400) * 50 - averageVitality * 1.2));
-    base = Math.floor(base * getShootingTraitMultiplier(person));
+    base = Math.floor(base * getRangedTraitMultiplier(person, ACTION_SHOOT));
   } else if (action === ACTION_CANNON) {
     base = Math.max(0, Math.floor((stat("mag") * stat("int") / 400) * 20));
+    base = Math.floor(base * getRangedTraitMultiplier(person, ACTION_CANNON));
   } else {
     return 0;
   }

@@ -30,7 +30,7 @@ import {
   getFortifyDamageMultiplier,
   getRaidActionBlockReason,
   getRaidActionSkipMessage,
-  getShootingTraitMultiplier,
+  getRangedTraitMultiplier,
   getRaiderIncomingDamageMultiplier,
   hasRaidStunEffect,
   getActiveRaidFrontliners,
@@ -1016,8 +1016,9 @@ function canActInCombat(actor, village) {
 
 function calcRangedDamage(atk, def) {
   if (atk?.action === ACTION_CANNON || atk?.raidAttackType === RAID_ATTACK_CANNON) {
+    const cannonDamage = Math.max(0, Math.floor(((atk.mag * atk.int) / 400) * 20));
     return {
-      damage: Math.max(0, Math.floor(((atk.mag * atk.int) / 400) * 20)),
+      damage: Math.floor(cannonDamage * getRangedTraitMultiplier(atk, ACTION_CANNON)),
       isMagic: true,
       attackText: ACTION_CANNON
     };
@@ -1031,7 +1032,7 @@ function calcRangedDamage(atk, def) {
   }
   const damage = Math.max(0, Math.floor(((atk.dex * atk.cou) / 400) * 50 - def.vit * 1.2));
   return {
-    damage: Math.floor(damage * getShootingTraitMultiplier(atk)),
+    damage: Math.floor(damage * getRangedTraitMultiplier(atk, ACTION_SHOOT)),
     isMagic: false,
     attackText: "射撃"
   };
@@ -1829,6 +1830,7 @@ const RAID_BADGE_TRAITS = [
   { trait: "飛行", label: "飛行", title: "罠作成による被ダメージ0.5倍" },
   { trait: "月の巫女", label: "月の巫女", title: "射撃のダメージ1.5倍" },
   { trait: "月の加護", label: "月の加護", title: "射撃のダメージ1.2倍" },
+  { trait: "狙撃心得", label: "狙撃心得", title: "射撃・火砲のダメージ1.2倍" },
   { trait: "歴戦", label: "歴戦", title: "与ダメージ1.2倍" },
   { trait: "戦慣れ", label: "戦慣れ", title: "与ダメージ1.1倍" },
   { trait: "非戦主義", label: "非戦", title: "攻撃も反撃も行わない" },
