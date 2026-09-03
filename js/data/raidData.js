@@ -192,7 +192,7 @@ export const RAIDER_TYPES = [
       action: "襲撃"
     },
     raidPosition: "front",
-    raidTargeting: "weakestHighChance",
+    raidTargeting: "frontFirst",
     portraits: numberedPortraits("GOB", 13),
     ranges: {
       hp: [60, 80],
@@ -201,15 +201,15 @@ export const RAIDER_TYPES = [
       str: [15, 21],
       vit: [10, 20],
       dex: [18, 26],
-      mag: [5, 12],
-      chr: [8, 16],
+      mag: [5, 11],
+      chr: [5, 12],
       int: [18, 23],
       ind: [10, 18],
       eth: [1, 6],
       cou: [18, 26],
       sexdr: [16, 25]
     },
-    mindTraits: ["首長"],
+    mindTraits: ["首長", "ゴブリン兵法"],
     dialogues: [
       "弱ったやつから囲め！強いのは後回しなのだ！",
       "弓を散らすな！倒せるやつへ狙いを集めるのだ！",

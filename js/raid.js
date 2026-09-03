@@ -579,11 +579,18 @@ function getTargetCandidates(actor, village) {
   return pickFrontFirst(candidates, village);
 }
 
+/**
+ * 弱者狙いを発動するか。精神特性「ゴブリン兵法」で判定する。
+ * 襲撃中に保存された古いデータは特性を持たないため、旧来の raidTargeting も見る。
+ */
+function hasWeakestTargeting(unit) {
+  return hasTrait(unit, "ゴブリン兵法") || unit?.raidTargeting === RAID_TARGET_WEAKEST_HIGH_CHANCE;
+}
+
 function selectTarget(actor, village) {
   const candidates = getTargetCandidates(actor, village);
   if (
-    isEnemyUnit(actor, village) &&
-    actor.raidTargeting === RAID_TARGET_WEAKEST_HIGH_CHANCE &&
+    hasWeakestTargeting(actor) &&
     candidates.length > 0 &&
     Math.random() < RAID_WEAKEST_TARGET_CHANCE
   ) {
@@ -840,9 +847,15 @@ export function setupCombatPhase(village) {
   logDiv.innerHTML+=`<hr><br>【戦闘フェーズ】ターン ${village.raidTurnCount} 開始`;
   if (isCombatStarting) {
     getAliveEnemies(village)
-      .filter(enemy => enemy.raidTargeting === RAID_TARGET_WEAKEST_HIGH_CHANCE)
+      .filter(hasWeakestTargeting)
       .forEach(enemy => {
         logDiv.innerHTML += `<br>【弱者狙い】${enemy.name}は体力の低い村人へ狙いを定めた！`;
+      });
+    getVillageCombatants(village)
+      // 籠城は自分の手番を持たず、狙いを定める場面がない。
+      .filter(person => person.action !== ACTION_FORTIFY && hasWeakestTargeting(person))
+      .forEach(person => {
+        logDiv.innerHTML += `<br>【弱者狙い】${person.name}は体力の低い襲撃者へ狙いを定めた！`;
       });
   }
 
@@ -1931,7 +1944,7 @@ function appendRaidNameCell(row, unit, village = null) {
 function getRaidVisibleEffects(unit) {
   const sources = [unit?.raidEffects, unit?.statusEffects, unit?.buffs, unit?.debuffs];
   const names = [];
-  if (unit?.raidTargeting === RAID_TARGET_WEAKEST_HIGH_CHANCE) names.push("弱者狙い");
+  if (hasWeakestTargeting(unit)) names.push("弱者狙い");
   sources.forEach(source => {
     if (!Array.isArray(source)) return;
     source.forEach(effect => {
