@@ -16,6 +16,7 @@ import { refreshJobTable } from "./domain/jobTables.js";
 import { isOriginalBodyOwner } from "./domain/portraitHistory.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
+import { hasVillageTrait } from "./domain/jobMath.js";
 import { getActiveVillagers, getVillagersIncludingSaltPillar } from "./domain/apocalypseRules.js";
 import { getCaptives } from "./captives.js";
 import { damageRandomBuilding } from "./buildings.js";
@@ -795,11 +796,17 @@ export class RandomEvents {
     return "";
   }
 
-  static getBadEventWeight(eventKey, season) {
+  /** 大嵐と疫病の流行は、異端認定を受けた村か黙示録を越えた村にだけ起こる。 */
+  static isOminousBadEventAllowed(village) {
+    return hasVillageTrait(village, "異端") || !!village?.apocalypseCleared;
+  }
+
+  static getBadEventWeight(eventKey, season, village) {
     switch (eventKey) {
       case "storm":
         return season === "春" ? 1 : 0;
       case "greatStorm":
+        if (!this.isOminousBadEventAllowed(village)) return 0;
         return season === "夏" || season === "秋" ? 1 : 0;
       case "downpour":
         return season === "夏" || season === "秋" ? 1 : 0;
@@ -813,6 +820,7 @@ export class RandomEvents {
       case "snow":
         return season === "冬" || season === "春" ? 1 : 0;
       case "epidemic":
+        if (!this.isOminousBadEventAllowed(village)) return 0;
         return season === "冬" ? 0.35 : 0;
       default:
         return 1;
@@ -838,7 +846,7 @@ export class RandomEvents {
       .filter(key => !excluded || !excluded.has(key))
       .map(key => ({
         key,
-        weight: this.getBadEventWeight(key, season)
+        weight: this.getBadEventWeight(key, season, village)
       })));
   }
 
