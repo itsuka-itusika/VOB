@@ -216,7 +216,7 @@ function applyFirstCalamity(village) {
     person.mp = clampValue((Number(person.mp) || 0) - 10, 0, 100);
     person.happiness = clampValue((Number(person.happiness) || 0) - 10, 0, 100);
   });
-  recordStage(village, 1, "第一の角笛が吹かれた", "川が血のように染まり、村人たちの心を恐怖が蝕んだ。");
+  recordStage(village, 1, "第一の角笛が吹かれた", "川が血のように染まり、村人たちの心を恐怖が蝕む。");
   queueApocalypseModal({
     title: "第一の角笛が吹かれた",
     message: "川が血のように染まった。",
@@ -231,7 +231,7 @@ function applySecondCalamity(village) {
   village.food = Math.max(0, before - loss);
   addVillageTrait(village, LOCUST_TRAIT);
   village.apocalypseLocustMonths = 0;
-  recordStage(village, 2, "第二の角笛が吹かれた", "黒き騎士《飢餓》が天を覆う蝗とともに現れ、蓄えを食い尽くした。");
+  recordStage(village, 2, "第二の角笛が吹かれた", "黒き騎士《飢餓》が天を覆う蝗とともに現れ、蓄えを食い尽くす。");
   queueApocalypseModal({
     title: "第二の角笛が吹かれた",
     message: "天を覆う蝗の向こうに、黒き騎士・飢餓が姿を現し、荒らされた倉を見届けると天へ消えた。",
@@ -263,8 +263,8 @@ function applyThirdCalamity(village) {
     (village.villagers || []).forEach(person => refreshJobTable(person, village));
   }
   recordStage(village, 3, "第三の角笛が吹かれた", damagedCount > 0
-    ? `硫黄の火が村へ降り注ぎ、${damagedLabel}が損壊した。`
-    : "硫黄の火が村へ降り注いだが、損壊する有効な建築物はなかった。");
+    ? `硫黄の火が村へ降り注ぎ、${damagedLabel}が損壊する。`
+    : "硫黄の火が村へ降り注ぐが、損壊する有効な建築物はない。");
   queueApocalypseModal({
     title: "第三の角笛が吹かれた",
     message: "裂けた空から燃える硫黄が降り注ぎ、村の建物を焼いた。",
@@ -288,7 +288,7 @@ function applyFourthCalamity(village) {
     recordEpidemicHistory(village, person, { source: "第四の災厄" });
   });
   const targetNames = targets.map(person => person.name).join("、") || "対象者なし";
-  recordStage(village, 4, "第四の角笛が吹かれた", "青白き騎士《疫病》が現れ、村に病が蔓延した。");
+  recordStage(village, 4, "第四の角笛が吹かれた", "青白き騎士《疫病》が現れ、村に病が蔓延する。");
   queueApocalypseModal({
     title: "第四の角笛が吹かれた",
     message: "青白き騎士《疫病》が村を見下ろす。騎士が去ったあと、村のあちこちから咳が聞こえ始めた。",
@@ -319,7 +319,7 @@ function applyFifthCalamity(village) {
     });
   });
   const targetNames = targets.map(person => person.name).join("、") || "対象者なし";
-  recordStage(village, 5, "第五の角笛が吹かれた", "天の光により幾人かの村人が塩の柱となった。");
+  recordStage(village, 5, "第五の角笛が吹かれた", "天の光により幾人かの村人が塩の柱となる。");
   queueApocalypseModal({
     title: "第五の角笛が吹かれた",
     message: "天の光を振り仰いだ勇気ある者たちの身体が、白い塩へと変わった。",
@@ -348,7 +348,7 @@ export function startApocalypseFromGoldenStatue(village) {
   village.log("【黙示録】天に怒りの声が響いた。次月から七つの災厄が村を襲う。");
   addHistoryEvent(village, {
     title: "黄金像の建立",
-    text: "バッカスの黄金像が建立された。それは神の怒りに触れ災厄を招いた。",
+    text: "バッカスの黄金像が建立される。それは神の怒りに触れ、災厄を招く。",
     tags: ["バッカス", "黄金像", "黙示録"]
   });
   queueApocalypseModal({
@@ -386,7 +386,7 @@ export function processApocalypseMonthStart(village) {
         stage: 6,
         title: "第六の角笛が吹かれた",
         message: "赤き騎士・戦争が、聖征軍団を率いて進軍した。",
-        historyText: "赤き騎士《戦争》が聖征軍団を率いて現れ、村へ攻め寄せた。",
+        historyText: "赤き騎士《戦争》が聖征軍団を率いて現れ、村へ攻め寄せる。",
         effect: "聖征軍団と赤き騎士・戦争の襲撃が始まります。敗北すれば黄金像は破壊され、黙示録は終了します。",
         raidId: APOCALYPSE_RAID_IDS.SIXTH
       });
@@ -396,7 +396,7 @@ export function processApocalypseMonthStart(village) {
         stage: 7,
         title: "第七の角笛が吹かれた",
         message: "白き騎士・支配が、雲を裂いて降り立つ上位翼人兵を従え、最後の裁きを告げた。",
-        historyText: "白き騎士《支配》が最後の裁きを下すべく翼人兵を率いて村へ襲来した。",
+        historyText: "白き騎士《支配》が最後の裁きを下すべく翼人兵を率いて村へ襲来する。",
         effect: "上位翼人兵と白き騎士・支配の襲撃が始まります。敗北すれば黄金像は破壊され、黙示録は終了します。",
         raidId: APOCALYPSE_RAID_IDS.SEVENTH,
         image: stageImage(5)
@@ -457,7 +457,7 @@ export function destroyBacchusGoldenStatue(village, options = {}) {
   village.log(`【黙示録中断】${reason}ため、バッカスの黄金像は${forced ? "打ち砕かれた" : "引き倒された"}。`);
   addHistoryEvent(village, {
     title: "黄金像の崩壊",
-    text: `${reason}ため、バッカスの黄金像は${forced ? "打ち砕かれ" : "引き倒され"}、黙示録は中断された。`,
+    text: `${reason}ため、バッカスの黄金像は${forced ? "打ち砕かれ" : "引き倒され"}、黙示録は中断される。`,
     tags: ["バッカス", "黄金像", "黙示録"]
   });
   queueApocalypseModal({
@@ -499,7 +499,7 @@ function completeApocalypse(village) {
   }
   addHistoryEvent(village, {
     title: "四騎士の退却",
-    text: "黙示録の四騎士を退け、村は七つの災厄を越えた。天の怒りと異端の記録は消え去った。",
+    text: "黙示録の四騎士を退け、村は七つの災厄を越える。天の怒りと異端の記録は消え去る。",
     tags: ["黙示録", "四騎士", "七つの災厄"]
   });
   queueApocalypseModal({

@@ -402,7 +402,7 @@ export class RandomEvents {
     recordMythicEventHistory(v, c.type, p, {
       subject: EVENT_SUBJECTS[c.type],
       text: c.type === "thunderboltLove"
-        ? `${p.name}は${c.target.name}に心臓を射貫かれ、一目で恋に落ちた。`
+        ? `${p.name}は${c.target.name}に心臓を射貫かれ、一目で恋に落ちる。`
         : undefined
     });
     return c.type;

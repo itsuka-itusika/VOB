@@ -69,8 +69,8 @@ const ELECTION_COUNTS_TAG_PREFIX = "得票:";
 // 得票のない選挙（無投票）と、同数のくじ引きを見分けるためのタグ。
 const ELECTION_RESULT_TAG_PREFIX = "結果:";
 const ELECTION_RESULT_NOTES = Object.freeze({
-  uncontested: "候補者は1人で、無投票だった。",
-  lottery: "得票が並び、くじ引きで決まった。"
+  uncontested: "候補者は1人で、無投票となる。",
+  lottery: "得票が並び、くじ引きで決まる。"
 });
 
 function getElectionResultNote(event) {
@@ -87,13 +87,13 @@ function getElectionCounts(event) {
 }
 
 const MYTHIC_EVENT_TEXTS = Object.freeze({
-  "狩猟神": personName => `${personName}が狩女神の祝福を受けた。`,
-  "太陽神": personName => `${personName}が太陽神の寵愛を受けた。`,
-  "戦女神": personName => `${personName}が戦女神の啓示を受けた。`,
-  "地母神": personName => `${personName}が地母神の慈愛を受けた。`,
-  goldenRain: personName => `黄金の雨が降り、${personName}に神秘の兆しが宿った。`,
-  strangeGrowthPotion: personName => `怪しい薬により、${personName}の身体が急速に成長した。`,
-  timeRipple: personName => `${personName}は時空のうねりに巻き込まれ、成長した姿で現れた。`
+  "狩猟神": personName => `${personName}が狩女神の祝福を受ける。`,
+  "太陽神": personName => `${personName}が太陽神の寵愛を受ける。`,
+  "戦女神": personName => `${personName}が戦女神の啓示を受ける。`,
+  "地母神": personName => `${personName}が地母神の慈愛を受ける。`,
+  goldenRain: personName => `黄金の雨が降り、${personName}に神秘の兆しが宿る。`,
+  strangeGrowthPotion: personName => `怪しい薬により、${personName}の身体が急速に成長する。`,
+  timeRipple: personName => `${personName}は時空のうねりに巻き込まれ、成長した姿で現れる。`
 });
 
 function ensureHistoryEvents(village) {
@@ -198,7 +198,7 @@ export function recordGameStartHistory(village) {
   addHistoryEvent(village, {
     type: HISTORY_EVENT_TYPES.FOUNDING,
     title: "古き神、開拓村に目覚める",
-    text: "忘れられた豊穣神バッカスが、小さな開拓村に目覚めた。",
+    text: "忘れられた豊穣神バッカスが、小さな開拓村に目覚める。",
     tags: ["開村", "バッカス"],
     dedupeKey: "founding"
   });
@@ -224,7 +224,7 @@ export function recordScaleTitleHistory(village, stage) {
   addHistoryEvent(village, {
     type: HISTORY_EVENT_TYPES.SCALE_TITLE,
     title: `村は「${stage.title}」と呼ばれる`,
-    text: `「${stage.title}」と呼ばれる規模になった。`,
+    text: `「${stage.title}」と呼ばれる規模になる。`,
     tags: ["村の発展", stage.title],
     dedupeKey: `scaleTitle:${stage.index}`
   });
@@ -239,7 +239,7 @@ export function recordHeadmanElectionHistory(village, winner, options = {}) {
     addHistoryEvent(village, {
       type: HISTORY_EVENT_TYPES.HEADMAN_ELECTION,
       title: "里長選挙、不成立",
-      text: "里長選挙は不成立となった。",
+      text: "里長選挙は不成立となる。",
       tags: ["里長選挙", ...countsTags, ...resultTags]
     });
     return;
@@ -250,8 +250,8 @@ export function recordHeadmanElectionHistory(village, winner, options = {}) {
     type: HISTORY_EVENT_TYPES.HEADMAN_ELECTION,
     title: continued ? `${winner.name}、里長を続ける` : `${winner.name}、里長に選ばれる`,
     text: continued
-      ? `${winner.name}が里長を続けることになった。`
-      : `${winner.name}が里長に選ばれた。${counts}`.trim(),
+      ? `${winner.name}が里長を続けることになる。`
+      : `${winner.name}が里長に選ばれる。${counts}`.trim(),
     people: [winner],
     tags: ["里長選挙", ...countsTags, ...resultTags]
   });
@@ -262,8 +262,8 @@ export function recordVillagerJoinHistory(village, person, options = {}) {
   const recruiterName = options.recruiter?.name || "";
   const source = normalizeJoinSource(options.source);
   const text = recruiterName
-    ? `${recruiterName}に${source}され、${person.name}が村に加わった。`
-    : `${person.name}が村に加わった。`;
+    ? `${recruiterName}に${source}され、${person.name}が村に加わる。`
+    : `${person.name}が村に加わる。`;
   addHistoryEvent(village, {
     type: HISTORY_EVENT_TYPES.VILLAGER_JOIN,
     title: `${person.name}、村に加わる`,
@@ -279,7 +279,7 @@ export function recordVillagerLeaveHistory(village, person, options = {}) {
   addHistoryEvent(village, {
     type: HISTORY_EVENT_TYPES.VILLAGER_LEAVE,
     title: `${person.name}、村を去る`,
-    text: `${person.name}が村を去った。`,
+    text: `${person.name}が村を去る。`,
     people: [person],
     tags: ["離村", source]
   });
@@ -292,8 +292,8 @@ export function recordVillagerDeathHistory(village, person, options = {}) {
     type: HISTORY_EVENT_TYPES.VILLAGER_DEATH,
     title: `${person.name}、逝く`,
     text: reason === "死亡"
-      ? `${person.name}が村での生を終えた。`
-      : `${person.name}が${reason}により村での生を終えた。`,
+      ? `${person.name}が村での生を終える。`
+      : `${person.name}が${reason}により村での生を終える。`,
     people: [person],
     tags: ["死別", reason]
   });
@@ -303,8 +303,8 @@ export function recordMarriageHistory(village, personA, personB, options = {}) {
   if (!personA || !personB) return;
   const source = options.source || "婚姻";
   const text = source.includes("奇跡")
-    ? `奇跡の導きにより、${personA.name}と${personB.name}が夫婦となった。`
-    : `${personA.name}と${personB.name}が夫婦となった。`;
+    ? `奇跡の導きにより、${personA.name}と${personB.name}が夫婦となる。`
+    : `${personA.name}と${personB.name}が夫婦となる。`;
   addHistoryEvent(village, {
     type: HISTORY_EVENT_TYPES.MARRIAGE,
     title: `${personA.name}と${personB.name}、夫婦となる`,
@@ -320,7 +320,7 @@ export function recordLoverHistory(village, personA, personB, options = {}) {
   addHistoryEvent(village, {
     type: HISTORY_EVENT_TYPES.LOVER,
     title: `${personA.name}と${personB.name}、恋人となる`,
-    text: `${personA.name}と${personB.name}が恋人となった。`,
+    text: `${personA.name}と${personB.name}が恋人となる。`,
     people: [personA, personB],
     importance: "minor",
     scope: HISTORY_SCOPES.PERSON,
@@ -336,7 +336,7 @@ export function recordSocialRelationHistory(village, personA, personB, relation,
   addHistoryEvent(village, {
     type: HISTORY_EVENT_TYPES.SOCIAL_RELATION,
     title: `${personA.name}と${personB.name}、${relationText}となる`,
-    text: `${personA.name}と${personB.name}が${relationText}になった。`,
+    text: `${personA.name}と${personB.name}が${relationText}になる。`,
     people: [personA, personB],
     importance: "minor",
     scope: HISTORY_SCOPES.PERSON,
@@ -350,7 +350,7 @@ export function recordHobbyAwakeningHistory(village, person, hobby, options = {}
   addHistoryEvent(village, {
     type: HISTORY_EVENT_TYPES.HOBBY_AWAKENING,
     title: `${person.name}、${hobby}に目覚める`,
-    text: `${person.name}が${hobby}の趣味に目覚めた。`,
+    text: `${person.name}が${hobby}の趣味に目覚める。`,
     people: [person],
     importance: "minor",
     scope: HISTORY_SCOPES.PERSON,
@@ -366,10 +366,10 @@ export function recordPregnancyHistory(village, mother, father, options = {}) {
     type: HISTORY_EVENT_TYPES.PREGNANCY,
     title: special ? `${mother.name}、神秘の子を宿す` : `${mother.name}、子を宿す`,
     text: special
-      ? `${mother.name}に神秘の子が宿った。`
+      ? `${mother.name}に神秘の子が宿る。`
       : father
-        ? `${mother.name}が${father.name}との子を身ごもった。`
-        : `${mother.name}が子を身ごもった。`,
+        ? `${mother.name}が${father.name}との子を身ごもる。`
+        : `${mother.name}が子を身ごもる。`,
     people: [mother, father].filter(Boolean),
     importance: "minor",
     scope: HISTORY_SCOPES.PERSON,
@@ -384,8 +384,8 @@ export function recordBirthHistory(village, mother, child, options = {}) {
     type: HISTORY_EVENT_TYPES.BIRTH,
     title: special ? `${child.name}、神秘の子として生まれる` : `${child.name}、生まれる`,
     text: special
-      ? `${mother.name}が${child.name}を産み、神秘の子が生まれた。`
-      : `${mother.name}が${child.name}を産んだ。`,
+      ? `${mother.name}が${child.name}を産み、神秘の子が生まれる。`
+      : `${mother.name}が${child.name}を産む。`,
     people: [mother, options.spouse, child].filter(Boolean),
     tags: special ? ["出生", "神秘の出生"] : ["出生"]
   });
@@ -399,7 +399,7 @@ export function recordAdulthoodHistory(village, person, options = {}) {
   addHistoryEvent(village, {
     type: HISTORY_EVENT_TYPES.ADULTHOOD,
     title: isWolfMaturity ? `${person.name}、成狼になる` : `${person.name}、成人する`,
-    text: isWolfMaturity ? `${person.name}が成狼になった。` : `${person.name}が成人した。`,
+    text: isWolfMaturity ? `${person.name}が成狼になる。` : `${person.name}が成人する。`,
     people: [person],
     importance: "minor",
     scope: HISTORY_SCOPES.PERSON,
@@ -412,13 +412,13 @@ export function recordBodyExchangeHistory(village, personA, personB, options = {
   if (!personA || !personB) return;
   const includesOutsider = !village.villagers?.includes(personA) || !village.villagers?.includes(personB);
   const source = options.source || "奇跡";
-  let text = `奇跡の光によって、${personA.name}と${personB.name}の身体が入れ替わった。`;
+  let text = `奇跡の光によって、${personA.name}と${personB.name}の身体が入れ替わる。`;
   if (source === "落雷") {
-    text = `雷に打たれて、${personA.name}と${personB.name}の身体が入れ替わった。`;
+    text = `雷に打たれて、${personA.name}と${personB.name}の身体が入れ替わる。`;
   } else if (includesOutsider) {
-    text = `村の境が揺らぎ、${personA.name}と${personB.name}の身体が入れ替わった。`;
+    text = `村の境が揺らぎ、${personA.name}と${personB.name}の身体が入れ替わる。`;
   } else {
-    text = `奇跡の光によって、${personA.name}と${personB.name}の身体が入れ替わった。`;
+    text = `奇跡の光によって、${personA.name}と${personB.name}の身体が入れ替わる。`;
   }
   addHistoryEvent(village, {
     type: HISTORY_EVENT_TYPES.BODY_EXCHANGE,
@@ -437,7 +437,7 @@ export function recordDryadFruitHistory(village, person, options = {}) {
   addHistoryEvent(village, {
     type: HISTORY_EVENT_TYPES.DRYAD_FRUIT,
     title: `${person.name}、ドライアドの身体となる`,
-    text: `${person.name}がドライアドの果実を食べ、${previousRace}の身体からドライアドの身体となった。`,
+    text: `${person.name}がドライアドの果実を食べ、${previousRace}の身体からドライアドの身体となる。`,
     people: [person],
     importance: "minor",
     scope: HISTORY_SCOPES.PERSON,
@@ -452,7 +452,7 @@ export function recordCriticalHistory(village, person, options = {}) {
   addHistoryEvent(village, {
     type: HISTORY_EVENT_TYPES.CRITICAL,
     title: `${person.name}、危篤となる`,
-    text: `${person.name}が危篤となった。`,
+    text: `${person.name}が危篤となる。`,
     people: [person],
     importance: "minor",
     scope: HISTORY_SCOPES.PERSON,
@@ -466,7 +466,7 @@ export function recordEpidemicHistory(village, person, options = {}) {
   addHistoryEvent(village, {
     type: HISTORY_EVENT_TYPES.EPIDEMIC,
     title: `${person.name}、病に倒れる`,
-    text: `${person.name}が病に倒れた。`,
+    text: `${person.name}が病に倒れる。`,
     people: [person],
     importance: "minor",
     scope: HISTORY_SCOPES.PERSON,
@@ -478,7 +478,7 @@ export function recordMythicEventHistory(village, eventKey, person, options = {}
   const title = options.title || options.subject || "怪異";
   const personName = person?.name || "村人";
   const textFactory = MYTHIC_EVENT_TEXTS[eventKey];
-  const text = options.text || (textFactory ? textFactory(personName) : `${title}が村に起こった。`);
+  const text = options.text || (textFactory ? textFactory(personName) : `${title}が村に起こる。`);
   addHistoryEvent(village, {
     type: HISTORY_EVENT_TYPES.MYTHIC_EVENT,
     title,
@@ -572,29 +572,29 @@ function getBodyExchangeVillageText(event) {
   const [personA, personB] = event.people;
   const source = getEventSource(event);
   if (source === "落雷" || event.text.includes("落雷")) {
-    return `雷に打たれて、${personA}と${personB}の身体が入れ替わった。`;
+    return `雷に打たれて、${personA}と${personB}の身体が入れ替わる。`;
   }
   if (source === "秘宝") {
-    return `秘宝の力によって、${personA}と${personB}の身体が入れ替わった。`;
+    return `秘宝の力によって、${personA}と${personB}の身体が入れ替わる。`;
   }
   if (event.text.includes("境")) {
-    return `村の境が揺らぎ、${personA}と${personB}の身体が入れ替わった。`;
+    return `村の境が揺らぎ、${personA}と${personB}の身体が入れ替わる。`;
   }
-  return `奇跡の光によって、${personA}と${personB}の身体が入れ替わった。`;
+  return `奇跡の光によって、${personA}と${personB}の身体が入れ替わる。`;
 }
 
 function getBodyExchangePersonalText(event, otherName) {
   const source = getEventSource(event);
   if (source === "落雷" || event.text.includes("落雷")) {
-    return otherName ? `雷に打たれて、${otherName}と身体が入れ替わった。` : cleanRecordText(event.text);
+    return otherName ? `雷に打たれて、${otherName}と身体が入れ替わる。` : cleanRecordText(event.text);
   }
   if (source === "秘宝") {
-    return otherName ? `秘宝の力により、${otherName}と身体が入れ替わった。` : cleanRecordText(event.text);
+    return otherName ? `秘宝の力により、${otherName}と身体が入れ替わる。` : cleanRecordText(event.text);
   }
   if (event.text.includes("境")) {
-    return otherName ? `村の境が揺らぎ、${otherName}と身体が入れ替わった。` : cleanRecordText(event.text);
+    return otherName ? `村の境が揺らぎ、${otherName}と身体が入れ替わる。` : cleanRecordText(event.text);
   }
-  return otherName ? `奇跡の光により、${otherName}と身体が入れ替わった。` : cleanRecordText(event.text);
+  return otherName ? `奇跡の光により、${otherName}と身体が入れ替わる。` : cleanRecordText(event.text);
 }
 
 function getVillageHistoryText(event) {
@@ -603,44 +603,44 @@ function getVillageHistoryText(event) {
     case HISTORY_EVENT_TYPES.ARCHIVE_GAP:
       return "古い記録は散逸し、この時より前の村史は失われている。";
     case HISTORY_EVENT_TYPES.FOUNDING:
-      return "忘れられた豊穣神バッカスが、小さな開拓村に目覚めた。";
+      return "忘れられた豊穣神バッカスが、小さな開拓村に目覚める。";
     case HISTORY_EVENT_TYPES.SCALE_TITLE: {
       const scaleTitle = event.tags[1] || event.title.match(/「(.+)」/)?.[1] || "";
-      return scaleTitle ? `「${scaleTitle}」と呼ばれる規模になった。` : cleanRecordText(event.text || event.title);
+      return scaleTitle ? `「${scaleTitle}」と呼ばれる規模になる。` : cleanRecordText(event.text || event.title);
     }
     case HISTORY_EVENT_TYPES.HEADMAN_ELECTION: {
-      if (!personA) return "里長選挙は不成立となった。";
+      if (!personA) return "里長選挙は不成立となる。";
       const base = event.title.includes("続ける")
-        ? `${personA}が里長を続けることになった。`
-        : `${personA}が里長に選ばれた。`;
+        ? `${personA}が里長を続けることになる。`
+        : `${personA}が里長に選ばれる。`;
       const counts = getElectionCounts(event);
       const note = getElectionResultNote(event);
       return [base, counts ? `得票は${counts}。` : "", note].filter(Boolean).join(" ");
     }
     case HISTORY_EVENT_TYPES.VILLAGER_JOIN: {
       const source = normalizeJoinSource(getEventSource(event));
-      if (personA && personB) return `${personB}の${source}で、${personA}が村に加わった。`;
-      if (personA) return `${personA}が村に加わった。`;
+      if (personA && personB) return `${personB}の${source}で、${personA}が村に加わる。`;
+      if (personA) return `${personA}が村に加わる。`;
       break;
     }
     case HISTORY_EVENT_TYPES.VILLAGER_LEAVE:
-      if (personA) return `${personA}が村を去った。`;
+      if (personA) return `${personA}が村を去る。`;
       break;
     case HISTORY_EVENT_TYPES.VILLAGER_DEATH:
       if (personA) {
         const reason = getEventSource(event);
         return reason && reason !== "死亡"
-          ? `${personA}が${reason}により村での生を終えた。`
-          : `${personA}が村での生を終えた。`;
+          ? `${personA}が${reason}により村での生を終える。`
+          : `${personA}が村での生を終える。`;
       }
       break;
     case HISTORY_EVENT_TYPES.MARRIAGE:
-      if (personA && personB) return `${personA}と${personB}が夫婦となった。`;
+      if (personA && personB) return `${personA}と${personB}が夫婦となる。`;
       break;
     case HISTORY_EVENT_TYPES.BIRTH: {
       const childName = event.people[event.people.length - 1] || "";
-      if (event.tags.includes("神秘の出生") && personA && childName) return `${personA}が${childName}を産み、神秘の子が生まれた。`;
-      if (personA && childName) return `${personA}が${childName}を産んだ。`;
+      if (event.tags.includes("神秘の出生") && personA && childName) return `${personA}が${childName}を産み、神秘の子が生まれる。`;
+      if (personA && childName) return `${personA}が${childName}を産む。`;
       break;
     }
     case HISTORY_EVENT_TYPES.BODY_EXCHANGE:
@@ -651,21 +651,21 @@ function getVillageHistoryText(event) {
     case HISTORY_EVENT_TYPES.MYTHIC_EVENT:
       return cleanRecordText(event.text || event.title);
     case HISTORY_EVENT_TYPES.LOVER:
-      if (personA && personB) return `${personA}と${personB}が恋人となった。`;
+      if (personA && personB) return `${personA}と${personB}が恋人となる。`;
       break;
     case HISTORY_EVENT_TYPES.PREGNANCY:
-      if (personA && personB) return `${personA}が${personB}との子を身ごもった。`;
-      if (personA) return event.text.includes("神秘") ? `${personA}に神秘の子が宿った。` : `${personA}が子を身ごもった。`;
+      if (personA && personB) return `${personA}が${personB}との子を身ごもる。`;
+      if (personA) return event.text.includes("神秘") ? `${personA}に神秘の子が宿る。` : `${personA}が子を身ごもる。`;
       break;
     case HISTORY_EVENT_TYPES.ADULTHOOD:
       if (personA) {
         return event.tags.includes(ADULTHOOD_WOLF_TAG)
-          ? `${personA}が成狼になった。`
-          : `${personA}が成人した。`;
+          ? `${personA}が成狼になる。`
+          : `${personA}が成人する。`;
       }
       break;
     case HISTORY_EVENT_TYPES.CRITICAL:
-      if (personA) return `${personA}が危篤となった。`;
+      if (personA) return `${personA}が危篤となる。`;
       break;
     default:
       break;
@@ -679,56 +679,56 @@ function getPersonalHistoryText(event, personName, personId = null) {
     case HISTORY_EVENT_TYPES.BODY_EXCHANGE:
       return getBodyExchangePersonalText(event, otherName);
     case HISTORY_EVENT_TYPES.DRYAD_FRUIT:
-      return cleanRecordText(event.text).replace(`${personName}が`, "").trim() || "ドライアドの身体となった。";
+      return cleanRecordText(event.text).replace(`${personName}が`, "").trim() || "ドライアドの身体となる。";
     case HISTORY_EVENT_TYPES.MARRIAGE:
-      return otherName ? `${otherName}と夫婦となった。` : cleanRecordText(event.text);
+      return otherName ? `${otherName}と夫婦となる。` : cleanRecordText(event.text);
     case HISTORY_EVENT_TYPES.LOVER:
-      return otherName ? `${otherName}と恋人になった。` : cleanRecordText(event.text);
+      return otherName ? `${otherName}と恋人になる。` : cleanRecordText(event.text);
     case HISTORY_EVENT_TYPES.SOCIAL_RELATION: {
       const relation = event.tags[1] || "関係";
       const hobby = event.tags[2] || "";
       if (relation === "趣味仲間") {
         return otherName
-          ? `${otherName}と${hobby ? `${hobby}の` : ""}趣味仲間になった。`
+          ? `${otherName}と${hobby ? `${hobby}の` : ""}趣味仲間になる。`
           : cleanRecordText(event.text);
       }
-      return otherName ? `${otherName}と${relation}になった。` : cleanRecordText(event.text);
+      return otherName ? `${otherName}と${relation}になる。` : cleanRecordText(event.text);
     }
     case HISTORY_EVENT_TYPES.HOBBY_AWAKENING: {
       const hobby = event.tags[1] || "";
-      return hobby ? `${hobby}の趣味に目覚めた。` : cleanRecordText(event.text);
+      return hobby ? `${hobby}の趣味に目覚める。` : cleanRecordText(event.text);
     }
     case HISTORY_EVENT_TYPES.PREGNANCY: {
       const motherName = event.people[0] || personName;
-      if (!eventPersonAtIs(event, 0, personName, personId) && event.people[0]) return `${motherName}が子を身ごもった。`;
-      return event.text.includes("神秘") ? "神秘の子を身ごもった。" : otherName ? `${otherName}との子を身ごもった。` : "子を身ごもった。";
+      if (!eventPersonAtIs(event, 0, personName, personId) && event.people[0]) return `${motherName}が子を身ごもる。`;
+      return event.text.includes("神秘") ? "神秘の子を身ごもる。" : otherName ? `${otherName}との子を身ごもる。` : "子を身ごもる。";
     }
     case HISTORY_EVENT_TYPES.BIRTH: {
       const motherName = event.people[0] || "";
       const childName = event.people[event.people.length - 1] || "";
-      if (eventPersonAtIs(event, -1, personName, personId) && motherName) return `${motherName}の子として生まれた。`;
-      if (eventPersonAtIs(event, 0, personName, personId) && childName) return `${childName}を産んだ。`;
+      if (eventPersonAtIs(event, -1, personName, personId) && motherName) return `${motherName}の子として生まれる。`;
+      if (eventPersonAtIs(event, 0, personName, personId) && childName) return `${childName}を産む。`;
       return cleanRecordText(event.text);
     }
     case HISTORY_EVENT_TYPES.VILLAGER_JOIN: {
       const source = normalizeJoinSource(getEventSource(event));
       if (eventPersonAtIs(event, 0, personName, personId)) {
-        return otherName ? `${otherName}に${source}され村に加わった。` : "村に加わった。";
+        return otherName ? `${otherName}に${source}され村に加わる。` : "村に加わる。";
       }
-      return event.people[0] ? `${event.people[0]}を${source}し、村に迎えた。` : cleanRecordText(event.text);
+      return event.people[0] ? `${event.people[0]}を${source}し、村に迎える。` : cleanRecordText(event.text);
     }
     case HISTORY_EVENT_TYPES.VILLAGER_LEAVE:
-      return "村を去った。";
+      return "村を去る。";
     case HISTORY_EVENT_TYPES.VILLAGER_DEATH:
       return getEventSource(event) && getEventSource(event) !== "死亡"
-        ? `${getEventSource(event)}により村での生を終えた。`
-        : "村での生を終えた。";
+        ? `${getEventSource(event)}により村での生を終える。`
+        : "村での生を終える。";
     case HISTORY_EVENT_TYPES.ADULTHOOD:
-      return event.tags.includes(ADULTHOOD_WOLF_TAG) ? "成狼になった。" : "成人した。";
+      return event.tags.includes(ADULTHOOD_WOLF_TAG) ? "成狼になる。" : "成人する。";
     case HISTORY_EVENT_TYPES.CRITICAL:
-      return "危篤となった。";
+      return "危篤となる。";
     case HISTORY_EVENT_TYPES.EPIDEMIC:
-      return "病に倒れた。";
+      return "病に倒れる。";
     case HISTORY_EVENT_TYPES.MYTHIC_EVENT:
       return cleanRecordText(event.text).replace(`${personName}が`, "").trim() || cleanRecordText(event.text || event.title);
     default:
@@ -1158,16 +1158,16 @@ export function openPersonalHistoryModal(village, person, options = {}) {
 
 // 過去帳と個人史に載せる、去り方の一文。
 const DEPARTURE_SENTENCES = {
-  "出立の奇跡": "出立の奇跡で村を発った",
-  "絶望": "絶望して村を離れた",
-  "老衰": "老衰により死亡した",
-  "重体の悪化": "重体の悪化により死亡した",
-  "光の柱への曝露": "光の柱への曝露により死亡した"
+  "出立の奇跡": "出立の奇跡で村を発つ",
+  "絶望": "絶望して村を離れる",
+  "老衰": "老衰により死亡する",
+  "重体の悪化": "重体の悪化により死亡する",
+  "光の柱への曝露": "光の柱への曝露により死亡する"
 };
 
 function formatDepartureSentence(departure) {
   const reason = departure?.reason || "離村";
-  const body = DEPARTURE_SENTENCES[reason] || `${reason}により村を去った`;
+  const body = DEPARTURE_SENTENCES[reason] || `${reason}により村を去る`;
   return `${departure?.year ?? "?"}年${departure?.month ?? "?"}月に${body}`;
 }
 
