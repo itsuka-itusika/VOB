@@ -132,6 +132,10 @@
         <button type="button" onclick="clearVillagerFilter()">解除</button>
         <span class="villager-filter-count" id="villagerFilterCount"></span>
       </div>
+      <div class="table-tools">
+        <label><input type="checkbox" id="spiritColumnsToggle" onchange="toggleSpiritColumns(this.checked)"> 精神性別、精神年齢を表示</label>
+        <label><input type="checkbox" id="statColumnsToggle" onchange="toggleStatColumns(this.checked)"> ステータスを非表示</label>
+      </div>
     </div>
     <table id="villagersTable">
       <thead>
@@ -167,10 +171,6 @@
       <tbody>
       </tbody>
     </table>
-    <div class="table-tools">
-      <label><input type="checkbox" id="spiritColumnsToggle" onchange="toggleSpiritColumns(this.checked)"> 精神性別、精神年齢を表示</label>
-      <label><input type="checkbox" id="statColumnsToggle" onchange="toggleStatColumns(this.checked)"> ステータスを非表示</label>
-    </div>
   </section>
   <section id="captivesSection" style="display:none;">
     <h2>捕虜一覧</h2>
