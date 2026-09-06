@@ -194,6 +194,14 @@ export const WISH_DEFINITIONS = [
     }
   },
   {
+    id: "heal_aftereffect",
+    name: "傷のない身体に戻りたい",
+    startLine: () => "襲撃で受けた傷が、今もこの身に残っている。傷を負う前の身体に戻りたい。",
+    completionLines: {
+      healed: () => "この身体には、もう襲撃の傷が残っていない。傷を負う前の自分に戻れた。"
+    }
+  },
+  {
     id: "grow_up",
     name: "早くおとなになりたい",
     startLine: () => "はやくおとなになりたい。みんなとおなじように、できることをふやしたいな。",

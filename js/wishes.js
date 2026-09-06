@@ -24,6 +24,8 @@ const WISH_OVERLAY_ID = "wishOverlay";
 const WISH_COMPLETE_MODAL_ID = "wishCompleteModal";
 const WISH_COMPLETE_OVERLAY_ID = "wishCompleteOverlay";
 const CHILD_BODY_TRAITS = new Set(["赤子", "幼児", "少年", "少女"]);
+// 襲撃で残る後遺症の肉体特性。これらが身体から消えたときに願望が叶う。
+const RAID_AFTEREFFECT_BODY_TRAITS = new Set(["隻腕", "隻眼", "古傷"]);
 // 願望の能力条件は、狂乱や火星の加護のような当月限りの増減を除いた永続値で見る。
 const stat = (person, key) => getPermanentStat(person, key);
 const MONSTER_RACES = new Set(["ゴブリン", "ハーピー", "スフィンクス", "ミノタウロス", "キュクロプス", "サイクロプス"]);
@@ -388,6 +390,9 @@ function getWishCandidates(village) {
 
     if (stat(requester, "vit") <= 13) candidates.push({ id: "be_healthy", requester });
     if (stat(requester, "str") <= 13) candidates.push({ id: "be_strong", requester });
+    if (hasAnyBodyTrait(requester, RAID_AFTEREFFECT_BODY_TRAITS)) {
+      candidates.push({ id: "heal_aftereffect", requester });
+    }
     if (hasMindTrait(requester, "萌芽") && Number(requester.bodyAge) <= 14) {
       candidates.push({ id: "grow_up", requester });
     }
@@ -451,6 +456,9 @@ function getWishCompletionReason(wish, requester, villagers, context = {}) {
       return stat(requester, "vit") >= 20 ? "healthy" : null;
     case "be_strong":
       return stat(requester, "str") >= 20 ? "strong" : null;
+    case "heal_aftereffect":
+      // 後遺症は自然には治らない。肉体交換などで身体そのものが変わったときに叶う。
+      return hasAnyBodyTrait(requester, RAID_AFTEREFFECT_BODY_TRAITS) ? null : "healed";
     case "grow_up":
     case "be_full_fledged":
       return Number(requester.bodyAge) >= 16 ? "adultBody" : null;
