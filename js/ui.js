@@ -351,8 +351,8 @@ function buildWarningMessages(village) {
   if (isApocalypseActive(village)) {
     const apocalypseStage = Math.min(7, Math.max(1, Math.trunc(Number(village.apocalypseStage) || 0)));
     warnings.push({
-      level: "danger",
-      text: `黙示録【第${apocalypseStage}の災厄】<br>「建築」から黄金像を破壊すれば黙示録は中断されます。`
+      level: "warning",
+      text: `黙示録【第${apocalypseStage}の災厄】「建築」から黄金像を破壊すれば中断されます。`
     });
   }
 
