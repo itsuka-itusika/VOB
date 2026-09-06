@@ -339,7 +339,7 @@ function buildWarningMessages(village) {
 
   if (severelyInjuredVillagers.length > 0) {
     warnings.push({
-      level: "warning",
+      level: "danger",
       text: `${formatWarningNames(severelyInjuredVillagers)}が重体です。翌月、危篤になる可能性があります。`
     });
   }
