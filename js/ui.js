@@ -310,10 +310,19 @@ function buildWarningMessages(village) {
   const epidemicVillagers = villagers.filter(person => {
     return Array.isArray(person.bodyTraits) && person.bodyTraits.includes("疫病");
   });
+  const criticalVillagers = activeVillagers.filter(person => hasTrait(person, "危篤"));
+  const severelyInjuredVillagers = activeVillagers.filter(person => hasTrait(person, "重体"));
   const noActionCount = activeVillagers.filter(isUnassignedActionVillager).length;
   const assemblyHallBuilt = hasActiveBuildingFlag(village, "hasAssemblyHall", "assemblyHall");
 
   // 村人を失う警告は、他のどの警告よりも先に目に入れる。
+  if (criticalVillagers.length > 0) {
+    warnings.push({
+      level: "danger",
+      text: `${formatWarningNames(criticalVillagers)}が危篤です。月末に死亡します。`
+    });
+  }
+
   if (despairingVillagers.length > 0) {
     warnings.push({
       level: "danger",
@@ -325,6 +334,13 @@ function buildWarningMessages(village) {
     warnings.push({
       level: "danger",
       text: `${formatWarningNames(disappointedVillagers)}が失望しています。幸福度を回復しないまま次の月を迎えると絶望します。`
+    });
+  }
+
+  if (severelyInjuredVillagers.length > 0) {
+    warnings.push({
+      level: "warning",
+      text: `${formatWarningNames(severelyInjuredVillagers)}が重体です。翌月、危篤になる可能性があります。`
     });
   }
 
