@@ -3,6 +3,8 @@ import { createRandomVisitorOfType } from "./createVillagers.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { recordDryadFruitHistory, recordMarriageHistory } from "./history.js";
 import {
+  SERPENT_STAFF_BODY_TRAITS,
+  SERPENT_STAFF_MIND_TRAITS,
   formatMiracleStyleOptionLabel,
   openExchangeModal,
   openPanFluteExchangeModal,
@@ -25,10 +27,10 @@ import { addAcquiredStat, syncEffectiveStats } from "./domain/statLayers.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { MESSENGER_PASS_SECRET_TREASURE_ID } from "./data/tutorialData.js";
 import { getCaptives } from "./captives.js";
-import { DESPAIR_TRAIT, DISAPPOINTMENT_TRAIT } from "./domain/despair.js";
 import { getDialogueLine } from "./dialogue/dialogueEngine.js";
 import { getActiveVillagers, getVillagersIncludingSaltPillar } from "./domain/apocalypseRules.js";
 import { FOUR_LEGGED_TRAIT } from "./domain/speciesTraits.js";
+import { checkWishCompletion } from "./wishes.js";
 
 const SEASON_TRAITS_TO_REMOVE = ["夏", "秋", "冬", "冷夏", "飛蝗", "厳冬"];
 const BAD_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "凍え", "疫病", "産褥", "危篤"];
@@ -443,13 +445,14 @@ export const SECRET_TREASURES = [
   {
     id: "serpent_staff",
     name: "蛇の巻き付いた杖",
-    desc: "指定した村人1名の負傷・重体・産褥・疫病・危篤・失望・絶望などの状態異常を解除し、体力・メンタルが33以下なら34まで回復する。",
+    desc: "指定した村人1名の負傷・重体・産褥・疫病・危篤・失望・絶望などの状態異常と、襲撃の後遺症である隻腕・隻眼・古傷・トラウマを解除し、体力・メンタルが33以下なら34まで回復する。",
     sellPrice: SECRET_TREASURE_SELL_PRICES.serpent_staff,
     target: "villager",
     targetDetailKind: "serpentStaff",
     use: (village, target) => {
       const recovered = restoreBadStatus(target, village, {
-        includeMindTraits: ["心労", "抑鬱", DISAPPOINTMENT_TRAIT, DESPAIR_TRAIT]
+        includeBodyTraits: SERPENT_STAFF_BODY_TRAITS,
+        includeMindTraits: SERPENT_STAFF_MIND_TRAITS
       });
       const vitalRecovered = restoreLowVitals(target);
       if (vitalRecovered.length) refreshJobTable(target, village);
@@ -459,6 +462,8 @@ export const SECRET_TREASURES = [
       ].filter(Boolean);
       village.log(`【秘宝】蛇の巻き付いた杖を${target.name}に使いました${details.length ? `。${details.join("、")}` : ""}`);
       showSecretTreasureResult(village, "蛇の巻き付いた杖", `${target.name}に杖の力が巡りました。`, [target]);
+      // 後遺症が癒えた月に達成を見る。肉体交換で叶えた場合と達成セリフを分けるため、癒した相手を渡す。
+      checkWishCompletion(village, { healedIds: [target.id] });
     }
   },
   {

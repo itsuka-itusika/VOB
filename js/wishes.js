@@ -457,8 +457,12 @@ function getWishCompletionReason(wish, requester, villagers, context = {}) {
     case "be_strong":
       return stat(requester, "str") >= 20 ? "strong" : null;
     case "heal_aftereffect":
-      // 後遺症は自然には治らない。肉体交換などで身体そのものが変わったときに叶う。
-      return hasAnyBodyTrait(requester, RAID_AFTEREFFECT_BODY_TRAITS) ? null : "healed";
+      if (hasAnyBodyTrait(requester, RAID_AFTEREFFECT_BODY_TRAITS)) return null;
+      // 後遺症を癒せるのは蛇の巻き付いた杖だけ。その場で healedIds が渡り、
+      // 渡らない場合は肉体交換で身体そのものが替わって叶ったことになる。
+      return Array.isArray(context.healedIds) && context.healedIds.includes(requester.id)
+        ? "healed"
+        : "exchangedBody";
     case "grow_up":
     case "be_full_fledged":
       return Number(requester.bodyAge) >= 16 ? "adultBody" : null;

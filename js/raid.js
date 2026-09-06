@@ -1154,7 +1154,7 @@ const RAID_AFTEREFFECT_TRAITS = [
 
 /**
  * 高難易度では、どの襲撃でも終了時に体力0で倒れている村人ごとに
- * 後遺症が残るかを引く。後遺症は治らない。
+ * 後遺症が残るかを引く。後遺症を癒せるのは蛇の巻き付いた杖だけ。
  * 戦闘の負傷離脱も、迎撃失敗ペナルティの体力0も対象。
  */
 function applyHardModeAftereffects(village) {

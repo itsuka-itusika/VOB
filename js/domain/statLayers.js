@@ -52,7 +52,7 @@ const VILLAGE_ROLE_ADDS = Object.freeze({
 
 const TEMP_BODY_TRAIT_EFFECTS = Object.freeze({
   "飢餓": { mul: { str: 0.5, vit: 0.5, dex: 0.5 } },
-  // 襲撃の後遺症。治らないが、特性がある間だけ実効値へ掛かる。
+  // 襲撃の後遺症。特性がある間だけ実効値へ掛かる。
   "隻腕": { mul: { str: 0.5 } },
   "隻眼": { mul: { dex: 0.5 } },
   "凍え": { mul: { str: 0.8, vit: 0.8, dex: 0.8 } },

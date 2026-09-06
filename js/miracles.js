@@ -302,8 +302,9 @@ const HEAL_MIRACLE_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢�
 const GOBLET_MIRACLE_MIND_TRAITS = ["心労", "抑鬱", DISAPPOINTMENT_TRAIT, DESPAIR_TRAIT];
 const NECTAR_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "疫病"];
 const NECTAR_MIND_TRAITS = ["心労", "抑鬱"];
-const SERPENT_STAFF_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "疫病", "産褥", "凍え", "危篤"];
-const SERPENT_STAFF_MIND_TRAITS = ["心労", "抑鬱", DISAPPOINTMENT_TRAIT, DESPAIR_TRAIT];
+// 蛇の巻き付いた杖が解除する状態異常。襲撃の後遺症まで癒せるのはこの秘宝だけ。
+export const SERPENT_STAFF_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "疫病", "産褥", "凍え", "危篤", "隻腕", "隻眼", "古傷"];
+export const SERPENT_STAFF_MIND_TRAITS = ["心労", "抑鬱", DISAPPOINTMENT_TRAIT, DESPAIR_TRAIT, "トラウマ"];
 
 const MIRACLE_CONDITION_SORTS = {
   body: { traits: HEAL_MIRACLE_BODY_TRAITS, traitKey: "bodyTraits", statKey: "hp", statLabel: "体力" },
