@@ -291,6 +291,10 @@ function formatWarningNames(people) {
   return people.length > 4 ? `${names}ほか${people.length - 4}人` : names;
 }
 
+// 警告欄の段階。数字が小さいほど上に出す。
+const WARNING_LEVEL_ORDER = Object.freeze({ danger: 0, warning: 1, request: 2, tutorial: 3 });
+const getWarningLevelRank = level => WARNING_LEVEL_ORDER[level] ?? Object.keys(WARNING_LEVEL_ORDER).length;
+
 function buildWarningMessages(village) {
   const warnings = [];
   const villagers = Array.isArray(village.villagers) ? village.villagers : [];
@@ -460,7 +464,11 @@ function buildWarningMessages(village) {
   warnings.push(...getWishWarnings(village));
   warnings.push(...getTutorialWarnings(village));
 
-  return warnings;
+  // 窓は数行しか見えないため、段階の重い順に並べる。同じ段階の中では追加した順を保つ。
+  return warnings
+    .map((item, index) => ({ item, index }))
+    .sort((a, b) => getWarningLevelRank(a.item.level) - getWarningLevelRank(b.item.level) || a.index - b.index)
+    .map(({ item }) => item);
 }
 
 function updateMessageWindow(village) {
