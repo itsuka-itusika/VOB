@@ -313,6 +313,21 @@ function buildWarningMessages(village) {
   const noActionCount = activeVillagers.filter(isUnassignedActionVillager).length;
   const assemblyHallBuilt = hasActiveBuildingFlag(village, "hasAssemblyHall", "assemblyHall");
 
+  // 村人を失う警告は、他のどの警告よりも先に目に入れる。
+  if (despairingVillagers.length > 0) {
+    warnings.push({
+      level: "danger",
+      text: `${formatWarningNames(despairingVillagers)}が絶望しています。奇跡や秘宝で解除しないまま次の月を迎えると村を去ります。`
+    });
+  }
+
+  if (disappointedVillagers.length > 0) {
+    warnings.push({
+      level: "danger",
+      text: `${formatWarningNames(disappointedVillagers)}が失望しています。幸福度を回復しないまま次の月を迎えると絶望します。`
+    });
+  }
+
   if (isApocalypseActive(village)) {
     const apocalypseStage = Math.min(7, Math.max(1, Math.trunc(Number(village.apocalypseStage) || 0)));
     warnings.push({
@@ -393,20 +408,6 @@ function buildWarningMessages(village) {
     warnings.push({
       level: "danger",
       text: "疫病の村人がいます。治療しない場合<br>翌月感染が広がる可能性があります。"
-    });
-  }
-
-  if (despairingVillagers.length > 0) {
-    warnings.push({
-      level: "danger",
-      text: `${formatWarningNames(despairingVillagers)}が絶望しています。奇跡や秘宝で解除しないまま次の月を迎えると村を去ります。`
-    });
-  }
-
-  if (disappointedVillagers.length > 0) {
-    warnings.push({
-      level: "warning",
-      text: `${formatWarningNames(disappointedVillagers)}が失望しています。幸福度を回復しないまま次の月を迎えると絶望します。`
     });
   }
 
