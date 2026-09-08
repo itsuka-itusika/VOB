@@ -1,13 +1,17 @@
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { addDivineMight } from "./divineMight.js";
-import { TUTORIAL_ALL_COMPLETE_REWARD, TUTORIAL_TASKS } from "./data/tutorialData.js";
+import { TUTORIAL_ALL_COMPLETE_REWARD, TUTORIAL_START_MESSAGE, TUTORIAL_TASKS } from "./data/tutorialData.js";
 import { clampValue } from "./util.js";
 
 const TUTORIAL_COMPLETION_MODAL_ID = "tutorialCompletionModal";
 const TUTORIAL_COMPLETION_OVERLAY_ID = "tutorialCompletionOverlay";
 const TUTORIAL_ALL_COMPLETE_MODAL_ID = "tutorialAllCompleteModal";
 const TUTORIAL_ALL_COMPLETE_OVERLAY_ID = "tutorialAllCompleteOverlay";
+const TUTORIAL_START_MODAL_ID = "tutorialStartModal";
+const TUTORIAL_START_OVERLAY_ID = "tutorialStartOverlay";
 const PRIORITY_MODAL_SELECTORS = [
+  // オープニングの上には出さない。暗転が明けてから最初の1枚を見せる。
+  "#openingScreen",
   "#actionPhaseModal",
   "#seasonChangeDialog",
   "#festivalModal",
@@ -180,11 +184,18 @@ function showNextTutorialModal() {
 
   stopWaitingForPriorityModals();
   const item = modalQueue.shift();
-  if (item.type === "allComplete") {
+  if (item.type === "start") {
+    showTutorialStartModal(item.village);
+  } else if (item.type === "allComplete") {
     showTutorialAllCompleteModal(item.village);
   } else {
     showTutorialCompletionModal(item.village, item.taskId);
   }
+}
+
+/** ゲーム開始直後に、最初のチュートリアル項目へ誘導する1枚を予約する。 */
+export function queueTutorialStartModal(village) {
+  queueTutorialModal(village, null, "start");
 }
 
 function buildChecklistHtml(village) {
@@ -196,6 +207,46 @@ function buildChecklistHtml(village) {
       <span class="tutorial-checklist-status">${state.completed[task.id] ? "達成済み" : "未達成"}</span>
     </label>
   `).join("");
+}
+
+function showTutorialStartModal(village) {
+  const firstTask = TUTORIAL_TASKS[0];
+  if (!firstTask) return;
+
+  removeTutorialModals();
+  modalOpen = true;
+
+  const overlay = document.createElement("div");
+  overlay.id = TUTORIAL_START_OVERLAY_ID;
+  overlay.className = "tutorial-completion-overlay";
+
+  const modal = document.createElement("div");
+  modal.id = TUTORIAL_START_MODAL_ID;
+  modal.className = "effect-result-modal tutorial-completion-modal";
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-modal", "true");
+  // 見出しを置かない代わりに、読み上げ用の名前を属性で持たせる。
+  modal.setAttribute("aria-label", "チュートリアル開始");
+  modal.innerHTML = `
+    <div class="tutorial-completion-body">
+      <p class="tutorial-completion-description">${escapeHtml(TUTORIAL_START_MESSAGE)}</p>
+      <div class="tutorial-start-goal">
+        <div class="tutorial-start-goal-label">最初の目標</div>
+        <div class="tutorial-start-goal-title">${escapeHtml(firstTask.title)}</div>
+        <div class="tutorial-start-goal-condition">${escapeHtml(firstTask.conditionText)}</div>
+        <div class="tutorial-start-goal-reward">報酬: ${escapeHtml(firstTask.rewardText)}</div>
+      </div>
+    </div>
+    <div class="tutorial-checklist">
+      <div class="tutorial-checklist-heading">チュートリアル一覧</div>
+      ${buildChecklistHtml(village)}
+    </div>
+    <div class="tutorial-completion-buttons">
+      <button type="button" data-close-tutorial-modal>はじめる</button>
+    </div>
+  `;
+
+  mountTutorialModal(overlay, modal);
 }
 
 function showTutorialCompletionModal(village, taskId) {
@@ -269,7 +320,9 @@ function removeTutorialModals() {
     TUTORIAL_COMPLETION_OVERLAY_ID,
     TUTORIAL_COMPLETION_MODAL_ID,
     TUTORIAL_ALL_COMPLETE_OVERLAY_ID,
-    TUTORIAL_ALL_COMPLETE_MODAL_ID
+    TUTORIAL_ALL_COMPLETE_MODAL_ID,
+    TUTORIAL_START_OVERLAY_ID,
+    TUTORIAL_START_MODAL_ID
   ].forEach(id => document.getElementById(id)?.remove());
 }
 

@@ -1,6 +1,9 @@
 export const MESSENGER_PASS_SECRET_TREASURE_ID = "messenger_pass";
 export const NECTAR_SECRET_TREASURE_ID = "nectar";
 
+// ゲーム開始直後、最初の項目へ誘導するモーダルの導入文。
+export const TUTORIAL_START_MESSAGE = "村を持ったからには、やることがある。難しい話じゃない、順に教えてやるから一つずつ片付けろ。";
+
 export const TUTORIAL_ALL_COMPLETE_REWARD = {
   rewardText: "秘宝「伝令神の手形」、秘宝「ネクタル」",
   reward: { secretTreasureIds: [MESSENGER_PASS_SECRET_TREASURE_ID, NECTAR_SECRET_TREASURE_ID] }

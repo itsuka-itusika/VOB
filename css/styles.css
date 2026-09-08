@@ -2742,6 +2742,32 @@ section h2 {
 .tutorial-completion-reward {
   font-weight: bold;
 }
+.tutorial-start-goal {
+  margin: 12px 0 4px;
+  padding: 12px 14px;
+  background: #faf6ee;
+  border: 1px solid #b8a36d;
+  border-left: 5px solid #9c7a39;
+  border-radius: 6px;
+}
+.tutorial-start-goal-label {
+  margin-bottom: 4px;
+  color: #8a6a30;
+  font-size: 0.85rem;
+}
+.tutorial-start-goal-title {
+  margin-bottom: 6px;
+  color: #5d3d12;
+  font-size: 1.15rem;
+  font-weight: bold;
+}
+.tutorial-start-goal-condition {
+  margin-bottom: 6px;
+  line-height: 1.55;
+}
+.tutorial-start-goal-reward {
+  font-weight: bold;
+}
 .tutorial-checklist {
   margin: 0 20px 14px;
   padding: 12px;

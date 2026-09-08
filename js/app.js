@@ -36,6 +36,7 @@ import { resetVillagerFilter, updateUI } from "./ui.js";
 import { getCaptives } from "./captives.js";
 import { setBalanceSimulationOptions } from "./balance/simulationOptions.js";
 import { enterGame, initOpeningScreen, replayOpeningStory } from "./openingScreen.js";
+import { queueTutorialStartModal } from "./tutorial.js";
 import { getVillageScaleStage, getVillageScaleTitle, VILLAGE_SCALE_STAGES } from "./villageScale.js";
 import { DIVINE_MIGHT_LEVELS } from "./divineMight.js";
 import { resumePendingHeresyInquisition } from "./heresyInquisition.js";
@@ -472,7 +473,11 @@ initOpeningScreen({
   onLoadLocal: loadFromLocalStorage,
   onLoadJson: openJsonLoadDialog,
   // 「はじめから」の開始時だけ、設定の難易度を新しい村へ適用する。
-  onNewGame: () => { theVillage.difficulty = getStartingDifficulty(); },
+  // 開始モーダルはここで予約し、オープニングの暗転が明けてから表示される。
+  onNewGame: () => {
+    theVillage.difficulty = getStartingDifficulty();
+    queueTutorialStartModal(theVillage);
+  },
   onOpenSettings: openGameSettingsModal,
   getLocalSaveLabel: () => {
     const summary = getLocalSaveSummary();
