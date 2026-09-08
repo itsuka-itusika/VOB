@@ -956,7 +956,7 @@ export function assignBodyMindTraits(v) {
 
   // 非排他特性
   const nonExclusiveTraits = [
-    { name: "ニート", condition: (v)=>(v.ind<=12), chance:0.3, target:"mind" },
+    { name: "ニート", condition: (v)=>(v.ind<=10), chance:0.3, target:"mind" },
     { name: "ワーカホリック", condition: (v)=>(v.ind>=23), chance:0.2, target:"mind" },
     { name: "澄んだ声", condition: (v)=>(v.bodySex==="女" && v.chr>=25), chance:0.1, target:"body" },
     { name: "通る声", condition: (v)=>(v.chr>=20 && v.cou>=20 && v.eth>=20), chance:0.3, target:"body" },
