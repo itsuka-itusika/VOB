@@ -700,7 +700,7 @@ export function initRandomParams(v) {
     v.mag = randNormalInRange(5, 25);
     v.chr = randNormalInRange(6, 25);
     v.int = randNormalInRange(5, 25);
-    v.ind = randNormalInRange(5, 25);
+    v.ind = randNormalInRange(8, 25);
     let me = Math.min(25, Math.floor(v.ind * 1.5));
     if (me < 5) me = 5;
     v.eth = randNormalInRange(5, me);
@@ -715,7 +715,7 @@ export function initRandomParams(v) {
     v.mag = randNormalInRange(15, 27);
     v.chr = randNormalInRange(15, 27);
     v.int = randNormalInRange(5, 25);
-    v.ind = randNormalInRange(5, 25);
+    v.ind = randNormalInRange(8, 25);
     let me = Math.min(30, Math.floor(v.ind * 1.8));
     if (me < 8) me = 8;
     v.eth = randNormalInRange(8, me);
@@ -840,12 +840,12 @@ const MIND_TRAIT_DEFINITIONS = [
     { name: "残忍", condition: (v) => v.eth <= 4 && v.cou >= 18 },
     { name: "酷薄", condition: (v) => v.eth <= 4 && v.int >= 16 },
     { name: "昼行燈", condition: (v) => v.int >= 20 && v.ind <= 14 && v.cou >= 20 },
-    { name: "戦闘狂", condition: (v) => v.str >= 20 && v.ind <= 12 && v.cou >= 22 },
+    { name: "戦闘狂", condition: (v) => v.str >= 20 && v.ind <= 14 && v.cou >= 22 },
     { name: "根暗", condition: (v) => v.chr <= 14 && v.sexdr <= 14 && v.cou <= 15 },
     { name: "無気力", condition: (v) => v.int <= 14 && v.ind <= 14 && v.eth <= 14 && v.cou <= 14 && v.sexdr <= 14 },
     { name: "マジメ", condition: (v) => v.ind >= 20 && v.eth >= 16 && v.sexdr <= 16 },
-    { name: "怠け者", condition: (v) => ["int","eth","cou","sexdr"].every(param => v[param] <= 18) && v.ind <= 11 },
-    { name: "ろくでなし", condition: (v) => v.bodySex === "男" && v.ind <= 12 && v.eth <= 12 },
+    { name: "怠け者", condition: (v) => ["int","eth","cou","sexdr"].every(param => v[param] <= 18) && v.ind <= 13 },
+    { name: "ろくでなし", condition: (v) => v.bodySex === "男" && v.ind <= 14 && v.eth <= 12 },
     { name: "ワル", condition: (v) => v.bodySex === "男" && v.eth <= 9 && v.cou >= 16 },
     { name: "インテリヤクザ", condition: (v) => v.bodySex === "男" && v.eth <= 9 && v.ind >= 20 },
     { name: "守銭奴", condition: (v) => v.eth <= 9 && v.ind >= 20 },
@@ -883,7 +883,7 @@ const MIND_TRAIT_DEFINITIONS = [
     { name: "綺麗好き", condition: (v) => v.eth >= 18 && v.sexdr <= 16 },
     { name: "暴れ者", condition: (v) => v.bodySex === "男" && v.str >= 20 && v.eth <= 12 && v.cou >= 20 },
     { name: "好戦的", condition: (v) => v.str >= 20 && v.eth <= 16 && v.cou >= 20 },
-    { name: "問題児", condition: (v) => v.bodySex === "男" && v.ind <= 12 && v.eth <= 12 },
+    { name: "問題児", condition: (v) => v.bodySex === "男" && v.ind <= 14 && v.eth <= 12 },
     { name: "草食系", condition: (v) => v.bodySex === "男" && v.sexdr <= 12 },
     { name: "スケベ", condition: (v) => v.bodySex === "男" && v.int <= 18 && v.eth <= 16 && v.sexdr >= 20 },
     { name: "遊び人", condition: (v) => v.bodySex === "男" && v.chr >= 18 && v.eth <= 12 && v.sexdr >= 20 },
@@ -895,7 +895,7 @@ const MIND_TRAIT_DEFINITIONS = [
     { name: "惚れっぽい", condition: (v) => v.bodySex === "女" && v.int <= 18 && v.chr <= 23 && v.sexdr >= 19 },
     { name: "惚れっぽい", condition: (v) => v.bodySex === "男" && v.sexdr <= 24 && v.sexdr >= 19 },
     { name: "愚直", condition: (v) => v.int <= 10 && v.ind >= 20 },
-    { name: "夢想家", condition: (v) => v.int >= 18 && v.chr >= 16 && v.ind <= 12 },
+    { name: "夢想家", condition: (v) => v.int >= 18 && v.chr >= 16 && v.ind <= 14 },
     { name: "堅物", condition: (v) => v.ind >= 18 && v.eth >= 20 && v.sexdr <= 15 },
     { name: "ストイック", condition: (v) => v.ind >= 20 && v.eth >= 16 && v.sexdr <= 15 },
     { name: "仕事好き", condition: (v) => v.ind >= 23},
@@ -951,7 +951,7 @@ export function assignBodyMindTraits(v) {
 
   // 非排他特性
   const nonExclusiveTraits = [
-    { name: "ニート", condition: (v)=>(v.ind<=10), chance:0.3, target:"mind" },
+    { name: "ニート", condition: (v)=>(v.ind<=12), chance:0.3, target:"mind" },
     { name: "ワーカホリック", condition: (v)=>(v.ind>=23), chance:0.2, target:"mind" },
     { name: "澄んだ声", condition: (v)=>(v.bodySex==="女" && v.chr>=25), chance:0.1, target:"body" },
     { name: "通る声", condition: (v)=>(v.chr>=20 && v.cou>=20 && v.eth>=20), chance:0.3, target:"body" },
