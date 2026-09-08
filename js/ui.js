@@ -433,7 +433,7 @@ function buildWarningMessages(village) {
 
   if (noActionCount > 0) {
     warnings.push({
-      level: "warning",
+      level: "danger",
       text: `行動が未設定の村人が${noActionCount}人います。必要なら自動割り振りを使えます。`
     });
   }
