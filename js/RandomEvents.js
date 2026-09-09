@@ -13,7 +13,7 @@ import {
   scheduleGoldenRainPregnancy
 } from "./reproduction.js";
 import { refreshJobTable } from "./domain/jobTables.js";
-import { isOriginalBodyOwner } from "./domain/portraitHistory.js";
+import { isOriginalBodyPortrait } from "./domain/portraitHistory.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { hasVillageTrait } from "./domain/jobMath.js";
@@ -333,7 +333,7 @@ export class RandomEvents {
     // 時空のうねりは、幼い精神を持ち、肉体交換をしていない村人だけに起こる。
     const timeRippleCandidates = getActiveVillagers(v).filter(person =>
       Number(person.spiritAge) <= 9 &&
-      isOriginalBodyOwner(person.name, person.bodyOwner) &&
+      isOriginalBodyPortrait(person) &&
       !hasMindTrait(person, "野生"));
     if (timeRippleCandidates.length > 0) {
       cands.push({ type: "timeRipple", vill: this.randChoice(timeRippleCandidates) });

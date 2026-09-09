@@ -873,13 +873,17 @@ function formatRelationshipGroups(person, category) {
     .filter(item => item?.category === category && item.prefix !== "村設立の同志")
     .forEach(item => {
       if (!groups.has(item.prefix)) groups.set(item.prefix, new Map());
-      if (item.target) groups.get(item.prefix).set(item.target, item.targetId);
+      // 同じ名の別人が並ぶことがあるため、IDでまとめる。旧データはIDが無いので名前で代える。
+      if (item.target) groups.get(item.prefix).set(item.targetId ?? item.target, item);
     });
   const entries = [...groups.entries()];
   if (category === "social") {
     entries.sort((a, b) => getSocialRelationOrder(a[0]) - getSocialRelationOrder(b[0]));
   }
-  return entries.map(([prefix, targets]) => ({ prefix, targets: [...targets.entries()] }));
+  return entries.map(([prefix, targets]) => ({
+    prefix,
+    targets: [...targets.values()].map(item => [item.target, item.targetId])
+  }));
 }
 
 function renderRelationshipLines(village, person, category) {

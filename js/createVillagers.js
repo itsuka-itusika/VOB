@@ -358,19 +358,24 @@ function addPersonNames(set, person) {
   addReservedName(set, person?.givenName);
 }
 
+/** 今の村にいる者（村人・訪問者・襲撃者・捕虜）の名前。村を去れば再び使える。 */
 export function collectReservedNames(village, extraNames = []) {
   const reserved = new Set();
   Array.from(extraNames || []).forEach(name => addReservedName(reserved, name));
   if (!village) return reserved;
 
-  // 永久に予約する側。個人史・村史・続柄に名前が残るため再利用しない。
-  (Array.isArray(village.villagers) ? village.villagers : []).forEach(person => addPersonNames(reserved, person));
-  (Array.isArray(village.departedVillagers) ? village.departedVillagers : []).forEach(person => addPersonNames(reserved, person));
-  // 村にいる間だけ占有する側。
-  (Array.isArray(village.visitors) ? village.visitors : []).forEach(person => addPersonNames(reserved, person));
-  (Array.isArray(village.raidEnemies) ? village.raidEnemies : []).forEach(person => addPersonNames(reserved, person));
-  (Array.isArray(village.captives) ? village.captives : []).forEach(person => addPersonNames(reserved, person));
+  ["villagers", "visitors", "raidEnemies", "captives"].forEach(key => {
+    (Array.isArray(village[key]) ? village[key] : []).forEach(person => addPersonNames(reserved, person));
+  });
   return reserved;
+}
+
+/** 過去帳に残る名前。人物はIDで結ぶため使い回せるが、未使用の名前がある間は避ける。 */
+function collectDepartedNames(village) {
+  const departed = new Set();
+  (Array.isArray(village?.departedVillagers) ? village.departedVillagers : [])
+    .forEach(person => addPersonNames(departed, person));
+  return departed;
 }
 
 /** 命名済みの名前かどうか。プレイヤー命名の重複確認に使う。 */
@@ -673,6 +678,9 @@ export function createRandomVillager({ sex, minAge, maxAge, params = {}, ranges 
   return vill;
 }
 
+// 未使用の名前がこの数以下になったら、過去帳の名前も候補に含める。
+const DEPARTED_NAME_REUSE_THRESHOLD = 9;
+
 /**
  * ランダム名前生成(男/女)を修正
  */
@@ -682,12 +690,22 @@ export function generateRandomName(sex, options = {}) {
   // 専用の一覧が尽きた種族は、連結名より先に一般の一覧から選び直す。
   const fallbackList = getFallbackNameList(sex, listOptions);
   const reservedNames = collectReservedNames(options.village, options.existingNames);
-  for (const list of [nameList, fallbackList]) {
-    if (!list) continue;
+  const departedNames = collectDepartedNames(options.village);
+  const lists = [nameList, fallbackList].filter(Boolean);
+
+  // 未使用の名前がある間はそちらを優先する。専用の一覧、一般の一覧の順。
+  const unusedByList = lists.map(list => list.filter(name => !reservedNames.has(name) && !departedNames.has(name)));
+  const unusedCount = unusedByList.reduce((sum, names) => sum + names.length, 0);
+  if (unusedCount > DEPARTED_NAME_REUSE_THRESHOLD) {
+    return randChoice(unusedByList.find(names => names.length > 0));
+  }
+  // 未使用が少なくなったら、過去帳の名前も候補に含める。
+  for (const list of lists) {
     const availableNames = list.filter(name => !reservedNames.has(name));
     if (availableNames.length > 0) return randChoice(availableNames);
   }
-  return buildCombinedName(fallbackList || nameList, reservedNames);
+  // 連名は組み合わせが尽きないため、過去帳と同じ連名も避ける。
+  return buildCombinedName(fallbackList || nameList, new Set([...reservedNames, ...departedNames]));
 }
 
 /**
