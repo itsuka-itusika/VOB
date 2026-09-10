@@ -915,7 +915,7 @@ const MIND_TRAIT_DEFINITIONS = [
     { name: "勇猛果敢", condition: (v) => v.cou >= 28 },
     { name: "豪傑", condition: (v) => v.str >= 24 && v.cou >= 24 },
     { name: "箱入り", condition: (v) => v.bodySex === "女" && v.str <= 16 && v.eth >= 20 && v.sexdr <= 12 },
-    { name: "惚れっぽい", condition: (v) => v.bodySex === "女" && v.int <= 18 && v.chr <= 23 && v.sexdr >= 21 && v.sexdr <= 24 },
+    { name: "惚れっぽい", condition: (v) => v.bodySex === "女" && v.int <= 18 && v.chr <= 23 && v.sexdr >= 19 },
     { name: "惚れっぽい", condition: (v) => v.bodySex === "男" && v.sexdr >= 21 && v.sexdr <= 24 },
     { name: "愚直", condition: (v) => v.int <= 10 && v.ind >= 20 },
     { name: "夢想家", condition: (v) => v.int >= 18 && v.chr >= 16 && v.ind <= 12 },
