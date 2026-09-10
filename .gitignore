@@ -1,2 +1,4 @@
 # tools/package_itch.py が作る配布用 zip の出力先
 output/
+# package_mugen.py が package_itch.py を読み込むときに作られる
+tools/__pycache__/
