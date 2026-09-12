@@ -211,7 +211,10 @@
 
 生成ツールは256pxタイルを最大8×8で詰め、各シートを2048×2048以下のWebPとして出力する。`children/` と `sample/` は原本確認用としてシートには含めるが、同名の現行顔IDを上書きしないようランタイムマップから除外する。`CHILD_SHADOW.svg` と `CHILD_SHADOW_BABY.svg` はアトラス化せず、そのまま表示する。
 
-itch.io向けzipは `python tools/package_itch.py` で `output/village-of-bacchus-itch.zip` に生成する。zipには顔原本PNGを含めず、アトラスと上記SVG 2枚だけを含める。スクリプトは出力ファイル数が1,000未満であることも検証する。
+配布用zipは `tools/` のスクリプトで作る。どちらも `index.html` / `css` / `js` / `images` だけを入れ、顔原本PNGは含めずアトラスと上記SVG 2枚だけを含める。`--no-images` を付けると `images/` を外した軽いzipになり、画像は手で足す前提になる。
+
+- itch.io向け: `python tools/package_itch.py` → `output/village-of-bacchus-itch.zip`。出力ファイル数が1,000未満であることも検証する。
+- フリーゲーム夢現向け: `python tools/package_mugen.py` → `output/village-of-bacchus-mugen.zip`。zip内の `index.html` からGoogleアナリティクスのタグを外し、除去できたかを検証する。プレイヤー向けの `Readme.txt` も同梱する。
 
 ## 訪問者とレア種族
 

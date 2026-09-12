@@ -15,6 +15,7 @@ from package_itch import REPO_ROOT, collect_files  # noqa: E402
 
 
 DEFAULT_OUTPUT = REPO_ROOT / "output" / "village-of-bacchus-mugen.zip"
+NO_IMAGES_OUTPUT = REPO_ROOT / "output" / "village-of-bacchus-mugen-no-images.zip"
 # 同梱するプレイヤー向けの説明。ゲーム内のメニューからは開けないため、zipへ入れる。
 EXTRA_FILES = (Path("Readme.txt"),)
 INDEX_PATH = Path("index.html")
@@ -37,8 +38,8 @@ def strip_analytics(html: str) -> str:
     return stripped
 
 
-def package(output_path: Path) -> None:
-    files = collect_files()
+def package(output_path: Path, include_images: bool = True) -> None:
+    files = collect_files(include_images)
     files += [path for path in EXTRA_FILES if (REPO_ROOT / path).is_file()]
     if INDEX_PATH not in files:
         raise RuntimeError("index.html が対象に含まれていません")
@@ -67,16 +68,23 @@ def package(output_path: Path) -> None:
     print(f"Uncompressed: {source_bytes / 1024 / 1024:.2f} MiB")
     print(f"Zip: {output_path.stat().st_size / 1024 / 1024:.2f} MiB")
     print("Google Analytics: removed")
+    if not include_images:
+        print("Images: excluded (add the images/ folder by hand)")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("output", nargs="?", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("output", nargs="?", type=Path)
+    parser.add_argument(
+        "--no-images",
+        action="store_true",
+        help="images/ を入れずに作る。あとで手で足す前提の軽い zip になる。",
+    )
     args = parser.parse_args()
-    output_path = args.output
+    output_path = args.output or (NO_IMAGES_OUTPUT if args.no_images else DEFAULT_OUTPUT)
     if not output_path.is_absolute():
         output_path = REPO_ROOT / output_path
-    package(output_path.resolve())
+    package(output_path.resolve(), include_images=not args.no_images)
 
 
 if __name__ == "__main__":

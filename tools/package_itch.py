@@ -10,7 +10,9 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = REPO_ROOT / "output" / "village-of-bacchus-itch.zip"
+NO_IMAGES_OUTPUT = REPO_ROOT / "output" / "village-of-bacchus-itch-no-images.zip"
 INCLUDED_ROOTS = ("index.html", "css", "js", "images")
+IMAGE_ROOT = "images"
 STANDALONE_PORTRAITS = {
     Path("images/portraits/system/CHILD_SHADOW.svg"),
     Path("images/portraits/system/CHILD_SHADOW_BABY.svg"),
@@ -25,9 +27,10 @@ def should_include(relative_path: Path) -> bool:
     return True
 
 
-def collect_files() -> list[Path]:
+def collect_files(include_images: bool = True) -> list[Path]:
     files: list[Path] = []
-    for root_name in INCLUDED_ROOTS:
+    roots = INCLUDED_ROOTS if include_images else tuple(n for n in INCLUDED_ROOTS if n != IMAGE_ROOT)
+    for root_name in roots:
         root = REPO_ROOT / root_name
         candidates = [root] if root.is_file() else root.rglob("*")
         for path in candidates:
@@ -39,8 +42,8 @@ def collect_files() -> list[Path]:
     return sorted(set(files), key=lambda path: path.as_posix())
 
 
-def package(output_path: Path) -> None:
-    files = collect_files()
+def package(output_path: Path, include_images: bool = True) -> None:
+    files = collect_files(include_images)
     if len(files) >= FILE_LIMIT:
         raise RuntimeError(f"itch.io file limit exceeded: {len(files)} >= {FILE_LIMIT}")
 
@@ -62,16 +65,23 @@ def package(output_path: Path) -> None:
     print(f"Files: {len(files)} / {FILE_LIMIT - 1} max")
     print(f"Uncompressed: {source_bytes / 1024 / 1024:.2f} MiB")
     print(f"Zip: {output_path.stat().st_size / 1024 / 1024:.2f} MiB")
+    if not include_images:
+        print(f"Images: excluded (add the {IMAGE_ROOT}/ folder by hand)")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("output", nargs="?", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("output", nargs="?", type=Path)
+    parser.add_argument(
+        "--no-images",
+        action="store_true",
+        help="images/ を入れずに作る。あとで手で足す前提の軽い zip になる。",
+    )
     args = parser.parse_args()
-    output_path = args.output
+    output_path = args.output or (NO_IMAGES_OUTPUT if args.no_images else DEFAULT_OUTPUT)
     if not output_path.is_absolute():
         output_path = REPO_ROOT / output_path
-    package(output_path.resolve())
+    package(output_path.resolve(), include_images=not args.no_images)
 
 
 if __name__ == "__main__":
