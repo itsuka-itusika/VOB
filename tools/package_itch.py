@@ -61,8 +61,11 @@ def collect_files(include_images: bool = True) -> list[Path]:
     return sorted(set(files), key=lambda path: path.as_posix())
 
 
-def build_zip(files: list[Path], output_path: Path) -> None:
-    """配布用zipを書き出す。index.html は計測タグを外したものを入れる。"""
+def build_zip(files: list[Path], output_path: Path, extra_texts: dict[str, str] | None = None) -> None:
+    """配布用zipを書き出す。index.html は計測タグを外したものを入れる。
+
+    extra_texts は、リポジトリの構成と違う名前で入れたい文書を {zip内の名前: 本文} で渡す。
+    """
     if INDEX_PATH not in files:
         raise RuntimeError("index.html が対象に含まれていません")
     index_html = strip_analytics((REPO_ROOT / INDEX_PATH).read_text(encoding="utf-8"))
@@ -82,12 +85,20 @@ def build_zip(files: list[Path], output_path: Path) -> None:
                 archive.writestr(INDEX_PATH.as_posix(), index_html)
             else:
                 archive.write(REPO_ROOT / relative_path, relative_path.as_posix())
+        for name, text in (extra_texts or {}).items():
+            archive.writestr(name, text)
 
 
-def print_summary(files: list[Path], output_path: Path, include_images: bool, file_count_note: str = "") -> None:
+def print_summary(
+    files: list[Path],
+    output_path: Path,
+    include_images: bool,
+    file_count_note: str = "",
+    extra_count: int = 0,
+) -> None:
     source_bytes = sum((REPO_ROOT / path).stat().st_size for path in files)
     print(f"Output: {output_path}")
-    print(f"Files: {len(files)}{file_count_note}")
+    print(f"Files: {len(files) + extra_count}{file_count_note}")
     print(f"Uncompressed: {source_bytes / 1024 / 1024:.2f} MiB")
     print(f"Zip: {output_path.stat().st_size / 1024 / 1024:.2f} MiB")
     print("Google Analytics: removed")

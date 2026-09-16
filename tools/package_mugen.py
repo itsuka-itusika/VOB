@@ -15,15 +15,20 @@ from package_itch import REPO_ROOT, build_zip, collect_files, print_summary  # n
 DEFAULT_OUTPUT = REPO_ROOT / "output" / "village-of-bacchus-mugen.zip"
 NO_IMAGES_OUTPUT = REPO_ROOT / "output" / "village-of-bacchus-mugen-no-images.zip"
 # 同梱するプレイヤー向けの説明。ゲーム内のメニューからは開けないため、zipへ入れる。
-EXTRA_FILES = (Path("Readme.txt"),)
+# 配布先では未プレイの人が先に読むため、終盤の内容を伏せた版を Readme.txt として入れる。
+README_SOURCE = Path("Readme_mugen.txt")
+README_IN_ZIP = "Readme.txt"
 
 
 def package(output_path: Path, include_images: bool = True) -> None:
-    files = collect_files(include_images)
-    files += [path for path in EXTRA_FILES if (REPO_ROOT / path).is_file()]
+    readme_path = REPO_ROOT / README_SOURCE
+    if not readme_path.is_file():
+        raise RuntimeError(f"{README_SOURCE} が見つかりません")
 
-    build_zip(files, output_path)
-    print_summary(files, output_path, include_images)
+    files = collect_files(include_images)
+    build_zip(files, output_path, extra_texts={README_IN_ZIP: readme_path.read_text(encoding="utf-8")})
+    print_summary(files, output_path, include_images, extra_count=1)
+    print(f"Readme: {README_SOURCE} -> {README_IN_ZIP}")
 
 
 def main() -> None:
