@@ -10,6 +10,9 @@ import { syncTitleCountRecord } from "./records.js";
 import { findPersonEverywhereById, normalizePersonId } from "./domain/personId.js";
 import { EXCLUSIVE_BODY_TRAITS } from "./createVillagers.js";
 
+// 最初からいる村人だけが互いに持つ続柄。旧セーブで開村の記録を補うときの目印にする。
+const FOUNDING_RELATION_PREFIX = "村設立の同志";
+
 export const HISTORY_EVENT_TYPES = Object.freeze({
   ARCHIVE_GAP: "archiveGap",
   FOUNDING: "founding",
@@ -204,6 +207,24 @@ export function recordGameStartHistory(village, founders = []) {
     tags: ["開村", "バッカス"],
     dedupeKey: "founding"
   });
+}
+
+/**
+ * 旧セーブの補完。開村の記録に登場人物がいない場合、村設立の同志を持つ者から補う。
+ * この続柄は最初からいる村人だけが持つため、後から加わった村人は混じらない。
+ */
+export function backfillFoundingHistoryPeople(village) {
+  const founding = ensureHistoryEvents(village).find(event => event.type === HISTORY_EVENT_TYPES.FOUNDING);
+  if (!founding) return;
+  if (Array.isArray(founding.peopleIds) && founding.peopleIds.some(id => id != null)) return;
+
+  const founders = [
+    ...(Array.isArray(village.villagers) ? village.villagers : []),
+    ...(Array.isArray(village.departedVillagers) ? village.departedVillagers : [])
+  ].filter(person => getRelationshipEntries(person).some(entry => entry.prefix === FOUNDING_RELATION_PREFIX));
+  if (founders.length === 0) return;
+
+  Object.assign(founding, normalizePeopleData(founders, null));
 }
 
 export function createArchiveGapHistoryEvent(year, month) {
@@ -691,7 +712,7 @@ function getPersonalHistoryText(event, personName, personId = null) {
   const otherName = getOtherPersonName(event, personName, personId);
   switch (event.type) {
     case HISTORY_EVENT_TYPES.FOUNDING:
-      return "仲間とともに、この開拓村を立ち上げる。";
+      return "仲間とともに開拓村を立ち上げる。";
     case HISTORY_EVENT_TYPES.BODY_EXCHANGE:
       return getBodyExchangePersonalText(event, otherName);
     case HISTORY_EVENT_TYPES.DRYAD_FRUIT:
@@ -874,7 +895,7 @@ function formatRelationshipGroups(person, category) {
   const groups = new Map();
   getRelationshipEntries(person)
     .map(parsePersonalRelationship)
-    .filter(item => item?.category === category && item.prefix !== "村設立の同志")
+    .filter(item => item?.category === category && item.prefix !== FOUNDING_RELATION_PREFIX)
     .forEach(item => {
       if (!groups.has(item.prefix)) groups.set(item.prefix, new Map());
       // 同じ名の別人が並ぶことがあるため、IDでまとめる。旧データはIDが無いので名前で代える。

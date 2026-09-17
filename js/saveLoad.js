@@ -6,7 +6,7 @@ import { ACTION_NONE, isPreferredActionCandidate, refreshJobTable, setPreferredA
 import { getPermanentStat, hydrateStatLayersFromObject, syncEffectiveStats } from "./domain/statLayers.js";
 import { syncGoblinSpeciesTraits, syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
 import { normalizePastPortraitFiles } from "./domain/portraitHistory.js";
-import { createArchiveGapHistoryEvent, HISTORY_EVENT_TYPES, normalizeHistoryEvents } from "./history.js";
+import { backfillFoundingHistoryPeople, createArchiveGapHistoryEvent, HISTORY_EVENT_TYPES, normalizeHistoryEvents } from "./history.js";
 import { normalizePortraitKey } from "./data/portraitPaths.js";
 import { ensureVillageFriendships, normalizeFriendshipState, normalizeRelationships } from "./relationships.js";
 import { ensureTitleState, evaluateTitles } from "./titles.js";
@@ -619,6 +619,8 @@ function convertObjectToVillage(dataObj) {
   });
   normalizeVillageRoles(v);
   finalizePersonIds(v, dataObj);
+  // 人物IDが揃ったあとで、開村の記録に最初の村人を補う。
+  backfillFoundingHistoryPeople(v);
 
   return v;
 }
