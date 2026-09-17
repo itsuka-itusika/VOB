@@ -1600,7 +1600,11 @@ function getBodyExchangeLineKey(person) {
   const raiderTypes = ["野盗", "ゴブリン", "狼", "キュクロプス", "ハーピー"];
   if (person.mindTraits && person.mindTraits.includes("襲撃者")) {
     const raiderType = raiderTypes.find(type => person.name.includes(type));
-    if (raiderType) return raiderType;
+    // 襲撃者専用の文を優先する。村人の口調キーと名前が同じ種族は接頭辞つきで持つ。
+    if (raiderType) {
+      const raiderKey = `襲撃者:${raiderType}`;
+      return BODY_EXCHANGE_REACTION_LINES[raiderKey] ? raiderKey : raiderType;
+    }
   }
   return resolveDialogueTone(person);
 }
