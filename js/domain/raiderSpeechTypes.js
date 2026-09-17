@@ -20,7 +20,7 @@ const POLITE_FEMALE_RAIDER_TYPES = new Set([
   "翼人兵",
   "上位翼人"
 ]);
-const ROUGH_FEMALE_RAIDER_TYPES = new Set(["ハーピー", "ハーピーの長"]);
+const HARPY_RAIDER_TYPES = new Set(["ハーピー", "ハーピーの長"]);
 
 export function getRaiderSpeechType(person) {
   const raiderType = typeof person === "string"
@@ -31,7 +31,7 @@ export function getRaiderSpeechType(person) {
   if (ROUGH_RAIDER_TYPES.has(raiderType)) return "乱暴";
   if (POLITE_MALE_RAIDER_TYPES.has(raiderType)) return "丁寧Ｍ";
   if (POLITE_FEMALE_RAIDER_TYPES.has(raiderType)) return "丁寧Ｆ";
-  if (ROUGH_FEMALE_RAIDER_TYPES.has(raiderType)) return "蓮っ葉";
+  if (HARPY_RAIDER_TYPES.has(raiderType)) return "ハーピー";
   if (raiderType === "スフィンクス") {
     const sex = person?.spiritSex || person?.bodySex;
     return sex === "女" ? "中性的" : "クールＭ";

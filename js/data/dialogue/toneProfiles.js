@@ -29,6 +29,8 @@ export const TONE_PROFILES = {
   "内気": { family: "shy", gender: "female", fallback: ["shy", "female", "default"] },
   "強気Ｆ": { family: "bold", gender: "female", fallback: ["bold", "female", "default"] },
   "蓮っ葉": { family: "rough", gender: "female", fallback: ["rough", "bold", "female", "default"] },
+  // ハーピー用。専用の文がない場面は蓮っ葉へ落ちるため、穴が空かない。
+  "ハーピー": { family: "rough", gender: "female", fallback: ["蓮っ葉", "rough", "bold", "female", "default"] },
   "おっとり": { family: "polite", gender: "female", fallback: ["polite", "female", "default"] },
   "ぶりっこ": { family: "cute", gender: "female", fallback: ["cute", "bright", "female", "default"] },
   "クールＦ": { family: "cool", gender: "female", fallback: ["cool", "female", "default"] },
