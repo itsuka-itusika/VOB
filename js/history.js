@@ -194,11 +194,13 @@ export function addHistoryEvent(village, entry) {
   return normalized;
 }
 
-export function recordGameStartHistory(village) {
+/** 開村の記録。最初の村人を登場人物に載せ、各人の個人史にも残す。 */
+export function recordGameStartHistory(village, founders = []) {
   addHistoryEvent(village, {
     type: HISTORY_EVENT_TYPES.FOUNDING,
     title: "古き神、開拓村に目覚める",
     text: "忘れられた豊穣神バッカスが、小さな開拓村に目覚めた。",
+    people: Array.isArray(founders) ? founders.filter(Boolean) : [],
     tags: ["開村", "バッカス"],
     dedupeKey: "founding"
   });
@@ -688,6 +690,8 @@ function toPersonalTense(text) {
 function getPersonalHistoryText(event, personName, personId = null) {
   const otherName = getOtherPersonName(event, personName, personId);
   switch (event.type) {
+    case HISTORY_EVENT_TYPES.FOUNDING:
+      return "仲間とともに、この開拓村を立ち上げる。";
     case HISTORY_EVENT_TYPES.BODY_EXCHANGE:
       return getBodyExchangePersonalText(event, otherName);
     case HISTORY_EVENT_TYPES.DRYAD_FRUIT:

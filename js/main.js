@@ -17,7 +17,7 @@ import { getActiveVillagers } from "./domain/apocalypseRules.js";
 // Villageインスタンスを生成
 export const theVillage = new Village();
 theVillage.villagers = createInitialVillagers();
-recordGameStartHistory(theVillage);
+recordGameStartHistory(theVillage, theVillage.villagers);
 updateUI(theVillage);
 
 function applyTurnStartRestrictions(village) {
