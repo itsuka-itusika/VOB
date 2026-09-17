@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import re
 import zipfile
+from collections.abc import Callable
 from pathlib import Path
 
 
@@ -61,14 +62,22 @@ def collect_files(include_images: bool = True) -> list[Path]:
     return sorted(set(files), key=lambda path: path.as_posix())
 
 
-def build_zip(files: list[Path], output_path: Path, extra_texts: dict[str, str] | None = None) -> None:
+def build_zip(
+    files: list[Path],
+    output_path: Path,
+    extra_texts: dict[str, str] | None = None,
+    index_transform: Callable[[str], str] | None = None,
+) -> None:
     """配布用zipを書き出す。index.html は計測タグを外したものを入れる。
 
     extra_texts は、リポジトリの構成と違う名前で入れたい文書を {zip内の名前: 本文} で渡す。
+    index_transform は、配布先ごとに index.html をさらに書き換えたいときに渡す。
     """
     if INDEX_PATH not in files:
         raise RuntimeError("index.html が対象に含まれていません")
     index_html = strip_analytics((REPO_ROOT / INDEX_PATH).read_text(encoding="utf-8"))
+    if index_transform is not None:
+        index_html = index_transform(index_html)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     if output_path.exists():

@@ -214,7 +214,7 @@
 配布用zipは `tools/` のスクリプトで作る。どちらも `index.html` / `css` / `js` / `images` だけを入れ、顔原本PNGは含めずアトラスと上記SVG 2枚だけを含める。zip内の `index.html` からはGoogleアナリティクスのタグを外し、除去できたかを検証する。`--no-images` を付けると `images/` を外した軽いzipになり、画像は手で足す前提になる。zipの書き出しと計測タグの除去は `package_itch.py` に置き、夢現向けはそれを読み込んで使う。
 
 - itch.io向け: `python tools/package_itch.py` → `output/village-of-bacchus-itch.zip`。出力ファイル数が1,000未満であることも検証する。
-- フリーゲーム夢現向け: `python tools/package_mugen.py` → `output/village-of-bacchus-mugen.zip`。終盤の内容を伏せた `Readme_mugen.txt` を、zip内では `Readme.txt` という名前で同梱する。配布先では未プレイの人が先に読むため、リポジトリの `Readme.txt` とは分けている。
+- フリーゲーム夢現向け: `python tools/package_mugen.py` → `output/village-of-bacchus-mugen-v1.0.zip`。終盤の内容を伏せた `Readme_mugen.txt` を、zip内では `Readme.txt` という名前で同梱する。配布先では未プレイの人が先に読むため、リポジトリの `Readme.txt` とは分けている。zip内の `index.html` のバージョン表記はスクリプトの `DISPLAY_VERSION` で置き換える。公開の版はリポジトリの開発版とは別に数えるため、この値と出力ファイル名を更新して版を上げる。
 
 ## 訪問者とレア種族
 
