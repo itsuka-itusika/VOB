@@ -22,7 +22,8 @@ export const RAID_MIDDLE_INCOMING_DAMAGE_MULTIPLIER = 1.2;
 export const RAID_CANNON_INCOMING_DAMAGE_MULTIPLIER = 1.5;
 
 const RAID_COMMON_UNABLE_MIND_TRAITS = ["無垢", "萌芽", "襲撃者", "訪問者"];
-// トラウマは戦闘の後遺症。前衛・中衛には立てないが、狙われない罠作成は可能。
+// 思春期はまだ戦列に立てる歳ではなく、トラウマは戦闘の後遺症。
+// どちらも前衛・中衛には立てないが、狙われない罠作成は可能。
 const RAID_DEFEND_UNABLE_MIND_TRAITS = [...RAID_COMMON_UNABLE_MIND_TRAITS, "思春期", "トラウマ"];
 const RAID_BODY_BLOCK_REASONS = [
   "塩の柱",
@@ -101,7 +102,7 @@ export function getRaidActionBlockReason(person, action = "", { ignoreRoleTraits
   if (mindTraits.includes("萌芽")) return "萌芽";
   if (!ignoreRoleTraits && mindTraits.includes("襲撃者")) return "襲撃者";
   if (!ignoreRoleTraits && mindTraits.includes("訪問者")) return "訪問者";
-  if (action === ACTION_DEFEND && mindTraits.includes("思春期")) return "思春期";
+  if (action && action !== ACTION_TRAP && mindTraits.includes("思春期")) return "思春期";
   if (action && action !== ACTION_TRAP && mindTraits.includes("トラウマ")) return "トラウマ";
   if (action && action !== ACTION_FORTIFY) {
     const pacifistReason = PACIFIST_MIND_TRAITS.find(trait => mindTraits.includes(trait));
@@ -141,7 +142,7 @@ export function getRaidActionSkipMessage(person, action = "戦闘", options = {}
     "抑鬱": `${name}は心を奮い立たせられず、行動できない。`,
     "無垢": `${name}は戦いを理解できず、行動しない。`,
     "萌芽": `${name}はまだ幼く、戦いに参加できない。`,
-    "思春期": `${name}は前衛で迎撃できず、行動しない。`,
+    "思春期": `${name}はまだ前線に立てる歳ではなく、${label}に加われない。`,
     [FOUR_LEGGED_TRAIT]: `${name}は四足の身体で${label}の道具を扱えない。`,
     [HUMAN_BEAST_TRAIT]: `${name}は獣身では${label}の道具を扱えない。`,
     [WILD_MIND_TRAIT]: `${name}は野生の本能に従い、${label}の指示を受け付けない。`,
