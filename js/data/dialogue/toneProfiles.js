@@ -28,9 +28,10 @@ export const TONE_PROFILES = {
   "快活": { family: "bright", gender: "female", fallback: ["bright", "female", "default"] },
   "内気": { family: "shy", gender: "female", fallback: ["shy", "female", "default"] },
   "強気Ｆ": { family: "bold", gender: "female", fallback: ["bold", "female", "default"] },
-  "蓮っ葉": { family: "rough", gender: "female", fallback: ["rough", "bold", "female", "default"] },
-  // ハーピー用。専用の文がない場面は蓮っ葉へ落ちるため、穴が空かない。
-  "ハーピー": { family: "rough", gender: "female", fallback: ["蓮っ葉", "rough", "bold", "female", "default"] },
+  // rough は男性側の言い回しで書かれているため、女性側の荒い口調は roughFemale を先に見る。
+  "蓮っ葉": { family: "roughFemale", gender: "female", fallback: ["rough", "bold", "female", "default"] },
+  // ハーピー用。専用の文がない場面は roughFemale か蓮っ葉へ落ちるため、穴が空かない。
+  "ハーピー": { family: "roughFemale", gender: "female", fallback: ["蓮っ葉", "rough", "bold", "female", "default"] },
   "おっとり": { family: "polite", gender: "female", fallback: ["polite", "female", "default"] },
   "ぶりっこ": { family: "cute", gender: "female", fallback: ["cute", "bright", "female", "default"] },
   "クールＦ": { family: "cool", gender: "female", fallback: ["cool", "female", "default"] },
