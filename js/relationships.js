@@ -411,7 +411,7 @@ export function normalizeRelationships(person) {
 }
 
 /** エントリの相手が指定人物か。ID優先で、旧データはスナップショット名で照合する。 */
-function entryMatchesPerson(entry, person) {
+export function entryMatchesPerson(entry, person) {
   if (!entry || !person) return false;
   if (entry.targetId != null && person.id != null) return entry.targetId === person.id;
   return !!entry.targetName && entry.targetName === person.name;

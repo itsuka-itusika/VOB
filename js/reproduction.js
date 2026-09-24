@@ -32,10 +32,9 @@ import {
 import { getRaiderTypeByType } from "./data/raidData.js";
 import { getBaseStat, setBaseStat, setBaseStatsFromEffective, syncEffectiveStats } from "./domain/statLayers.js";
 import { IMMATURE_MIND_TRAIT, OLD_WOLF_TRAIT, syncWolfSpeciesTraits, WILD_MIND_TRAIT, YOUNG_WOLF_TRAIT } from "./domain/speciesTraits.js";
-import { isSpeciesSpeechType } from "./domain/raiderSpeechTypes.js";
-import { getRaiderSpeechType } from "./domain/raiderSpeechTypes.js";
+import { getRaiderSpeechType, isSpeciesSpeechType } from "./domain/raiderSpeechTypes.js";
 import { recordAdulthoodHistory, recordBirthHistory, recordPregnancyHistory } from "./history.js";
-import { addRelationship, checkHasRelationship, getRelationshipEntries, getRelationshipTargetId } from "./relationships.js";
+import { addRelationship, checkHasRelationship, entryMatchesPerson, getRelationshipEntries, getRelationshipTargetId } from "./relationships.js";
 import { getDialogueLine } from "./dialogue/dialogueEngine.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
 
@@ -591,6 +590,38 @@ export function createWolfFoundling(village) {
   return child;
 }
 
+// 親が子へ伝える精神特性。子が思春期になったとき、村にいる親から受け継ぐ。
+// 戦いの型は必ず、土地の知恵は半々で伝わる。
+const PARENT_TAUGHT_MIND_TRAITS = [
+  { trait: "ゴブリン兵法", chance: 1 },
+  { trait: "狙撃心得", chance: 1 },
+  { trait: "森の知恵", chance: 0.5 },
+  { trait: "海の知恵", chance: 0.5 }
+];
+
+/** 続柄の母・父のうち、いま村にいる者を返す。 */
+function getParentsInVillage(child, village) {
+  const villagers = Array.isArray(village?.villagers) ? village.villagers : [];
+  const parentEntries = getRelationshipEntries(child)
+    .filter(entry => entry.prefix === "母" || entry.prefix === "父");
+  if (parentEntries.length === 0) return [];
+  return villagers.filter(person => parentEntries.some(entry => entryMatchesPerson(entry, person)));
+}
+
+/** 思春期になった子へ、村にいる親の技と知恵を伝える。 */
+function teachParentMindTraits(child, village) {
+  const parents = getParentsInVillage(child, village);
+  if (parents.length === 0) return;
+
+  PARENT_TAUGHT_MIND_TRAITS.forEach(({ trait, chance }) => {
+    if (hasMindTrait(child, trait)) return;
+    if (!parents.some(parent => hasMindTrait(parent, trait))) return;
+    if (chance < 1 && Math.random() >= chance) return;
+    addUnique(child.mindTraits, trait);
+    village?.log?.(`【伝授】${child.name}は親から${trait}を受け継いだ`);
+  });
+}
+
 export function updateChildGrowthStage(child, village, { announce = false } = {}) {
   const bodyPotential = child.bodyPotentialStats !== undefined ? child.bodyPotentialStats : child.potentialStats;
   const mindPotential = child.mindPotentialStats !== undefined ? child.mindPotentialStats : child.potentialStats;
@@ -634,9 +665,12 @@ export function updateChildGrowthStage(child, village, { announce = false } = {}
     addUnique(child.mindTraits, child.childMindTrait);
     child.hobby = "";
   } else if (child.spiritAge <= 15) {
+    const wasAdolescent = hasMindTrait(child, "思春期");
     child.mindTraits = removeTraits(child.mindTraits, ["無垢", "萌芽"]);
     addUnique(child.mindTraits, "思春期");
     child.hobby = "";
+    // 思春期に入った月だけ伝授を見る。毎月引き直すと確率つきの特性が必ず付いてしまう。
+    if (!wasAdolescent) teachParentMindTraits(child, village);
   } else {
     const childTraitsToRemove = [...CHILD_MIND_TRAITS];
     if (child.childMindTrait) childTraitsToRemove.push(child.childMindTrait);
