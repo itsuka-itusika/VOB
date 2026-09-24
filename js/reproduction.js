@@ -720,10 +720,14 @@ export function growPersonToAdultAge(person, village, { targetAge = 16, announce
 
   const age = Math.max(16, Math.floor(Number(targetAge) || 16));
   const hasPotential = !!(person.potentialStats || person.bodyPotentialStats || person.mindPotentialStats);
+  // クロノスの秘薬や時空のうねりで精神が思春期を飛ばす場合、成長段階の処理では
+  // 伝授が走らない。飛ばしたときだけ、ここで1度だけ判定する。
+  const skipsAdolescence = oldSpiritAge <= 15 && !hasMindTrait(person, "思春期");
 
   if (oldBodyAge <= 15) person.bodyAge = age;
   if (oldSpiritAge <= 15) person.spiritAge = age;
   updateChildGrowthStage(person, village, { announce });
+  if (skipsAdolescence) teachParentMindTraits(person, village);
   syncWolfSpeciesTraits(person);
   if (!hasPotential) {
     person.bodyTraits = removeTraits(person.bodyTraits, CHILD_BODY_TRAITS);
