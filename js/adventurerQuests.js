@@ -191,8 +191,8 @@ export function openAdventurerQuestModal(village, adventurer, { onAccepted } = {
           <div><dt>成功率</dt><dd>${successRate}%</dd></div>
         </dl>
         ${template.requiredBodySex ? `<p class="adventurer-quest-requirement">身体性別: ${template.requiredBodySex} 限定</p>` : ""}
-        <button type="button" data-adventurer-quest-index="${index}" ${sexBlocked || fundsBlocked ? "disabled" : ""}>このクエストを依頼する</button>
         ${disabledReason ? `<p class="adventurer-quest-disabled-reason">${escapeHtml(disabledReason)}</p>` : ""}
+        <button type="button" data-adventurer-quest-index="${index}" ${sexBlocked || fundsBlocked ? "disabled" : ""}>このクエストを依頼する</button>
       </section>
     `;
   }).join("");

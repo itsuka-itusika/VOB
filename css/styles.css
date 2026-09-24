@@ -2508,9 +2508,10 @@ section h2 {
   margin: 0 0 8px;
 }
 
-/* 説明文の長さが違っても、依頼ボタンの位置を揃える。 */
+/* 説明文の長さが違っても依頼ボタンの位置を揃える。余った高さは一覧の下に寄せ、
+   説明文と一覧の間の余白は説明文の行数によらず一定にする。 */
 .adventurer-quest-card dl {
-  margin: auto 0 8px;
+  margin: 8px 0 auto;
 }
 
 .adventurer-quest-card dl div {
