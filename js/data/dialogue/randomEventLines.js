@@ -58,6 +58,8 @@ export const SPEECH_TYPE_LINE_FALLBACKS = {
   "ぶりっこ": ["ぶりっこ", "bright", "female"],
   "クールＦ": ["クールＦ", "cool", "female"],
   "中性的": ["中性的", "cool", "female", "male"],
+  // ランダムイベントは文量が大きいため、専用文は持たせず中性的の文へ落とす。
+  "スフィンクス": ["スフィンクス", "中性的", "cool", "female"],
   "ギャル風": ["ギャル風", "bright", "female"],
   "老人": ["老人", "male"]
 };
@@ -82,6 +84,7 @@ export const SPEECH_TYPE_TONES = {
   "ぶりっこ": "bright",
   "クールＦ": "cool",
   "中性的": "cool",
+  "スフィンクス": "cool",
   "ギャル風": "bright",
   "老人": "male"
 };
@@ -107,6 +110,7 @@ function speechTypeLines(lines) {
     "ぶりっこ": lines.cuteF,
     "クールＦ": lines.coolF,
     "中性的": lines.neutral,
+    "スフィンクス": lines.neutral,
     "ギャル風": lines.gal,
     "老人": lines.elder
   };

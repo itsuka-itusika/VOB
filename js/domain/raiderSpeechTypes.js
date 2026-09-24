@@ -22,7 +22,7 @@ const POLITE_FEMALE_RAIDER_TYPES = new Set([
 ]);
 const HARPY_RAIDER_TYPES = new Set(["ハーピー", "ハーピーの長"]);
 // 種族そのものに結びついた口調。精神側に残るため、身体が変わっても引き継がれる。
-const SPECIES_SPEECH_TYPES = new Set(["狼", "ゴブリン", "ハーピー"]);
+const SPECIES_SPEECH_TYPES = new Set(["狼", "ゴブリン", "ハーピー", "スフィンクス"]);
 
 /** 種族に結びついた口調か。成長処理で人間の口調へ書き換えないために使う。 */
 export function isSpeciesSpeechType(speechType) {
@@ -39,9 +39,6 @@ export function getRaiderSpeechType(person) {
   if (POLITE_MALE_RAIDER_TYPES.has(raiderType)) return "丁寧Ｍ";
   if (POLITE_FEMALE_RAIDER_TYPES.has(raiderType)) return "丁寧Ｆ";
   if (HARPY_RAIDER_TYPES.has(raiderType)) return "ハーピー";
-  if (raiderType === "スフィンクス") {
-    const sex = person?.spiritSex || person?.bodySex;
-    return sex === "女" ? "中性的" : "クールＭ";
-  }
+  if (raiderType === "スフィンクス") return "スフィンクス";
   return "";
 }

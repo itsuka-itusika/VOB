@@ -37,6 +37,8 @@ export const TONE_PROFILES = {
   "クールＦ": { family: "cool", gender: "female", fallback: ["cool", "female", "default"] },
   "ギャル風": { family: "bright", gender: "female", fallback: ["bright", "female", "default"] },
   "中性的": { family: "neutralFemale", gender: "female", fallback: ["neutralFemale", "female", "default"] },
+  // スフィンクス用。専用の文がない場面は中性的へ落ちるため、穴が空かない。
+  "スフィンクス": { family: "cool", gender: "female", fallback: ["中性的", "cool", "neutralFemale", "female", "default"] },
 
   "老人": { family: "elder", gender: "male", fallback: ["elder", "male", "default"] },
   "狼": { family: "wolf", gender: "beast", fallback: ["wolf"] },
