@@ -217,7 +217,7 @@ export function openAdventurerQuestModal(village, adventurer, { onAccepted } = {
   overlay.addEventListener("click", close);
   modal.querySelector("[data-close-adventurer-quest]")?.addEventListener("click", close);
   modal.querySelector("[data-adventurer-quest-reroll]")?.addEventListener("click", () => {
-    const ok = window.confirm(`資金${ADVENTURER_QUEST_REROLL_COST}を払い、依頼内容を引き直しますか？ 引き直せるのは1回だけです。`);
+    const ok = window.confirm(`資金${ADVENTURER_QUEST_REROLL_COST}を払い、依頼内容を引き直しますか？`);
     if (!ok) return;
     if (!rerollAdventurerQuestOffers(village, adventurer)) return;
     updateUI(village);
