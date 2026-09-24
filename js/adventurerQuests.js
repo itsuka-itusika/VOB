@@ -205,7 +205,7 @@ export function openAdventurerQuestModal(village, adventurer, { onAccepted } = {
         <button type="button" data-adventurer-quest-reroll ${rerollBlockedReason ? "disabled" : ""}
           title="${escapeHtml(rerollBlockedReason)}">依頼内容を引き直す（資金${ADVENTURER_QUEST_REROLL_COST}）</button>
       </div>
-      <p>依頼すると冒険者は出発し、6か月後の月初に帰還します。引き直しは1人につき1回までです。</p>
+      <p>依頼すると冒険者は出発し、6か月後の月初に帰還します。</p>
       <div class="adventurer-quest-list">${offerHtml}</div>
       <div class="event-modal-buttons">
         <button type="button" data-close-adventurer-quest>閉じる</button>
