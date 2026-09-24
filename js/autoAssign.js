@@ -23,6 +23,7 @@ import {
   calculateGatherYield,
   calculateGuardYield,
   calculateHandiworkYield,
+  calculateHelpExpectedYield,
   calculateHuntYield,
   calculateLumberYield,
   calculateMassageHeal,
@@ -271,6 +272,7 @@ function getExpectedYield(person, job, village) {
     case "狩猟": return { food: calculateHuntYield(person, village) };
     case "漁": return { food: calculateFishYield(person, village) };
     case "伐採": return { materials: calculateLumberYield(person, village) };
+    case "お手伝い": return calculateHelpExpectedYield();
     case "採集": {
       const yields = calculateGatherYield(person, village);
       return { food: yields.food, materials: yields.materials };

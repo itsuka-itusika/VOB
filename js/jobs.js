@@ -14,6 +14,7 @@ import {
   calculateGatherYield,
   calculateGuardYield,
   calculateHandiworkYield,
+  HELP_JOB_RESOURCE_RANGE,
   calculateHuntYield,
   calculateLumberYield,
   calculateMassageHeal,
@@ -466,8 +467,9 @@ function doPlayJob(p, v) {
 
 function doHelpJob(p, v) {
   const tc = calcBodyCost(10, p.vit, p, v);
-  const foodGain = randInt(3, 6);
-  const materialGain = randInt(3, 6);
+  const [gainMin, gainMax] = HELP_JOB_RESOURCE_RANGE;
+  const foodGain = randInt(gainMin, gainMax);
+  const materialGain = randInt(gainMin, gainMax);
   p.hp = clampValue(p.hp - tc, 0, 100);
   gainStoredResource(v, p, "food", foodGain);
   gainStoredResource(v, p, "materials", materialGain);

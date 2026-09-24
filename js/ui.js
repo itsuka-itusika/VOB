@@ -12,6 +12,7 @@ import {
   calculateGatherYield,
   calculateGuardYield,
   calculateHandiworkYield,
+  HELP_JOB_RESOURCE_RANGE,
   calculateHuntYield,
   calculateLumberYield,
   calculateMassageHeal,
@@ -660,7 +661,7 @@ function getTaskEstimateParts(person, task, village) {
       parts = [`体力-${bodyCost(5, person, village)}`, "メンタル+20", "幸福+15"];
       break;
     case "お手伝い":
-      parts = ["食料+3〜6", "資材+3〜6", `体力-${bodyCost(10, person, village)}`];
+      parts = [`食料+${HELP_JOB_RESOURCE_RANGE[0]}〜${HELP_JOB_RESOURCE_RANGE[1]}`, `資材+${HELP_JOB_RESOURCE_RANGE[0]}〜${HELP_JOB_RESOURCE_RANGE[1]}`, `体力-${bodyCost(10, person, village)}`];
       break;
     case "療養":
       parts = [`体力+${Math.floor(20 * ((hasTrait(person, "老人") || hasTrait(person, "老狼")) ? 0.6 : hasTrait(person, "中年") ? 0.8 : 1))}`, `メンタル+${Math.floor(20 * ((hasTrait(person, "老人") || hasTrait(person, "老狼")) ? 0.6 : hasTrait(person, "中年") ? 0.8 : 1))}`];

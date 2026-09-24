@@ -20,6 +20,8 @@ const SEASONAL_COST_MULTIPLIER = 1.2;
 const RANDOM_HARVEST_EXPECTED_BASE = 32;
 const IMPROVED_HARVEST_EXPECTED_BASE = 35;
 const MID_TEEN_TRAIT = "思春期";
+// お手伝いの獲得量。実処理はこの範囲から抽選し、予測と自動割り振りでは期待値を使う。
+export const HELP_JOB_RESOURCE_RANGE = [3, 6];
 
 export const WORK_COST_TYPES = {
   PHYSICAL: { body: 24, mind: 12 },
@@ -184,6 +186,13 @@ export function getLaborYieldMultiplier(job, person = null, village = null) {
   if ((person?.hobby === "読書" || person?.hobby === "自由研究") && job === "研究") mul *= 1.1;
   if (hasMindTrait(person, MID_TEEN_TRAIT) && YOUTH_WORK_JOBS.includes(job)) mul *= 0.8;
   return mul;
+}
+
+/** お手伝いの1か月あたりの期待成果。抽選幅の中央値を食料・資材それぞれに返す。 */
+export function calculateHelpExpectedYield() {
+  const [min, max] = HELP_JOB_RESOURCE_RANGE;
+  const expected = (min + max) / 2;
+  return { food: expected, materials: expected };
 }
 
 export function calculateFarmYield(person, village) {

@@ -1,6 +1,6 @@
 // miracles.js
 
-import { clampValue, shuffleArray } from "./util.js";
+import { clampValue, randChoice, shuffleArray } from "./util.js";
 import { applyPortraitToElement, getPortraitSpriteHtml } from "./data/portraitAtlas.js";
 import { addRelationship, removeRelationship, checkHasRelationship, hasLoverRelationship, getRelationshipTargetId, clearRelationshipsForDepartedVillager, addSpouseRelationships, raiseMutualFriendshipTo } from "./relationships.js";
 import { updateUI } from "./ui.js";  // 実行後にUIを更新する
@@ -1448,6 +1448,11 @@ function marketMiracle(v) {
     const merchant = createRandomVisitorOfType("行商人", existingNames);
     newVisitors.push(merchant);
     v.visitors.push(merchant);
+  }
+  // 市を開くための奇跡なので、3人のうち必ず1人は掘り出し物を持ってくる。
+  if (!newVisitors.some(merchant => merchant.merchantStock?.secretTreasure)) {
+    const luckyMerchant = randChoice(newVisitors.filter(merchant => merchant.merchantStock));
+    if (luckyMerchant) luckyMerchant.merchantStock.secretTreasure = true;
   }
   v.log(`【市場の奇跡】行商人3人が村を訪れました`);
   showMiracleResultModal(v, "市場の奇跡", "行商人たちが市を開くために村を訪れました。", newVisitors);
