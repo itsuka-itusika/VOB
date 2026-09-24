@@ -392,6 +392,7 @@ function convertVillagerToObject(vill) {
     adventurerQuestOffers: Array.isArray(vill.adventurerQuestOffers)
       ? JSON.parse(JSON.stringify(vill.adventurerQuestOffers))
       : null,
+    adventurerQuestRerolled: !!vill.adventurerQuestRerolled,
     pregnancy: normalizePregnancyState(vill.pregnancy),
     postpartumMonths: vill.postpartumMonths || 0,
     ares: normalizeFiniteNumber(vill.ares, 0),
@@ -766,6 +767,7 @@ function convertObjectToVillager(obj) {
   vill.adventurerQuestOffers = Array.isArray(obj.adventurerQuestOffers)
     ? JSON.parse(JSON.stringify(obj.adventurerQuestOffers))
     : null;
+  vill.adventurerQuestRerolled = !!obj.adventurerQuestRerolled;
   vill.pregnancy = normalizePregnancyState(obj.pregnancy);
   vill.postpartumMonths = obj.postpartumMonths || 0;
   vill.ares = normalizeFiniteNumber(obj.ares, 0);

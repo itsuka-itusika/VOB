@@ -1,11 +1,13 @@
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { getPortraitSpriteHtml } from "./data/portraitAtlas.js";
 import { grantSecretTreasure, pickRandomSecretTreasureDefinitions } from "./secretTreasures.js";
+import { updateUI } from "./ui.js";
 import {
   ADVENTURER_QUEST_ACCEPTED_TRAIT,
   ADVENTURER_QUEST_BASE_SUCCESS_RATES,
   ADVENTURER_QUEST_COST,
   ADVENTURER_QUEST_DURATION_MONTHS,
+  ADVENTURER_QUEST_REROLL_COST,
   ADVENTURER_QUEST_STAT_LABELS,
   ADVENTURER_QUEST_TEMPLATES
 } from "./data/adventurerQuestData.js";
@@ -65,11 +67,7 @@ export function hasAcceptedAdventurerQuest(character) {
     && character.mindTraits.includes(ADVENTURER_QUEST_ACCEPTED_TRAIT);
 }
 
-export function ensureAdventurerQuestOffers(adventurer) {
-  if (Array.isArray(adventurer?.adventurerQuestOffers) && adventurer.adventurerQuestOffers.length === QUEST_OFFER_COUNT) {
-    return adventurer.adventurerQuestOffers;
-  }
-
+function rollAdventurerQuestOffers(adventurer) {
   const templates = shuffled(ADVENTURER_QUEST_TEMPLATES).slice(0, QUEST_OFFER_COUNT);
   const treasures = pickRandomSecretTreasureDefinitions(QUEST_OFFER_COUNT);
   adventurer.adventurerQuestOffers = templates.map((template, index) => ({
@@ -79,6 +77,29 @@ export function ensureAdventurerQuestOffers(adventurer) {
     treasureName: treasures[index].name
   }));
   return adventurer.adventurerQuestOffers;
+}
+
+export function ensureAdventurerQuestOffers(adventurer) {
+  if (Array.isArray(adventurer?.adventurerQuestOffers) && adventurer.adventurerQuestOffers.length === QUEST_OFFER_COUNT) {
+    return adventurer.adventurerQuestOffers;
+  }
+  return rollAdventurerQuestOffers(adventurer);
+}
+
+/** 候補を引き直せるか。冒険者1人につき1回までで、資金も要る。 */
+function canRerollAdventurerQuestOffers(village, adventurer) {
+  if (adventurer?.adventurerQuestRerolled) return "この冒険者の依頼内容は引き直し済みです";
+  if ((Number(village?.funds) || 0) < ADVENTURER_QUEST_REROLL_COST) return "資金が不足しています";
+  return "";
+}
+
+function rerollAdventurerQuestOffers(village, adventurer) {
+  if (canRerollAdventurerQuestOffers(village, adventurer)) return false;
+  village.funds = Math.max(0, (Number(village.funds) || 0) - ADVENTURER_QUEST_REROLL_COST);
+  adventurer.adventurerQuestRerolled = true;
+  rollAdventurerQuestOffers(adventurer);
+  village.log(`【冒険者クエスト】${adventurer.name}へ資金${ADVENTURER_QUEST_REROLL_COST}を渡し、依頼内容を引き直しました`);
+  return true;
 }
 
 export function getAdventurerQuestSuccessRate(adventurer, offer) {
@@ -166,7 +187,6 @@ export function openAdventurerQuestModal(village, adventurer, { onAccepted } = {
           <div><dt>期間</dt><dd>${ADVENTURER_QUEST_DURATION_MONTHS}か月</dd></div>
           <div><dt>獲得報酬</dt><dd>秘宝「${escapeHtml(offer.treasureName)}」</dd></div>
           <div><dt>参照能力</dt><dd>${bodyLabel}${bodyValue} × ${mindLabel}${mindValue}</dd></div>
-          <div><dt>基礎成功率</dt><dd>${getQuestBaseSuccessRate(offer)}%</dd></div>
           <div><dt>成功率</dt><dd>${successRate}%</dd></div>
         </dl>
         ${template.requiredBodySex ? `<p class="adventurer-quest-requirement">身体性別: ${template.requiredBodySex} 限定</p>` : ""}
@@ -176,10 +196,15 @@ export function openAdventurerQuestModal(village, adventurer, { onAccepted } = {
     `;
   }).join("");
 
+  const rerollBlockedReason = canRerollAdventurerQuestOffers(village, adventurer);
   modal.innerHTML = `
     <div class="event-modal-body">
-      <h3>${escapeHtml(adventurer.name)}へのクエスト依頼</h3>
-      <p>依頼すると冒険者は出発し、6か月後の月初に帰還します。</p>
+      <div class="adventurer-quest-header">
+        <h3>${escapeHtml(adventurer.name)}へのクエスト依頼</h3>
+        <button type="button" data-adventurer-quest-reroll ${rerollBlockedReason ? "disabled" : ""}
+          title="${escapeHtml(rerollBlockedReason)}">依頼内容を引き直す（資金${ADVENTURER_QUEST_REROLL_COST}）</button>
+      </div>
+      <p>依頼すると冒険者は出発し、6か月後の月初に帰還します。引き直しは1人につき1回までです。</p>
       <div class="adventurer-quest-list">${offerHtml}</div>
       <div class="event-modal-buttons">
         <button type="button" data-close-adventurer-quest>閉じる</button>
@@ -190,6 +215,13 @@ export function openAdventurerQuestModal(village, adventurer, { onAccepted } = {
   const close = () => removeQuestModal();
   overlay.addEventListener("click", close);
   modal.querySelector("[data-close-adventurer-quest]")?.addEventListener("click", close);
+  modal.querySelector("[data-adventurer-quest-reroll]")?.addEventListener("click", () => {
+    const ok = window.confirm(`資金${ADVENTURER_QUEST_REROLL_COST}を払い、依頼内容を引き直しますか？ 引き直せるのは1回だけです。`);
+    if (!ok) return;
+    if (!rerollAdventurerQuestOffers(village, adventurer)) return;
+    updateUI(village);
+    openAdventurerQuestModal(village, adventurer, { onAccepted });
+  });
   modal.querySelectorAll("[data-adventurer-quest-index]").forEach(button => {
     button.addEventListener("click", () => {
       const offer = offers[Number(button.dataset.adventurerQuestIndex)];

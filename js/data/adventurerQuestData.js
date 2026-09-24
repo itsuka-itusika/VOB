@@ -2,6 +2,8 @@
 import { MESSENGER_PASS_SECRET_TREASURE_ID } from "./tutorialData.js";
 
 export const ADVENTURER_QUEST_COST = 100;
+// 提示された4候補を引き直す費用。冒険者1人につき1回まで。
+export const ADVENTURER_QUEST_REROLL_COST = 500;
 export const ADVENTURER_QUEST_DURATION_MONTHS = 6;
 export const ADVENTURER_QUEST_ACCEPTED_TRAIT = "依頼受諾";
 

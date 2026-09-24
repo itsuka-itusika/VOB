@@ -2464,13 +2464,33 @@ section h2 {
   width: min(840px, calc(100vw - 32px));
 }
 
+.adventurer-quest-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.adventurer-quest-header h3 {
+  margin: 0;
+}
+
+.adventurer-quest-header button {
+  flex: 0 0 auto;
+  min-height: 32px;
+}
+
+/* 候補は常に4件なので、2列に並べて2×2に揃える。 */
 .adventurer-quest-list {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
 .adventurer-quest-card {
+  display: flex;
+  flex-direction: column;
   padding: 12px;
   border: 1px solid #b99a68;
   border-radius: 5px;
@@ -2488,8 +2508,9 @@ section h2 {
   margin: 0 0 8px;
 }
 
+/* 説明文の長さが違っても、依頼ボタンの位置を揃える。 */
 .adventurer-quest-card dl {
-  margin: 8px 0;
+  margin: auto 0 8px;
 }
 
 .adventurer-quest-card dl div {
