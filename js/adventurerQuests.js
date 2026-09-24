@@ -177,7 +177,8 @@ export function openAdventurerQuestModal(village, adventurer, { onAccepted } = {
     const successRate = getAdventurerQuestSuccessRate(adventurer, offer);
     const sexBlocked = !isOfferAvailable(adventurer, offer);
     const fundsBlocked = village.funds < ADVENTURER_QUEST_COST;
-    const disabledReason = sexBlocked ? "身体性別が女性の冒険者限定" : (fundsBlocked ? "資金が不足しています" : "");
+    // 身体性別の条件はボタンの上の「身体性別: ◯ 限定」で出しているため、ここでは繰り返さない。
+    const disabledReason = !sexBlocked && fundsBlocked ? "資金が不足しています" : "";
     return `
       <section class="adventurer-quest-card${sexBlocked ? " is-disabled" : ""}">
         <h4>${index + 1}. ${escapeHtml(template.title)}</h4>
