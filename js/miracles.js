@@ -1628,10 +1628,13 @@ function pickLineAvoidingUsed(lines, usedLines) {
 }
 
 function getBodyExchangeReactionLine(person, usedLines = null) {
-  // 生まれ持った肉体が特殊種族だった場合は、口調ごとの種族セリフを優先する。
-  const raceLines = getBodyExchangeSourceRaceLines(person);
-  if (raceLines.length > 0) return pickLineAvoidingUsed(raceLines, usedLines);
   const type = getBodyExchangeLineKey(person);
+  // 生まれ持った肉体が特殊種族だった場合は、口調ごとの種族セリフを優先する。
+  // ただし塩と化した身体は声を出せないため、種族の反応より沈黙を優先する。
+  if (type !== SALT_PILLAR_TRAIT) {
+    const raceLines = getBodyExchangeSourceRaceLines(person);
+    if (raceLines.length > 0) return pickLineAvoidingUsed(raceLines, usedLines);
+  }
   const fallbackType = person.spiritSex === "女" ? "普通Ｆ" : "普通Ｍ";
   const lines = BODY_EXCHANGE_REACTION_LINES[type] ||
     BODY_EXCHANGE_REACTION_LINES[fallbackType] ||

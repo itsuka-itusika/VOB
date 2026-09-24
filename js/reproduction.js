@@ -32,6 +32,7 @@ import {
 import { getRaiderTypeByType } from "./data/raidData.js";
 import { getBaseStat, setBaseStat, setBaseStatsFromEffective, syncEffectiveStats } from "./domain/statLayers.js";
 import { IMMATURE_MIND_TRAIT, OLD_WOLF_TRAIT, syncWolfSpeciesTraits, WILD_MIND_TRAIT, YOUNG_WOLF_TRAIT } from "./domain/speciesTraits.js";
+import { isSpeciesSpeechType } from "./domain/raiderSpeechTypes.js";
 import { getRaiderSpeechType } from "./domain/raiderSpeechTypes.js";
 import { recordAdulthoodHistory, recordBirthHistory, recordPregnancyHistory } from "./history.js";
 import { addRelationship, checkHasRelationship, getRelationshipEntries, getRelationshipTargetId } from "./relationships.js";
@@ -644,7 +645,11 @@ export function updateChildGrowthStage(child, village, { announce = false } = {}
     child.hobby = child.adultHobby || child.hobby || "";
   }
 
-  child.speechType = determineSpeechType(child);
+  // 狼・ゴブリン・ハーピーの口調は精神側に残る種族口調。子どもの身体へ入った獣を
+  // 成長させても、身体側の種族から人間の口調へ書き換えない。
+  if (!isSpeciesSpeechType(child.speechType)) {
+    child.speechType = determineSpeechType(child);
+  }
   syncWolfSpeciesTraits(child);
   syncEffectiveStats(child);
   setChildPortrait(child);

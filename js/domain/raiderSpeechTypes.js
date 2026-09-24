@@ -21,6 +21,13 @@ const POLITE_FEMALE_RAIDER_TYPES = new Set([
   "上位翼人"
 ]);
 const HARPY_RAIDER_TYPES = new Set(["ハーピー", "ハーピーの長"]);
+// 種族そのものに結びついた口調。精神側に残るため、身体が変わっても引き継がれる。
+const SPECIES_SPEECH_TYPES = new Set(["狼", "ゴブリン", "ハーピー"]);
+
+/** 種族に結びついた口調か。成長処理で人間の口調へ書き換えないために使う。 */
+export function isSpeciesSpeechType(speechType) {
+  return SPECIES_SPEECH_TYPES.has(String(speechType || ""));
+}
 
 export function getRaiderSpeechType(person) {
   const raiderType = typeof person === "string"
