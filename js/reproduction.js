@@ -164,6 +164,23 @@ function isLongLivedRace(race) {
   return LONG_LIVED_RACES.has(normalizeChildRace(race));
 }
 
+/**
+ * 成長後の値を持つ潜在値。肉体側は身体に、精神側は精神に付く。
+ * applyGrowthStats と同じ解決にし、null は「潜在値なし」として扱う。
+ */
+function resolvePotentialStats(person, key) {
+  return person?.[key] !== undefined ? person[key] : person?.potentialStats;
+}
+
+/**
+ * 遺伝に使う親の能力。育ち切っていない親でも成長後の値を渡すため、潜在値を見る。
+ * 潜在値を持たない村人（成人として生成された者など）は現在値をそのまま使う。
+ */
+function snapshotParentStat(person, potential, stat) {
+  const value = Number(potential?.[stat]);
+  return value > 0 ? Math.round(value) : (getBaseStat(person, stat) || 1);
+}
+
 function snapshotParent(person) {
   const snap = {
     name: person.name,
@@ -176,8 +193,13 @@ function snapshotParent(person) {
       ? person.bodyTraits.filter(trait => !GENETIC_EXCLUDED_BODY_TRAITS.has(trait))
       : []
   };
-  [...PHYSICAL_STATS, ...MENTAL_STATS].forEach(stat => {
-    snap[stat] = getBaseStat(person, stat) || 1;
+  const bodyPotential = resolvePotentialStats(person, "bodyPotentialStats");
+  const mindPotential = resolvePotentialStats(person, "mindPotentialStats");
+  PHYSICAL_STATS.forEach(stat => {
+    snap[stat] = snapshotParentStat(person, bodyPotential, stat);
+  });
+  MENTAL_STATS.forEach(stat => {
+    snap[stat] = snapshotParentStat(person, mindPotential, stat);
   });
   return snap;
 }
