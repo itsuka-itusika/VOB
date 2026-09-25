@@ -740,7 +740,7 @@ export function updateChildGrowthStage(child, village, { announce = false } = {}
  * 潜在能力を持たない村人には成長段階が働かないため、子ども特性だけを外す。
  * 進めるものが無い場合は false を返す。
  */
-export function growPersonToAdultAge(person, village, { targetAge = 16, announce = false } = {}) {
+export function growPersonToAdultAge(person, village, { targetAge = 16, announce = false, source = "" } = {}) {
   if (!person) return false;
   const oldBodyAge = Number(person.bodyAge) || 0;
   const oldSpiritAge = Number(person.spiritAge) || 0;
@@ -752,6 +752,9 @@ export function growPersonToAdultAge(person, village, { targetAge = 16, announce
   // 伝授が走らない。飛ばしたときだけ、ここで1度だけ判定する。
   const skipsAdolescence = oldSpiritAge <= 15 && !hasMindTrait(person, "思春期");
 
+  // 秘宝や怪異による成人は専用の文面で残す。成長処理の通常の成人記録より先に残し、
+  // 同じ人物の成人記録として後の記録は重複除外させる。
+  if (source && oldSpiritAge <= 15 && person.race !== "狼") recordAdulthoodHistory(village, person, { source });
   if (oldBodyAge <= 15) person.bodyAge = age;
   if (oldSpiritAge <= 15) person.spiritAge = age;
   updateChildGrowthStage(person, village, { announce });

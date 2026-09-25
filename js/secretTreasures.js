@@ -241,7 +241,7 @@ function applyGrotesquePortrait(village, target) {
 }
 
 function growToSixteen(person, village) {
-  if (!growPersonToAdultAge(person, village, { targetAge: 16, announce: true })) return;
+  if (!growPersonToAdultAge(person, village, { targetAge: 16, announce: true, source: "クロノスの秘薬" })) return;
   village.log(`【秘宝】クロノスの秘薬により${person.name}は16歳まで成長しました`);
   showSecretTreasureResult(village, "クロノスの秘薬", `${person.name}は急速に成長し、若い姿を得ました。`, [person]);
 }

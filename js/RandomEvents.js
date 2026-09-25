@@ -21,7 +21,7 @@ import { getActiveVillagers, getVillagersIncludingSaltPillar } from "./domain/ap
 import { getCaptives } from "./captives.js";
 import { damageRandomBuilding } from "./buildings.js";
 import { addAcquiredStat, syncEffectiveStats } from "./domain/statLayers.js";
-import { recordEpidemicHistory, recordHobbyAwakeningHistory, recordLoverHistory, recordMythicEventHistory, recordSocialRelationHistory, recordVillagerJoinHistory } from "./history.js";
+import { recordAdulthoodHistory, recordEpidemicHistory, recordHobbyAwakeningHistory, recordLoverHistory, recordMythicEventHistory, recordSocialRelationHistory, recordVillagerJoinHistory } from "./history.js";
 import { updateUI } from "./ui.js";
 import {
   getChildlikeRandomEventLine,
@@ -380,6 +380,7 @@ export class RandomEvents {
       case "strangeGrowthPotion": {
         const beforeAge = Number(p.bodyAge) || 0;
         if (!matureBodyToAdultOnly(p, v)) return null;
+        recordAdulthoodHistory(v, p, { source: "怪しい薬" });
         this.addForcedSpeaker(p);
         v.log(`怪しい薬:${p.name}は怪しい薬を頭からかぶり、肉体だけが急成長した。肉体年齢${beforeAge}歳→16歳、肉体能力が潜在値まで成長`);
         break;
@@ -388,7 +389,7 @@ export class RandomEvents {
         const beforeBodyAge = Number(p.bodyAge) || 0;
         const beforeSpiritAge = Number(p.spiritAge) || 0;
         const grownAge = randInt(TIME_RIPPLE_MIN_AGE, TIME_RIPPLE_MAX_AGE);
-        if (!growPersonToAdultAge(p, v, { targetAge: grownAge })) return null;
+        if (!growPersonToAdultAge(p, v, { targetAge: grownAge, source: "時空のうねり" })) return null;
         this.addForcedSpeaker(p);
         v.log(`時空のうねり:${p.name}は時空のうねりに巻き込まれ成長した姿で現れた。肉体年齢${beforeBodyAge}歳→${p.bodyAge}歳、精神年齢${beforeSpiritAge}歳→${p.spiritAge}歳`);
         break;

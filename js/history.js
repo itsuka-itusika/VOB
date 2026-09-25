@@ -66,6 +66,26 @@ const HISTORY_SCOPES = Object.freeze({
 
 // 成狼の記録を成人と区別するタグ。表示側もこの値で文言を切り替える。
 const ADULTHOOD_WOLF_TAG = "成狼";
+// 秘宝や怪異で一足飛びに大人になった時の成人記録。キーは記録の source（タグの2番目）。
+// bodyOnly は肉体だけが大人になる場合で、後で精神が16歳になった時の成人記録を別に残す。
+const SPECIAL_ADULTHOOD_TEXTS = Object.freeze({
+  "クロノスの秘薬": {
+    title: name => `${name}、クロノスの秘薬で成人する`,
+    text: name => `${name}がクロノスの秘薬を飲み、一夜にして大人になった。`,
+    personal: "クロノスの秘薬を飲み、一夜にして大人になる。"
+  },
+  "時空のうねり": {
+    title: name => `${name}、時空のうねりの中で成人する`,
+    text: name => `${name}が時空のうねりの中で子どもの時を飛び越え、大人になった。`,
+    personal: "時空のうねりの中で子どもの時を飛び越え、大人になる。"
+  },
+  "怪しい薬": {
+    title: name => `${name}、怪しい薬で身体だけ成人する`,
+    text: name => `${name}が怪しい薬を浴び、心は幼いまま身体だけが大人になった。`,
+    personal: "怪しい薬を浴び、心は幼いまま身体だけが大人になる。",
+    bodyOnly: true
+  }
+});
 // 里長選挙の得票を残すタグ。「得票:名前0票、…」の形で持つ。
 const ELECTION_COUNTS_TAG_PREFIX = "得票:";
 
@@ -419,15 +439,16 @@ export function recordAdulthoodHistory(village, person, options = {}) {
   const source = options.source || "成長";
   // 狼は「成人」ではなく「成狼」として記録する。表示側もこのタグで文言を分ける。
   const isWolfMaturity = options.label === ADULTHOOD_WOLF_TAG;
+  const special = isWolfMaturity ? null : SPECIAL_ADULTHOOD_TEXTS[source];
   addHistoryEvent(village, {
     type: HISTORY_EVENT_TYPES.ADULTHOOD,
-    title: isWolfMaturity ? `${person.name}、成狼になる` : `${person.name}、成人する`,
-    text: isWolfMaturity ? `${person.name}が成狼になった。` : `${person.name}が成人した。`,
+    title: isWolfMaturity ? `${person.name}、成狼になる` : special ? special.title(person.name) : `${person.name}、成人する`,
+    text: isWolfMaturity ? `${person.name}が成狼になった。` : special ? special.text(person.name) : `${person.name}が成人した。`,
     people: [person],
     importance: "minor",
     scope: HISTORY_SCOPES.PERSON,
     tags: [isWolfMaturity ? ADULTHOOD_WOLF_TAG : "成人", source],
-    dedupeKey: `adulthood:${person.name}`
+    dedupeKey: special?.bodyOnly ? `adulthood-body:${person.name}` : `adulthood:${person.name}`
   });
 }
 
@@ -682,9 +703,9 @@ function getVillageHistoryText(event) {
       break;
     case HISTORY_EVENT_TYPES.ADULTHOOD:
       if (personA) {
-        return event.tags.includes(ADULTHOOD_WOLF_TAG)
-          ? `${personA}が成狼になった。`
-          : `${personA}が成人した。`;
+        if (event.tags.includes(ADULTHOOD_WOLF_TAG)) return `${personA}が成狼になった。`;
+        const special = SPECIAL_ADULTHOOD_TEXTS[getEventSource(event)];
+        return special ? special.text(personA) : `${personA}が成人した。`;
       }
       break;
     case HISTORY_EVENT_TYPES.CRITICAL:
@@ -763,7 +784,8 @@ function getPersonalHistoryText(event, personName, personId = null) {
         ? `${getEventSource(event)}により村での生を終える。`
         : "村での生を終える。";
     case HISTORY_EVENT_TYPES.ADULTHOOD:
-      return event.tags.includes(ADULTHOOD_WOLF_TAG) ? "成狼になる。" : "成人する。";
+      if (event.tags.includes(ADULTHOOD_WOLF_TAG)) return "成狼になる。";
+      return SPECIAL_ADULTHOOD_TEXTS[getEventSource(event)]?.personal || "成人する。";
     case HISTORY_EVENT_TYPES.CRITICAL:
       return "危篤となる。";
     case HISTORY_EVENT_TYPES.EPIDEMIC:
