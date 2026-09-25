@@ -19,6 +19,10 @@ STANDALONE_PORTRAITS = {
     Path("images/portraits/system/CHILD_SHADOW.svg"),
     Path("images/portraits/system/CHILD_SHADOW_BABY.svg"),
 }
+# ゲームからは読み込まない。旧会話の文面を残すためにリポジトリにだけ置いている。
+EXCLUDED_FILES = {
+    Path("js/data/dialogue/basicConversationLines.js"),
+}
 FILE_LIMIT = 1000
 # 計測タグはコメント行から、設定を書いた script の終わりまでをひとかたまりで外す。
 ANALYTICS_PATTERN = re.compile(
@@ -40,6 +44,8 @@ def strip_analytics(html: str) -> str:
 
 
 def should_include(relative_path: Path) -> bool:
+    if relative_path in EXCLUDED_FILES:
+        return False
     portrait_root = Path("images/portraits")
     if relative_path == portrait_root or portrait_root in relative_path.parents:
         return relative_path in STANDALONE_PORTRAITS
@@ -58,6 +64,13 @@ def collect_files(include_images: bool = True) -> list[Path]:
             relative_path = path.relative_to(REPO_ROOT)
             if should_include(relative_path):
                 files.append(relative_path)
+    # 外したファイルをゲームが読み込むようになっていたら、壊れた zip を作らずに止める。
+    for path in files:
+        if path.suffix == ".js":
+            source = (REPO_ROOT / path).read_text(encoding="utf-8")
+            referenced = [excluded.name for excluded in EXCLUDED_FILES if excluded.name in source]
+            if referenced:
+                raise RuntimeError(f"{path} が除外したファイルを参照しています: {', '.join(referenced)}")
     return sorted(set(files), key=lambda path: path.as_posix())
 
 
