@@ -269,7 +269,13 @@ function selectAdultPortraitForChild(child, adult) {
 }
 
 function hasOwnChildInVillage(village, parent) {
-  return getRelationshipEntries(parent).some(entry => entry.prefix === "子");
+  return getRelationshipEntries(parent).some(entry => {
+    if (entry.prefix !== "子") return false;
+    // 配偶者が産んだ子は親として持っていても、本人の出産には数えない。
+    const child = village.villagers.find(person => entryMatchesPerson(entry, person));
+    const geneticMotherId = getRelationshipTargetId(child, "遺伝母");
+    return geneticMotherId == null || geneticMotherId === parent.id || geneticMotherId === parent.bodyOwnerId;
+  });
 }
 
 function getSpouse(person, village) {
