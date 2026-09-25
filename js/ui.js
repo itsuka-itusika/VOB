@@ -1262,7 +1262,7 @@ export function updateUI(v) {
     <div class="resource-box"><span class="resource-label">資金</span><span class="resource-value">${v.funds}</span></div>
     <div class="resource-box"><span class="resource-label">魔素</span><span class="resource-value">${v.mana}</span></div>
     <div class="resource-box"><span class="resource-label">技術</span><span class="resource-value">${v.tech}</span></div>
-    <div class="resource-box"><span class="resource-label">治安</span><span class="resource-value">${v.security}</span></div>
+    <div class="resource-box"><span class="resource-label">治安</span><span class="resource-value">${v.security}/100</span></div>
     <div class="resource-box"><span class="resource-label">規模</span><span class="resource-value">${v.building}</span></div>
     <div class="resource-box"><span class="resource-label">人口/上限</span><span class="resource-value">${formatPopulationValue(v)}</span></div>
     <div class="resource-box resource-traits"><span class="resource-label">村特性</span><span class="resource-value" id="villageTraitsTerms"></span></div>
