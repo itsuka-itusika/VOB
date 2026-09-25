@@ -67,7 +67,7 @@ const HISTORY_SCOPES = Object.freeze({
 // 成狼の記録を成人と区別するタグ。表示側もこの値で文言を切り替える。
 const ADULTHOOD_WOLF_TAG = "成狼";
 // 秘宝や怪異で一足飛びに大人になった時の成人記録。キーは記録の source（タグの2番目）。
-// bodyOnly は肉体だけが大人になる場合で、後で精神が16歳になった時の成人記録を別に残す。
+// bodyOnly は肉体だけが急成長する場合で、成人とは呼ばず、後で精神が16歳になった時の成人記録を別に残す。
 const SPECIAL_ADULTHOOD_TEXTS = Object.freeze({
   "クロノスの秘薬": {
     title: name => `${name}、クロノスの秘薬で成人する`,
@@ -80,9 +80,9 @@ const SPECIAL_ADULTHOOD_TEXTS = Object.freeze({
     personal: "時空のうねりの中で子どもの時を飛び越え、大人になる。"
   },
   "怪しい薬": {
-    title: name => `${name}、怪しい薬で身体だけ成人する`,
-    text: name => `${name}が怪しい薬を浴び、心は幼いまま身体だけが大人になった。`,
-    personal: "怪しい薬を浴び、心は幼いまま身体だけが大人になる。",
+    title: name => `${name}、怪しい薬で急成長する`,
+    text: name => `${name}が怪しい薬を浴びて急成長し、大人になった。`,
+    personal: "怪しい薬を浴びて急成長し、大人になる。",
     bodyOnly: true
   }
 });
@@ -447,7 +447,7 @@ export function recordAdulthoodHistory(village, person, options = {}) {
     people: [person],
     importance: "minor",
     scope: HISTORY_SCOPES.PERSON,
-    tags: [isWolfMaturity ? ADULTHOOD_WOLF_TAG : "成人", source],
+    tags: [isWolfMaturity ? ADULTHOOD_WOLF_TAG : special?.bodyOnly ? "急成長" : "成人", source],
     dedupeKey: special?.bodyOnly ? `adulthood-body:${person.name}` : `adulthood:${person.name}`
   });
 }
