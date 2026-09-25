@@ -72,8 +72,8 @@ const ADULTHOOD_WOLF_TAG = "成狼";
 const SPECIAL_ADULTHOOD_TEXTS = Object.freeze({
   "クロノスの秘薬": {
     title: name => `${name}、クロノスの秘薬で成人する`,
-    text: name => `${name}がクロノスの秘薬を飲み、一夜にして大人になった。`,
-    personal: "クロノスの秘薬を飲み、一夜にして大人になる。"
+    text: name => `${name}がクロノスの秘薬を飲み大人になった。`,
+    personal: "クロノスの秘薬を飲み大人になる。"
   },
   "時空のうねり": {
     title: name => `${name}、時空のうねりの中で成人する`,
