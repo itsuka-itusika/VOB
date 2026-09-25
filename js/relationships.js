@@ -387,9 +387,18 @@ function relationshipEntryKey(entry) {
   return `${entry.prefix}\u0000${entry.targetId != null ? `id:${entry.targetId}` : `name:${entry.targetName}`}`;
 }
 
+// 正規化済みの関係配列。addRelationship は正規化済みのエントリを重複なしで足すだけなので、作り直さない。
+// 全ペアの月次処理で何度も呼ばれ、長期プレイでは関係が1人数百件になるため、毎回作り直すと重くなる。
+const normalizedRelationshipLists = new WeakSet();
+
 /** 人物の関係一覧を正規化済みエントリ配列として返す（重複は除去して保存し直す）。 */
 export function getRelationshipEntries(person) {
   if (!person) return [];
+  if (normalizedRelationshipLists.has(person.relationships)) return person.relationships;
+  return rebuildRelationshipEntries(person);
+}
+
+function rebuildRelationshipEntries(person) {
   const source = Array.isArray(person.relationships) ? person.relationships : [];
   const seen = new Set();
   const entries = [];
@@ -402,12 +411,14 @@ export function getRelationshipEntries(person) {
     entries.push(entry);
   });
   person.relationships = entries;
+  normalizedRelationshipLists.add(entries);
   return entries;
 }
 
-/** saveLoad互換の別名。エントリ配列を返す。 */
+/** saveLoad互換の別名。読込時にエントリを書き換えた後も使うため、必ず正規化し直す。 */
 export function normalizeRelationships(person) {
-  return getRelationshipEntries(person);
+  if (!person) return [];
+  return rebuildRelationshipEntries(person);
 }
 
 /** エントリの相手が指定人物か。ID優先で、旧データはスナップショット名で照合する。 */
@@ -517,13 +528,19 @@ function normalizeCounterMap(value) {
   return result;
 }
 
+// 正規化済みの交友記録。以後の書き込みは incrementMutualPairCounter 経由で正規化済みの値だけが入るため、
+// 毎回作り直さない。同じ仕事の全ペアについて呼ばれるため、作り直すと人数の3乗で重くなる。
+const normalizedFriendshipStats = new WeakSet();
+
 function ensureFriendshipStats(person) {
   if (!person || typeof person !== "object") return { workTogether: {}, frontRaidTogether: {} };
   if (!person.friendshipStats || typeof person.friendshipStats !== "object" || Array.isArray(person.friendshipStats)) {
     person.friendshipStats = {};
   }
+  if (normalizedFriendshipStats.has(person.friendshipStats)) return person.friendshipStats;
   person.friendshipStats.workTogether = normalizeCounterMap(person.friendshipStats.workTogether);
   person.friendshipStats.frontRaidTogether = normalizeCounterMap(person.friendshipStats.frontRaidTogether);
+  normalizedFriendshipStats.add(person.friendshipStats);
   return person.friendshipStats;
 }
 
@@ -1116,10 +1133,11 @@ function showRelationshipModalNow(title, message, entries) {
 function removePairRelationshipsWhere(person, other, predicate) {
   if (!person || !other) return false;
   const entries = getRelationshipEntries(person);
-  const next = entries.filter(entry => !(entryMatchesPerson(entry, other) && predicate(entry)));
-  const removed = next.length !== entries.length;
-  person.relationships = next;
-  return removed;
+  const matches = entry => entryMatchesPerson(entry, other) && predicate(entry);
+  // 全ペアの月次処理で呼ばれるため、消す関係がなければ配列を作らない。
+  if (!entries.some(matches)) return false;
+  person.relationships = entries.filter(entry => !matches(entry));
+  return true;
 }
 
 function removePairRelationshipByPrefix(a, b, prefix) {

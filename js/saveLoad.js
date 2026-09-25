@@ -672,6 +672,8 @@ function finalizePersonIds(village, dataObj) {
           entry.targetId = idByName.get(entry.targetName) ?? null;
         }
       });
+      // 相手IDを補うと同じ相手への重複が生まれうるため、正規化し直す。
+      normalizeRelationships(person);
     }
   });
 }

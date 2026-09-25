@@ -74,7 +74,7 @@
 - `js/reproduction.js`
   - 妊娠、出産、産褥、成人化、成長段階を扱う。遺伝に使う親の能力は `snapshotParent` が潜在値から作る。身体能力は `bodyPotentialStats`、精神能力は `mindPotentialStats` を見て、潜在値を持たない相手だけ現在の基礎値を渡す。子が思春期に入った月には `teachParentMindTraits` が走り、村にいる続柄の母・父から `ゴブリン兵法`・`狙撃心得` を必ず、`森の知恵`・`海の知恵` を50%で受け継ぐ。クロノスの秘薬と時空のうねりが使う `growPersonToAdultAge` は思春期を飛ばすため、飛ばした場合だけ同じ判定を1度行う。`giveBirth` は赤子を作って出産モーダルを出すだけで、名前・関係・村史・村人への追加は命名確定後の `finalizeBirth` で行う。黄金の雨と告天使の絵画による翌月の神秘的な妊娠予約も、保存互換性のため `pendingGoldenRainPregnancies` 上で種別を分けて処理する。予約は `targetBodyOwnerId`（肉体の元の持ち主のID）で肉体に紐づけ、肉体交換ではその身体を得た人物へ移る。IDを持たない旧保存データは `targetBodyOwner` / `targetName` の名前で読み替える。
 - `js/relationships.js`
-  - 恋人・配偶者・親子などの関係を正規化し、追加・削除・表示する。関係は `{ prefix, targetId, targetName }` のエントリで保存し、判定は相手ID、表示は記録時の名前スナップショットで行う。好感度 `friendships` と共働き回数 `friendshipStats` のキーも人物ID。
+  - 恋人・配偶者・親子などの関係を正規化し、追加・削除・表示する。関係は `{ prefix, targetId, targetName }` のエントリで保存し、判定は相手ID、表示は記録時の名前スナップショットで行う。好感度 `friendships` と共働き回数 `friendshipStats` のキーも人物ID。関係配列・好感度・共働き回数は、全ペアの月次処理で重くならないよう一度正規化したものを使い回すため、他のファイルから直接書き換えず、このファイルの関数を通す。読込時の補正のようにエントリを直接書き換えた場合は、`normalizeRelationships` で正規化し直す。
 - `js/miracles.js`
   - 奇跡モーダル、奇跡の実行、交換の奇跡、奇跡結果を扱う。
 - `js/secretTreasures.js`
