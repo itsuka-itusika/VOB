@@ -22,6 +22,9 @@ import { normalizeDamagedBuildings, recalculateBuildingDerivedState } from "./do
 import { normalizeVillageRoleForPerson, normalizeVillageRoles } from "./domain/villageRoles.js";
 import { ensurePersonId, normalizePersonId, peekNextPersonId, syncNextPersonId } from "./domain/personId.js";
 
+// ログは読込後のログ欄へ戻さないため、保存するのは直近の分だけにする。
+const SAVED_LOG_LIMIT = 1000;
+
 const BODY_TRAIT_RENAMES = {
   "子供": "幼児",
   "児童": "幼児",
@@ -263,7 +266,7 @@ function convertVillageToObject(village) {
     festivalFlags: normalizeFestivalFlags(village.festivalFlags),
     tutorial: normalizeTutorialState(village.tutorial),
     autoAssignSettings: normalizeAutoAssignSettings(village.autoAssignSettings),
-    logs: [...village.logs],
+    logs: village.logs.slice(-SAVED_LOG_LIMIT),
     historyEvents: normalizeHistoryEvents(village.historyEvents),
     departedVillagers: Array.isArray(village.departedVillagers) ? JSON.parse(JSON.stringify(village.departedVillagers)) : [],
     gameOver: village.gameOver,
