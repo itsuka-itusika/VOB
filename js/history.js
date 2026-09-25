@@ -67,6 +67,7 @@ const HISTORY_SCOPES = Object.freeze({
 // 成狼の記録を成人と区別するタグ。表示側もこの値で文言を切り替える。
 const ADULTHOOD_WOLF_TAG = "成狼";
 // 秘宝や怪異で一足飛びに大人になった時の成人記録。キーは記録の source（タグの2番目）。
+// mythicTitle は同じ出来事の怪異記録の題で、個人史では成長の記録と重なるため怪異側を出さない。
 // bodyOnly は肉体だけが急成長する場合で、成人とは呼ばず、後で精神が16歳になった時の成人記録を別に残す。
 const SPECIAL_ADULTHOOD_TEXTS = Object.freeze({
   "クロノスの秘薬": {
@@ -77,12 +78,14 @@ const SPECIAL_ADULTHOOD_TEXTS = Object.freeze({
   "時空のうねり": {
     title: name => `${name}、時空のうねりの中で成人する`,
     text: name => `${name}が時空のうねりの中で子どもの時を飛び越え、大人になった。`,
-    personal: "時空のうねりの中で子どもの時を飛び越え、大人になる。"
+    personal: "時空のうねりの中で子どもの時を飛び越え、大人になる。",
+    mythicTitle: "時空のうねり"
   },
   "怪しい薬": {
     title: name => `${name}、怪しい薬で急成長する`,
     text: name => `${name}が怪しい薬を浴びて急成長し、大人になった。`,
     personal: "怪しい薬を浴びて急成長し、大人になる。",
+    mythicTitle: "怪しい薬の急成長",
     bodyOnly: true
   }
 });
@@ -862,7 +865,18 @@ function includesPerson(event, personName, personId = null) {
 export function getPersonalHistoryEvents(village, person) {
   const personName = typeof person === "string" ? person : person?.name;
   const personId = typeof person === "object" && Number.isInteger(person?.id) && person.id > 0 ? person.id : null;
-  return normalizeHistoryEvents(village?.historyEvents).filter(event => includesPerson(event, personName, personId));
+  const events = normalizeHistoryEvents(village?.historyEvents).filter(event => includesPerson(event, personName, personId));
+  return events.filter(event => !isMythicEventCoveredByGrowth(event, events));
+}
+
+/** 同じ月に同じ出来事の成長記録がある怪異は、個人史では重なるので出さない。村史には残る。 */
+function isMythicEventCoveredByGrowth(event, personalEvents) {
+  if (event.type !== HISTORY_EVENT_TYPES.MYTHIC_EVENT) return false;
+  return personalEvents.some(other =>
+    other.type === HISTORY_EVENT_TYPES.ADULTHOOD &&
+    other.year === event.year &&
+    other.month === event.month &&
+    SPECIAL_ADULTHOOD_TEXTS[getEventSource(other)]?.mythicTitle === event.title);
 }
 
 function hasArchiveGap(village) {
