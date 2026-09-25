@@ -37,6 +37,8 @@ const FRIENDSHIP_WORK_EXCLUDED_ACTIONS = new Set([
 const FRIENDSHIP_MAIN_RELATED_PREFIXES = new Set(["恋人", "夫", "妻", "親友"]);
 const FRIENDSHIP_MAIN_RELATED_BOUNDS = { min: 65, max: 75 };
 const FRIENDSHIP_DEFAULT_BOUNDS = { min: -30, max: 30 };
+// 最後に同じ仕事をした月から、この月数だけ同じ仕事をしなければ仕事仲間は解消する。
+const WORKMATE_DISSOLVE_MONTHS = 6;
 
 /**
  * 恋人チェック (星霜祭などで呼ばれる)
@@ -528,18 +530,20 @@ function normalizeCounterMap(value) {
   return result;
 }
 
-// 正規化済みの交友記録。以後の書き込みは incrementMutualPairCounter 経由で正規化済みの値だけが入るため、
+// 正規化済みの交友記録。以後の書き込みはこのファイルの関数から正規化済みの値だけが入るため、
 // 毎回作り直さない。同じ仕事の全ペアについて呼ばれるため、作り直すと人数の3乗で重くなる。
 const normalizedFriendshipStats = new WeakSet();
 
 function ensureFriendshipStats(person) {
-  if (!person || typeof person !== "object") return { workTogether: {}, frontRaidTogether: {} };
+  if (!person || typeof person !== "object") return { workTogether: {}, frontRaidTogether: {}, lastWorkTogether: {} };
   if (!person.friendshipStats || typeof person.friendshipStats !== "object" || Array.isArray(person.friendshipStats)) {
     person.friendshipStats = {};
   }
   if (normalizedFriendshipStats.has(person.friendshipStats)) return person.friendshipStats;
   person.friendshipStats.workTogether = normalizeCounterMap(person.friendshipStats.workTogether);
   person.friendshipStats.frontRaidTogether = normalizeCounterMap(person.friendshipStats.frontRaidTogether);
+  // 仕事仲間と最後に同じ仕事をした月の通し番号。仕事仲間の組だけが持つ。
+  person.friendshipStats.lastWorkTogether = normalizeCounterMap(person.friendshipStats.lastWorkTogether);
   normalizedFriendshipStats.add(person.friendshipStats);
   return person.friendshipStats;
 }
@@ -722,7 +726,7 @@ function applyFriendshipBounds(a, b) {
   applyFriendshipBoundsForDirection(b, a);
 }
 
-function processSameWorkFriendship(a, b) {
+function processSameWorkFriendship(a, b, monthIndex) {
   const action = String(a.action || "").trim();
   if (action !== String(b.action || "").trim() || !isFriendshipWorkAction(action)) return;
   processSameWorkFriendshipDirection(a, b);
@@ -731,7 +735,45 @@ function processSameWorkFriendship(a, b) {
   if (workCount >= 6) {
     addRelationship(a, "仕事仲間", b);
     addRelationship(b, "仕事仲間", a);
+    recordLastWorkTogether(a, b, monthIndex);
   }
+}
+
+function recordLastWorkTogether(a, b, monthIndex) {
+  ensureFriendshipStats(a).lastWorkTogether[toFriendshipKey(b.id)] = monthIndex;
+  ensureFriendshipStats(b).lastWorkTogether[toFriendshipKey(a.id)] = monthIndex;
+}
+
+/**
+ * 最後に同じ仕事をした月から6か月以上離れた仕事仲間を解消し、同じ仕事をした回数も0に戻す。
+ * 最後の月を持たない仕事仲間（この仕組みより前の保存データ）は、今月から数え始める。
+ */
+function dissolveStaleWorkmates(village, monthIndex) {
+  const villagers = village.villagers.filter(person => !isSaltPillar(person));
+  const villagersById = new Map(villagers.map(person => [person.id, person]));
+  villagers.forEach(a => {
+    getRelationshipEntries(a)
+      .filter(entry => entry.prefix === "仕事仲間")
+      .forEach(entry => {
+        const b = villagersById.get(entry.targetId);
+        if (!b) return;
+        const keyA = toFriendshipKey(a.id);
+        const keyB = toFriendshipKey(b.id);
+        const statsA = ensureFriendshipStats(a);
+        const statsB = ensureFriendshipStats(b);
+        const lastMonth = Math.max(statsA.lastWorkTogether[keyB] || 0, statsB.lastWorkTogether[keyA] || 0);
+        if (lastMonth === 0) {
+          recordLastWorkTogether(a, b, monthIndex);
+          return;
+        }
+        if (monthIndex - lastMonth < WORKMATE_DISSOLVE_MONTHS) return;
+        removePairRelationshipByPrefix(a, b, "仕事仲間");
+        delete statsA.workTogether[keyB];
+        delete statsB.workTogether[keyA];
+        delete statsA.lastWorkTogether[keyB];
+        delete statsB.lastWorkTogether[keyA];
+      });
+  });
 }
 
 function processSameWorkFriendshipDirection(a, b) {
@@ -800,10 +842,12 @@ function processAffinityFriendship(a, b) {
 export function processMonthlyFriendship(village) {
   ensureVillageFriendships(village, 0);
   processFriendshipRelationChanges(village);
+  const monthIndex = (Number(village.year) || 0) * 12 + (Number(village.month) || 0);
   forEachVillagerPair(village, (a, b) => {
-    processSameWorkFriendship(a, b);
+    processSameWorkFriendship(a, b, monthIndex);
     processAffinityFriendship(a, b);
   });
+  dissolveStaleWorkmates(village, monthIndex);
   processFriendshipRelationChanges(village);
   forEachVillagerPair(village, (a, b) => {
     applyFriendshipBounds(a, b);
@@ -1510,6 +1554,7 @@ export function clearRelationshipsForDepartedVillager(village, departed) {
     const stats = ensureFriendshipStats(person);
     delete stats.workTogether[departedKey];
     delete stats.frontRaidTogether[departedKey];
+    delete stats.lastWorkTogether[departedKey];
     person.relationships = getRelationshipEntries(person).filter(entry => {
       if (entry.prefix === "既婚") return true;
 

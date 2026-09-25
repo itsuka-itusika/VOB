@@ -367,7 +367,8 @@ function convertVillagerToObject(vill) {
     friendships: { ...vill.friendships },
     friendshipStats: {
       workTogether: { ...vill.friendshipStats.workTogether },
-      frontRaidTogether: { ...vill.friendshipStats.frontRaidTogether }
+      frontRaidTogether: { ...vill.friendshipStats.frontRaidTogether },
+      lastWorkTogether: { ...vill.friendshipStats.lastWorkTogether }
     },
     socialAttemptedThisMonth: !!vill.socialAttemptedThisMonth,
     titleIds: Array.isArray(vill.titleIds) ? [...vill.titleIds] : [],

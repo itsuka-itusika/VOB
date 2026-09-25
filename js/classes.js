@@ -187,7 +187,8 @@ export class Villager {
     this.friendships = {};
     this.friendshipStats = {
       workTogether: {},
-      frontRaidTogether: {}
+      frontRaidTogether: {},
+      lastWorkTogether: {}
     };
     this.socialAttemptedThisMonth = false;
     this.titleIds = [];
