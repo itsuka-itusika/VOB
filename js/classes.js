@@ -9,6 +9,19 @@ import { allocatePersonId } from "./domain/personId.js";
  * - ゲームロジックは他ファイルへ分割
  */
 
+// ログ1行ごとに末尾へスクロールすると、そのたびにレイアウト計算が走って月送りが重くなる。
+// 同じ描画フレーム内のスクロールは1回にまとめる。
+let isLogScrollScheduled = false;
+
+function scheduleLogScroll(logArea) {
+  if (isLogScrollScheduled) return;
+  isLogScrollScheduled = true;
+  requestAnimationFrame(() => {
+    isLogScrollScheduled = false;
+    logArea.scrollTop = logArea.scrollHeight;
+  });
+}
+
 export class Village {
   constructor() {
     this.year = 1195;
@@ -120,8 +133,8 @@ export class Village {
     this.logs.push(msg);
     const la = document.getElementById("logArea");
     if (la) {
-      la.innerHTML += `<div>${msg}</div>`;
-      la.scrollTop = la.scrollHeight;
+      la.insertAdjacentHTML("beforeend", `<div>${msg}</div>`);
+      scheduleLogScroll(la);
     }
     console.log(msg);
   }

@@ -481,11 +481,16 @@ function hasStoredFriendshipValue(person, targetId) {
     Number.isFinite(Number(map[key]));
 }
 
+// 正規化済みの好感度マップ。以後の書き込みは setFriendshipScore 経由で正規化済みの値だけが入るため、
+// 毎回走査し直さない。全ペアの月次処理で呼ばれるため、走査すると人数の3乗で重くなる。
+const normalizedFriendshipMaps = new WeakSet();
+
 function ensureFriendshipMap(person) {
   if (!person || typeof person !== "object") return {};
   if (!person.friendships || typeof person.friendships !== "object" || Array.isArray(person.friendships)) {
     person.friendships = {};
   }
+  if (normalizedFriendshipMaps.has(person.friendships)) return person.friendships;
   Object.entries(person.friendships).forEach(([rawKey, value]) => {
     const key = toFriendshipKey(rawKey);
     if (!key || key === toFriendshipKey(person.id)) {
@@ -497,6 +502,7 @@ function ensureFriendshipMap(person) {
     }
     person.friendships[key] = normalizeFriendshipValue(value);
   });
+  normalizedFriendshipMaps.add(person.friendships);
   return person.friendships;
 }
 
