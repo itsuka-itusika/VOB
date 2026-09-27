@@ -284,6 +284,22 @@ function getSpouse(person, village) {
   return village.villagers.find(candidate => candidate.id === spouseId) || null;
 }
 
+// 重婚では配偶者が複数いる。夫・妻の呼び名は結婚時の肉体で決まり、性転換や肉体交換の後も
+// 変わらないため、呼び名ではなく配偶者全員を見て判定する。
+function getSpouses(person, village) {
+  const spouseIds = getRelationshipEntries(person)
+    .filter(entry => entry.prefix === "夫" || entry.prefix === "妻")
+    .map(entry => entry.targetId);
+  return village.villagers.filter(candidate => spouseIds.includes(candidate.id));
+}
+
+/** 子の親として並べる配偶者。父親が今も配偶者ならその人、そうでなければ従来どおり最初の配偶者。 */
+function getBirthSpouse(mother, data, village) {
+  const fatherId = data.fatherSnapshot?.id;
+  return getSpouses(mother, village).find(spouse => fatherId != null && spouse.id === fatherId) ||
+    getSpouse(mother, village);
+}
+
 function getBuddingStatusLine(character) {
   const maleLines = ["えへへ、きょうもあそぶ？", "ねえねえ、あれなあに？", "ぼく、ちょっとできるよ！", "おそと、いきたいな。"];
   const femaleLines = ["えへへ、きょうもあそぶ？", "ねえねえ、あれなあに？", "わたしもおてつだいする！", "おそと、いきたいな。"];
@@ -855,8 +871,9 @@ export function handlePregnancyAndBirth(village) {
 function processPregnancyChecks(village) {
   village.villagers.forEach(mother => {
     if (!canBeMother(mother, village)) return;
-    const father = getSpouse(mother, village);
-    if (!father || !canBeFather(father)) return;
+    const fathers = getSpouses(mother, village).filter(canBeFather);
+    if (fathers.length === 0) return;
+    const father = fathers.length > 1 ? randChoice(fathers) : fathers[0];
 
     const baseChance = ((Number(mother.sexdr) || 0) / 30) * ((Number(father.sexdr) || 0) / 30);
     const chance = clampValue(baseChance * 0.5, 0.05, 0.5);
@@ -979,7 +996,7 @@ function giveBirth(village, mother) {
   // 命名が決まるまで村へは加えない。母体の変化だけは先に確定させる。
   applyPostpartumToMother(mother);
   const child = createNewbornChild(village, data);
-  showBirthModal(village, mother, getSpouse(mother, village), child, childName => {
+  showBirthModal(village, mother, getBirthSpouse(mother, data, village), child, childName => {
     finalizeBirth(village, mother, data, child, childName);
   });
 }
@@ -1034,7 +1051,7 @@ function finalizeBirth(village, mother, data, child, childName) {
       name: data.fatherSnapshot?.bodyOwner || data.fatherSnapshot?.name || "不明"
     });
 
-  const spouse = getSpouse(mother, village);
+  const spouse = getBirthSpouse(mother, data, village);
   if (spouse) {
     const spouseParentPrefix = spouse.bodySex === "女" ? "母" : "父";
     addRelationship(child, spouseParentPrefix, spouse);

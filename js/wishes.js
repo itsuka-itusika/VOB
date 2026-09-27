@@ -340,7 +340,7 @@ export function checkWishCompletion(village, context = {}) {
 
     const definition = WISH_DEFINITION_BY_ID.get(wish.id);
     const currentTargetName = wish.id === "want_child"
-      ? getSpouse(requester, villagers)?.name || wish.targetName
+      ? (getSpouses(requester, villagers).find(hasPregnancy) || getSpouse(requester, villagers))?.name || wish.targetName
       : wish.targetName;
     const completionLine = resolveWishLine(definition?.completionLines?.[reason], {
       requester,
@@ -431,9 +431,11 @@ function getWishCandidates(village) {
       candidates.push({ id: "celebrate", requester });
     }
 
-    const spouse = getSpouse(requester, villagers);
-    if (spouse && cannotHaveChildByBody(requester, spouse) && !hasPregnancy(requester) && !hasPregnancy(spouse)) {
-      candidates.push({ id: "want_child", requester, target: spouse });
+    const spouses = getSpouses(requester, villagers);
+    if (spouses.length > 0 &&
+        spouses.every(spouse => cannotHaveChildByBody(requester, spouse) && !hasPregnancy(spouse)) &&
+        !hasPregnancy(requester)) {
+      candidates.push({ id: "want_child", requester, target: getSpouse(requester, villagers) || spouses[0] });
     }
   });
 
@@ -487,8 +489,7 @@ function getWishCompletionReason(wish, requester, villagers, context = {}) {
         context.distinguishedIds.includes(requester.id) ? "distinguished" : null;
     case "want_child": {
       if (hasPregnancy(requester)) return "requesterPregnant";
-      const spouse = getSpouse(requester, villagers);
-      return spouse && hasPregnancy(spouse) ? "spousePregnant" : null;
+      return getSpouses(requester, villagers).some(hasPregnancy) ? "spousePregnant" : null;
     }
     default:
       return null;
@@ -555,6 +556,14 @@ function hasPartnerWith(person, target) {
 function getSpouse(person, villagers) {
   const spouseId = getRelationshipTargetId(person, "夫") ?? getRelationshipTargetId(person, "妻");
   return spouseId != null ? villagers.find(candidate => candidate.id === spouseId) || null : null;
+}
+
+// 重婚では配偶者が複数いる。呼び名は結婚時の肉体で決まるため、配偶者全員を見る。
+function getSpouses(person, villagers) {
+  const spouseIds = getRelationshipEntries(person)
+    .filter(entry => entry.prefix === "夫" || entry.prefix === "妻")
+    .map(entry => entry.targetId);
+  return villagers.filter(candidate => spouseIds.includes(candidate.id));
 }
 
 function isOneSidedAffection(requester, target) {
