@@ -268,11 +268,13 @@ function selectAdultPortraitForChild(child, adult) {
     : selectPortraitByCharacter(adult);
 }
 
+// 自分が産んだ子が村で未成年（精神年齢16歳未満）の間は、次の子を宿さない。
 function hasOwnChildInVillage(village, parent) {
   return getRelationshipEntries(parent).some(entry => {
     if (entry.prefix !== "子") return false;
-    // 配偶者が産んだ子は親として持っていても、本人の出産には数えない。
     const child = village.villagers.find(person => entryMatchesPerson(entry, person));
+    if (!child || (Number(child.spiritAge) || 0) >= 16) return false;
+    // 配偶者が産んだ子は親として持っていても、本人の出産には数えない。
     const geneticMotherId = getRelationshipTargetId(child, "遺伝母");
     return geneticMotherId == null || geneticMotherId === parent.id || geneticMotherId === parent.bodyOwnerId;
   });
@@ -817,7 +819,9 @@ export function matureBodyToAdultOnly(character, village) {
 }
 
 export function handleBirthAndPostpartum(village) {
-  village.villagers.forEach(person => {
+  // 捕虜も村の中にいるため、妊娠と産褥は村人と同じように進める。
+  const residents = [...village.villagers, ...(Array.isArray(village.captives) ? village.captives : [])];
+  residents.forEach(person => {
     if (isSaltPillar(person)) return;
     if (Number(person.postpartumMonths) > 0) {
       person.postpartumMonths -= 1;
@@ -829,8 +833,7 @@ export function handleBirthAndPostpartum(village) {
     }
   });
 
-  const mothers = [...village.villagers];
-  mothers.forEach(mother => {
+  residents.forEach(mother => {
     if (!mother.pregnancy) return;
     if (isSaltPillar(mother)) return;
 
