@@ -13,6 +13,7 @@ import { isUnassignedActionVillager } from "./domain/rules.js";
 import { getRaidReadiness } from "./raidRules.js";
 import { hasDespairState } from "./domain/despair.js";
 import { getActiveVillagers } from "./domain/apocalypseRules.js";
+import { runAfterReproductionModals } from "./reproduction.js";
 
 // Villageインスタンスを生成
 export const theVillage = new Village();
@@ -168,5 +169,6 @@ export function onNextTurn() {
   runMonthStartPhase(theVillage);
 
   updateUI(theVillage);
-  runAutosave(theVillage);
+  // 出産の命名前に保存すると、村に加わる前の子が保存から抜け落ちる。
+  runAfterReproductionModals(() => runAutosave(theVillage));
 }

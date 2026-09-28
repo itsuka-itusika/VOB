@@ -322,7 +322,9 @@ function canBeMother(person, village) {
     !hasTrait(person, "妊娠") &&
     !hasTrait(person, "臨月") &&
     !hasTrait(person, "産褥") &&
-    !hasOwnChildInVillage(village, person);
+    !hasOwnChildInVillage(village, person) &&
+    // 翌月の神秘の妊娠を予約済みなら、通常の妊娠で予約を潰さない。
+    !hasPendingMysticPregnancy(village, person);
 }
 
 function canBeFather(person) {
@@ -1101,6 +1103,7 @@ function getPregnancyNoticeLine(character, role, partner) {
 
 const reproductionModalQueue = [];
 let isShowingReproductionModal = false;
+const afterReproductionModalQueue = [];
 
 /** 妊娠・出産・成人モーダルの表示中か。月初イベントの待機判定に使う。 */
 export function isReproductionModalOpen() {
@@ -1114,10 +1117,23 @@ function enqueueReproductionModal(renderModal) {
   showNextReproductionModal();
 }
 
+/**
+ * 妊娠・出産・成人のモーダルを閉じ終えてから処理を回す。
+ * 生まれた子は命名が決まるまで村にいないため、保存などは命名の後まで待たせる。
+ */
+export function runAfterReproductionModals(callback) {
+  if (!isShowingReproductionModal && reproductionModalQueue.length === 0) {
+    callback();
+    return;
+  }
+  afterReproductionModalQueue.push(callback);
+}
+
 function showNextReproductionModal() {
   const renderModal = reproductionModalQueue.shift();
   if (!renderModal) {
     isShowingReproductionModal = false;
+    afterReproductionModalQueue.splice(0).forEach(callback => callback());
     return;
   }
   isShowingReproductionModal = true;
