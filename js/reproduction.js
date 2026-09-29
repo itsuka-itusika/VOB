@@ -37,6 +37,7 @@ import { recordAdulthoodHistory, recordBirthHistory, recordPregnancyHistory } fr
 import { addRelationship, checkHasRelationship, entryMatchesPerson, getRelationshipEntries, getRelationshipTargetId } from "./relationships.js";
 import { getDialogueLine } from "./dialogue/dialogueEngine.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
+import { isCaptive } from "./captives.js";
 
 const HUMANOID_RACES = new Set(["人間", "ゴブリン", "ハーピー", "半神", "キュクロプス", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド", "エクイナ", "サテュロス", "メナド", "セントール"]);
 const FEMALE_FIXED_RACES = new Set(["ハーピー", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド", "エクイナ", "メナド"]);
@@ -1265,7 +1266,7 @@ function showBirthModal(village, mother, father, child, onNamed) {
     modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;max-width:520px;width:calc(100% - 32px);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
     modal.innerHTML = `
       <h2>出産</h2>
-      <p>${mother.name}が${child.bodySex === "男" ? "男児" : "女児"}を産みました。</p>
+      <p>${mother.name}が${child.bodySex === "男" ? "男児" : "女児"}を産みました。${isCaptive(mother, village) ? "子は村で育てられることになりました。" : ""}</p>
       ${renderPortraitLine(mother, getBirthLine(mother, "母"))}
       ${father ? renderPortraitLine(father, getBirthLine(father, "父")) : ""}
       ${renderPortraitLine(child, "……すやすや眠っている。", getUnnamedChildLabel(child))}
