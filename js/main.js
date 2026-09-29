@@ -53,6 +53,7 @@ const TURN_BLOCKING_MODAL_SELECTORS = [
   "#recruitmentModal",
   "#seductionModal",
   "#merchantTradeModal",
+  "#slavePurchaseModal",
   "#miracleModal",
   "#buildingModal",
   "#secretTreasureModal",

@@ -5,14 +5,14 @@ import { applyPortraitToElement, getPortraitSpriteHtml } from "./data/portraitAt
 import { addRelationship, removeRelationship, checkHasRelationship, hasLoverRelationship, getRelationshipTargetId, clearRelationshipsForDepartedVillager, addSpouseRelationships, raiseMutualFriendshipTo } from "./relationships.js";
 import { updateUI } from "./ui.js";  // 実行後にUIを更新する
 import { canExchangeBody, doExchange } from "./exchange.js";
-import { createRandomVisitor, createRandomVisitorOfType, isRareVisitorTypeAvailable, EXCLUSIVE_BODY_TRAITS, EXCLUSIVE_MIND_TRAITS } from "./createVillagers.js";
+import { createRandomVisitor, createRandomVisitorOfType, createVisitorGroup, isRareVisitorTypeAvailable, EXCLUSIVE_BODY_TRAITS, EXCLUSIVE_MIND_TRAITS } from "./createVillagers.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
 import { recordDepartedVillager, recordMarriageHistory, recordVillagerLeaveHistory } from "./history.js";
 import { clearHopeLossTraits, DESPAIR_TRAIT, DISAPPOINTMENT_TRAIT } from "./domain/despair.js";
 import { resolveDialogueTone } from "./data/dialogue/toneProfiles.js";
-import { getBodyExchangeSourceRaceLines, getDialogueLine } from "./dialogue/dialogueEngine.js";
+import { getBodyExchangeSourceRaceLines, getDialogueLine, getSlaveTradeExchangeLines } from "./dialogue/dialogueEngine.js";
 import { BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
 import { getVisitorArrivalLine } from "./data/dialogue/visitorLines.js";
 import { getActiveVillagers, isSaltPillar, SALT_PILLAR_TRAIT } from "./domain/apocalypseRules.js";
@@ -24,6 +24,7 @@ import { getCaptives, normalizeCaptive } from "./captives.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { getVillageRole, VILLAGE_ROLE_DOCTOR } from "./domain/villageRoles.js";
 import { checkWishCompletion } from "./wishes.js";
+import { isEnslaved } from "./domain/slaveTrade.js";
 import {
   addDivineMight,
   DIVINE_MIGHT_LEVELS,
@@ -1391,18 +1392,22 @@ function travelerMiracle(v) {
     ...v,
     building: AUTONOMOUS_SETTLEMENT_SCALE
   };
-  let newV = createRandomVisitor([
+  // 奴隷商人が選ばれた場合は、連れている奴隷も一緒に訪れる。
+  const arrivals = createVisitorGroup([
     ...v.villagers.map(person => person.name),
     ...v.visitors.map(person => person.name)
   ], null, visitorTableVillage);
-  v.visitors.push(newV);
-  v.log(`【旅人の奇跡】${newV.name}が来訪(訪問者)`);
-  const arrivalLine = getVisitorArrivalLine(newV);
-  if (arrivalLine) v.log(`${newV.name}「${arrivalLine}」`);
-  const message = arrivalLine
-    ? `${newV.name}が村を訪れました。<br>「${arrivalLine}」`
-    : `${newV.name}が村を訪れました。`;
-  showMiracleResultModal(v, "旅人の奇跡", message, [newV]);
+  const messages = arrivals.map(newV => {
+    v.visitors.push(newV);
+    v.log(`【旅人の奇跡】${newV.name}が来訪(訪問者)`);
+    const arrivalLine = getVisitorArrivalLine(newV);
+    if (arrivalLine) v.log(`${newV.name}「${arrivalLine}」`);
+    return arrivalLine
+      ? `${newV.name}が村を訪れました。<br>「${arrivalLine}」`
+      : `${newV.name}が村を訪れました。`;
+  });
+  // 奴隷は奇跡に導かれた旅人ではないため、反応は並べず来訪のひと言だけを残す。
+  showMiracleResultModal(v, "旅人の奇跡", messages.join("<br>"), arrivals.filter(person => !isEnslaved(person)));
 }
 
 // 稀人の奇跡が呼ぶ種族。どれも同じくらいの確率で来るよう、種族を名指しで等確率に選ぶ。
@@ -1627,11 +1632,14 @@ function pickLineAvoidingUsed(lines, usedLines) {
   return line;
 }
 
-function getBodyExchangeReactionLine(person, usedLines = null) {
+function getBodyExchangeReactionLine(person, usedLines = null, partner = null) {
   const type = getBodyExchangeLineKey(person);
   // 生まれ持った肉体が特殊種族だった場合は、口調ごとの種族セリフを優先する。
   // ただし塩と化した身体は声を出せないため、種族の反応より沈黙を優先する。
   if (type !== SALT_PILLAR_TRAIT) {
+    // 奴隷と奴隷商人は、種族の反応より奴隷の身の上に触れた文を優先する。
+    const slaveTradeLines = getSlaveTradeExchangeLines(person, partner);
+    if (slaveTradeLines.length > 0) return pickLineAvoidingUsed(slaveTradeLines, usedLines);
     const raceLines = getBodyExchangeSourceRaceLines(person);
     if (raceLines.length > 0) return pickLineAvoidingUsed(raceLines, usedLines);
   }
@@ -1682,9 +1690,9 @@ export function openPanFluteExchangeModal(pairs, options = {}) {
   const usedLines = new Set();
   const lineByPerson = new Map();
   pairs.forEach(pair => {
-    (Array.isArray(pair) ? pair : []).forEach(person => {
-      if (person) lineByPerson.set(person, getBodyExchangeReactionLine(person, usedLines));
-    });
+    const [personA, personB] = Array.isArray(pair) ? pair : [];
+    if (personA) lineByPerson.set(personA, getBodyExchangeReactionLine(personA, usedLines, personB));
+    if (personB) lineByPerson.set(personB, getBodyExchangeReactionLine(personB, usedLines, personA));
   });
   pairs.forEach(([personA, personB], index) => {
     const item = document.createElement("div");
@@ -1749,8 +1757,8 @@ export function openExchangeModal(personA, personB, options = {}) {
 
   // 入れ替わり時のセリフを選ぶ。二人が並ぶため、同じ文にならないようにする。
   const usedLines = new Set();
-  const lineA = getBodyExchangeReactionLine(personA, usedLines);
-  const lineB = getBodyExchangeReactionLine(personB, usedLines);
+  const lineA = getBodyExchangeReactionLine(personA, usedLines, personB);
+  const lineB = getBodyExchangeReactionLine(personB, usedLines, personA);
 
   // 会話テキストを設定
   textA.innerHTML = `

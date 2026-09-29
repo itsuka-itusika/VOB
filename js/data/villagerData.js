@@ -320,5 +320,28 @@ export const VISITOR_TYPES = [
       int: [18, 25],  // やや高い知力
       ind: [15, 25],  // やや高い勤勉
     }
+  },
+  // 奴隷を連れて訪れる。奴隷は同じ訪問者枠で同行する（js/createVillagers.js）。
+  {
+    type: "奴隷商人",
+    weight: 0,  // 繁栄した郷村以降の訪問者テーブルでだけ抽選される
+    ageRange: { min: 25, max: 45 },
+    forcedSex: "男", // 野盗の顔グラフィックを流用するため男性限定
+    params: {
+      job: "奴隷商人",
+      action: "訪問"
+    },
+    ranges: {
+      hp: [70, 95],       // 荷車を引いて街道を渡り歩いている
+      mp: [65, 90],
+      happiness: [55, 80],
+      chr: [12, 20],
+      int: [16, 24],  // 人の値踏みに長ける
+      eth: [1, 8],    // 人を売り買いする倫理の低さ
+      cou: [12, 20]
+    },
+    portraits: Array.from({ length: 20 }, (_, index) => `BAN${index + 1}.png`),
+    // 交換で身体が変わっても奴隷商人のセリフを話すよう、精神側の訪問者キーを持たせる。
+    rareVisitorType: "奴隷商人"
   }
 ];

@@ -8,7 +8,7 @@ import { getPermanentStat } from "./domain/statLayers.js";
 import { ACTION_CANNON, ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT, ACTION_TRAP, RAID_ACTIONS, canPerformRaidAction, getRaidSlotLimitMessage } from "./raidRules.js";
 import { getConversationLine, getDialogueLine } from "./dialogue/dialogueEngine.js";
 import { completeTutorialTask, ensureTutorialState } from "./tutorial.js";
-import { JOIN_ORIGIN_CAPTIVE, openPersonalHistoryModal, recordVillagerJoinHistory } from "./history.js";
+import { JOIN_ORIGIN_CAPTIVE, openPersonalHistoryModal, recordSlavePurchaseHistory, recordVillagerJoinHistory } from "./history.js";
 import { getVisitorLineKey, MERCHANT_SECRET_TREASURE_LINES, VISITOR_JOIN_LINES } from "./data/dialogue/visitorLines.js";
 import { getCaptiveConversationLines, getCaptiveGroupKey } from "./data/dialogue/captiveLines.js";
 import { incrementTitleCounter, TITLE_COUNTER_KEYS } from "./titles.js";
@@ -36,6 +36,7 @@ import {
   isAdventurerVisitor,
   openAdventurerQuestModal
 } from "./adventurerQuests.js";
+import { findTradedSlave, freeSlave, isEnslaved, SLAVE_TRAIT } from "./domain/slaveTrade.js";
 
 const SALT_PILLAR_CONVERSATION_LINE = "………（塩の柱は黙して何も語らない）";
 const SEDUCTION_MIN_LUST = 18;
@@ -51,7 +52,9 @@ const RECRUITMENT_COEFFICIENTS = {
   "観光客": 0.4,  // かなり勧誘しにくい
   "旅人": 0.4,    // 標準
   "行商人": 0.2,  // 勧誘しにくい
-  "棄民": 0.9     // 最も勧誘しやすい（村を追われた人なので）
+  "棄民": 0.9,    // 最も勧誘しやすい（村を追われた人なので）
+  "奴隷商人": 0.2, // 商いの損得でしか動かない
+  "解放奴隷": 0.8  // 解き放たれても、帰る当てがない
 };
 
 // サテュロスとメナドは吟遊詩人や巡礼者として名乗るが、名乗る役職で誘いやすさは変わらない。
@@ -285,8 +288,9 @@ export function openConversationModal(character) {
     }
   } else if (isVisitor) {
     // 訪問者で、かつ勧誘失敗フラグがない場合は勧誘と誘惑ボタンを表示
+    // 奴隷は勧誘・誘惑できず、奴隷商人に代価を払って迎える。
     const buttons = [];
-    if (!hasFailedRecruitment && !hasAcceptedQuest) {
+    if (!hasFailedRecruitment && !hasAcceptedQuest && !isEnslaved(character)) {
       buttons.push('<button id="recruitButton">勧誘する</button>');
       buttons.push('<button id="seduceButton">誘惑する</button>');
     }
@@ -296,6 +300,9 @@ export function openConversationModal(character) {
     if (isMerchantVisitor(character)) {
       ensureMerchantStock(character);
       buttons.push('<button id="merchantTradeButton">取引する</button>');
+    }
+    if (findTradedSlave(theVillage, character)) {
+      buttons.push('<button id="slavePurchaseButton">奴隷を買う</button>');
     }
     actionButtons.innerHTML = buttons.join("");
     actionButtons.style.display = buttons.length > 0 ? "block" : "none";
@@ -332,6 +339,13 @@ export function openConversationModal(character) {
     if (merchantTradeButton) {
       merchantTradeButton.addEventListener("click", () => {
         openMerchantTradeModal(character);
+      });
+    }
+
+    const slavePurchaseButton = document.getElementById("slavePurchaseButton");
+    if (slavePurchaseButton) {
+      slavePurchaseButton.addEventListener("click", () => {
+        openSlavePurchaseModal(character);
       });
     }
   } else if (isUnderRaid && isVillageMember) {
@@ -1049,6 +1063,95 @@ function closeMerchantTradeModal() {
   if (modal) modal.remove();
 }
 
+function getSlavePurchaseBlockedReason(trader, slave) {
+  if (isAtPopulationLimit(theVillage, slave)) {
+    return "村の人口上限に達しているため、買い取れません。家屋を建設して人口上限を増やしてください。";
+  }
+  if (theVillage.funds < trader.slaveTrade.price) return "資金が足りません。";
+  return "";
+}
+
+// 奴隷商人に代価を払い、連れている奴隷を買い取るモーダル
+function openSlavePurchaseModal(trader) {
+  const slave = findTradedSlave(theVillage, trader);
+  if (!slave) return;
+  const price = trader.slaveTrade.price;
+  const blockedReason = getSlavePurchaseBlockedReason(trader, slave);
+
+  const overlay = document.createElement("div");
+  overlay.id = "slavePurchaseOverlay";
+  overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:3000;";
+
+  const modal = document.createElement("div");
+  modal.id = "slavePurchaseModal";
+  modal.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:20px;z-index:3001;min-width:300px;border-radius:5px;box-shadow:0 2px 10px rgba(0,0,0,0.1);";
+  modal.innerHTML = `
+    <h3 style="margin-top:0;">奴隷を買う</h3>
+    <p style="margin-bottom:8px;">${trader.name}に資金${price}を支払い、${slave.name}を買い取ります。</p>
+    <p style="margin:0 0 8px 0;font-size:0.9em;color:#555;">買い取ると隷属が外れ、村人として加わります。</p>
+    <p style="margin:0 0 12px 0;">所持資金: ${theVillage.funds}</p>
+    ${blockedReason ? `<p style="margin:0 0 12px 0;color:#b00020;">${blockedReason}</p>` : ""}
+    <div style="display:flex;justify-content:flex-end;gap:10px;">
+      <button id="cancelSlavePurchase" style="padding:5px 15px;">キャンセル</button>
+      <button id="doSlavePurchase" style="padding:5px 15px;" ${blockedReason ? "disabled" : ""}>買い取る</button>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  document.body.appendChild(modal);
+
+  document.getElementById("doSlavePurchase").addEventListener("click", () => {
+    if (getSlavePurchaseBlockedReason(trader, slave)) return;
+    handleSlavePurchase(trader, slave);
+  });
+  document.getElementById("cancelSlavePurchase").addEventListener("click", closeSlavePurchaseModal);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) {
+      closeSlavePurchaseModal();
+    }
+  });
+}
+
+function closeSlavePurchaseModal() {
+  const overlay = document.getElementById("slavePurchaseOverlay");
+  const modal = document.getElementById("slavePurchaseModal");
+  if (overlay) overlay.remove();
+  if (modal) modal.remove();
+}
+
+function handleSlavePurchase(trader, slave) {
+  const price = trader.slaveTrade.price;
+  // 村史には肩書の付いた奴隷のときの呼び名で残す。
+  const joinedName = slave.name;
+  theVillage.funds -= price;
+
+  // 買い取られた奴隷は隷属が外れ、村人として加わる。
+  slave.mindTraits = slave.mindTraits.filter(trait => trait !== "訪問者" && trait !== SLAVE_TRAIT);
+  setPreferredAction(slave, ACTION_NONE);
+  slave.action = ACTION_NONE;
+  slave.jobTable = [];
+  slave.actionTable = [];
+  const separatorIndex = slave.name.indexOf("の");
+  if (separatorIndex >= 0) {
+    slave.name = slave.name.slice(separatorIndex + 1);
+  }
+
+  theVillage.visitors = theVillage.visitors.filter(person => person !== slave);
+  theVillage.villagers.push(slave);
+  initializeNewVillagerFriendships(theVillage, slave, null);
+  recordSlavePurchaseHistory(theVillage, slave, trader, { joinedName, price });
+  refreshJobTable(slave, theVillage);
+
+  theVillage.log(`${trader.name}に資金${price}を支払い、${joinedName}を買い取りました。${slave.name}が村人になりました。`);
+  const saleLine = getDialogueLine({ character: trader, scene: "slaveSale" });
+  if (saleLine) theVillage.log(`${trader.name}「${saleLine}」`);
+  closeSlavePurchaseModal();
+  closeConversationModal();
+  updateUI(theVillage);
+  alert(`${joinedName}を買い取りました。${slave.name}が村人になりました。`);
+  openCharacterLineModal(slave, { scene: "slavePurchaseJoin", key: slave.slaveType });
+}
+
 // 勧誘成功時の処理を修正
 function handleRecruitmentSuccess(visitor, recruiter, successRate = 0, source = "勧誘") {
   const originalVisitor = visitor;
@@ -1057,7 +1160,13 @@ function handleRecruitmentSuccess(visitor, recruiter, successRate = 0, source = 
   // 訪問者のタイプを取得（名前から抽出）
   const visitorType = visitor.name.includes("の") ? visitor.name.split("の")[0] : null;
   // 名前の「◯◯の」を削る前に、加入セリフのキーを確定させる。
-  const joinLineKey = getVisitorLineKey(visitor, VISITOR_JOIN_LINES);
+  // 解放奴隷は種族の訪問者とは別に、奴隷だった者としての加入セリフを話す。
+  const joinLine = visitor.slaveType
+    ? { scene: "freedSlaveJoin", key: visitor.slaveType }
+    : { scene: "visitorJoin", key: getVisitorLineKey(visitor, VISITOR_JOIN_LINES) };
+  // 奴隷商人が村人になると、連れていた奴隷は解放されて訪問者として残る。
+  const freedSlave = findTradedSlave(theVillage, visitor);
+  delete visitor.slaveTrade;
 
   visitor.mindTraits = visitor.mindTraits.filter(t => t !== "訪問者");
   setPreferredAction(visitor, ACTION_NONE);
@@ -1093,8 +1202,17 @@ function handleRecruitmentSuccess(visitor, recruiter, successRate = 0, source = 
   refreshJobTable(visitor, theVillage);
 
   theVillage.log(`${recruiter.name}の${source}により、${visitor.name}が村人になりました。(成功率: ${Math.floor(successRate)}%)`);
+  let freedMessage = "";
+  if (freedSlave) {
+    const slaveName = freedSlave.name;
+    freeSlave(freedSlave);
+    freedMessage = `${slaveName}は解放されました。`;
+    theVillage.log(`${slaveName}は解放され、${freedSlave.name}となりました。`);
+    const freedLine = getDialogueLine({ character: freedSlave, scene: "slaveFreed", key: freedSlave.slaveType });
+    if (freedLine) theVillage.log(`${freedSlave.name}「${freedLine}」`);
+  }
   closeConversationModal();
   updateUI(theVillage);
-  alert(`${source}成功！${visitor.name}が村人になりました。`);
-  openCharacterLineModal(visitor, { scene: "visitorJoin", key: joinLineKey });
+  alert(`${source}成功！${visitor.name}が村人になりました。${freedMessage ? `\n${freedMessage}` : ""}`);
+  openCharacterLineModal(visitor, joinLine);
 }

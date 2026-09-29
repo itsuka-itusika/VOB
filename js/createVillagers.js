@@ -26,6 +26,16 @@ import {
   VISITOR_TYPES
 } from "./data/villagerData.js";
 import { MERCHANT_SECRET_TREASURE_CHANCE } from "./secretTreasureEvents.js";
+import { getRaiderTypeByType } from "./data/raidData.js";
+import { getRaiderSpeechType } from "./domain/raiderSpeechTypes.js";
+import {
+  SLAVE_PRICE_MAX,
+  SLAVE_PRICE_MIN,
+  SLAVE_TITLE,
+  SLAVE_TRADER_TYPE,
+  SLAVE_TRAIT,
+  SLAVE_TYPES
+} from "./domain/slaveTrade.js";
 export { MALE_PORTRAIT_FILES } from "./data/villagerData.js";
 
 /**
@@ -78,7 +88,8 @@ const VISITOR_TABLES_BY_SCALE = [
       { type: "レア種族", weight: 10 },
       { type: "エクイナ", weight: 10 },
       { type: "サテュロス", weight: 5 },
-      { type: "メナド", weight: 5 }
+      { type: "メナド", weight: 5 },
+      { type: "奴隷商人", weight: 10 }
     ]
   }
 ];
@@ -1447,16 +1458,85 @@ function createBodyExchangedPairVisitor(selectedType, existingNames = [], villag
   return selectedType === MAENAD_VISITOR_TYPE.type ? maenad : satyr;
 }
 
-export function createRandomVisitor(existingNames = [], forcedType = null, village = null) {
+// 奴隷商人が連れてくる奴隷は、同じ種族の訪問者・襲撃者の能力と姿を借りる。
+// 囚われの旅で弱っているため、体力・メンタル・幸福だけは低く抑える。
+const SLAVE_CONDITION_RANGES = {
+  hp: [50, 75],
+  mp: [35, 60],
+  happiness: [5, 25]
+};
+
+function getSlaveBaseType(slaveType) {
+  if (slaveType === EQUINA_VISITOR_TYPE.type) return EQUINA_VISITOR_TYPE;
+  const rareEntry = RARE_VISITOR_TYPES.find(entry => entry.type === slaveType);
+  if (rareEntry) return rareEntry.visitor;
+
+  const raiderType = getRaiderTypeByType(slaveType);
+  return {
+    forcedSex: raiderType.forcedSex,
+    ageRange: raiderType.ageRange,
+    params: { job: raiderType.params.job, race: raiderType.race },
+    ranges: raiderType.ranges,
+    forcedBodyTraits: raiderType.forcedBodyTraits,
+    // 狂信は奴隷に落とされた時点で折れている。信仰そのもの（神聖）は残る。
+    forcedMindTraits: (raiderType.mindTraits || []).filter(trait => trait !== "狂信"),
+    portraits: raiderType.portraits,
+    speechType: getRaiderSpeechType(slaveType)
+  };
+}
+
+function buildSlaveVisitor(existingNames = [], village = null) {
+  const slaveType = randChoice(SLAVE_TYPES);
+  const baseType = getSlaveBaseType(slaveType);
+  const slave = buildVisitorFromType({
+    ...baseType,
+    type: slaveType,
+    displayType: SLAVE_TITLE,
+    displayTypes: undefined,
+    useDisplayTypeAsJob: false,
+    ranges: { ...baseType.ranges, ...SLAVE_CONDITION_RANGES },
+    forcedMindTraits: [...(baseType.forcedMindTraits || []), SLAVE_TRAIT]
+  }, existingNames, village);
+  slave.slaveType = slaveType;
+  if (baseType.speechType) slave.speechType = baseType.speechType;
+  // 肉体特性は同じ種族の襲撃者に揃える。キュクロプスは巨人・単眼だけを持ち、
+  // 聖女の輝きは翼人兵には付かない。
+  if (slaveType === "キュクロプス") {
+    slave.bodyTraits = [...baseType.forcedBodyTraits];
+  } else if (slaveType === "翼人兵") {
+    slave.bodyTraits = slave.bodyTraits.filter(trait => trait !== "聖女の輝き");
+  }
+  syncEffectiveStats(slave);
+  return slave;
+}
+
+function createSlaveTraderGroup(visitorType, existingNames = [], village = null) {
+  const trader = buildVisitorFromType(visitorType, existingNames, village);
+  const slave = buildSlaveVisitor([...existingNames, trader.name, trader.givenName], village);
+  trader.slaveTrade = { slaveId: slave.id, price: randInt(SLAVE_PRICE_MIN, SLAVE_PRICE_MAX) };
+  return [trader, slave];
+}
+
+/**
+ * 訪問者枠1つぶんの来訪者を生成する。奴隷商人は奴隷を連れて来るため2人になる。
+ */
+export function createVisitorGroup(existingNames = [], forcedType = null, village = null) {
   const visitorType = forcedType
     ? (resolveForcedVisitorType(forcedType, village) || selectVisitorType(village))
     : selectVisitorType(village);
 
   if (isGoatPairVisitorType(visitorType)) {
-    return createBodyExchangedPairVisitor(visitorType.type, existingNames, village);
+    return [createBodyExchangedPairVisitor(visitorType.type, existingNames, village)];
+  }
+  if (visitorType.type === SLAVE_TRADER_TYPE) {
+    return createSlaveTraderGroup(visitorType, existingNames, village);
   }
 
-  return buildVisitorFromType(visitorType, existingNames, village);
+  return [buildVisitorFromType(visitorType, existingNames, village)];
+}
+
+export function createRandomVisitor(existingNames = [], forcedType = null, village = null) {
+  return createVisitorGroup(existingNames, forcedType, village)[0];
 }
 
 export function createRandomVisitorOfType(type, existingNames = []) {

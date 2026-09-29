@@ -392,6 +392,8 @@ function convertVillagerToObject(vill) {
     portraitFile: normalizePortraitFile(vill.portraitFile),
     pastPortraitFiles: normalizePastPortraitFiles(vill.pastPortraitFiles),
     ...(vill.rareVisitorType ? { rareVisitorType: vill.rareVisitorType } : {}),
+    ...(vill.slaveType ? { slaveType: vill.slaveType } : {}),
+    ...(vill.slaveTrade ? { slaveTrade: { ...vill.slaveTrade } } : {}),
     merchantStock: vill.merchantStock ? { ...vill.merchantStock } : undefined,
     adventurerQuestOffers: Array.isArray(vill.adventurerQuestOffers)
       ? JSON.parse(JSON.stringify(vill.adventurerQuestOffers))
@@ -766,6 +768,12 @@ function convertObjectToVillager(obj) {
   vill.race = normalizeRaceName(obj.race);
   if (obj.rareVisitorType) {
     vill.rareVisitorType = obj.rareVisitorType;
+  }
+  if (obj.slaveType) {
+    vill.slaveType = obj.slaveType;
+  }
+  if (obj.slaveTrade) {
+    vill.slaveTrade = { ...obj.slaveTrade };
   }
   if (obj.merchantStock) {
     vill.merchantStock = { ...obj.merchantStock };

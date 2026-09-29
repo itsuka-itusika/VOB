@@ -1,6 +1,6 @@
 import { autoAssignJobs, autoAssignRaidActions } from "./autoAssign.js";
 import { openBuildingModal, closeBuildingModal, unlockAllBuildings } from "./buildings.js";
-import { createRandomVillager, createRandomVisitor, getVisitorTypeChoices } from "./createVillagers.js";
+import { createRandomVillager, createVisitorGroup, getVisitorTypeChoices } from "./createVillagers.js";
 import "./dictionary.js";
 import { addNonHousePopLimitBonus } from "./domain/buildingState.js";
 import { closeHistoryModal, closePersonalHistoryModal } from "./history.js";
@@ -262,10 +262,12 @@ function runDebugVisitorTitleAction() {
   );
   if (!visitorType) return;
 
-  const visitor = createRandomVisitor(getExistingNames(), visitorType, theVillage);
+  const arrivals = createVisitorGroup(getExistingNames(), visitorType, theVillage);
   if (!Array.isArray(theVillage.visitors)) theVillage.visitors = [];
-  theVillage.visitors.push(visitor);
-  theVillage.log(`【デバッグ】${visitor.name}が村を訪れました`);
+  arrivals.forEach(visitor => {
+    theVillage.visitors.push(visitor);
+    theVillage.log(`【デバッグ】${visitor.name}が村を訪れました`);
+  });
   updateUI(theVillage);
 }
 

@@ -9,6 +9,7 @@ import { getRelationshipEntries } from "./relationships.js";
 import { syncTitleCountRecord } from "./records.js";
 import { findPersonEverywhereById, normalizePersonId } from "./domain/personId.js";
 import { EXCLUSIVE_BODY_TRAITS } from "./createVillagers.js";
+import { FREED_SLAVE_TITLE, SLAVE_TITLE } from "./domain/slaveTrade.js";
 
 // 最初からいる村人だけが互いに持つ続柄。旧セーブで開村の記録を補うときの目印にする。
 const FOUNDING_RELATION_PREFIX = "村設立の同志";
@@ -97,6 +98,9 @@ const ELECTION_RESULT_TAG_PREFIX = "結果:";
 // 加入した者の来歴を残すタグ。「来歴:行商人」「来歴:捕虜」の形で持つ。
 const JOIN_ORIGIN_TAG_PREFIX = "来歴:";
 export const JOIN_ORIGIN_CAPTIVE = "捕虜";
+// 奴隷商人から買い取った加入。支払った資金を「代価:200」の形でタグに持つ。
+const JOIN_SOURCE_PURCHASE = "購入";
+const JOIN_PRICE_TAG_PREFIX = "代価:";
 const ELECTION_RESULT_NOTES = Object.freeze({
   uncontested: "候補者は1人で、無投票だった。",
   lottery: "得票が並び、くじ引きで決まった。"
@@ -330,6 +334,26 @@ export function recordVillagerJoinHistory(village, person, options = {}) {
 function getJoinOrigin(event) {
   const tag = event.tags.find(item => item.startsWith(JOIN_ORIGIN_TAG_PREFIX));
   return tag ? tag.slice(JOIN_ORIGIN_TAG_PREFIX.length) : "";
+}
+
+/**
+ * 奴隷商人から奴隷を買い取った加入の記録。売り手の奴隷商人も登場人物に載せる。
+ * 呼び名は「奴隷の」が付いた買い取る前のもので残す。
+ */
+export function recordSlavePurchaseHistory(village, slave, trader, { joinedName, price }) {
+  if (!slave || !trader) return;
+  addHistoryEvent(village, {
+    type: HISTORY_EVENT_TYPES.VILLAGER_JOIN,
+    title: `${joinedName}、村に加わる`,
+    text: `${trader.name}に資金${price}を払い、${joinedName}を買い取って村に迎えた。`,
+    people: [{ id: slave.id, name: joinedName }, trader],
+    tags: ["加入", JOIN_SOURCE_PURCHASE, `${JOIN_ORIGIN_TAG_PREFIX}${SLAVE_TITLE}`, `${JOIN_PRICE_TAG_PREFIX}${price}`]
+  });
+}
+
+function getJoinPrice(event) {
+  const tag = event.tags.find(item => item.startsWith(JOIN_PRICE_TAG_PREFIX));
+  return tag ? tag.slice(JOIN_PRICE_TAG_PREFIX.length) : "";
 }
 
 export function recordVillagerLeaveHistory(village, person, options = {}) {
@@ -625,6 +649,7 @@ function getEventSource(event) {
 function normalizeJoinSource(source) {
   if (source === "誘惑") return "誘惑";
   if (source === "保護") return "保護";
+  if (source === JOIN_SOURCE_PURCHASE) return JOIN_SOURCE_PURCHASE;
   return "勧誘";
 }
 
@@ -679,6 +704,11 @@ function getVillageHistoryText(event) {
     }
     case HISTORY_EVENT_TYPES.VILLAGER_JOIN: {
       const source = normalizeJoinSource(getEventSource(event));
+      if (source === JOIN_SOURCE_PURCHASE && personA && personB) {
+        return `${personB}に資金${getJoinPrice(event)}を払い、${personA}を買い取って村に迎えた。`;
+      }
+      // 保護は、迷い込んだ子狼を村で飼うと決めたときの加入。
+      if (source === "保護" && personA) return `森から迷い込んだ子狼の${personA}を、村で飼うことにした。`;
       if (personA && personB) return `${personB}の${source}で、${personA}が村に加わった。`;
       if (personA) return `${personA}が村に加わった。`;
       break;
@@ -788,9 +818,17 @@ function getPersonalHistoryText(event, personName, personId = null) {
     }
     case HISTORY_EVENT_TYPES.VILLAGER_JOIN: {
       const source = normalizeJoinSource(getEventSource(event));
+      if (source === JOIN_SOURCE_PURCHASE) {
+        const price = getJoinPrice(event);
+        return eventPersonAtIs(event, 0, personName, personId)
+          ? `${otherName}に連れられて村を訪れ、資金${price}で買い取られて村に加わる。`
+          : `${event.people[0]}を資金${price}で村に売り渡す。`;
+      }
+      if (source === "保護") return "森から村へ迷い込み、子狼として村で飼われることになる。";
       if (eventPersonAtIs(event, 0, personName, personId)) {
         const origin = getJoinOrigin(event);
         if (otherName && origin === JOIN_ORIGIN_CAPTIVE) return `捕虜になっていたところを、${otherName}に${source}されて村に加わる。`;
+        if (otherName && origin === FREED_SLAVE_TITLE) return `奴隷として村を訪れ、解放されたのちに${otherName}に${source}されて村に加わる。`;
         if (otherName && origin) return `${origin}として村を訪れ、${otherName}に${source}されて村に加わる。`;
         return otherName ? `${otherName}に${source}され村に加わる。` : "村に加わる。";
       }

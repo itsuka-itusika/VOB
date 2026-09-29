@@ -37,7 +37,23 @@ import {
   expandEventVillagerLines,
   findLineByKeys
 } from "../data/dialogue/randomEventLines.js";
-import { BODY_EXCHANGE_SOURCE_RACE_LINES, BODY_EXCHANGE_REACTION_LINES } from "../data/dialogue/exchangeLines.js";
+import {
+  BODY_EXCHANGE_SOURCE_RACE_LINES,
+  BODY_EXCHANGE_REACTION_LINES,
+  SLAVE_EXCHANGE_LINES,
+  SLAVE_TRADER_EXCHANGE_LINES
+} from "../data/dialogue/exchangeLines.js";
+import {
+  FREED_SLAVE_JOIN_LINES,
+  FREED_SLAVE_LINES,
+  SLAVE_FREED_LINES,
+  SLAVE_LINES,
+  SLAVE_PURCHASE_JOIN_LINES,
+  SLAVE_TRADER_EXCHANGED_LINES,
+  SLAVE_TRADER_SALE_LINES,
+  SLAVE_TRADER_SOLD_LINES
+} from "../data/dialogue/slaveTradeLines.js";
+import { findTradedSlave, isEnslaved, isSlaveOf } from "../domain/slaveTrade.js";
 import {
   CAPTIVE_JOIN_LINES,
   CAPTIVE_RELEASE_LINES,
@@ -127,6 +143,13 @@ function getStatusLines(character, status, context = {}) {
   return selectToneLines(STATUS_LINES[status], character, context);
 }
 
+// 奴隷の種族ごとの文は、生まれ持った体でいる間だけ使う。
+// 交換で別の体にいる間や種族の文がない場合は、口調ごとの文で受ける。
+function getSlaveTypeLines(group, key, character, context = {}) {
+  const typeLines = hasDifferentBodyOwner(character) ? null : group.byType[key];
+  return typeLines ? asLineArray(typeLines, context) : selectToneLines(group.byTone, character, context);
+}
+
 function getVisitorLines(visitorType, context = {}) {
   if (context.apocalypseActive) {
     const apocalypseLines = asLineArray(
@@ -194,6 +217,23 @@ function pickLineByVariant(value, variantIndex) {
  * 生まれ持った肉体が特殊種族だった者が、その体を離れた直後の反応。
  * 借りていただけの肉体では出さないため、口調のセリフがそのまま残る。
  */
+/**
+ * 奴隷・奴隷商人が肉体交換されたときの反応。当てはまらない者は空配列を返し、通常の交換セリフに任せる。
+ * partner は同じ交換の相手で、奴隷と奴隷商人が入れ替わったかの判定に使う。
+ */
+export function getSlaveTradeExchangeLines(character, partner = null, context = {}) {
+  if (isEnslaved(character)) {
+    const group = isSlaveOf(character, partner) ? SLAVE_EXCHANGE_LINES.withTrader : SLAVE_EXCHANGE_LINES.other;
+    const typeLines = character.lastBodyExchangeFromOwnBody ? group[character.slaveType] : null;
+    return typeLines ? asLineArray(typeLines, context) : selectToneLines(SLAVE_EXCHANGE_LINES.byTone, character, context);
+  }
+  if (character?.slaveTrade && character.lastBodyExchangeFromOwnBody) {
+    const lines = isSlaveOf(partner, character) ? SLAVE_TRADER_EXCHANGE_LINES.withSlave : SLAVE_TRADER_EXCHANGE_LINES.other;
+    return asLineArray(lines, context);
+  }
+  return [];
+}
+
 export function getBodyExchangeSourceRaceLines(character, context = {}) {
   if (!character?.lastBodyExchangeFromOwnBody) return [];
   const sourceRace = character?.lastBodyExchangeSourceRace;
@@ -303,6 +343,18 @@ export function getDialogueLines({ character, scene, key, context = {} }) {
       return asLineArray(VISITOR_JOIN_LINES[key] || VISITOR_JOIN_GENERIC_LINES, context);
     case "visitor":
       return getVisitorLines(key, context);
+    case "slave":
+      return getSlaveTypeLines(SLAVE_LINES, key, character, context);
+    case "freedSlave":
+      return getSlaveTypeLines(FREED_SLAVE_LINES, key, character, context);
+    case "slaveFreed":
+      return getSlaveTypeLines(SLAVE_FREED_LINES, key, character, context);
+    case "slavePurchaseJoin":
+      return getSlaveTypeLines(SLAVE_PURCHASE_JOIN_LINES, key, character, context);
+    case "freedSlaveJoin":
+      return getSlaveTypeLines(FREED_SLAVE_JOIN_LINES, key, character, context);
+    case "slaveSale":
+      return asLineArray(SLAVE_TRADER_SALE_LINES, context);
     default:
       return [];
   }
@@ -436,6 +488,19 @@ function getVisitorType(visitor) {
   return getVisitorLineKey(visitor, VISITOR_LINES);
 }
 
+// 奴隷・解放奴隷と、奴隷を売り渡した後や別の体にいる奴隷商人は、
+// 訪問者タイプの通常会話より先に専用の文を話す。
+function getSlaveTradeVisitorLine(character, village, context) {
+  if (character?.slaveType) {
+    const scene = isEnslaved(character) ? "slave" : "freedSlave";
+    return getDialogueLine({ character, scene, key: character.slaveType, context });
+  }
+  if (!character?.slaveTrade) return null;
+  if (hasDifferentBodyOwner(character)) return pickDialogueLine(SLAVE_TRADER_EXCHANGED_LINES, context);
+  if (!findTradedSlave(village, character)) return pickDialogueLine(SLAVE_TRADER_SOLD_LINES, context);
+  return null;
+}
+
 function getRaidStatusKey(character) {
   const entry = RAID_STATUS_KEYS_BY_MIND_TRAIT.find(item => hasTrait(character, item.trait, "mindTraits"));
   return entry ? entry.key : "raid";
@@ -550,6 +615,8 @@ export function selectConversationCandidate(candidates) {
 
 export function getConversationLine({ character, village, context = {} }) {
   if (hasTrait(character, "訪問者", "mindTraits")) {
+    const slaveTradeLine = getSlaveTradeVisitorLine(character, village, context);
+    if (slaveTradeLine) return slaveTradeLine;
     const visitorContext = { ...context, apocalypseActive: isApocalypseActive(village) };
     return getDialogueLine({
       character,

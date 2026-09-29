@@ -2,7 +2,7 @@
 
 import { randInt, clampValue, round3, getVillagerFoodConsumption, getVillagerWinterMaterialConsumption } from "./util.js";
 import { applyDepartureGrief, doLoverCheck, doMarriageCheck, doNaturalBondingCheck, clearRelationshipsForDepartedVillager, processMonthlyFriendship } from "./relationships.js";
-import { createRandomVillager, createRandomVisitor } from "./createVillagers.js";
+import { createRandomVillager, createRandomVisitor, createVisitorGroup } from "./createVillagers.js";
 import { processRaidScheduleAtMonthStart } from "./raidSchedule.js";
 import { RandomEvents } from "./RandomEvents.js";
 import {
@@ -944,17 +944,20 @@ export function doMonthStartProcess(v, simulationOptions = {}) {
   if (!simulationOptions.suppressVisitors) {
     for (let i = 0; i < visitorLimit; i++) {
       if (Math.random() < 0.5) {
-        let visitor = createRandomVisitor([
+        // 奴隷商人は奴隷を連れて来るが、枠は1つしか使わない。
+        const arrivals = createVisitorGroup([
           ...v.villagers.map(person => person.name),
           ...v.visitors.map(person => person.name),
           ...(Array.isArray(v.activeAdventurerQuests)
             ? v.activeAdventurerQuests.map(quest => quest?.adventurer?.name).filter(Boolean)
             : [])
         ], null, v);
-        v.visitors.push(visitor);
-        v.log(`訪問者 ${visitor.name} が村を訪れました`);
-        const arrivalLine = getVisitorArrivalLine(visitor);
-        if (arrivalLine) v.log(`${visitor.name}「${arrivalLine}」`);
+        arrivals.forEach(visitor => {
+          v.visitors.push(visitor);
+          v.log(`訪問者 ${visitor.name} が村を訪れました`);
+          const arrivalLine = getVisitorArrivalLine(visitor);
+          if (arrivalLine) v.log(`${visitor.name}「${arrivalLine}」`);
+        });
       }
     }
     if (hasActiveBuildingFlag(v, "hasPoorhouse", "poorhouse") && Math.random() < 0.5) {
