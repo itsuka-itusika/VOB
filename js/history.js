@@ -94,6 +94,9 @@ const ELECTION_COUNTS_TAG_PREFIX = "得票:";
 
 // 得票のない選挙（無投票）と、同数のくじ引きを見分けるためのタグ。
 const ELECTION_RESULT_TAG_PREFIX = "結果:";
+// 加入した者の来歴を残すタグ。「来歴:行商人」「来歴:捕虜」の形で持つ。
+const JOIN_ORIGIN_TAG_PREFIX = "来歴:";
+export const JOIN_ORIGIN_CAPTIVE = "捕虜";
 const ELECTION_RESULT_NOTES = Object.freeze({
   uncontested: "候補者は1人で、無投票だった。",
   lottery: "得票が並び、くじ引きで決まった。"
@@ -303,20 +306,30 @@ export function recordHeadmanElectionHistory(village, winner, options = {}) {
   });
 }
 
+/**
+ * 加入の記録。村人になると呼び名から「旅人の」などの肩書が外れるため、
+ * 加わる前の呼び名（joinedName）で残し、来歴（訪問者の肩書か捕虜）もタグに持つ。
+ */
 export function recordVillagerJoinHistory(village, person, options = {}) {
   if (!person) return;
   const recruiterName = options.recruiter?.name || "";
   const source = normalizeJoinSource(options.source);
+  const joinedName = options.joinedName || person.name;
   const text = recruiterName
-    ? `${recruiterName}に${source}され、${person.name}が村に加わった。`
-    : `${person.name}が村に加わった。`;
+    ? `${recruiterName}に${source}され、${joinedName}が村に加わった。`
+    : `${joinedName}が村に加わった。`;
   addHistoryEvent(village, {
     type: HISTORY_EVENT_TYPES.VILLAGER_JOIN,
-    title: `${person.name}、村に加わる`,
+    title: `${joinedName}、村に加わる`,
     text,
-    people: [person, options.recruiter].filter(Boolean),
-    tags: ["加入", source]
+    people: [{ id: person.id, name: joinedName }, options.recruiter].filter(Boolean),
+    tags: ["加入", source, options.origin ? `${JOIN_ORIGIN_TAG_PREFIX}${options.origin}` : ""]
   });
+}
+
+function getJoinOrigin(event) {
+  const tag = event.tags.find(item => item.startsWith(JOIN_ORIGIN_TAG_PREFIX));
+  return tag ? tag.slice(JOIN_ORIGIN_TAG_PREFIX.length) : "";
 }
 
 export function recordVillagerLeaveHistory(village, person, options = {}) {
@@ -776,6 +789,9 @@ function getPersonalHistoryText(event, personName, personId = null) {
     case HISTORY_EVENT_TYPES.VILLAGER_JOIN: {
       const source = normalizeJoinSource(getEventSource(event));
       if (eventPersonAtIs(event, 0, personName, personId)) {
+        const origin = getJoinOrigin(event);
+        if (otherName && origin === JOIN_ORIGIN_CAPTIVE) return `捕虜になっていたところを、${otherName}に${source}されて村に加わる。`;
+        if (otherName && origin) return `${origin}として村を訪れ、${otherName}に${source}されて村に加わる。`;
         return otherName ? `${otherName}に${source}され村に加わる。` : "村に加わる。";
       }
       return event.people[0] ? `${event.people[0]}を${source}し、村に迎える。` : toPersonalTense(event.text);

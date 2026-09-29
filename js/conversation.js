@@ -8,7 +8,7 @@ import { getPermanentStat } from "./domain/statLayers.js";
 import { ACTION_CANNON, ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT, ACTION_TRAP, RAID_ACTIONS, canPerformRaidAction, getRaidSlotLimitMessage } from "./raidRules.js";
 import { getConversationLine, getDialogueLine } from "./dialogue/dialogueEngine.js";
 import { completeTutorialTask, ensureTutorialState } from "./tutorial.js";
-import { openPersonalHistoryModal, recordVillagerJoinHistory } from "./history.js";
+import { JOIN_ORIGIN_CAPTIVE, openPersonalHistoryModal, recordVillagerJoinHistory } from "./history.js";
 import { getVisitorLineKey, MERCHANT_SECRET_TREASURE_LINES, VISITOR_JOIN_LINES } from "./data/dialogue/visitorLines.js";
 import { getCaptiveConversationLines, getCaptiveGroupKey } from "./data/dialogue/captiveLines.js";
 import { incrementTitleCounter, TITLE_COUNTER_KEYS } from "./titles.js";
@@ -786,6 +786,8 @@ function markCaptiveSocialFailure(captive, actor, source, reason = "") {
 function handleCaptiveSocialSuccess(captive, actor, successRate, source) {
   // normalizeFormerCaptive が raiderType を消すため、属性キーは村人化の前に確定させる。
   const joinLineKey = getCaptiveGroupKey(captive);
+  // 村史には肩書の付いた捕虜のときの呼び名で残す。
+  const joinedName = captive.name;
   releaseCaptive(theVillage, captive);
   normalizeFormerCaptive(captive);
   markFormerCaptiveJoin(theVillage, captive);
@@ -802,7 +804,7 @@ function handleCaptiveSocialSuccess(captive, actor, successRate, source) {
     { getPermanentStat }
   );
   addVillageRecord(theVillage, actor, source === "誘惑" ? "seduction" : "recruitment", 1);
-  recordVillagerJoinHistory(theVillage, captive, { recruiter: actor, source });
+  recordVillagerJoinHistory(theVillage, captive, { recruiter: actor, source, joinedName, origin: JOIN_ORIGIN_CAPTIVE });
   refreshJobTable(captive, theVillage);
   theVillage.log(`${actor.name}の${source}により、${captive.name}が村人になりました。(成功率: ${Math.floor(successRate)}%)`);
   closeConversationModal();
@@ -1050,6 +1052,8 @@ function closeMerchantTradeModal() {
 // 勧誘成功時の処理を修正
 function handleRecruitmentSuccess(visitor, recruiter, successRate = 0, source = "勧誘") {
   const originalVisitor = visitor;
+  // 村史には肩書の付いた訪問者のときの呼び名で残す。
+  const joinedName = visitor.name;
   // 訪問者のタイプを取得（名前から抽出）
   const visitorType = visitor.name.includes("の") ? visitor.name.split("の")[0] : null;
   // 名前の「◯◯の」を削る前に、加入セリフのキーを確定させる。
@@ -1083,7 +1087,7 @@ function handleRecruitmentSuccess(visitor, recruiter, successRate = 0, source = 
     { getPermanentStat }
   );
   addVillageRecord(theVillage, recruiter, source === "誘惑" ? "seduction" : "recruitment", 1);
-  recordVillagerJoinHistory(theVillage, visitor, { recruiter, source });
+  recordVillagerJoinHistory(theVillage, visitor, { recruiter, source, joinedName, origin: visitorType });
 
   // 行動テーブルを更新
   refreshJobTable(visitor, theVillage);
