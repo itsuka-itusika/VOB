@@ -91,7 +91,8 @@ const AGE_VARIANT_PORTRAIT_LIMITS = {
     ["MA", 16], ["MB", 24], ["MC", 55], ["MD", 30], ["ME", 22],
     ["A", 32], ["BB", 29], ["C", 33], ["D", 62],
     ["BAN", 21], ["NOMAD", 20], ["KNIGHT", 26], ["ELITE_NOMAD", 20],
-    ["ELITE", 22], ["HOLY_KNIGHT", 8], ["EQUINA", 18], ["SAINT", 21]
+    ["ELITE", 22], ["HOLY_KNIGHT", 8], ["EQUINA", 18], ["SAINT", 21],
+    ["CENTAUR", 9]
   ]),
   young: new Map([
     ["MA", 16], ["MB", 24], ["MC", 55], ["MD", 30], ["ME", 22],
