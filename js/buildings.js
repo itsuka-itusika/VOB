@@ -82,14 +82,14 @@ export const BUILDINGS = [
     materials: 100,
     funds: 0,
     tech: 0,
-    desc: "村の上限人口が2人増える。最大6つまで建設可能。規模+15",
+    desc: "村の上限人口が2人増える。最大6つまで建設可能（黙示録クリア後は上限なし）。規模+15",
     effect: (village) => {
       village.building += 15;
       recalculateBuildingDerivedState(village);
       village.log(`家屋建設: 人口上限+2 (現在${village.popLimit}人), 規模+15`);
     },
     allowMultiple: true,
-    maxCount: 6
+    maxCount: village => village?.apocalypseCleared ? Infinity : 6
   },
   {
     id: "barn",
