@@ -95,7 +95,9 @@ const AGE_VARIANT_PORTRAIT_LIMITS = {
   ]),
   young: new Map([
     ["MA", 16], ["MB", 24], ["MC", 55], ["MD", 30], ["ME", 22],
-    ["A", 32], ["BB", 29], ["C", 33], ["D", 62], ["EQUINA", 18]
+    ["A", 32], ["BB", 29], ["C", 33], ["D", 62], ["EQUINA", 18],
+    ["ALSEID", 13], ["ANGEL", 16], ["ARACHNID", 5], ["CENTAUR", 9],
+    ["DRYAD", 18], ["HARPY", 12], ["MAENAD", 16], ["NEREID", 15]
   ])
 };
 
