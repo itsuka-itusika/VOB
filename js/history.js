@@ -1206,18 +1206,22 @@ function renderPersonalHistorySummary(village, person, options = {}) {
   ];
   const familyRelations = renderRelationshipLines(village, person, "family");
   const socialRelations = renderRelationshipLines(village, person, "social");
+  const familyTreeButtonHtml = `
+        <span class="personal-history-detail-row">
+          <button type="button" class="personal-history-detail-button" data-open-family-tree>家系図</button>
+        </span>`;
   // 過去帳の人物は好感度が残っていないため、詳細ボタンを出さない。
   const detailButtonHtml = options.archived ? "" : `
         <span class="personal-history-detail-row">
           <button type="button" class="personal-history-detail-button" data-open-friendship-detail>詳細</button>
         </span>`;
+  // ボタンは見出しの下に置き、続柄が長く続いても同じ位置で押せるようにする。
   const relationshipFields = [
-    { label: "家族関係", valueHtml: familyRelations },
+    { label: "家族関係", labelActionHtml: familyTreeButtonHtml, valueHtml: familyRelations },
     {
       label: "人間関係",
-      valueHtml: `
-        <span class="personal-history-relationship-text">${socialRelations}</span>${detailButtonHtml}
-      `
+      labelActionHtml: detailButtonHtml,
+      valueHtml: `<span class="personal-history-relationship-text">${socialRelations}</span>`
     }
   ];
   const detailFields = [
@@ -1242,7 +1246,7 @@ function renderPersonalHistorySummary(village, person, options = {}) {
           </div>
           ${detailFields.map(field => `
             <div class="personal-history-profile-field is-detail">
-              <span>${escapeHtml(field.label)}</span>
+              <span>${escapeHtml(field.label)}${field.labelActionHtml ?? ""}</span>
               <strong>${field.valueHtml ?? escapeHtml(field.value)}</strong>
             </div>
           `).join("")}
@@ -1283,6 +1287,10 @@ export function openPersonalHistoryModal(village, person, options = {}) {
   content.querySelector("[data-open-friendship-detail]")?.addEventListener("click", async () => {
     const { openFriendshipDetailModal } = await import("./relationships.js");
     openFriendshipDetailModal(village, person);
+  });
+  content.querySelector("[data-open-family-tree]")?.addEventListener("click", async () => {
+    const { openFamilyTreeModal } = await import("./familyTree.js");
+    openFamilyTreeModal(village, person);
   });
 
   overlay.style.display = "block";

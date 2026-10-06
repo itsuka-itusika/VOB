@@ -1,7 +1,8 @@
 // ledger.js
-// 村の記録をまとめる「台帳」。村史・過去帳・選挙記録・願望・経営目標への入口を持つ。
+// 村の記録をまとめる「台帳」。村史・過去帳・家系図・選挙記録・願望・経営目標への入口を持つ。
 // 各画面は台帳から開き、閉じると台帳へ戻る。
 
+import { openFamilyTreeModal } from "./familyTree.js";
 import {
   HISTORY_EVENT_TYPES,
   bindPersonLinks,
@@ -41,6 +42,7 @@ const WISH_OUTCOME_LABELS = Object.freeze({
 const LEDGER_CARDS = [
   { id: "history", title: "村史", note: "村に起きた出来事の年代記" },
   { id: "pastbook", title: "過去帳", note: "村を去った者たちの記録" },
+  { id: "familyTree", title: "家系図", note: "親子と夫婦のつながり" },
   { id: "election", title: "選挙記録", note: "里長選挙の結果と得票" },
   { id: "wish", title: "願望", note: "村人が神へ託した望み" },
   { id: "ranking", title: "殿堂", note: "村に残る歴代の記録" },
@@ -102,6 +104,12 @@ function openLedgerPage(village, cardId) {
   switch (cardId) {
     case "history": openHistoryModal(village, { onBack: () => openLedgerModal(village) }); break;
     case "pastbook": openPastBookModal(village, { onBack: () => openLedgerModal(village) }); break;
+    // 台帳からは、今いる村人のうち最も古くから村にいる人物を開き、家系図の中で人物を選び直す。
+    case "familyTree":
+      openFamilyTreeModal(village, village.villagers?.[0] ?? village.departedVillagers?.at(-1), {
+        onBack: () => openLedgerModal(village)
+      });
+      break;
     case "election": openElectionRecordModal(village); break;
     case "wish": openWishLedgerModal(village); break;
     case "ranking": openRankingModal(village); break;

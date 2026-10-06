@@ -3,6 +3,7 @@ import { openBuildingModal, closeBuildingModal, unlockAllBuildings } from "./bui
 import { createRandomVillager, createVisitorGroup, getVisitorTypeChoices } from "./createVillagers.js";
 import "./dictionary.js";
 import { addNonHousePopLimitBonus } from "./domain/buildingState.js";
+import { closeFamilyTreeModal } from "./familyTree.js";
 import { closeHistoryModal, closePersonalHistoryModal } from "./history.js";
 import {
   closeElectionRecordModal,
@@ -363,6 +364,7 @@ function bindGlobalHandlers() {
     closeSecretTreasureModal,
     closeDryadFruitModal,
     closePersonalHistoryModal,
+    closeFamilyTreeModal,
     openLedgerModal: () => openLedgerModal(theVillage),
     closeLedgerModal,
     onAutoAssignJobs: () => {
@@ -460,6 +462,7 @@ function bindModalOverlayClickClose() {
   bindOverlayClickClose("dryadFruitOverlay", closeDryadFruitModal);
   bindOverlayClickClose("historyOverlay", closeHistoryModal);
   bindOverlayClickClose("personalHistoryOverlay", closePersonalHistoryModal);
+  bindOverlayClickClose("familyTreeOverlay", closeFamilyTreeModal);
   bindOverlayClickClose("ledgerOverlay", closeLedgerModal);
   bindOverlayClickClose("electionRecordOverlay", closeElectionRecordModal);
   bindOverlayClickClose("wishLedgerOverlay", closeWishLedgerModal);

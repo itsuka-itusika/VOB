@@ -1696,6 +1696,7 @@ section h2 {
 #dryadFruitOverlay,
 #historyOverlay,
 #personalHistoryOverlay,
+#familyTreeOverlay,
 #ledgerOverlay,
 #electionRecordOverlay,
 #wishLedgerOverlay,
@@ -1713,6 +1714,7 @@ section h2 {
 #dryadFruitModal,
 #historyModal,
 #personalHistoryModal,
+#familyTreeModal,
 #ledgerModal,
 #electionRecordModal,
 #wishLedgerModal,
@@ -1750,6 +1752,7 @@ section h2 {
 #secretTreasureContent,
 #historyContent,
 #personalHistoryContent,
+#familyTreeContent,
 #ledgerContent,
 #electionRecordContent,
 #wishLedgerContent,
@@ -1758,6 +1761,7 @@ section h2 {
 }
 #historyModal,
 #personalHistoryModal,
+#familyTreeModal,
 #ledgerModal,
 #electionRecordModal,
 #wishLedgerModal,
@@ -1771,6 +1775,7 @@ section h2 {
 }
 #historyModal .modal-header,
 #personalHistoryModal .modal-header,
+#familyTreeModal .modal-header,
 #ledgerModal .modal-header,
 #electionRecordModal .modal-header,
 #wishLedgerModal .modal-header,
@@ -1809,12 +1814,13 @@ section h2 {
   gap: 6px;
   width: 200px;
 }
+/* 顔グラの背景は会話モーダルと同じ色にし、透過の縁を目立たせない。 */
 .personal-history-portrait-frame {
   display: grid;
   place-items: center;
   width: 200px;
   aspect-ratio: 1;
-  background: #e8dfcb;
+  background: #f0f0f0;
   border: 1px solid #bda978;
   overflow: hidden;
 }
@@ -2025,7 +2031,7 @@ section h2 {
   height: 42px;
   object-fit: cover;
   border: 1px solid #bda978;
-  background: #e8dfcb;
+  background: #f0f0f0;
 }
 .friendship-detail-content {
   overflow: auto;
@@ -2102,7 +2108,7 @@ section h2 {
   height: 42px;
   object-fit: cover;
   border: 1px solid #bda978;
-  background: #e8dfcb;
+  background: #f0f0f0;
 }
 .friendship-detail-empty {
   text-align: center;
@@ -2119,6 +2125,293 @@ section h2 {
   border-bottom: 1px solid #e3d7bd;
   color: #73654b;
   font-size: 0.92rem;
+}
+
+/* ---------------- 家系図 ---------------- */
+/* 個人記録の上に重ねて開くため、個人記録より前面に出す。 */
+#familyTreeOverlay {
+  z-index: 1099;
+}
+#familyTreeModal {
+  z-index: 1100;
+}
+.family-tree-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  color: #6d5b34;
+  font-size: 0.85rem;
+}
+.family-tree-picker select {
+  max-width: 100%;
+}
+.family-tree-scroll {
+  overflow-x: auto;
+  background: #fffaf0;
+  border: 1px solid #d8c9a6;
+  border-radius: 6px;
+  font-family: "Yu Gothic", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+}
+/* 本人を中央の列に固定し、親の線は本人へ、子の線は本人から引く。 */
+.family-tree-canvas {
+  position: relative;
+  box-sizing: border-box;
+  width: max-content;
+  min-width: 100%;
+  padding: 6px 12px 12px;
+}
+.family-tree-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.family-tree-lines path {
+  fill: none;
+  stroke: #9b875d;
+  stroke-width: 2;
+}
+.family-tree-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  margin-bottom: 22px;
+}
+.family-tree-row:last-child {
+  margin-bottom: 0;
+}
+/* 世代名は横へ送っても左端に残す。 */
+.family-tree-gen-label {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  justify-self: start;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  margin-bottom: 4px;
+  padding: 0 4px;
+  background: rgba(255, 250, 240, 0.92);
+  color: #7a6542;
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+.family-tree-side,
+.family-tree-center,
+.family-tree-children {
+  grid-row: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.family-tree-side.is-left {
+  grid-column: 1;
+  justify-self: end;
+  padding-right: 10px;
+}
+.family-tree-center {
+  grid-column: 2;
+  justify-content: center;
+  min-width: 28px;
+}
+.family-tree-side.is-right {
+  grid-column: 3;
+  justify-self: start;
+  padding-left: 10px;
+}
+.family-tree-children {
+  grid-column: 1 / -1;
+  justify-content: center;
+}
+.family-tree-couple {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.family-tree-marriage {
+  padding: 0 2px;
+  color: #9b875d;
+  font-weight: bold;
+}
+.family-tree-siblings {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.family-tree-sibling-cards {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.family-tree-card {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+  width: 84px;
+  margin: 0;
+  padding: 6px 4px;
+  border: 1px solid #c9b78e;
+  border-radius: 6px;
+  background: #f7f0e3;
+  color: #2f2618;
+  font: inherit;
+}
+button.family-tree-card:hover,
+button.family-tree-card:focus {
+  border-color: #8b6d31;
+  background: #efe3c8;
+}
+.family-tree-card.is-self {
+  border: 2px solid #b8860b;
+  background: #fff3c8;
+}
+.family-tree-card.is-departed {
+  opacity: 0.6;
+  filter: grayscale(0.9);
+}
+/* 顔グラの背景は会話モーダルと同じ色にし、透過の縁を目立たせない。 */
+.family-tree-card .portrait-sprite,
+.family-tree-list-person .portrait-sprite {
+  width: 52px;
+  height: 52px;
+  border: 1px solid #bda978;
+  border-radius: 4px;
+  background-color: #f0f0f0;
+}
+.family-tree-name {
+  max-width: 78px;
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+.family-tree-meta {
+  color: #6b5a3a;
+  font-size: 0.7rem;
+}
+.family-tree-more {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  height: 86px;
+  margin: 0;
+  padding: 4px 6px;
+  border: 1px dashed #9b875d;
+  border-radius: 6px;
+  background: #f3ead6;
+  color: #5a4a2c;
+  font: inherit;
+  font-size: 0.7rem;
+}
+.family-tree-more b {
+  color: #3a2c14;
+  font-size: 0.95rem;
+}
+.family-tree-half {
+  margin: 0;
+  padding: 3px 10px;
+  border: 1px solid #c9b78e;
+  border-radius: 12px;
+  background: #f3ead6;
+  color: #5a4a2c;
+  font: inherit;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+.family-tree-more:hover,
+.family-tree-more:focus,
+.family-tree-half:hover,
+.family-tree-half:focus {
+  background: #ead9b8;
+}
+.family-tree-empty {
+  color: #9a8a6a;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.family-tree-note {
+  margin: 8px 0 0;
+  color: #5a4a2c;
+  font-size: 0.85rem;
+}
+.family-tree-link {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline dotted;
+}
+.family-tree-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 6px;
+  color: #6b5a3a;
+  font-size: 0.75rem;
+}
+.family-tree-list {
+  margin-top: 10px;
+  padding: 8px 10px 10px;
+  border: 1px solid #d8c9a6;
+  border-radius: 6px;
+  background: #fffaf0;
+}
+.family-tree-list-title {
+  margin: 0 0 6px;
+  color: #6b5a3a;
+  font-size: 0.85rem;
+}
+.family-tree-list-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.family-tree-list-person {
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto;
+  column-gap: 6px;
+  align-items: center;
+  margin: 0;
+  padding: 3px 8px 3px 3px;
+  border: 1px solid #c9b78e;
+  border-radius: 6px;
+  background: #f7f0e3;
+  color: #2f2618;
+  font: inherit;
+  text-align: left;
+}
+.family-tree-list-person .portrait-sprite {
+  grid-row: 1 / 3;
+  width: 36px;
+  height: 36px;
+}
+.family-tree-list-person .family-tree-name {
+  max-width: 9em;
+  margin-top: 0;
+}
+.family-tree-list-person.is-departed {
+  opacity: 0.6;
+  filter: grayscale(0.9);
+}
+.family-tree-list-person:hover,
+.family-tree-list-person:focus {
+  border-color: #8b6d31;
+  background: #efe3c8;
 }
 .history-list {
   display: grid;
