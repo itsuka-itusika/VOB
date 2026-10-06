@@ -46,7 +46,6 @@ import {
 import {
   FREED_SLAVE_JOIN_LINES,
   FREED_SLAVE_LINES,
-  SLAVE_FREED_LINES,
   SLAVE_LINES,
   SLAVE_PURCHASE_JOIN_LINES,
   SLAVE_TRADER_EXCHANGED_LINES,
@@ -347,8 +346,6 @@ export function getDialogueLines({ character, scene, key, context = {} }) {
       return getSlaveTypeLines(SLAVE_LINES, key, character, context);
     case "freedSlave":
       return getSlaveTypeLines(FREED_SLAVE_LINES, key, character, context);
-    case "slaveFreed":
-      return getSlaveTypeLines(SLAVE_FREED_LINES, key, character, context);
     case "slavePurchaseJoin":
       return getSlaveTypeLines(SLAVE_PURCHASE_JOIN_LINES, key, character, context);
     case "freedSlaveJoin":

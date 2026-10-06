@@ -55,7 +55,7 @@
 - `secretTreasure`
 - `miracle`
 - `visitor`
-- `slave` / `freedSlave` / `slaveFreed` / `slavePurchaseJoin` / `freedSlaveJoin`: 奴隷・解放奴隷のセリフ。key は奴隷の種族（`slaveType`）。生まれ持った体でいる間は種族ごとの文、別の体にいる間は口調ごとの文を返す。
+- `slave` / `freedSlave` / `slavePurchaseJoin` / `freedSlaveJoin`: 奴隷・解放奴隷のセリフ。key は奴隷の種族（`slaveType`）。生まれ持った体でいる間は種族ごとの文、別の体にいる間は口調ごとの文を返す。
 - `slaveSale`: 奴隷を買い取られた瞬間の奴隷商人のセリフ。
 
 `randomEvent` と `randomEventSecond` は、通常の `getDialogueLines` ではなく `getDialogueLine` 内の専用分岐で処理する。
@@ -97,7 +97,7 @@
   - `VISITOR_APOCALYPSE_LINES` は黙示録中の訪問者タイプ別会話。災厄の進行段階では分岐せず、第一〜第七のどこでも成立する内容にする。未定義タイプは `VISITOR_APOCALYPSE_GENERIC_LINES` で受ける。
 
 - `js/data/dialogue/slaveTradeLines.js`
-  - 奴隷の来訪時・通常会話、解放された瞬間、解放奴隷の通常会話、買い取り・勧誘や誘惑での加入時の反応と、奴隷商人の売り渡し後・交換後の会話。奴隷のセリフは種族ごとの `byType` と口調ごとの `byTone` の二層で持つ。
+  - 奴隷の来訪時・通常会話、解放奴隷の通常会話、買い取り・勧誘や誘惑での加入時の反応と、奴隷商人の売り渡し後・交換後の会話。奴隷のセリフは種族ごとの `byType` と口調ごとの `byTone` の二層で持つ。
 
 - `js/data/dialogue/randomEventLines.js`
   - ランダムイベントの口調別セリフ、子供向け汎用セリフ、fallback 展開ヘルパー。

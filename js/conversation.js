@@ -1208,8 +1208,6 @@ function handleRecruitmentSuccess(visitor, recruiter, successRate = 0, source = 
     freeSlave(freedSlave);
     freedMessage = `${slaveName}は解放されました。`;
     theVillage.log(`${slaveName}は解放され、${freedSlave.name}となりました。`);
-    const freedLine = getDialogueLine({ character: freedSlave, scene: "slaveFreed", key: freedSlave.slaveType });
-    if (freedLine) theVillage.log(`${freedSlave.name}「${freedLine}」`);
   }
   closeConversationModal();
   updateUI(theVillage);
