@@ -1326,7 +1326,7 @@ function showBirthModal(village, mother, father, child, onNamed) {
 function renderPortraitLine(character, line, displayName = "") {
   return `
     <div style="display:grid;grid-template-columns:72px 1fr;gap:12px;margin:12px 0;align-items:center;">
-      ${getPortraitSpriteHtml(character, { size: 72, alt: displayName || character.name, extraStyle: "border:1px solid #ddd;background-color:#f6f0e6;" })}
+      ${getPortraitSpriteHtml(character, { size: 72, alt: displayName || character.name, extraStyle: "border:1px solid #ddd;background-color:#f0f0f0;" })}
       <p><strong>${displayName || character.name}</strong>: ${line}</p>
     </div>
   `;
