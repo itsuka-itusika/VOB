@@ -2305,6 +2305,13 @@ button.family-tree-card:focus {
   color: #6b5a3a;
   font-size: 0.7rem;
 }
+/* 年齢と去り方は途中で折り返さない。カードに収まらない時は去り方だけを次の行へ送り、中央にそろえる。 */
+.family-tree-meta > span {
+  white-space: nowrap;
+}
+.family-tree-card .family-tree-meta {
+  text-align: center;
+}
 .family-tree-more {
   position: relative;
   z-index: 1;

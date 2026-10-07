@@ -1,7 +1,8 @@
 // familyTree.js
 // 家系図モーダル。本人を中心に、祖父母・父母・本人（きょうだい・配偶者）・子を並べる。
 // 家系は「母・父・子」の関係を、過去帳も含めて createLineageIndex でたどる。
-// 年齢は顔グラに合わせて肉体年齢で表示し、本人以外の顔を押すとその人物の家系図へ移る。
+// 年齢は顔グラに合わせて肉体年齢で表示し、精神年齢が違う人だけ「肉体/精神」で並べる。
+// 本人以外の顔を押すとその人物の家系図へ移る。
 
 import { getPortraitSpriteHtml } from "./data/portraitAtlas.js";
 import { createLineageIndex, getRelationshipEntries } from "./relationships.js";
@@ -100,10 +101,13 @@ function collectFamily(village, person, people) {
   };
 }
 
-function formatAge(person) {
-  const age = `${person.bodyAge ?? "?"}歳`;
-  if (!person.departure) return age;
-  return `${age}・${DEATH_REASONS.has(person.departure.reason) ? "没" : "離村"}`;
+// 年齢と去り方はそれぞれ途中で折り返さず、1行に収まらない時は去り方だけを次の行へ送る。
+function renderAgeMeta(person) {
+  const bodyAge = `${person.bodyAge ?? "?"}歳`;
+  const spiritAge = person.spiritAge ?? person.bodyAge;
+  const parts = [spiritAge === person.bodyAge ? bodyAge : `${bodyAge}/${spiritAge}歳`];
+  if (person.departure) parts.push(DEATH_REASONS.has(person.departure.reason) ? "没" : "離村");
+  return `<span class="family-tree-meta">${parts.map(part => `<span>${escapeHtml(part)}</span>`).join(" ")}</span>`;
 }
 
 function renderCard(person, node, { self = false } = {}) {
@@ -111,7 +115,7 @@ function renderCard(person, node, { self = false } = {}) {
   const body = `
     ${getPortraitSpriteHtml(person, { alt: person.name })}
     <span class="family-tree-name">${escapeHtml(person.name)}</span>
-    <span class="family-tree-meta">${escapeHtml(formatAge(person))}</span>`;
+    ${renderAgeMeta(person)}`;
   if (self) return `<div class="${className}" data-family-tree-node="${node}">${body}</div>`;
   return `<button type="button" class="${className}" data-family-tree-node="${node}" data-family-tree-person="${person.id}" title="${escapeHtml(person.name)}の家系図へ">${body}</button>`;
 }
@@ -229,7 +233,7 @@ function toggleList(content, family, kind) {
         <button type="button" class="family-tree-list-person${person.departure ? " is-departed" : ""}" data-family-tree-person="${person.id}" title="${escapeHtml(person.name)}の家系図へ">
           ${getPortraitSpriteHtml(person, { alt: person.name })}
           <span class="family-tree-name">${escapeHtml(person.name)}</span>
-          <span class="family-tree-meta">${escapeHtml(formatAge(person))}</span>
+          ${renderAgeMeta(person)}
         </button>`).join("")}
     </div>`;
   panel.hidden = false;
