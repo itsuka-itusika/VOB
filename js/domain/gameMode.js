@@ -32,10 +32,11 @@ export function isGoblinRaid(enemyGroups) {
 export const GOBLIN_MODE_VISITOR_WEIGHT = 20;
 // ゴブリンの訪問者の勧誘・誘惑の係数（棄民と同じ）。
 export const GOBLIN_VISITOR_RECRUITMENT_COEFFICIENT = 0.9;
-// 規模の大きい村（繁栄した郷村以降）に来るゴブリンの訪問者が、
-// ゴブリンリーダー・ゴブリン射手と同じ能力の幅になる確率。
-export const GOBLIN_ELITE_VISITOR_MIN_STAGE_INDEX = 5;
+// ゴブリンの訪問者が、ゴブリンリーダー・ゴブリン射手と同じ能力の幅になる確率と、出始める規模段階。
+// リーダー相当は豊かな村（段階4）以降、射手相当は旅人の立ち寄る村（段階3）以降に来る。
+export const GOBLIN_LEADER_VISITOR_MIN_STAGE_INDEX = 4;
 export const GOBLIN_LEADER_VISITOR_CHANCE = 0.1;
+export const GOBLIN_ARCHER_VISITOR_MIN_STAGE_INDEX = 3;
 export const GOBLIN_ARCHER_VISITOR_CHANCE = 0.15;
 // 各襲撃テーブルで、ゴブリン系が加わる襲撃の重みに掛ける倍率。
 export const GOBLIN_MODE_RAID_WEIGHT_MULTIPLIER = 1.5;

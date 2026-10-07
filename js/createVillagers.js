@@ -31,8 +31,9 @@ import { getRaiderTypeByType } from "./data/raidData.js";
 import { getRaiderSpeechType } from "./domain/raiderSpeechTypes.js";
 import {
   GOBLIN_ARCHER_VISITOR_CHANCE,
-  GOBLIN_ELITE_VISITOR_MIN_STAGE_INDEX,
+  GOBLIN_ARCHER_VISITOR_MIN_STAGE_INDEX,
   GOBLIN_LEADER_VISITOR_CHANCE,
+  GOBLIN_LEADER_VISITOR_MIN_STAGE_INDEX,
   GOBLIN_MODE_VISITOR_WEIGHT,
   GOBLIN_RACE,
   isGoblinMode
@@ -319,10 +320,20 @@ const GOBLIN_VISITOR_TYPE = {
 };
 
 // ゴブリンリーダー・ゴブリン射手と同じ能力の幅で作るゴブリンと、持たせる戦い方の精神特性。
-// 襲撃者ではないため首長は持たせない。ゴブリンモードの最初の村人と、規模の大きい村の訪問者で使う。
+// 襲撃者ではないため首長は持たせない。ゴブリンモードの最初の村人と、規模が育った村の訪問者で使う。
 const GOBLIN_ELITE_ROLES = [
-  { raiderType: "ゴブリンリーダー", mindTrait: "ゴブリン兵法", visitorChance: GOBLIN_LEADER_VISITOR_CHANCE },
-  { raiderType: "ゴブリン射手", mindTrait: "狙撃心得", visitorChance: GOBLIN_ARCHER_VISITOR_CHANCE }
+  {
+    raiderType: "ゴブリンリーダー",
+    mindTrait: "ゴブリン兵法",
+    visitorChance: GOBLIN_LEADER_VISITOR_CHANCE,
+    visitorMinStageIndex: GOBLIN_LEADER_VISITOR_MIN_STAGE_INDEX
+  },
+  {
+    raiderType: "ゴブリン射手",
+    mindTrait: "狙撃心得",
+    visitorChance: GOBLIN_ARCHER_VISITOR_CHANCE,
+    visitorMinStageIndex: GOBLIN_ARCHER_VISITOR_MIN_STAGE_INDEX
+  }
 ];
 
 // 肩書・顔・口調は通常のゴブリンの訪問者と同じにし、表記では見分けがつかないようにする。
@@ -330,6 +341,7 @@ const GOBLIN_ELITE_VISITOR_TYPES = GOBLIN_ELITE_ROLES.map(role => {
   const raiderType = getRaiderTypeByType(role.raiderType);
   return {
     chance: role.visitorChance,
+    minStageIndex: role.visitorMinStageIndex,
     visitorType: {
       ...GOBLIN_VISITOR_TYPE,
       ageRange: raiderType.ageRange,
@@ -339,13 +351,12 @@ const GOBLIN_ELITE_VISITOR_TYPES = GOBLIN_ELITE_ROLES.map(role => {
   };
 });
 
-/** ゴブリンの訪問者を選ぶ。規模の大きい村では、まれにリーダーや射手と同じ能力の幅になる。 */
+/** ゴブリンの訪問者を選ぶ。規模が育った村では、まれにリーダーや射手と同じ能力の幅になる。 */
 function selectGoblinVisitorType(village = null) {
-  if (getVillageScaleStage(village?.building).index < GOBLIN_ELITE_VISITOR_MIN_STAGE_INDEX) {
-    return GOBLIN_VISITOR_TYPE;
-  }
+  const stageIndex = getVillageScaleStage(village?.building).index;
   let roll = Math.random();
-  for (const { chance, visitorType } of GOBLIN_ELITE_VISITOR_TYPES) {
+  for (const { chance, minStageIndex, visitorType } of GOBLIN_ELITE_VISITOR_TYPES) {
+    if (stageIndex < minStageIndex) continue;
     if (roll < chance) return visitorType;
     roll -= chance;
   }
