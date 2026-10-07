@@ -29,6 +29,7 @@ export const BUILDING_REQUEST_COMPLETION_LINES = {
   "ギャル風": [({ buildingName }) => `${buildingName}できてるじゃん！ 神さま、ありがと。これ、村のみんなも助かるやつだね。`],
   "中性的": [({ buildingName }) => `${buildingName}を建ててくれてありがとう。これで村の空気も少し変わりそうだね。`],
   "老人": [({ buildingName }) => `${buildingName}を建ててくださったか。ありがたいことじゃ。これで村も少し安らぐのう。`],
+  "ゴブリン": [({ buildingName }) => `${buildingName}ができたゴブ！ 神さま、ありがとゴブ。大事に使うゴブ。`],
   default: [({ buildingName }) => `${buildingName}を建ててくださってありがとうございます。`]
 };
 

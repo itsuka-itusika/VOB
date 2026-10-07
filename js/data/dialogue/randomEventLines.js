@@ -112,7 +112,8 @@ function speechTypeLines(lines) {
     "中性的": lines.neutral,
     "スフィンクス": lines.neutral,
     "ギャル風": lines.gal,
-    "老人": lines.elder
+    "老人": lines.elder,
+    "ゴブリン": lines.goblin
   };
 }
 
@@ -137,7 +138,8 @@ const EVENT_SPEECH_TYPE_LINES = {
     coolF: "狩女神の祝福ね。動きがいつもより冴えている。",
     neutral: "狩女神の祝福か。森の道筋が見える気がする。",
     gal: "狩女神の祝福とかすごくない？ 今日の狩り、勝ち確かも！",
-    elder: "狩女神の祝福とはのう。まだ森に呼ばれておるわい。"
+    elder: "狩女神の祝福とはのう。まだ森に呼ばれておるわい。",
+    goblin: "狩女神の祝福ゴブ！ 獲物の居場所が、匂いで分かる気がするゴブ。"
   }),
   "太陽神": speechTypeLines({
     normalM: "太陽神の寵愛か。体の芯から力が出る。",
@@ -159,7 +161,8 @@ const EVENT_SPEECH_TYPE_LINES = {
     coolF: "太陽神の寵愛ね。体温と筋力が上がっている。",
     neutral: "太陽神の光か。内側から熱が満ちてくる。",
     gal: "太陽神の寵愛とか、今日の私めっちゃ輝いてない？",
-    elder: "太陽神の光はありがたいのう。骨まで温まるわい。"
+    elder: "太陽神の光はありがたいのう。骨まで温まるわい。",
+    goblin: "体の奥がぽかぽかするゴブ！ 太陽神が味方なら、なんでも持ち上げられるゴブ！"
   }),
   "戦女神": speechTypeLines({
     normalM: "戦女神の啓示か。次にどう動くか見えてきた。",
@@ -181,7 +184,8 @@ const EVENT_SPEECH_TYPE_LINES = {
     coolF: "戦女神の啓示ね。思考がいつもより澄んでいる。",
     neutral: "戦女神の啓示か。次の一手が見える。",
     gal: "戦女神の啓示とか熱いじゃん。これ、いけるっしょ！",
-    elder: "戦女神の声か。年寄りにもまだ知恵を授けてくれるか。"
+    elder: "戦女神の声か。年寄りにもまだ知恵を授けてくれるか。",
+    goblin: "戦女神が教えてくれたゴブ。どこを突けば勝てるか、よく見えるゴブ。"
   }),
   "地母神": speechTypeLines({
     normalM: "地母神の慈愛か。足元から支えられている感じだ。",
@@ -203,7 +207,8 @@ const EVENT_SPEECH_TYPE_LINES = {
     coolF: "地母神の慈愛ね。姿勢が自然に安定している。",
     neutral: "地母神の加護か。足元から力が満ちる。",
     gal: "地母神の加護って安心感すごいね。めっちゃ落ち着く！",
-    elder: "地母神の慈愛はありがたいのう。足腰に力が戻るわい。"
+    elder: "地母神の慈愛はありがたいのう。足腰に力が戻るわい。",
+    goblin: "地面から力が湧いてくるゴブ。土の上なら、おれは倒れないゴブ。"
   }),
   selfPleasure: speechTypeLines({
     // イベント条件は精神男性かつ女性肉体。女性口調は通常発生しないため持たせず、矛盾時は男性側fallbackで受ける。
@@ -214,7 +219,8 @@ const EVENT_SPEECH_TYPE_LINES = {
     playfulM: "この体めっちゃ気持ちいいっす！",
     darkM: "…なかなかの感度だ",
     coolM: "これは…クセになるな…",
-    elder: "ほう……妙なものじゃが、悪くはないのう。"
+    elder: "ほう……妙なものじゃが、悪くはないのう。",
+    goblin: "キヒヒ……これはやめられないゴブ……。"
   }),
   bathPerk: speechTypeLines({
     // イベント条件は精神男性かつ女性肉体。女性口調は通常発生しないため持たせず、矛盾時は男性側fallbackで受ける。
@@ -226,7 +232,8 @@ const EVENT_SPEECH_TYPE_LINES = {
     darkM: "湯気の中にいると……戻りたくなくなるな。このままでいたい。",
     coolM: "……悪くない。長湯の効能ってやつを、身をもって知ったな。",
     neutral: "ふぅ、生き返るな……。湯に浸かると、余計な力が抜ける。",
-    elder: "ほう、よい湯じゃった。これなら、この体も悪くはないのう。"
+    elder: "ほう、よい湯じゃった。これなら、この体も悪くはないのう。",
+    goblin: "キヒヒ、女湯でのんびりしてきたゴブ。この体も役に立つゴブ。"
   })
 };
 
@@ -251,7 +258,8 @@ function makeEventSpecificLines(c) {
     coolF: c.coolF,
     neutral: c.neutral,
     gal: c.gal,
-    elder: c.elder
+    elder: c.elder,
+    goblin: c.goblin
   });
 }
 
@@ -277,7 +285,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     coolF: "人慣れしている猫ね。しばらく様子を見ましょう。",
     neutral: "猫の気配は不思議と場を和ませるな。",
     gal: "この猫かわいすぎ。絵に残したいくらい！",
-    elder: "猫はええのう。そばにおるだけで心が丸くなるわい。"
+    elder: "猫はええのう。そばにおるだけで心が丸くなるわい。",
+    goblin: "小さいのが寄ってきたゴブ。……食わないゴブ。撫でるだけだゴブ。"
   }),
   gold: makeEventSpecificLines({
     subject: "金貨の発見",
@@ -300,7 +309,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     coolF: "資金として管理しましょう。浮かれるのは後でいいわ。",
     neutral: "金貨は力になる。扱い方を間違えないことだ。",
     gal: "金貨見つけるとか運よすぎ！ 今日はツイてるね！",
-    elder: "金はありがたいが、使い道こそ大事じゃ。"
+    elder: "金はありがたいが、使い道こそ大事じゃ。",
+    goblin: "光るものを拾ったゴブ！ 金貨だゴブ！ ……ちゃんと村のために使うゴブ。"
   }),
   strangeRain: makeEventSpecificLines({
     subject: "不思議な魚の雨",
@@ -323,7 +333,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     coolF: "現象は不明でも、食料として処理しましょう。",
     neutral: "空から魚か。理屈はともかく役には立つ。",
     gal: "魚降ってくるとか意味わかんないけど助かるじゃん！",
-    elder: "長く生きても、魚の雨はそう見んのう。"
+    elder: "長く生きても、魚の雨はそう見んのう。",
+    goblin: "空から魚が降ってきたゴブ！ 拾え拾え、今夜の飯だゴブ！"
   }),
   fireworks: makeEventSpecificLines({
     subject: "花火師の来訪",
@@ -346,7 +357,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     coolF: "花火の効果で村の士気が上がっているわ。",
     neutral: "花火か。音と光が気分を変えるな。",
     gal: "花火めっちゃ映える！ 今日の夜、最高じゃん！",
-    elder: "花火はええのう。昔の祭りを思い出すわい。"
+    elder: "花火はええのう。昔の祭りを思い出すわい。",
+    goblin: "空に火の花が咲いたゴブ！ 音はでかいけど、きれいだゴブ。"
   }),
   menFriendship: makeEventSpecificLines({
     subject: "男同士の友情",
@@ -429,7 +441,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     elder: [
       "男の友情はええぞ。長く残る縁になるわい。",
       "そう言われると照れるがのう。……まあ、悪くない縁じゃ。"
-    ]
+    ],
+    goblin: ["お前とは気が合うゴブ。獲物を分けてやってもいいくらいだ。", "おれもだゴブ。背中を任せられるやつは、群れにもいなかったゴブ。"]
   }),
   hobbyFriends: makeEventSpecificLines({
     subject: "趣味仲間",
@@ -512,7 +525,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     elder: [
       "同じ楽しみを持つ相手は大事じゃ。長い付き合いになるぞ。",
       "長い付き合いになるとええのう。年寄りの話も聞いてもらおうか。"
-    ]
+    ],
+    goblin: ["お前も同じ遊びが好きゴブか！ 話が早いゴブ。", "趣味の話ならいくらでもできるゴブ。……ほかの話は苦手だがな。"]
   })
 });
 
@@ -538,7 +552,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     coolF: "損失を確認して、次の備蓄計画を立てましょう。",
     neutral: "嵐の後始末から始めるしかないな。",
     gal: "嵐やばかったね。食料減ったのきつすぎ！",
-    elder: "春の嵐は侮れん。残ったもんを大事にせい。"
+    elder: "春の嵐は侮れん。残ったもんを大事にせい。",
+    goblin: "食い物を持っていかれたゴブ！ 嵐め、許さないゴブ……。"
   }),
   greatStorm: makeEventSpecificLines({
     subject: "大嵐",
@@ -561,7 +576,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     coolF: "損壊箇所を記録します。資材の見積もりが要りますね。",
     neutral: "嵐が建物を壊していった。片付けと修繕からだ。",
     gal: "建物飛んでったんだけど！ さすがにやばくない？",
-    elder: "夏と秋の嵐は家を壊す。わしらは何度も建て直してきた。"
+    elder: "夏と秋の嵐は家を壊す。わしらは何度も建て直してきた。",
+    goblin: "屋根が飛んだゴブ！ ……また建てればいいゴブ。巣作りは得意だ。"
   }),
   downpour: makeEventSpecificLines({
     subject: "豪雨",
@@ -584,7 +600,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     coolF: "水分を含んだ食料は分けて管理しましょう。",
     neutral: "豪雨の後は、残せるものを選ぶしかない。",
     gal: "雨ひどすぎ。食料びしょびしょとか萎えるね。",
-    elder: "豪雨の後は腐りが早い。急いで選り分けるんじゃ。"
+    elder: "豪雨の後は腐りが早い。急いで選り分けるんじゃ。",
+    goblin: "食い物が濡れたゴブ……乾かせば、まだ食えるゴブ。"
   }),
   heat: makeEventSpecificLines({
     subject: "猛暑",
@@ -607,7 +624,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     coolF: "熱中症の危険があるわ。行動を抑えましょう。",
     neutral: "この暑さは消耗が大きい。温存が必要だ。",
     gal: "暑すぎて無理。日陰と飲み物、絶対いるって！",
-    elder: "猛暑は年寄りにこたえる。皆も無理するでないぞ。"
+    elder: "猛暑は年寄りにこたえる。皆も無理するでないぞ。",
+    goblin: "暑すぎるゴブ……日陰から一歩も出たくないゴブ。"
   }),
   fire: makeEventSpecificLines({
     subject: "ボヤ",
@@ -630,7 +648,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     coolF: "被害は限定的ね。原因を確認しましょう。",
     neutral: "小火でも油断はできない。後始末が先だ。",
     gal: "ボヤとか焦るって。資材燃えたの痛いね。",
-    elder: "火は小さくとも恐ろしい。用心せねばならん。"
+    elder: "火は小さくとも恐ろしい。用心せねばならん。",
+    goblin: "火だゴブ！ 資材が焦げたゴブ……もったいないゴブ。"
   }),
   thief: makeEventSpecificLines({
     subject: "盗賊団",
@@ -653,7 +672,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     coolF: "防犯体制を整えましょう。再発が問題よ。",
     neutral: "盗賊団か。村の隙を見られたな。",
     gal: "盗賊とか最悪。防犯ガチらないとだね。",
-    elder: "盗人は隙を好む。夜回りを増やすんじゃ。"
+    elder: "盗人は隙を好む。夜回りを増やすんじゃ。",
+    goblin: "盗むのはおれたちの得意技だったゴブ。……やられると、こんなに腹が立つゴブか。"
   })
 });
 
@@ -679,7 +699,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     coolF: "恋愛感情ね。焦らず確認していきましょう。",
     neutral: "相手を想う気持ちは、簡単には整理できないな。",
     gal: "これ絶対恋じゃん。めっちゃドキドキするんだけど！",
-    elder: "恋の気配か。若い心はよう揺れるものじゃ。"
+    elder: "恋の気配か。若い心はよう揺れるものじゃ。",
+    goblin: "あいつを見ると、腹の奥がむずむずするゴブ。……これが恋ってやつゴブか。"
   }),
   thunderboltLove: makeEventSpecificLines({
     subject: "突然の恋",
@@ -702,7 +723,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     coolF: "一瞬で心を持っていかれた。……不本意だけれど、事実ね。",
     neutral: "理由は分からない。ただ、目を離せなくなった。",
     gal: "は？ 今の一瞬でガチ恋なんだけど。どうすんのこれ！",
-    elder: "この歳になって胸を射抜かれるとはのう。神も酷なことをなさる。"
+    elder: "この歳になって胸を射抜かれるとはのう。神も酷なことをなさる。",
+    goblin: "目が合っただけで、頭が真っ白になったゴブ……あいつしか見えないゴブ。"
   }),
   // ナンパ・逆ナンは声をかける側と、かけられた側の受諾・拒否で3組に分かれる。
   // 趣味「ナンパ」「逆ナン」でも同じ組を使うため、男女どちらの口調も揃える。
@@ -727,7 +749,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     coolF: "少しいいかしら。用件はないわ。ただ、話してみたかっただけ。",
     neutral: "少し時間をもらえるかな。話してみたいと思っただけなんだ。",
     gal: "ちょっとちょっと、そこの人！ 話そーよ、絶対つまんなくないから！",
-    elder: "そこのお若いの、ちと付き合ってくれんか。年寄りの話は退屈かのう。"
+    elder: "そこのお若いの、ちと付き合ってくれんか。年寄りの話は退屈かのう。",
+    goblin: "おい、そこのお前。おれと飯でも食わないかゴブ。うまい肉を取っておいたゴブ。"
   }),
   pickupAccept: makeEventSpecificLines({
     subject: "ナンパ",
@@ -750,7 +773,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     coolF: "……妙な人。悪い気はしないわ。少しだけ付き合ってあげる。",
     neutral: "僕でいいのかな。……うん、少し話そうか。",
     gal: "まじで？ あたしに声かけるとかやるじゃん。いいよ、話そ！",
-    elder: "ほう、この年寄りにかね。……ふふ、悪い気はせんのう。付き合おう。"
+    elder: "ほう、この年寄りにかね。……ふふ、悪い気はせんのう。付き合おう。",
+    goblin: "……おれでいいゴブか。なら、少しだけ付き合うゴブ。"
   }),
   pickupReject: makeEventSpecificLines({
     subject: "ナンパ",
@@ -773,7 +797,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     coolF: "答えは決まっているわ。……お断りよ。",
     neutral: "悪いけど、その気はないよ。他をあたってくれ。",
     gal: "えー、無理無理。悪いけど、それはないわ。",
-    elder: "ほっほ、口の上手いことよ。じゃが、この年寄りは動かんぞ。"
+    elder: "ほっほ、口の上手いことよ。じゃが、この年寄りは動かんぞ。",
+    goblin: "いらないゴブ。おれは今、腹が減ってて機嫌が悪いゴブ。"
   }),
   yuri: makeEventSpecificLines({
     // イベント条件は精神男性かつ女性肉体。女性口調は通常発生しないため持たせず、矛盾時は男性側fallbackで受ける。
@@ -809,7 +834,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     elder: [
       "恋の形はひとつではないのう。大事にせい。",
       "そう言うてもらえると、肩の力が抜けるわい。大事にするとも。"
-    ]
+    ],
+    goblin: ["体がどうなってても関係ないゴブ。おれはお前がいいゴブ。", "……おれもだゴブ。誰に笑われても、離さないゴブ。"]
   }),
   tattoo: makeEventSpecificLines({
     subject: "刺青",
@@ -832,7 +858,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     coolF: "刺青ね。印象を変えるには十分だわ。",
     neutral: "刺青か。体に刻むことで気分も変わる。",
     gal: "刺青入れたら雰囲気変わったかも。けっこうアリじゃん！",
-    elder: "この刺青を刻むと、わしの覚悟まで肌に残るようじゃ。"
+    elder: "この刺青を刻むと、わしの覚悟まで肌に残るようじゃ。",
+    goblin: "肌に印を刻んだゴブ。これで少しは強そうに見えるゴブ。"
   }),
   fashion: makeEventSpecificLines({
     // イベント条件は精神男性かつ女性肉体。女性口調は通常発生しないため持たせず、矛盾時は男性側fallbackで受ける。
@@ -844,7 +871,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     playfulM: "この服、意外と似合ってるっすよね？",
     darkM: "鏡の中の自分が、少し別人みたいだ。",
     coolM: "服装による印象操作は侮れない。",
-    elder: "着るものひとつで心持ちも変わるものじゃ。"
+    elder: "着るものひとつで心持ちも変わるものじゃ。",
+    goblin: "新しい服ゴブ！ ……似合ってるか？ 似合ってるゴブな。"
   }),
   muscle: makeEventSpecificLines({
     // イベント条件は精神女性かつ男性肉体。男性口調は通常発生しないため持たせず、矛盾時は女性側fallbackで受ける。
@@ -886,7 +914,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     coolF: "衛生面にも問題があるわ。早急に処理しましょう。",
     neutral: "食料庫の管理を見直す必要があるな。",
     gal: "ネズミ多すぎて無理。食料やられたの痛いね。",
-    elder: "ネズミは増えると厄介じゃ。早めに手を打つんじゃ。"
+    elder: "ネズミは増えると厄介じゃ。早めに手を打つんじゃ。",
+    goblin: "ネズミだらけだゴブ！ ……捕まえれば、少しは食い物の足しになるゴブ？"
   }),
   lightning1: makeEventSpecificLines({
     subject: "落雷",
@@ -909,7 +938,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     coolF: "外傷と意識を確認しましょう。治療が先ね。",
     neutral: "雷撃か。体の反応を確認しないとな。",
     gal: "落雷とか本当にあるの？ まだビリビリするんだけど！",
-    elder: "雷は恐ろしい。命があるだけでも幸いじゃ。"
+    elder: "雷は恐ろしい。命があるだけでも幸いじゃ。",
+    goblin: "ぎゃっ！ 雷が落ちたゴブ……体じゅうびりびりするゴブ。"
   }),
   lightning2: BODY_EXCHANGE_REACTION_LINES,
   snow: makeEventSpecificLines({
@@ -933,7 +963,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     coolF: "移動効率が落ちているわ。体力温存が優先ね。",
     neutral: "雪が深い。無理に動けば消耗するだけだ。",
     gal: "雪すごいけど寒すぎ。暖炉から離れたくないね。",
-    elder: "大雪は足腰にくる。若い者も油断するでない。"
+    elder: "大雪は足腰にくる。若い者も油断するでない。",
+    goblin: "雪で埋まりそうゴブ……動くと腹が減る、じっとしてるゴブ。"
   }),
 });
 
@@ -960,7 +991,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
       coolF: "時間の流れがずれたようね。まず今が何年か、確かめさせて。",
       neutral: "身体だけ先へ進んだのか、村だけ後ろに残ったのか。判断がつかないな。",
       gal: "え、待って。あたしだけ育ってるとか意味わかんないんだけど！",
-      elder: "長く生きたが、時が渦を巻くとはのう。この村の若い姿を、また見ようとは。"
+      elder: "長く生きたが、時が渦を巻くとはのう。この村の若い姿を、また見ようとは。",
+      goblin: "村が小さくなったゴブ？ みんな、おれの知ってる顔より子どもだゴブ……。"
     }),
     "赤子": ["あう……？（急に伸びた手足を見つめている）"],
     "男児": ["ぼく、大きくなってる……！ でも村はちっちゃいままだ。どうして？"],
@@ -987,7 +1019,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
       coolF: "急激に体格が変化したようね。まずは転ばないように慣れる必要があるわ。",
       neutral: "体が一気に大きくなった。目線も歩幅も違って、少し変な感じだね。",
       gal: "え、急に大人っぽくなってない？ ちょっと待って、鏡見たいんだけど。",
-      elder: "ほう、体が急に若く大きくなるとは妙な薬じゃ。腰が軽いのは悪くないのう。"
+      elder: "ほう、体が急に若く大きくなるとは妙な薬じゃ。腰が軽いのは悪くないのう。",
+      goblin: "変な薬を飲んだら、体が急にでかくなったゴブ！ 服がきついゴブ……。"
     }),
     "赤子": ["あう……？（手足を見つめている）", "んぅ……。（もぞもぞしている）"],
     "男児": ["えっ、ぼく大きくなってる！？ すごい、手がこんなに遠い！", "背が高い……これ、どうやって走ればいいの？"],
@@ -1073,7 +1106,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     elder: [
       "根に持ったまま冬を越すものではないわい。ほれ、こっちへ来い。",
       "……年寄りに先を越されては形無しじゃな。隣に座らせてもらおう。"
-    ]
+    ],
+    goblin: ["……もう噛みつくのはやめるゴブ。腹が減るだけだ。", "おれも疲れたゴブ。……座れ。飯くらい分けてやるゴブ。"]
   }),
   fight: speechTypeLines({
     normalM: [
@@ -1155,7 +1189,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     elder: [
       "喧嘩は好かんが、言うべき時は言わねばならん。",
       "言うだけでは済まぬか。ならば老骨も付き合おうぞ。"
-    ]
+    ],
+    goblin: ["その口、二度と開けないようにしてやるゴブ！", "来るなら来いゴブ！ 先に転ぶのはお前だゴブ！"]
   }),
   loverArgument: speechTypeLines({
     normalM: [
@@ -1237,7 +1272,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     elder: [
       "連れ添う仲でも、越えてはならぬ一線があるものじゃ。",
       "その一線を、わしも踏んでしもうたか。……今日は口を閉じておこう。"
-    ]
+    ],
+    goblin: ["恋人でも、言っていいことと悪いことがあるゴブ！", "それはこっちのせりふだゴブ。今夜は一緒に寝ないゴブ。"]
   }),
   argument: speechTypeLines({
     normalM: [
@@ -1319,7 +1355,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     elder: [
       "口は災いの元じゃ。分かっていても、腹が立つ時はある。",
       "わしも売られた口に乗ってしもうた。年寄りとて未熟じゃな。"
-    ]
+    ],
+    goblin: ["言いすぎたかもしれないゴブ。でも、黙ってられなかったゴブ。", "言われっぱなしは嫌だゴブ。おあいこだゴブ。"]
   }),
   drunk: speechTypeLines({
     normalM: "まだ飲める。今日は妙に気分がいいんだ。",
@@ -1341,7 +1378,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     coolF: "酔いは回っているけれど、まだ制御できているわ。",
     neutral: "酒が回っている。気分が大きくなるな。",
     gal: "楽しくなってきた！ まだまだ飲めるっしょ！",
-    elder: "酒はほどほどがよいが、今日は少し賑やかじゃのう。"
+    elder: "酒はほどほどがよいが、今日は少し賑やかじゃのう。",
+    goblin: "酒だゴブ！ もっと持ってこいゴブ！ 今日は朝まで騒ぐゴブ！"
   }),
   epidemic: speechTypeLines({
     normalM: "体が重い……今日は無理せず療養した方がよさそうだ。",
@@ -1363,7 +1401,8 @@ Object.assign(EVENT_SPEECH_TYPE_LINES, {
     coolF: "感染を広げないことが先ね。療養に入るわ。",
     neutral: "体が重い。今は動くより休むべきだな。",
     gal: "マジでしんどい……今日は無理、ちゃんと休む。",
-    elder: "疫病は侮れん。若い者も無理をするでないぞ。"
+    elder: "疫病は侮れん。若い者も無理をするでないぞ。",
+    goblin: "みんな咳をしてるゴブ……おれもだ。今日はおとなしく寝るゴブ。"
   })
 });
 
@@ -1409,7 +1448,8 @@ export function createRandomEventFallbackLines(subject) {
         shy: `${subject}……こ、怖いけど、少しだけ綺麗でした……`,
         bright: `${subject}ってすごいね！ なんだか特別な日になったよ！`,
         male: `${subject}か……ただごとじゃなかったな。`,
-        female: `${subject}……不思議なこともあるものですね。`
+        female: `${subject}……不思議なこともあるものですね。`,
+        goblin: `${subject}……すごいものを見たゴブ。神さまの仕業ゴブか。`
       },
       happy: {
         polite: `これは朗報ですね。村の空気が少し和らぎました。`,
@@ -1418,7 +1458,8 @@ export function createRandomEventFallbackLines(subject) {
         shy: `……なんだか、少しうれしいです。`,
         bright: `わあ、いい感じ！ 今日はいい日になりそう！`,
         male: `いい知らせだな。少し気分が明るくなる。`,
-        female: `うれしい出来事ですね。村が明るくなった気がします。`
+        female: `うれしい出来事ですね。村が明るくなった気がします。`,
+        goblin: `いいことがあったゴブ！ 今日はいい日だゴブ。`
       },
       gain: {
         polite: `助かりますね。大切に使っていきましょう。`,
@@ -1427,7 +1468,8 @@ export function createRandomEventFallbackLines(subject) {
         shy: `……よかった。む、無駄にしないようにします。`,
         bright: `やった！ ちょっと得した気分だね！`,
         male: `これは助かるな。`,
-        female: `ありがたいですね。助かります。`
+        female: `ありがたいですね。助かります。`,
+        goblin: `得したゴブ！ 大事にしまっておくゴブ。`
       },
       friendship: {
         polite: `よい縁に恵まれました。これからも大切にしたいですね。`,
@@ -1436,7 +1478,8 @@ export function createRandomEventFallbackLines(subject) {
         shy: `……うまく仲良くできて、ほっとしました。`,
         bright: `気が合う人ができると、やっぱりうれしいね！`,
         male: `いい仲間ができた。頼もしいな。`,
-        female: `いいご縁でした。これからが楽しみですね。`
+        female: `いいご縁でした。これからが楽しみですね。`,
+        goblin: `いい仲間ができたゴブ。ここは居心地がいいゴブ。`
       },
       romance: {
         polite: `胸が高鳴りますね……丁寧に向き合っていきたいです。`,
@@ -1445,7 +1488,8 @@ export function createRandomEventFallbackLines(subject) {
         shy: `……は、恥ずかしいけど……うれしいです。`,
         bright: `わあ……これ、すごくドキドキするね！`,
         male: `不思議な気分だな……でも悪くない。`,
-        female: `心がふわっとします……大事にしたいですね。`
+        female: `心がふわっとします……大事にしたいですね。`,
+        goblin: `胸がどきどきするゴブ……こういうのは初めてだゴブ。`
       },
       selfChange: {
         polite: `新しい自分を試してみます。きっと糧になります。`,
@@ -1454,7 +1498,8 @@ export function createRandomEventFallbackLines(subject) {
         shy: `……ちょっと怖いけど、変わってみたいです。`,
         bright: `変わるのって楽しいね！ もっとやってみたい！`,
         male: `少し変わってみるのも悪くないな。`,
-        female: `新しい私になれる気がします。`
+        female: `新しい私になれる気がします。`,
+        goblin: `ちょっと変わったゴブ。……悪くないゴブ。`
       },
       loss: {
         polite: `${subject}の被害は痛いですね。早めに立て直しましょう。`,
@@ -1463,7 +1508,8 @@ export function createRandomEventFallbackLines(subject) {
         shy: `${subject}……こ、困りましたね……`,
         bright: `${subject}は大変だけど、まだなんとかなるよ！`,
         male: `${subject}は痛いな。対策しないと。`,
-        female: `${subject}は困りますね。備えが必要です。`
+        female: `${subject}は困りますね。備えが必要です。`,
+        goblin: `${subject}で損したゴブ……でも、また集めればいいゴブ。`
       },
       hardship: {
         polite: `${subject}は体に堪えますね。無理は禁物です。`,
@@ -1472,7 +1518,8 @@ export function createRandomEventFallbackLines(subject) {
         shy: `${subject}……今日は休んだ方がいいかも……`,
         bright: `${subject}はきついけど、がんばって乗り切ろう！`,
         male: `${subject}はこたえるな。`,
-        female: `${subject}はつらいですね。`
+        female: `${subject}はつらいですね。`,
+        goblin: `${subject}はきついゴブ……でも、群れにいた頃よりはましだゴブ。`
       },
       threat: {
         polite: `${subject}とは物騒ですね。警戒を強めましょう。`,
@@ -1481,7 +1528,8 @@ export function createRandomEventFallbackLines(subject) {
         shy: `${subject}……こ、怖いです……戸締まりします。`,
         bright: `${subject}！？ みんな、気をつけようね！`,
         male: `${subject}か。警戒が必要だな。`,
-        female: `${subject}なんて、物騒ですね。`
+        female: `${subject}なんて、物騒ですね。`,
+        goblin: `${subject}ゴブか。嫌な気配だ、見張りを増やすゴブ。`
       },
       injury: {
         polite: `手当てを急ぎましょう。被害を広げないことが先決です。`,
@@ -1490,7 +1538,8 @@ export function createRandomEventFallbackLines(subject) {
         shy: `……いたっ……で、でも、先に手当てします……`,
         bright: `いたた……！ でも大丈夫、すぐ手当てするよ！`,
         male: `痛っ……まずは手当てしないとな。`,
-        female: `痛みますね……落ち着いて手当てしましょう。`
+        female: `痛みますね……落ち着いて手当てしましょう。`,
+        goblin: `痛いゴブ……しばらく寝てれば治るゴブ。`
       },
       shock: {
         polite: `常識では測れない出来事ですね……状況確認を急ぎましょう。`,
@@ -1499,7 +1548,8 @@ export function createRandomEventFallbackLines(subject) {
         shy: `……え、えっと……私たち、大丈夫でしょうか……？`,
         bright: `びっくりした……！ 何が起きたか確認しよう！`,
         male: `今のは予想外だな……状況を確認しよう。`,
-        female: `驚きました……まずは落ち着いて確認しましょう。`
+        female: `驚きました……まずは落ち着いて確認しましょう。`,
+        goblin: `なんだこれは、ゴブ……頭が追いつかないゴブ。`
       },
       conflict: {
         polite: `感情的になってしまいました……まずは落ち着いて話します。`,
@@ -1508,7 +1558,8 @@ export function createRandomEventFallbackLines(subject) {
         shy: `……こ、怖かったです……ちゃんと話し合いたいです。`,
         bright: `言いすぎちゃったかも……ちゃんと仲直りしたいな。`,
         male: `まずかったな……冷静になって話し合おう。`,
-        female: `少し感情的でした……きちんと話し直します。`
+        female: `少し感情的でした……きちんと話し直します。`,
+        goblin: `腹が立つゴブ！ 黙ってられないゴブ！`
       }
     };
 }
