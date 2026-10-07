@@ -1400,7 +1400,7 @@ function travelerMiracle(v) {
   const messages = arrivals.map(newV => {
     v.visitors.push(newV);
     v.log(`【旅人の奇跡】${newV.name}が来訪(訪問者)`);
-    const arrivalLine = getVisitorArrivalLine(newV);
+    const arrivalLine = getVisitorArrivalLine(newV, v);
     if (arrivalLine) v.log(`${newV.name}「${arrivalLine}」`);
     return arrivalLine
       ? `${newV.name}が村を訪れました。<br>「${arrivalLine}」`
@@ -1433,7 +1433,7 @@ function rareGuestMiracle(v) {
   const newVisitor = createRandomVisitor(existingNames, type, v);
   v.visitors.push(newVisitor);
   v.log(`【稀人の奇跡】${newVisitor.name}が来訪(訪問者)`);
-  const arrivalLine = getVisitorArrivalLine(newVisitor);
+  const arrivalLine = getVisitorArrivalLine(newVisitor, v);
   if (arrivalLine) v.log(`${newVisitor.name}「${arrivalLine}」`);
   const message = arrivalLine
     ? `${newVisitor.name}が村を訪れました。<br>「${arrivalLine}」`

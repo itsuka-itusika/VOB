@@ -1,10 +1,11 @@
 import { autoAssignJobs, autoAssignRaidActions } from "./autoAssign.js";
 import { openBuildingModal, closeBuildingModal, unlockAllBuildings } from "./buildings.js";
-import { createRandomVillager, createVisitorGroup, getVisitorTypeChoices } from "./createVillagers.js";
+import { createGoblinModeVillagers, createRandomVillager, createVisitorGroup, getVisitorTypeChoices } from "./createVillagers.js";
 import "./dictionary.js";
 import { addNonHousePopLimitBonus } from "./domain/buildingState.js";
+import { isGoblinMode } from "./domain/gameMode.js";
 import { closeFamilyTreeModal } from "./familyTree.js";
-import { closeHistoryModal, closePersonalHistoryModal } from "./history.js";
+import { closeHistoryModal, closePersonalHistoryModal, recordGameStartHistory } from "./history.js";
 import {
   closeElectionRecordModal,
   closeLedgerModal,
@@ -43,7 +44,7 @@ import { DIVINE_MIGHT_LEVELS } from "./divineMight.js";
 import { resumePendingHeresyInquisition } from "./heresyInquisition.js";
 import { openAutoAssignSettingsModal } from "./autoAssignSettings.js";
 import { closeWarCouncilModal, isWarCouncilOpen, openWarCouncilModal, refreshWarCouncil } from "./warCouncil.js";
-import { getStartingDifficulty, openGameSettingsModal } from "./gameSettings.js";
+import { getStartingDifficulty, getStartingGameMode, openGameSettingsModal } from "./gameSettings.js";
 
 const APOCALYPSE_DEBUG_VILLAGER_COUNT = 15;
 const APOCALYPSE_DEBUG_RESOURCE_AMOUNT = 10000;
@@ -477,10 +478,18 @@ bindDebugTitleActions();
 initOpeningScreen({
   onLoadLocal: loadFromLocalStorage,
   onLoadJson: openJsonLoadDialog,
-  // 「はじめから」の開始時だけ、設定の難易度を新しい村へ適用する。
+  // 「はじめから」の開始時だけ、設定のモードと難易度を新しい村へ適用する。
+  // ゴブリンモードでは最初の村人をゴブリンに入れ替え、開村の記録もその顔ぶれで残し直す。
   // 開始モーダルはここで予約し、オープニングの暗転が明けてから表示される。
   onNewGame: () => {
     theVillage.difficulty = getStartingDifficulty();
+    theVillage.gameMode = getStartingGameMode();
+    if (isGoblinMode(theVillage)) {
+      theVillage.villagers = createGoblinModeVillagers();
+      theVillage.historyEvents = [];
+      recordGameStartHistory(theVillage, theVillage.villagers);
+      updateUI(theVillage);
+    }
     queueTutorialStartModal(theVillage);
   },
   onOpenSettings: openGameSettingsModal,

@@ -955,7 +955,7 @@ export function doMonthStartProcess(v, simulationOptions = {}) {
         arrivals.forEach(visitor => {
           v.visitors.push(visitor);
           v.log(`訪問者 ${visitor.name} が村を訪れました`);
-          const arrivalLine = getVisitorArrivalLine(visitor);
+          const arrivalLine = getVisitorArrivalLine(visitor, v);
           if (arrivalLine) v.log(`${visitor.name}「${arrivalLine}」`);
         });
       }
@@ -968,7 +968,7 @@ export function doMonthStartProcess(v, simulationOptions = {}) {
       ], visitorType, v);
       v.visitors.push(visitor);
       v.log(`救貧院の訪問者 ${visitor.name} が村を訪れました`);
-      const arrivalLine = getVisitorArrivalLine(visitor);
+      const arrivalLine = getVisitorArrivalLine(visitor, v);
       if (arrivalLine) v.log(`${visitor.name}「${arrivalLine}」`);
     }
   }

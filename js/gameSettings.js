@@ -1,9 +1,10 @@
 // gameSettings.js
-// オープニングの「設定」画面と、その内容（難易度・オートセーブ）の保存。
-// 設定は localStorage に保存する。難易度は「はじめから」の開始時に村へ適用され、
+// オープニングの「設定」画面と、その内容（モード・難易度・オートセーブ）の保存。
+// 設定は localStorage に保存する。モードと難易度は「はじめから」の開始時に村へ適用され、
 // 以後はセーブデータ側の値に従う（途中変更はできない）。
 
 import { DIFFICULTY_HARD, DIFFICULTY_NORMAL, normalizeDifficulty } from "./domain/difficulty.js";
+import { GAME_MODE_GOBLIN, GAME_MODE_NORMAL, normalizeGameMode } from "./domain/gameMode.js";
 import { saveVillageToJsonFile, saveVillageToLocalStorage } from "./saveLoad.js";
 
 const STORAGE_KEY = "vobGameSettings";
@@ -34,6 +35,7 @@ export function loadGameSettings() {
     stored = null;
   }
   return {
+    gameMode: normalizeGameMode(stored?.gameMode),
     difficulty: normalizeDifficulty(stored?.difficulty),
     autosave: normalizeAutosaveMode(stored?.autosave)
   };
@@ -42,6 +44,7 @@ export function loadGameSettings() {
 function saveGameSettings(settings) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      gameMode: normalizeGameMode(settings?.gameMode),
       difficulty: normalizeDifficulty(settings?.difficulty),
       autosave: normalizeAutosaveMode(settings?.autosave)
     }));
@@ -53,6 +56,11 @@ function saveGameSettings(settings) {
 /** 「はじめから」で使う難易度。 */
 export function getStartingDifficulty() {
   return loadGameSettings().difficulty;
+}
+
+/** 「はじめから」で使うモード。 */
+export function getStartingGameMode() {
+  return loadGameSettings().gameMode;
 }
 
 /** 月が進み切ったタイミングで呼び、設定に応じて自動保存する。 */
@@ -98,8 +106,19 @@ export function openGameSettingsModal() {
   modal.setAttribute("aria-labelledby", `${MODAL_ID}Title`);
   modal.innerHTML = `
     <h2 id="${MODAL_ID}Title" class="gs-title">設定</h2>
+    <div class="gs-section">モード</div>
+    <p class="gs-note">モードと難易度は「はじめから」で開始する時に適用されます。開始後は変更できません。</p>
+    <div class="gs-cards">
+      <div class="gs-card" data-gs-mode="${GAME_MODE_NORMAL}" role="button" tabindex="0">
+        <h4>ノーマル</h4>
+        <p>人間の開拓者たちと村を興します。</p>
+      </div>
+      <div class="gs-card is-goblin" data-gs-mode="${GAME_MODE_GOBLIN}" role="button" tabindex="0">
+        <h4>ゴブリン</h4>
+        <p><b>最初の村人が全員ゴブリンになります。</b>ゴブリンの訪問者と襲撃が増え、ゴブリンを<b>捕虜にしやすく</b>、懐柔・誘惑もしやすくなります。</p>
+      </div>
+    </div>
     <div class="gs-section">難易度</div>
-    <p class="gs-note">「はじめから」で開始する時に適用されます。開始後は変更できません。</p>
     <div class="gs-cards">
       <div class="gs-card" data-gs-difficulty="${DIFFICULTY_NORMAL}" role="button" tabindex="0">
         <h4>ノーマル<span class="gs-badge">推奨</span></h4>
@@ -124,6 +143,9 @@ export function openGameSettingsModal() {
   `;
 
   const refresh = () => {
+    modal.querySelectorAll("[data-gs-mode]").forEach(card => {
+      card.classList.toggle("is-selected", card.dataset.gsMode === editing.gameMode);
+    });
     modal.querySelectorAll("[data-gs-difficulty]").forEach(card => {
       card.classList.toggle("is-selected", card.dataset.gsDifficulty === editing.difficulty);
     });
@@ -142,6 +164,12 @@ export function openGameSettingsModal() {
     });
   };
 
+  modal.querySelectorAll("[data-gs-mode]").forEach(card => {
+    bindPress(card, () => {
+      editing.gameMode = normalizeGameMode(card.dataset.gsMode);
+      refresh();
+    });
+  });
   modal.querySelectorAll("[data-gs-difficulty]").forEach(card => {
     bindPress(card, () => {
       editing.difficulty = normalizeDifficulty(card.dataset.gsDifficulty);

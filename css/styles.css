@@ -841,6 +841,14 @@ th, td {
 .gs-card.is-hard p b {
   color: #8f2318;
 }
+.gs-card.is-goblin.is-selected {
+  border-color: #56661c;
+  background: #f1f4e1;
+  box-shadow: 0 0 0 1px #56661c inset;
+}
+.gs-card.is-goblin p b {
+  color: #4a5814;
+}
 .gs-badge {
   display: inline-block;
   font-size: 0.68rem;

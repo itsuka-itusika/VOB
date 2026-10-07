@@ -19,6 +19,7 @@ import { SECRET_TREASURE_LINES } from "../data/dialogue/secretTreasureLines.js";
 import { MIRACLE_RESULT_LINES, THUNDERBOLT_RAIDER_LINES } from "../data/dialogue/miracleLines.js";
 import { TUTORIAL_LINES } from "../data/dialogue/tutorialLines.js";
 import {
+  getGoblinVillageVisitorLine,
   getVisitorLineKey,
   VISITOR_APOCALYPSE_GENERIC_LINES,
   VISITOR_APOCALYPSE_LINES,
@@ -59,6 +60,7 @@ import {
   FORMER_CAPTIVE_LINES
 } from "../data/dialogue/captiveLines.js";
 import { isApocalypseActive, isSaltPillar, SALT_PILLAR_TRAIT } from "../domain/apocalypseRules.js";
+import { isGoblinMajorityVillage } from "../domain/gameMode.js";
 import { FORMER_CAPTIVE_ADJUSTMENT_MONTHS } from "../captives.js";
 
 export { resolveDialogueTone, resolveStoredSpeechType } from "../data/dialogue/toneProfiles.js";
@@ -615,6 +617,11 @@ export function getConversationLine({ character, village, context = {} }) {
     const slaveTradeLine = getSlaveTradeVisitorLine(character, village, context);
     if (slaveTradeLine) return slaveTradeLine;
     const visitorContext = { ...context, apocalypseActive: isApocalypseActive(village) };
+    // 村人の半数以上がゴブリンなら、黙示録の最中でない限り村への反応を話す。
+    if (!visitorContext.apocalypseActive && isGoblinMajorityVillage(village)) {
+      const goblinVillageLine = getGoblinVillageVisitorLine(character);
+      if (goblinVillageLine) return goblinVillageLine;
+    }
     return getDialogueLine({
       character,
       scene: "visitor",

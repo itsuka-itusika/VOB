@@ -2,6 +2,7 @@ import { theVillage } from "./main.js";
 import { updateUI } from "./ui.js";
 import { isForcedHealingAction } from "./util.js";
 import { applyPortraitToElement } from "./data/portraitAtlas.js";
+import { GOBLIN_RACE, GOBLIN_VISITOR_RECRUITMENT_COEFFICIENT } from "./domain/gameMode.js";
 import { ACTION_NONE, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { getPermanentStat } from "./domain/statLayers.js";
@@ -451,6 +452,8 @@ function getVisitorType(visitor) {
  */
 function getRecruitmentCoefficient(visitor) {
   if (GOAT_PAIR_RACES.has(visitor?.race)) return GOAT_PAIR_RECRUITMENT_COEFFICIENT;
+  // ゴブリンは旅人や流民を名乗っても、名乗りに関わらず誘いに乗りやすい。
+  if (visitor?.race === GOBLIN_RACE) return GOBLIN_VISITOR_RECRUITMENT_COEFFICIENT;
   const visitorType = getVisitorType(visitor);
   if (visitorType && RECRUITMENT_COEFFICIENTS[visitorType]) {
     return RECRUITMENT_COEFFICIENTS[visitorType];
@@ -473,7 +476,7 @@ function getVisitorSocialCandidates() {
 }
 
 function calculateCaptivePersuasionSuccessRate(captive, persuader) {
-  const coefficient = getCaptiveSocialCoefficient(captive, persuader);
+  const coefficient = getCaptiveSocialCoefficient(captive, persuader, theVillage);
   return Math.min(100, Math.max(0,
     coefficient * (persuader.chr / 20) * (persuader.int / 20) * 100
   ));
@@ -482,7 +485,7 @@ function calculateCaptivePersuasionSuccessRate(captive, persuader) {
 function calculateCaptiveSeductionSuccessRate(captive, seducer) {
   const check = canAttemptSeduction(captive, seducer);
   if (!check.ok) return 0;
-  const coefficient = getCaptiveSocialCoefficient(captive, seducer);
+  const coefficient = getCaptiveSocialCoefficient(captive, seducer, theVillage);
   const targetLustMultiplier = getSeductionTargetLustMultiplier(captive);
   return Math.min(100, Math.max(0,
     coefficient * (seducer.chr / 20) * (seducer.sexdr / 20) * targetLustMultiplier * 100

@@ -6,6 +6,7 @@ import {
   RAID_MODULES,
   RAID_SCALE_TABLES
 } from "./data/raidData.js";
+import { GOBLIN_MODE_RAID_WEIGHT_MULTIPLIER, isGoblinMode, isGoblinRaid } from "./domain/gameMode.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { getRaiderSpeechType } from "./domain/raiderSpeechTypes.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
@@ -155,15 +156,19 @@ function selectRaidDefinition(village, raidTableId = "") {
   const selectedRaidTable = RAID_SCALE_TABLES.find(table => table.id === raidTableId);
   const raidTable = selectedRaidTable || getRaidTableForVillage(village);
   const stageIndex = getVillageScaleStageIndex(village);
+  const goblinMode = isGoblinMode(village);
   const candidates = raidTable.entries
     .filter(entry => matchesRaidEntryConditions(village, entry, stageIndex))
     .map(entry => {
       const raidDefinition = getRaidModuleById(entry.raidId);
       if (!raidDefinition || !hasValidEnemyGroup(raidDefinition)) return null;
+      const weight = Number(entry.weight ?? raidDefinition.weight) || 0;
+      // ゴブリンモードでは、ゴブリン系だけの襲撃をテーブル内で少し引きやすくする。
+      const goblinRaid = goblinMode && isGoblinRaid(getAllRaidEnemyGroups(raidDefinition));
       return {
         entry,
         raidDefinition,
-        weight: Number(entry.weight ?? raidDefinition.weight) || 0
+        weight: goblinRaid ? weight * GOBLIN_MODE_RAID_WEIGHT_MULTIPLIER : weight
       };
     })
     .filter(candidate => candidate && candidate.weight > 0);

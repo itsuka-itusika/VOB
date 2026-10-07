@@ -1,6 +1,7 @@
 import { clampValue } from "./util.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
+import { GOBLIN_MODE_CAPTIVE_SOCIAL_MULTIPLIER, isGoblinMode, isGoblinRaider } from "./domain/gameMode.js";
 import { getRaiderSpeechType } from "./domain/raiderSpeechTypes.js";
 import { ACTION_SALT_PILLAR } from "./domain/jobTables.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
@@ -97,7 +98,7 @@ export function isCaptive(person, village) {
   );
 }
 
-export function getCaptiveSocialCoefficient(person, actor = null) {
+export function getCaptiveSocialCoefficient(person, actor = null, village = null) {
   const mindTraits = Array.isArray(person?.mindTraits) ? person.mindTraits : [];
   if (mindTraits.includes("狂信")) return 0;
 
@@ -106,6 +107,10 @@ export function getCaptiveSocialCoefficient(person, actor = null) {
   // セントールはエクイナから生まれる。同じ血筋の相手の言葉は通りやすい。
   if (raiderType === "セントール" && actor?.race === "エクイナ") {
     return coefficient * CAPTIVE_EQUINA_CENTAUR_MULTIPLIER;
+  }
+  // ゴブリンモードでは、ゴブリン系の捕虜は村の顔ぶれに馴染みやすい。
+  if (isGoblinMode(village) && isGoblinRaider(person)) {
+    return coefficient * GOBLIN_MODE_CAPTIVE_SOCIAL_MULTIPLIER;
   }
   return coefficient;
 }
@@ -263,12 +268,18 @@ export function tryCaptureRaidPrisoner(village) {
     village.log("捕虜にできる襲撃者はいませんでした");
     return null;
   }
+  // ゴブリンモードでは、取り逃がしてもゴブリン系の襲撃者がいれば代わりにその一人を捕らえる。
+  let pool = candidates;
   if (Math.random() >= 0.5) {
-    village.log("捕虜を取る機会はありましたが、逃しました");
-    return null;
+    const goblins = isGoblinMode(village) ? candidates.filter(isGoblinRaider) : [];
+    if (goblins.length === 0) {
+      village.log("捕虜を取る機会はありましたが、逃しました");
+      return null;
+    }
+    pool = goblins;
   }
 
-  const captive = candidates[Math.floor(Math.random() * candidates.length)];
+  const captive = pool[Math.floor(Math.random() * pool.length)];
   captive.hp = clampValue(Math.max(1, Number(captive.hp) || 0), 0, 100);
   captive.mp = clampValue(Number(captive.mp) || 0, 0, 100);
   normalizeCaptive(captive);

@@ -10,6 +10,7 @@ import {
   ARACHNID_PORTRAIT_FILES,
   DRYAD_PORTRAIT_FILES,
   EQUINA_PORTRAIT_FILES,
+  GOBLIN_PORTRAIT_FILES,
   MAENAD_PORTRAIT_FILES,
   NEREID_PORTRAIT_FILES,
   SATYR_PORTRAIT_FILES,
@@ -28,6 +29,7 @@ import {
 import { MERCHANT_SECRET_TREASURE_CHANCE } from "./secretTreasureEvents.js";
 import { getRaiderTypeByType } from "./data/raidData.js";
 import { getRaiderSpeechType } from "./domain/raiderSpeechTypes.js";
+import { GOBLIN_MODE_VISITOR_WEIGHT, GOBLIN_RACE, isGoblinMode } from "./domain/gameMode.js";
 import {
   SLAVE_PRICE_MAX,
   SLAVE_PRICE_MIN,
@@ -285,6 +287,28 @@ const EQUINA_VISITOR_TYPE = {
   },
   forcedBodyTraits: ["健脚"],
   portraits: EQUINA_PORTRAIT_FILES
+};
+
+// ゴブリンモードで訪れるゴブリン。旅人か流民を名乗り、能力の幅は襲撃に来るゴブリンと同じにする。
+const GOBLIN_RAIDER_TYPE = getRaiderTypeByType(GOBLIN_RACE);
+const GOBLIN_VISITOR_TYPE = {
+  type: GOBLIN_RACE,
+  displayTypes: [
+    { type: "旅人", weight: 50 },
+    { type: "流民", weight: 50 }
+  ],
+  useDisplayTypeAsJob: true,
+  forcedSex: "男",
+  ageRange: GOBLIN_RAIDER_TYPE.ageRange,
+  params: {
+    job: "旅人",
+    action: "訪問",
+    race: GOBLIN_RACE
+  },
+  ranges: GOBLIN_RAIDER_TYPE.ranges,
+  forcedBodyTraits: GOBLIN_RAIDER_TYPE.forcedBodyTraits,
+  portraits: GOBLIN_PORTRAIT_FILES,
+  speechType: getRaiderSpeechType(GOBLIN_RACE)
 };
 
 const GOAT_PAIR_DISPLAY_TYPES = [
@@ -622,6 +646,46 @@ export function createInitialVillagers() {
       villagers.push(female);
       femaleCount++;
     }
+  }
+
+  initializeFoundingFriendships(villagers);
+  return villagers;
+}
+
+// ゴブリンモードの最初の村人。先頭はゴブリンリーダー、2人目はゴブリン射手と同じ能力の幅で作り、
+// 残りは通常のゴブリンにする。襲撃者ではないため首長は持たせず、戦い方の精神特性だけを持たせる。
+const GOBLIN_FOUNDER_ROLES = [
+  { raiderType: "ゴブリンリーダー", mindTrait: "ゴブリン兵法" },
+  { raiderType: "ゴブリン射手", mindTrait: "狙撃心得" }
+];
+
+/**
+ * ゴブリンモードの初期村人を生成して返す。人数は通常の初期村人と同じで、全員男。
+ */
+export function createGoblinModeVillagers() {
+  const villagers = [];
+  const portraits = [...GOBLIN_PORTRAIT_FILES];
+  const totalCount = INITIAL_MALE_COUNT + INITIAL_FEMALE_COUNT;
+
+  for (let i = 0; i < totalCount; i++) {
+    const role = GOBLIN_FOUNDER_ROLES[i] || { raiderType: GOBLIN_RACE };
+    const raiderType = getRaiderTypeByType(role.raiderType);
+    const goblin = createRandomVillager({
+      sex: "男",
+      minAge: raiderType.ageRange.min,
+      maxAge: raiderType.ageRange.max,
+      params: { race: raiderType.race },
+      ranges: raiderType.ranges,
+      existingNames: villagers.map(person => person.name)
+    });
+    (raiderType.forcedBodyTraits || []).forEach(trait => addUniqueTrait(goblin.bodyTraits, trait));
+    if (role.mindTrait) addUniqueTrait(goblin.mindTraits, role.mindTrait);
+    goblin.speechType = getRaiderSpeechType(role.raiderType);
+    // 同じ顔が並ばないよう、使った顔は候補から外す。
+    goblin.portraitFile = portraits.splice(Math.floor(Math.random() * portraits.length), 1)[0];
+    syncEffectiveStats(goblin);
+    refreshJobTable(goblin);
+    villagers.push(goblin);
   }
 
   initializeFoundingFriendships(villagers);
@@ -1185,6 +1249,7 @@ function resolveForcedVisitorType(forcedType, village = null) {
   if (forcedType === RARE_VISITOR_TYPE) return selectRareVisitorType(village);
 
   if (forcedType === EQUINA_VISITOR_TYPE.type) return EQUINA_VISITOR_TYPE;
+  if (forcedType === GOBLIN_VISITOR_TYPE.type) return GOBLIN_VISITOR_TYPE;
   if (GOAT_PAIR_VISITOR_TYPES.has(forcedType)) return GOAT_PAIR_VISITOR_TYPES.get(forcedType);
 
   const visitorType = VISITOR_TYPES.find(type => type.type === forcedType);
@@ -1198,6 +1263,7 @@ export function getVisitorTypeChoices() {
   return [
     ...VISITOR_TYPES.map(type => type.type),
     EQUINA_VISITOR_TYPE.type,
+    GOBLIN_VISITOR_TYPE.type,
     SATYR_VISITOR_TYPE.type,
     MAENAD_VISITOR_TYPE.type,
     RARE_VISITOR_TYPE,
@@ -1211,7 +1277,7 @@ function resolveVisitorTable(village = null) {
     : VISITOR_TABLES_BY_SCALE[0];
   if (!table) return VISITOR_TYPES;
 
-  return table.entries
+  const entries = table.entries
     .map(entry => {
       if (entry.type === RARE_VISITOR_TYPE) {
         return hasAvailableRareVisitorType(village) ? { type: RARE_VISITOR_TYPE, weight: entry.weight } : null;
@@ -1226,6 +1292,11 @@ function resolveVisitorTable(village = null) {
       return visitorType ? { ...visitorType, weight: entry.weight } : null;
     })
     .filter(Boolean);
+  // ゴブリンモードでは、村の規模に関わらずゴブリンも訪れる。
+  if (isGoblinMode(village)) {
+    entries.push({ ...GOBLIN_VISITOR_TYPE, weight: GOBLIN_MODE_VISITOR_WEIGHT });
+  }
+  return entries;
 }
 
 function selectVisitorType(village = null) {
@@ -1414,6 +1485,10 @@ function buildVisitorFromType(visitorType, existingNames = [], village = null) {
     visitor.rareVisitorType = visitorType.rareVisitorType;
   }
   applyVisitorTypeTraits(visitor, visitorType);
+  // ゴブリンのように種族で口調が決まる訪問者は、性格から決めた口調を上書きする。
+  if (visitorType.speechType) {
+    visitor.speechType = visitorType.speechType;
+  }
 
   if (visitorType.type === "行商人") {
     visitor.merchantStock = {
