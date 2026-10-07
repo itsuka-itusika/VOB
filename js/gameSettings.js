@@ -115,7 +115,7 @@ export function openGameSettingsModal() {
       </div>
       <div class="gs-card is-goblin" data-gs-mode="${GAME_MODE_GOBLIN}" role="button" tabindex="0">
         <h4>ゴブリン</h4>
-        <p><b>最初の村人が全員ゴブリンになります。</b>ゴブリンの訪問者と襲撃が増え、ゴブリンを<b>捕虜にしやすく</b>、懐柔・誘惑もしやすくなります。</p>
+        <p><b>最初の村人が全員ゴブリンになります。</b>ゴブリンの訪問者と襲撃が増え、ゴブリンを<b>捕虜にしやすく</b>なります。</p>
       </div>
     </div>
     <div class="gs-section">難易度</div>

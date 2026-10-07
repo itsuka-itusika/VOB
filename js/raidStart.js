@@ -163,7 +163,7 @@ function selectRaidDefinition(village, raidTableId = "") {
       const raidDefinition = getRaidModuleById(entry.raidId);
       if (!raidDefinition || !hasValidEnemyGroup(raidDefinition)) return null;
       const weight = Number(entry.weight ?? raidDefinition.weight) || 0;
-      // ゴブリンモードでは、ゴブリン系だけの襲撃をテーブル内で少し引きやすくする。
+      // ゴブリンモードでは、ゴブリン系が加わる襲撃をテーブル内で少し引きやすくする。
       const goblinRaid = goblinMode && isGoblinRaid(getAllRaidEnemyGroups(raidDefinition));
       return {
         entry,

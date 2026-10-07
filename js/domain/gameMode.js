@@ -21,11 +21,10 @@ export function isGoblinRaider(person) {
   return GOBLIN_RAIDER_TYPES.has(String(person?.raiderType || person?.job || ""));
 }
 
-/** 出てくる襲撃者がゴブリン系だけの襲撃か。 */
+/** ゴブリン系の襲撃者が加わる襲撃か。モンスター・スタンビードのような混成の襲撃も含む。 */
 export function isGoblinRaid(enemyGroups) {
   return Array.isArray(enemyGroups)
-    && enemyGroups.length > 0
-    && enemyGroups.every(group => GOBLIN_RAIDER_TYPES.has(group?.raiderType));
+    && enemyGroups.some(group => GOBLIN_RAIDER_TYPES.has(group?.raiderType));
 }
 
 // ゴブリンモードの係数。
@@ -33,7 +32,7 @@ export function isGoblinRaid(enemyGroups) {
 export const GOBLIN_MODE_VISITOR_WEIGHT = 20;
 // ゴブリンの訪問者の勧誘・誘惑の係数（棄民と同じ）。
 export const GOBLIN_VISITOR_RECRUITMENT_COEFFICIENT = 0.9;
-// 各襲撃テーブルで、ゴブリン系だけの襲撃の重みに掛ける倍率。
+// 各襲撃テーブルで、ゴブリン系が加わる襲撃の重みに掛ける倍率。
 export const GOBLIN_MODE_RAID_WEIGHT_MULTIPLIER = 1.5;
 // ゴブリン系の捕虜を懐柔・誘惑する時の係数に掛ける倍率。
 export const GOBLIN_MODE_CAPTIVE_SOCIAL_MULTIPLIER = 1.5;
