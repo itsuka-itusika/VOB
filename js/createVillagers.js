@@ -29,7 +29,14 @@ import {
 import { MERCHANT_SECRET_TREASURE_CHANCE } from "./secretTreasureEvents.js";
 import { getRaiderTypeByType } from "./data/raidData.js";
 import { getRaiderSpeechType } from "./domain/raiderSpeechTypes.js";
-import { GOBLIN_MODE_VISITOR_WEIGHT, GOBLIN_RACE, isGoblinMode } from "./domain/gameMode.js";
+import {
+  GOBLIN_ARCHER_VISITOR_CHANCE,
+  GOBLIN_ELITE_VISITOR_MIN_STAGE_INDEX,
+  GOBLIN_LEADER_VISITOR_CHANCE,
+  GOBLIN_MODE_VISITOR_WEIGHT,
+  GOBLIN_RACE,
+  isGoblinMode
+} from "./domain/gameMode.js";
 import {
   SLAVE_PRICE_MAX,
   SLAVE_PRICE_MIN,
@@ -310,6 +317,40 @@ const GOBLIN_VISITOR_TYPE = {
   portraits: GOBLIN_PORTRAIT_FILES,
   speechType: getRaiderSpeechType(GOBLIN_RACE)
 };
+
+// ゴブリンリーダー・ゴブリン射手と同じ能力の幅で作るゴブリンと、持たせる戦い方の精神特性。
+// 襲撃者ではないため首長は持たせない。ゴブリンモードの最初の村人と、規模の大きい村の訪問者で使う。
+const GOBLIN_ELITE_ROLES = [
+  { raiderType: "ゴブリンリーダー", mindTrait: "ゴブリン兵法", visitorChance: GOBLIN_LEADER_VISITOR_CHANCE },
+  { raiderType: "ゴブリン射手", mindTrait: "狙撃心得", visitorChance: GOBLIN_ARCHER_VISITOR_CHANCE }
+];
+
+// 肩書・顔・口調は通常のゴブリンの訪問者と同じにし、表記では見分けがつかないようにする。
+const GOBLIN_ELITE_VISITOR_TYPES = GOBLIN_ELITE_ROLES.map(role => {
+  const raiderType = getRaiderTypeByType(role.raiderType);
+  return {
+    chance: role.visitorChance,
+    visitorType: {
+      ...GOBLIN_VISITOR_TYPE,
+      ageRange: raiderType.ageRange,
+      ranges: raiderType.ranges,
+      forcedMindTraits: [role.mindTrait]
+    }
+  };
+});
+
+/** ゴブリンの訪問者を選ぶ。規模の大きい村では、まれにリーダーや射手と同じ能力の幅になる。 */
+function selectGoblinVisitorType(village = null) {
+  if (getVillageScaleStage(village?.building).index < GOBLIN_ELITE_VISITOR_MIN_STAGE_INDEX) {
+    return GOBLIN_VISITOR_TYPE;
+  }
+  let roll = Math.random();
+  for (const { chance, visitorType } of GOBLIN_ELITE_VISITOR_TYPES) {
+    if (roll < chance) return visitorType;
+    roll -= chance;
+  }
+  return GOBLIN_VISITOR_TYPE;
+}
 
 const GOAT_PAIR_DISPLAY_TYPES = [
   { type: "吟遊詩人", weight: 50 },
@@ -652,15 +693,9 @@ export function createInitialVillagers() {
   return villagers;
 }
 
-// ゴブリンモードの最初の村人。先頭はゴブリンリーダー、2人目はゴブリン射手と同じ能力の幅で作り、
-// 残りは通常のゴブリンにする。襲撃者ではないため首長は持たせず、戦い方の精神特性だけを持たせる。
-const GOBLIN_FOUNDER_ROLES = [
-  { raiderType: "ゴブリンリーダー", mindTrait: "ゴブリン兵法" },
-  { raiderType: "ゴブリン射手", mindTrait: "狙撃心得" }
-];
-
 /**
  * ゴブリンモードの初期村人を生成して返す。人数は通常の初期村人と同じで、全員男。
+ * 先頭はゴブリンリーダー、2人目はゴブリン射手と同じ能力の幅で作り、残りは通常のゴブリンにする。
  */
 export function createGoblinModeVillagers() {
   const villagers = [];
@@ -668,7 +703,7 @@ export function createGoblinModeVillagers() {
   const totalCount = INITIAL_MALE_COUNT + INITIAL_FEMALE_COUNT;
 
   for (let i = 0; i < totalCount; i++) {
-    const role = GOBLIN_FOUNDER_ROLES[i] || { raiderType: GOBLIN_RACE };
+    const role = GOBLIN_ELITE_ROLES[i] || { raiderType: GOBLIN_RACE };
     const raiderType = getRaiderTypeByType(role.raiderType);
     const goblin = createRandomVillager({
       sex: "男",
@@ -1249,7 +1284,7 @@ function resolveForcedVisitorType(forcedType, village = null) {
   if (forcedType === RARE_VISITOR_TYPE) return selectRareVisitorType(village);
 
   if (forcedType === EQUINA_VISITOR_TYPE.type) return EQUINA_VISITOR_TYPE;
-  if (forcedType === GOBLIN_VISITOR_TYPE.type) return GOBLIN_VISITOR_TYPE;
+  if (forcedType === GOBLIN_VISITOR_TYPE.type) return selectGoblinVisitorType(village);
   if (GOAT_PAIR_VISITOR_TYPES.has(forcedType)) return GOAT_PAIR_VISITOR_TYPES.get(forcedType);
 
   const visitorType = VISITOR_TYPES.find(type => type.type === forcedType);
@@ -1307,6 +1342,7 @@ function selectVisitorType(village = null) {
   for (const visitorType of visitorTable) {
     random -= visitorType.weight;
     if (random <= 0) {
+      if (visitorType.type === GOBLIN_VISITOR_TYPE.type) return selectGoblinVisitorType(village);
       return visitorType.type === RARE_VISITOR_TYPE
         ? (selectRareVisitorType(village) || VISITOR_TYPES[0])
         : visitorType;
