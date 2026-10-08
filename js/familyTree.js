@@ -2,9 +2,10 @@
 // 家系図モーダル。本人を中心に、祖父母・父母・本人（きょうだい・配偶者）・子を並べる。
 // 家系は「母・父・子」の関係を、過去帳も含めて createLineageIndex でたどる。
 // 年齢は顔グラに合わせて肉体年齢で表示し、精神年齢が違う人だけ「肉体/精神」で並べる。
-// 本人以外の顔を押すとその人物の家系図へ移る。
+// 顔を押すとその人物の個人記録（去った者は過去帳の記録）を開く。
 
 import { getPortraitSpriteHtml } from "./data/portraitAtlas.js";
+import { openPersonalHistoryModal } from "./history.js";
 import { createLineageIndex, getRelationshipEntries } from "./relationships.js";
 
 // 図に並べる人数。超えたぶんは「他N人」から一覧で開く。
@@ -116,8 +117,7 @@ function renderCard(person, node, { self = false } = {}) {
     ${getPortraitSpriteHtml(person, { alt: person.name })}
     <span class="family-tree-name">${escapeHtml(person.name)}</span>
     ${renderAgeMeta(person)}`;
-  if (self) return `<div class="${className}" data-family-tree-node="${node}">${body}</div>`;
-  return `<button type="button" class="${className}" data-family-tree-node="${node}" data-family-tree-person="${person.id}" title="${escapeHtml(person.name)}の家系図へ">${body}</button>`;
+  return `<button type="button" class="${className}" data-family-tree-node="${node}" data-family-tree-person="${person.id}" title="${escapeHtml(person.name)}の個人記録を開く">${body}</button>`;
 }
 
 function renderMarriage(node = "") {
@@ -230,7 +230,7 @@ function toggleList(content, family, kind) {
     <h4 class="family-tree-list-title">${LIST_TITLES[kind]}（${people.length}人）</h4>
     <div class="family-tree-list-items">
       ${people.map(person => `
-        <button type="button" class="family-tree-list-person${person.departure ? " is-departed" : ""}" data-family-tree-person="${person.id}" title="${escapeHtml(person.name)}の家系図へ">
+        <button type="button" class="family-tree-list-person${person.departure ? " is-departed" : ""}" data-family-tree-person="${person.id}" title="${escapeHtml(person.name)}の個人記録を開く">
           ${getPortraitSpriteHtml(person, { alt: person.name })}
           <span class="family-tree-name">${escapeHtml(person.name)}</span>
           ${renderAgeMeta(person)}
@@ -310,14 +310,14 @@ function renderFamilyTree() {
     </div>
     ${renderGeneticNote(family)}
     <div class="family-tree-legend">
-      <span>═ 夫婦</span><span>線：親子</span><span>灰色：過去帳の人物</span><span>顔を押すとその人物の家系図へ移る</span>
+      <span>═ 夫婦</span><span>線：親子</span><span>灰色：過去帳の人物</span><span>顔を押すとその人物の個人記録を開く</span>
     </div>
     <div class="family-tree-list" data-family-tree-list-panel hidden></div>`;
 
   content.onclick = event => {
     const personButton = event.target.closest("[data-family-tree-person]");
     if (personButton) {
-      showFamilyTreeOf(Number(personButton.dataset.familyTreePerson));
+      openPersonalRecord(Number(personButton.dataset.familyTreePerson));
       return;
     }
     const listButton = event.target.closest("[data-family-tree-list]");
@@ -328,6 +328,16 @@ function renderFamilyTree() {
 
   modal.scrollTop = 0;
   layoutFamilyTree(content);
+}
+
+// 家系図を閉じて、その人物の個人記録を開く。去った者は過去帳の記録として開く。
+function openPersonalRecord(personId) {
+  if (!current) return;
+  const { village } = current;
+  const person = createPersonIndex(village).get(personId);
+  if (!person) return;
+  closeFamilyTreeModal();
+  openPersonalHistoryModal(village, person, { archived: Boolean(person.departure) });
 }
 
 function showFamilyTreeOf(personId) {
