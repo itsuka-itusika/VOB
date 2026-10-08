@@ -1082,21 +1082,38 @@ function makeCurrentPortraitStep(person, { archived = false } = {}) {
   };
 }
 
-function getPastPortraitSequence(person) {
+// 年頃を控える前に残った元の身体の肖像は、その身体の今の持ち主から補う。
+// 肉体は若返らないため、今も幼児なら当時も幼い姿だったと分かる。
+function getLegacyOriginalBodyTraits(village, person) {
+  if (person?.id == null) return [];
+  const holder = [
+    ...(Array.isArray(village?.villagers) ? village.villagers : []),
+    ...(Array.isArray(village?.departedVillagers) ? village.departedVillagers : [])
+  ].find(other => other?.bodyOwnerId === person.id);
+  return holder?.bodyTraits?.includes("幼児") ? ["幼児"] : [];
+}
+
+function getPastPortraitSequence(village, person) {
   const currentKey = makeCurrentPortraitStep(person).portraitFile;
   const entries = getPastPortraitFiles(person);
   const legacyOriginalBodyIndex = entries.findIndex(isLegacyOriginalBodyEntry);
   const pastPortraits = entries
-    .map((entry, index) => makePortraitStep(
-      entry.portraitFile,
-      getPastPortraitCaption(entry, person, index, legacyOriginalBodyIndex)
-    ));
+    .map((entry, index) => {
+      const caption = getPastPortraitCaption(entry, person, index, legacyOriginalBodyIndex);
+      // 過去の姿は、その身体だった当時の年頃の絵で出す。
+      const bodyTraits = entry.bodyTraits
+        || (caption === "元の身体" ? getLegacyOriginalBodyTraits(village, person) : []);
+      return {
+        ...makePortraitStep(entry.portraitFile, caption),
+        character: { portraitFile: entry.portraitFile, bodyTraits }
+      };
+    });
   return pastPortraits.some(step => step.portraitFile !== currentKey) ? pastPortraits.reverse() : [];
 }
 
-function renderPastPortraitControls(person, options = {}) {
+function renderPastPortraitControls(village, person, options = {}) {
   const currentPortrait = makeCurrentPortraitStep(person, options);
-  const pastPortraits = getPastPortraitSequence(person);
+  const pastPortraits = getPastPortraitSequence(village, person);
   if (pastPortraits.length === 0) return "";
 
   return `
@@ -1236,7 +1253,7 @@ function renderPersonalHistorySummary(village, person, options = {}) {
     <section class="personal-history-summary">
       <div class="personal-history-portrait-area">
         ${renderPortraitFrame(person, options)}
-        ${renderPastPortraitControls(person, options)}
+        ${renderPastPortraitControls(village, person, options)}
       </div>
       <div class="personal-history-profile">
         <div class="personal-history-profile-grid">

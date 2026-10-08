@@ -18,6 +18,9 @@ export function isOriginalBodyPortrait(person) {
   return isOriginalBodyOwner(person?.name, person?.bodyOwner);
 }
 
+// 同じ顔番号でも、肉体が幼児や老人なら絵が変わる。肖像を残すときは当時の年頃も控える。
+const PORTRAIT_AGE_TRAITS = ["幼児", "老人"];
+
 function normalizePortraitHistoryEntry(entry) {
   const rawFile = typeof entry === "string" ? entry : entry?.portraitFile;
   const portraitFile = normalizePortraitKey(rawFile || DEFAULT_PORTRAIT_KEY);
@@ -33,6 +36,10 @@ function normalizePortraitHistoryEntry(entry) {
   if (normalizeText(entry?.bodyOwner)) {
     normalized.bodyOwner = normalizeText(entry.bodyOwner);
   }
+  const ageTraits = Array.isArray(entry?.bodyTraits)
+    ? entry.bodyTraits.filter(trait => PORTRAIT_AGE_TRAITS.includes(trait))
+    : [];
+  if (ageTraits.length > 0) normalized.bodyTraits = ageTraits;
   return normalized;
 }
 
@@ -54,7 +61,8 @@ export function rememberCurrentPortrait(person, source = "", options = {}) {
     source,
     caption: options.caption || "",
     isOriginalBody: typeof options.isOriginalBody === "boolean" ? options.isOriginalBody : undefined,
-    bodyOwner: options.bodyOwner || person.bodyOwner || ""
+    bodyOwner: options.bodyOwner || person.bodyOwner || "",
+    bodyTraits: person.bodyTraits
   });
   if (!current) return;
 
