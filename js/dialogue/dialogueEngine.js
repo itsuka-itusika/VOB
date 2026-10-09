@@ -41,7 +41,6 @@ import {
 import {
   BODY_EXCHANGE_SOURCE_RACE_LINES,
   BODY_EXCHANGE_REACTION_LINES,
-  BODY_EXCHANGE_RETURN_LINES,
   SLAVE_EXCHANGE_LINES,
   SLAVE_TRADER_EXCHANGE_LINES
 } from "../data/dialogue/exchangeLines.js";
@@ -236,12 +235,6 @@ export function getSlaveTradeExchangeLines(character, partner = null, context = 
   return [];
 }
 
-/** 生まれ持った体へ戻ってきた者の反応。戻っていない者は空配列を返し、通常の交換セリフに任せる。 */
-export function getBodyExchangeReturnLines(character, context = {}) {
-  if (!character?.lastBodyExchangeToOwnBody) return [];
-  return selectToneLines(BODY_EXCHANGE_RETURN_LINES, character, context);
-}
-
 export function getBodyExchangeSourceRaceLines(character, context = {}) {
   if (!character?.lastBodyExchangeFromOwnBody) return [];
   const sourceRace = character?.lastBodyExchangeSourceRace;
@@ -263,8 +256,6 @@ function getRandomEventLine(character, eventKey, { kind = null, subject = null, 
 
   const speechType = isBodyExchangeEvent ? resolveDialogueTone(character) : resolveStoredSpeechType(character);
   if (isBodyExchangeEvent) {
-    const returnLines = getBodyExchangeReturnLines(character);
-    if (returnLines.length > 0) return pickLineByVariant(returnLines, variantIndex) || pickDialogueLine(returnLines);
     const raceLines = getBodyExchangeSourceRaceLines(character);
     if (raceLines.length > 0) return pickLineByVariant(raceLines, variantIndex) || pickDialogueLine(raceLines);
   }

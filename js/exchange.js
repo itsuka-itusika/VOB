@@ -87,7 +87,7 @@ function refreshAssignmentAfterExchange(person, village) {
   refreshJobTable(person, village);
 }
 
-function markBodyExchangeSourceRace(person, fromRace, toRace, fromOwnBody = false, toOwnBody = false) {
+function markBodyExchangeSourceRace(person, fromRace, toRace, fromOwnBody = false) {
   Object.defineProperties(person, {
     lastBodyExchangeSourceRace: {
       configurable: true,
@@ -103,12 +103,6 @@ function markBodyExchangeSourceRace(person, fromRace, toRace, fromOwnBody = fals
     lastBodyExchangeFromOwnBody: {
       configurable: true,
       value: !!fromOwnBody,
-      writable: true
-    },
-    // 借りていた体から、生まれ持った体へ戻ってきたときだけ、帰還の反応を出す。
-    lastBodyExchangeToOwnBody: {
-      configurable: true,
-      value: !!toOwnBody,
       writable: true
     }
   });
@@ -217,8 +211,8 @@ export function doExchange(a, b, v, isLightning = false, historySource = null, o
   evaluateTitles(b, { getPermanentStat });
   refreshAssignmentAfterExchange(a, v);
   refreshAssignmentAfterExchange(b, v);
-  markBodyExchangeSourceRace(a, sourceRaceA, a.race, fromOwnBodyA, !fromOwnBodyA && isOriginalBodyPortrait(a));
-  markBodyExchangeSourceRace(b, sourceRaceB, b.race, fromOwnBodyB, !fromOwnBodyB && isOriginalBodyPortrait(b));
+  markBodyExchangeSourceRace(a, sourceRaceA, a.race, fromOwnBodyA);
+  markBodyExchangeSourceRace(b, sourceRaceB, b.race, fromOwnBodyB);
 
   if (!isLightning) {
     v.log(`【交換の奇跡】${a.name}と${b.name}の肉体を交換しました`);

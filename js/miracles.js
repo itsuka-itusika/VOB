@@ -12,7 +12,7 @@ import { syncEffectiveStats } from "./domain/statLayers.js";
 import { recordDepartedVillager, recordMarriageHistory, recordVillagerLeaveHistory } from "./history.js";
 import { clearHopeLossTraits, DESPAIR_TRAIT, DISAPPOINTMENT_TRAIT } from "./domain/despair.js";
 import { resolveDialogueTone } from "./data/dialogue/toneProfiles.js";
-import { getBodyExchangeReturnLines, getBodyExchangeSourceRaceLines, getDialogueLine, getSlaveTradeExchangeLines } from "./dialogue/dialogueEngine.js";
+import { getBodyExchangeSourceRaceLines, getDialogueLine, getSlaveTradeExchangeLines } from "./dialogue/dialogueEngine.js";
 import { BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
 import { getVisitorArrivalLine } from "./data/dialogue/visitorLines.js";
 import { getActiveVillagers, isSaltPillar, SALT_PILLAR_TRAIT } from "./domain/apocalypseRules.js";
@@ -1637,9 +1637,6 @@ function getBodyExchangeReactionLine(person, usedLines = null, partner = null) {
   // 生まれ持った肉体が特殊種族だった場合は、口調ごとの種族セリフを優先する。
   // ただし塩と化した身体は声を出せないため、種族の反応より沈黙を優先する。
   if (type !== SALT_PILLAR_TRAIT) {
-    // 生まれ持った体へ戻ってきた者は、どの身の上でも帰還の反応を優先する。
-    const returnLines = getBodyExchangeReturnLines(person);
-    if (returnLines.length > 0) return pickLineAvoidingUsed(returnLines, usedLines);
     // 奴隷と奴隷商人は、種族の反応より奴隷の身の上に触れた文を優先する。
     const slaveTradeLines = getSlaveTradeExchangeLines(person, partner);
     if (slaveTradeLines.length > 0) return pickLineAvoidingUsed(slaveTradeLines, usedLines);

@@ -171,7 +171,7 @@
 通常会話は `js/dialogue/dialogueEngine.js` が入口です。表示側の `js/conversation.js` は `getConversationLine({ character, village })` を呼び、会話エンジンが口調、状態、通常時の行動、季節などから候補を集めて 1 行を選びます。
 
 会話データは `js/data/dialogue/` 配下に分割されています。状態会話、季節会話、行動会話、妊娠・成長会話、訪問者会話、絶望離村会話、秘宝・奇跡の専用反応、ランダムイベント会話、口調定義を別ファイルで持ちます。
-肉体交換への反応は `js/data/dialogue/exchangeLines.js` に置き、交換の奇跡と落雷による肉体交換で共有します。交換で生まれ持った体へ戻った者は、`doExchange` が付ける `lastBodyExchangeToOwnBody` を見て、口調ごとの帰還セリフ（`BODY_EXCHANGE_RETURN_LINES`）を通常の反応より優先します。
+肉体交換への反応は `js/data/dialogue/exchangeLines.js` に置き、交換の奇跡と落雷による肉体交換で共有します。
 奴隷・解放奴隷・奴隷商人のセリフは `js/data/dialogue/slaveTradeLines.js` に置きます。奴隷の種族ごとのセリフは生まれ持った体でいる間だけ使い、交換で別の体にいる間は口調ごとのセリフへ切り替えます。
 
 詳細な追加ルールは `DIALOGUE_RULES.md` を参照してください。
