@@ -20,7 +20,7 @@
 - `seasonLines.js`: 春、夏、秋、冬の季節会話。
 - `jobLines.js`: preferredAction に応じた会話。
 - `reproductionLines.js`: 妊娠、臨月、産褥、成人化など。
-- `exchangeLines.js`: 肉体交換への反応。交換の奇跡と落雷による肉体交換で共有する。
+- `exchangeLines.js`: 肉体交換への反応。交換の奇跡と落雷による肉体交換で共有する。生まれ持った体へ戻ったときの帰還セリフ（`BODY_EXCHANGE_RETURN_LINES`）もここに口調ごとに置き、通常の反応より優先する。
 - `exchangeSituationLines.js`: 入れ替わった身体の年齢・性別・種族・能力と、交換後半年以内の違和感に応じた通常会話。
 - `secretTreasureLines.js`: 秘宝の専用結果モーダルで表示する口調別反応。村人全員が対象になる秘宝（腕の無い天使像など）は代表3人が並ぶため、実口調キーを直接持たせる。
 - `miracleLines.js`: 清拭など、分離済みの奇跡結果モーダルで表示する口調別反応。
