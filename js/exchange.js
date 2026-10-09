@@ -99,6 +99,12 @@ function markBodyExchangeSourceRace(person, fromRace, toRace, fromOwnBody = fals
       value: toRace || "人間",
       writable: true
     },
+    // 別の肉体から、生まれ持った肉体へ戻ったときだけ帰還の反応を出す。
+    lastBodyExchangeReturnedToOwnBody: {
+      configurable: true,
+      value: !fromOwnBody && isOriginalBodyPortrait(person),
+      writable: true
+    },
     // 生まれ持った肉体から出たときだけ、種族固有の反応を出す。
     lastBodyExchangeFromOwnBody: {
       configurable: true,

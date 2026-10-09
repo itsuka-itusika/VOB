@@ -39,6 +39,7 @@ import {
   findLineByKeys
 } from "../data/dialogue/randomEventLines.js";
 import {
+  BODY_RETURN_REACTION_LINES,
   BODY_EXCHANGE_SOURCE_RACE_LINES,
   BODY_EXCHANGE_REACTION_LINES,
   SLAVE_EXCHANGE_LINES,
@@ -235,6 +236,18 @@ export function getSlaveTradeExchangeLines(character, partner = null, context = 
   return [];
 }
 
+// 交換前は別の身体、交換後は本人の身体になった者だけが帰還の反応を話す。
+export function getBodyReturnReactionLines(character, context = {}) {
+  if (!character?.lastBodyExchangeReturnedToOwnBody || isSaltPillar(character)) return [];
+  if (character.mindTraits?.includes("襲撃者")) {
+    const raiderType = ["野盗", "ゴブリン", "狼", "キュクロプス", "ハーピー"]
+      .find(type => character.name?.includes(type));
+    const lines = BODY_RETURN_REACTION_LINES[`襲撃者:${raiderType}`] || BODY_RETURN_REACTION_LINES[raiderType];
+    if (lines) return asLineArray(lines, context);
+  }
+  return selectToneLines(BODY_RETURN_REACTION_LINES, character, context);
+}
+
 export function getBodyExchangeSourceRaceLines(character, context = {}) {
   if (!character?.lastBodyExchangeFromOwnBody) return [];
   const sourceRace = character?.lastBodyExchangeSourceRace;
@@ -256,6 +269,8 @@ function getRandomEventLine(character, eventKey, { kind = null, subject = null, 
 
   const speechType = isBodyExchangeEvent ? resolveDialogueTone(character) : resolveStoredSpeechType(character);
   if (isBodyExchangeEvent) {
+    const returnLines = getBodyReturnReactionLines(character);
+    if (returnLines.length > 0) return pickLineByVariant(returnLines, variantIndex) || pickDialogueLine(returnLines);
     const raceLines = getBodyExchangeSourceRaceLines(character);
     if (raceLines.length > 0) return pickLineByVariant(raceLines, variantIndex) || pickDialogueLine(raceLines);
   }
