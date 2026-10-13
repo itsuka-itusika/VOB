@@ -795,8 +795,8 @@ export function startRaidEvent(village, options = {}) {
     onAvoidance: option => executeRaidAvoidance(village, raidDefinition, option)
   });
 
+  // 神威通知を閉じた後など、月初の画面更新より遅れて発生する襲撃も一覧まで描画する。
   if (typeof document !== "undefined") {
-    const raidSection = document.getElementById("raidEnemiesSection");
-    if (raidSection) raidSection.style.display = "block";
+    updateUI(village);
   }
 }

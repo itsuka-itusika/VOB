@@ -725,7 +725,8 @@ export function updateChildGrowthStage(child, village, { announce = false } = {}
     if (child.childMindTrait) childTraitsToRemove.push(child.childMindTrait);
     const currentMindTraits = removeTraits(child.mindTraits, childTraitsToRemove);
     child.mindTraits = [...new Set([...(child.adultMindTraits || []), ...currentMindTraits])];
-    child.hobby = child.adultHobby || child.hobby || "";
+    // 成人時の予定趣味は未設定時だけ使い、成人後のイベントで得た趣味を維持する。
+    child.hobby = child.hobby || child.adultHobby || "";
   }
 
   // 狼・ゴブリン・ハーピーの口調は精神側に残る種族口調。子どもの身体へ入った獣を
