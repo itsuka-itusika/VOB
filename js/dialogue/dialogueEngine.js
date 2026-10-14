@@ -20,6 +20,8 @@ import { MIRACLE_RESULT_LINES, THUNDERBOLT_RAIDER_LINES } from "../data/dialogue
 import { TUTORIAL_LINES } from "../data/dialogue/tutorialLines.js";
 import {
   getGoblinVillageVisitorLine,
+  getYoungFemaleVillageVisitorLines,
+  isYoungFemaleMajorityVillage,
   getVisitorLineKey,
   VISITOR_APOCALYPSE_GENERIC_LINES,
   VISITOR_APOCALYPSE_LINES,
@@ -629,6 +631,11 @@ export function selectConversationCandidate(candidates) {
 
 export function getConversationLine({ character, village, context = {} }) {
   if (hasTrait(character, "訪問者", "mindTraits")) {
+    // 平時は村の肉体構成への反応を優先。黙示録中は従来の専用会話を維持。
+    if (!isApocalypseActive(village) && isYoungFemaleMajorityVillage(village)) {
+      const villageLine = pickDialogueLine(getYoungFemaleVillageVisitorLines(character), context);
+      if (villageLine) return villageLine;
+    }
     const slaveTradeLine = getSlaveTradeVisitorLine(character, village, context);
     if (slaveTradeLine) return slaveTradeLine;
     const visitorContext = { ...context, apocalypseActive: isApocalypseActive(village) };
