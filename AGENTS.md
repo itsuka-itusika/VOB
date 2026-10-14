@@ -56,6 +56,7 @@
 - `CODE_REVIEW.md`: レビュー時の観点と検証手順。
 - `GAME_GUIDE_JA.md` / `README.md` / `Readme.txt`: プレイヤー向け説明と背景設定。
 - `docs/dialogue-refactor-handoff.md`: 会話エンジンの詳細な引き継ぎ。
+- `docs/codex-handoff.md`: これまでの方針・注意点、検証のしかた、夢現用 zip の作り方の引き継ぎ。
 
 ## ゲーム内容の分析・批評
 
