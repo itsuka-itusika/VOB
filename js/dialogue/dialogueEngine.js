@@ -624,11 +624,25 @@ export function collectConversationCandidates({ character, village, context = {}
       : values.some(value => hasTrait(character, value, topic.field));
     if (!matches) return;
     if (topic.adultOnly && !(character?.spiritAge >= 18 && character?.bodyAge >= 18)) return;
+    // この2趣味は男性精神の成人のみ。狼は非性的な休息・衣服の感覚差だけを扱う。
+    let bodyVariantKey = null;
+    if (topic.maleMindBodyVariants) {
+      if (character?.spiritSex !== "男" || !(character?.spiritAge >= 18)) return;
+      if (character.race === "狼") {
+        if (!(character.bodyAge >= 1)) return;
+        bodyVariantKey = topic.maleMindBodyVariants.wolf;
+      } else {
+        if (NON_HUMANOID_EXCHANGE_RACES.has(character.race) || !(character.bodyAge >= 18)) return;
+        const bodyKind = character.bodySex === "男" ? "male" : character.bodySex === "女" ? "female" : null;
+        bodyVariantKey = topic.maleMindBodyVariants[bodyKind];
+      }
+      if (!bodyVariantKey) return;
+    }
     const seasonalKey = topic.seasons?.[season];
     const tone = resolveDialogueTone(character);
-    const key = apocalypseActive
+    const key = bodyVariantKey || (apocalypseActive
       ? (topic.apocalypse || topic.key)
-      : (PERSONALITY_LINES[seasonalKey]?.[tone] ? seasonalKey : topic.key);
+      : (PERSONALITY_LINES[seasonalKey]?.[tone] ? seasonalKey : topic.key));
     addCandidate(candidates, character, {
       scene: "personality", key, priority: CONVERSATION_PRIORITY.NORMAL
     }, sharedContext);

@@ -26,7 +26,7 @@ for(const topic of PERSONALITY_TOPICS){
  assert(['bodyTraits','mindTraits','hobby'].includes(topic.field));
  if(topic.field==='bodyTraits'&&!['光合成','水中呼吸'].includes(topic.value)) assert(EXCLUSIVE_BODY_TRAITS.includes(topic.value),topic.value);
  if(topic.field==='mindTraits') assert(EXCLUSIVE_MIND_TRAITS.includes(topic.value),topic.value);
- for(const key of [topic.key,...Object.values(topic.seasons||{}),topic.apocalypse].filter(Boolean)) {
+ for(const key of [topic.key,...Object.values(topic.seasons||{}),...Object.values(topic.maleMindBodyVariants||{}),topic.apocalypse].filter(Boolean)) {
   refs.add(key);assert(PERSONALITY_LINES[key],`missing lines: ${key}`);
   for(const [tone,line] of Object.entries(PERSONALITY_LINES[key])) {
    assert(TONE_PROFILES[tone]&&!TONE_PROFILES[tone].aliasOf,`unknown tone: ${tone}`);
@@ -43,14 +43,35 @@ for(const topic of PERSONALITY_TOPICS){
     if(['赤子','男児','女児'].includes(tone)) c.mindTraits=[...c.mindTraits,tone==='赤子'?'無垢':'萌芽'];
     const resolved=resolveDialogueTone(c);
     const seasonalKey=topic.seasons?.[season];
-    const key=apocalypseActive?(topic.apocalypse||topic.key):(PERSONALITY_LINES[seasonalKey]?.[resolved]?seasonalKey:topic.key);
-    const expected=PERSONALITY_LINES[key]?.[resolved]?[key]:[];
+    const key=topic.maleMindBodyVariants?.female || (apocalypseActive?(topic.apocalypse||topic.key):(PERSONALITY_LINES[seasonalKey]?.[resolved]?seasonalKey:topic.key));
+    const eligible=!topic.maleMindBodyVariants || c.spiritSex==='男';
+    const expected=eligible && PERSONALITY_LINES[key]?.[resolved]?[key]:[];
     assert.deepEqual(keys(c,v),expected,`${topic.key}/${tone}/${season}/${apocalypseActive}`);assertions++;
    }
   }
  }
 }
 assert.deepEqual([...refs].sort(),Object.keys(PERSONALITY_LINES).sort(),'orphan scene');
+// 成人男性精神だけに、現在の身体を使って3差分を選ぶ。狼は非性的な文だけ。
+for (const [hobby,prefix] of [['露出','exposure'],['自家発電','privateTime']]) {
+ for (const spiritSex of ['男','女',undefined]) for(const spiritAge of [0,17,18,80]) {
+  for (const race of ['人間','ゴブリン','狼','スフィンクス']) for(const bodySex of ['男','女',undefined]) for(const bodyAge of [0,1,17,18,80]) {
+   const c={...person,hobby,spiritSex,spiritAge,race,bodySex,bodyAge};
+   let expected=[];
+   if(spiritSex==='男'&&spiritAge>=18) {
+    if(race==='狼'&&bodyAge>=1) expected=[prefix+'Wolf'];
+    else if(!['狼','スフィンクス'].includes(race)&&bodyAge>=18&&['男','女'].includes(bodySex)) expected=[prefix+(bodySex==='男'?'Male':'Female')];
+   }
+   assert.deepEqual(keys(c),expected,`${hobby}/${spiritSex}/${spiritAge}/${race}/${bodySex}/${bodyAge}`);
+  }
+ }
+ // 実効口調が子供・赤子なら、年齢数値だけ成人でも性的な会話は出ない。
+ for(const trait of ['無垢','萌芽']) assert.deepEqual(keys({...person,hobby,mindTraits:[trait]}),[]);
+ assert.deepEqual(keys({...person,hobby,speechType:'普通Ｆ'}),[]);
+ assert.deepEqual(keys({...person,hobby,race:'狼',bodyAge:2,speechType:'狼'}),[prefix+'Wolf']);
+ const visitor={...person,hobby,name:'旅人のテスト',mindTraits:['訪問者']};
+ assert(!Object.values(PERSONALITY_LINES[prefix+'Female']).includes(getConversationLine({character:visitor,village})));
+}
 // 元の所有者や精神の性別ではなく、現在の身体で外見を選ぶ。口調は精神側。
 const swapped={...person,bodyTraits:['絶世の美女'],speechType:'老人',spiritAge:80,bodyAge:25,bodyOwnerId:999};
 assert.deepEqual(keys(swapped),['peerlessBeauty']);
