@@ -1,0 +1,98 @@
+name: Package v1.022 no-images
+
+on:
+  push:
+    branches:
+      - codex/package-v1.022
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release source
+        uses: actions/checkout@v4
+        with:
+          ref: codex/vob-next
+          fetch-depth: 0
+
+      - name: Update version and changelog
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          index = Path('index.html')
+          text = index.read_text(encoding='utf-8')
+          old = 'ver.1.021'
+          new = 'ver.1.022'
+          count = text.count(old)
+          if count != 1:
+              raise SystemExit(f'Expected exactly one {old} in index.html, found {count}')
+          index.write_text(text.replace(old, new), encoding='utf-8')
+
+          full_entry = '''\n2026/10/15 ver.1.022\n　　　　　・村人の趣味・肉体特性・精神特性に応じた個性会話を追加し、季節による差分も拡充\n　　　　　・精神性別や現在の肉体・種族に応じた会話差分を追加\n　　　　　・肉体交換で元の身体へ戻った際の専用反応を追加\n　　　　　・訪問者や交換時の会話差分を追加\n　　　　　・奇跡・襲撃・妊娠まわりの細かな挙動を調整\n　　　　　・会話文や表示の細かな不具合を修正\n'''
+
+          mugen_entry = '''\n2026/10/15 ver.1.022\n　　　　　・村人の趣味や特性に応じた会話を追加し、季節による差分も拡充\n　　　　　・村人の状態や身体に応じた会話差分を追加\n　　　　　・訪問者や交換時の会話を追加\n　　　　　・一部システムの細かな挙動を調整\n　　　　　・会話文や表示の細かな不具合を修正\n'''
+
+          for path, entry in [(Path('Readme.txt'), full_entry), (Path('Readme_mugen.txt'), mugen_entry)]:
+              src = path.read_text(encoding='utf-8')
+              if '2026/10/15 ver.1.022' not in src:
+                  if not src.endswith('\n'):
+                      src += '\n'
+                  src += entry.lstrip('\n')
+              path.write_text(src, encoding='utf-8')
+          PY
+
+      - name: Run dialogue tests
+        run: node --test tests/personality-dialogue.test.mjs
+
+      - name: Build no-images package
+        run: python tools/package_mugen.py --no-images
+
+      - name: Verify package
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import zipfile
+
+          zpath = Path('output/village-of-bacchus-mugen-v1.022-no-images.zip')
+          if not zpath.exists():
+              raise SystemExit(f'Missing package: {zpath}')
+          with zipfile.ZipFile(zpath) as z:
+              names = z.namelist()
+              if any(n.startswith('images/') for n in names):
+                  raise SystemExit('images/ unexpectedly included')
+              index = z.read('index.html').decode('utf-8')
+              readme = z.read('Readme.txt').decode('utf-8')
+              if 'ver.1.022' not in index:
+                  raise SystemExit('ver.1.022 missing from packaged index.html')
+              if 'gtag' in index or 'googletagmanager' in index:
+                  raise SystemExit('Google Analytics tag remains in package')
+              if '2026/10/15 ver.1.022' not in readme:
+                  raise SystemExit('v1.022 changelog missing from packaged Readme.txt')
+          print(zpath)
+          PY
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: village-of-bacchus-mugen-v1.022-no-images
+          path: output/village-of-bacchus-mugen-v1.022-no-images.zip
+          if-no-files-found: error
+
+      - name: Commit release metadata to codex/vob-next
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html Readme.txt Readme_mugen.txt
+          if git diff --cached --quiet; then
+            echo "No release metadata changes to commit"
+            exit 0
+          fi
+          git commit -m "chore: ver.1.022 配布版へ更新"
+          git push origin HEAD:codex/vob-next
