@@ -9,6 +9,7 @@ import {
   resolveStoredSpeechType,
   uniqueKeys
 } from "../data/dialogue/toneProfiles.js";
+import { PERSONALITY_LINES, PERSONALITY_TOPICS } from "../data/dialogue/personalityLines.js";
 import { LAZY_LINES, STATUS_LINES } from "../data/dialogue/statusLines.js";
 import { SEASONAL_LINES } from "../data/dialogue/seasonLines.js";
 import { CONDITION_LINES } from "../data/dialogue/conditionLines.js";
@@ -333,6 +334,8 @@ export function getDialogueLines({ character, scene, key, context = {} }) {
   switch (scene) {
     case "status":
       return getStatusLines(character, key, context);
+    case "personality":
+      return asLineArray(PERSONALITY_LINES[key]?.[resolveDialogueTone(character)] || [], context);
     case "lazy":
       return selectToneLines(LAZY_LINES, character, context);
     case "season":
@@ -611,6 +614,21 @@ export function collectConversationCandidates({ character, village, context = {}
   }
 
   const season = getCurrentSeason(village);
+  // 同じ話題の通常・季節・黙示録を重ねず、一つだけ候補にする。
+  // 黙示録中は季節の楽しげな差分を使わない。
+  const apocalypseActive = isApocalypseActive(village);
+  PERSONALITY_TOPICS.forEach(topic => {
+    const matches = topic.field === "hobby"
+      ? character?.hobby === topic.value
+      : hasTrait(character, topic.value, topic.field);
+    if (!matches) return;
+    const key = apocalypseActive
+      ? (topic.apocalypse || topic.key)
+      : (topic.seasons?.[season] || topic.key);
+    addCandidate(candidates, character, {
+      scene: "personality", key, priority: CONVERSATION_PRIORITY.NORMAL
+    }, sharedContext);
+  });
   if (season) {
     addCandidate(candidates, character, {
       scene: "season",
