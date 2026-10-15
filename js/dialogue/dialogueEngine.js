@@ -618,13 +618,17 @@ export function collectConversationCandidates({ character, village, context = {}
   // 黙示録中は季節の楽しげな差分を使わない。
   const apocalypseActive = isApocalypseActive(village);
   PERSONALITY_TOPICS.forEach(topic => {
+    const values = Array.isArray(topic.value) ? topic.value : [topic.value];
     const matches = topic.field === "hobby"
-      ? character?.hobby === topic.value
-      : hasTrait(character, topic.value, topic.field);
+      ? values.includes(character?.hobby)
+      : values.some(value => hasTrait(character, value, topic.field));
     if (!matches) return;
+    if (topic.adultOnly && !(character?.spiritAge >= 18 && character?.bodyAge >= 18)) return;
+    const seasonalKey = topic.seasons?.[season];
+    const tone = resolveDialogueTone(character);
     const key = apocalypseActive
       ? (topic.apocalypse || topic.key)
-      : (topic.seasons?.[season] || topic.key);
+      : (PERSONALITY_LINES[seasonalKey]?.[tone] ? seasonalKey : topic.key);
     addCandidate(candidates, character, {
       scene: "personality", key, priority: CONVERSATION_PRIORITY.NORMAL
     }, sharedContext);
