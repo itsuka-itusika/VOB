@@ -292,8 +292,10 @@ function installStyle() {
   const style = document.createElement("style");
   style.id = "yearAdvanceStyle";
   style.textContent = `
-    #${BUTTON_ID}{background:linear-gradient(135deg,#5d4932,#806742);color:#fff;border:1px solid #3e3123;font-weight:700;letter-spacing:.04em}
-    #${BUTTON_ID}:hover{filter:brightness(1.08)}
+    #${BUTTON_ID}{color:#4a3618;font-weight:700;letter-spacing:.02em;border-left:4px solid #b8a36d}
+    #${BUTTON_ID}::before{content:"≫";margin-right:4px;color:#9a7b35}
+    #${BUTTON_ID}:disabled{color:#8b9199;border-left-color:#c9ced3}
+    #${BUTTON_ID}:disabled::before{color:inherit}
     #${BUTTON_ID}[hidden]{display:none!important}
     .year-advance-report-overlay{position:fixed;inset:0;background:rgba(18,15,11,.68);z-index:10020;backdrop-filter:blur(2px)}
     .year-advance-report-modal{position:fixed;z-index:10021;top:50%;left:50%;transform:translate(-50%,-50%);width:min(760px,calc(100vw - 28px));max-height:88vh;overflow:auto;background:#f4eddd;border:1px solid #675239;border-radius:10px;box-shadow:0 24px 70px rgba(0,0,0,.35);color:#2b241c}
