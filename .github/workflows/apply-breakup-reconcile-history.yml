@@ -1,0 +1,113 @@
+name: Apply breakup reconcile history
+
+on:
+  push:
+    branches:
+      - codex/apply-breakup-reconcile-history
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/vob-next
+          fetch-depth: 0
+
+      - name: Apply history changes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('js/history.js')
+          s = path.read_text(encoding='utf-8')
+
+          old = '''export function recordLoverHistory(village, personA, personB, options = {}) {
+  if (!personA || !personB) return;
+  const source = options.source || "縁結び";
+  addHistoryEvent(village, {
+    type: HISTORY_EVENT_TYPES.LOVER,
+    title: `${personA.name}と${personB.name}、恋人となる`,
+    text: `${personA.name}と${personB.name}が恋人となった。`,
+    people: [personA, personB],
+    importance: "minor",
+    scope: HISTORY_SCOPES.PERSON,
+    tags: ["恋人", source]
+  });
+}
+'''
+          new = '''export function recordLoverHistory(village, personA, personB, options = {}) {
+  if (!personA || !personB) return;
+  const source = options.source || "縁結び";
+  const previousBreakup = ensureHistoryEvents(village).some(event => {
+    if (event?.type !== HISTORY_EVENT_TYPES.SOCIAL_RELATION || event?.tags?.[1] !== "元恋人") return false;
+    if (!Array.isArray(event.tags) || !event.tags.includes("破局")) return false;
+    const ids = Array.isArray(event.peopleIds) ? event.peopleIds.filter(id => id != null) : [];
+    if (personA.id != null && personB.id != null && ids.length > 0) {
+      return ids.includes(personA.id) && ids.includes(personB.id);
+    }
+    const names = Array.isArray(event.people) ? event.people : [];
+    return names.includes(personA.name) && names.includes(personB.name);
+  });
+  addHistoryEvent(village, {
+    type: HISTORY_EVENT_TYPES.LOVER,
+    title: previousBreakup
+      ? `${personA.name}と${personB.name}、ヨリを戻す`
+      : `${personA.name}と${personB.name}、恋人となる`,
+    text: previousBreakup
+      ? `${personA.name}と${personB.name}がヨリを戻し再び恋人となった。`
+      : `${personA.name}と${personB.name}が恋人となった。`,
+    people: [personA, personB],
+    importance: "minor",
+    scope: HISTORY_SCOPES.PERSON,
+    tags: ["恋人", source, previousBreakup ? "復縁" : ""].filter(Boolean)
+  });
+}
+'''
+          if s.count(old) != 1:
+              raise SystemExit(f'recordLoverHistory block count: {s.count(old)}')
+          s = s.replace(old, new)
+
+          old = '''    case HISTORY_EVENT_TYPES.LOVER:
+      return otherName ? `${otherName}と恋人になる。` : toPersonalTense(event.text);
+    case HISTORY_EVENT_TYPES.SOCIAL_RELATION: {
+      const relation = event.tags[1] || "関係";
+      const hobby = event.tags[2] || "";
+      if (relation === "趣味仲間") {
+'''
+          new = '''    case HISTORY_EVENT_TYPES.LOVER:
+      if (event.tags.includes("復縁")) {
+        return otherName ? `${otherName}とヨリを戻し再び恋人になる。` : toPersonalTense(event.text);
+      }
+      return otherName ? `${otherName}と恋人になる。` : toPersonalTense(event.text);
+    case HISTORY_EVENT_TYPES.SOCIAL_RELATION: {
+      const relation = event.tags[1] || "関係";
+      const hobby = event.tags[2] || "";
+      if (relation === "元恋人" && event.tags.includes("破局")) {
+        return otherName ? `${otherName}と破局する。` : toPersonalTense(event.text);
+      }
+      if (relation === "趣味仲間") {
+'''
+          if s.count(old) != 1:
+              raise SystemExit(f'personal history block count: {s.count(old)}')
+          s = s.replace(old, new)
+
+          path.write_text(s, encoding='utf-8')
+          PY
+
+          node --check js/history.js
+          grep -F 'と破局する。' js/history.js
+          grep -F 'とヨリを戻し再び恋人になる。' js/history.js
+
+      - name: Commit to codex/vob-next
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add js/history.js
+          git commit -m "fix: 破局と復縁の個人史表記を改善"
+          git push origin HEAD:codex/vob-next
