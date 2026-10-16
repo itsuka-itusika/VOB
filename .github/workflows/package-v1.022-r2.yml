@@ -1,0 +1,45 @@
+name: Package v1.022 no-images r2
+
+on:
+  push:
+    branches:
+      - codex/package-v1.022-r2
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build package
+        run: python tools/package_mugen.py --no-images
+
+      - name: Verify package
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import zipfile
+
+          path = Path('output/village-of-bacchus-mugen-v1.022-no-images.zip')
+          assert path.is_file(), path
+          with zipfile.ZipFile(path) as zf:
+              names = zf.namelist()
+              assert not any(n == 'images' or n.startswith('images/') for n in names), 'images/ unexpectedly included'
+              assert 'index.html' in names, 'index.html missing'
+              assert 'Readme.txt' in names, 'Readme.txt missing'
+              index = zf.read('index.html').decode('utf-8')
+              assert 'ver.1.022' in index, 'version changed'
+              assert 'googletagmanager.com' not in index.lower(), 'Google Analytics/Tag Manager remains'
+              assert 'google-analytics.com' not in index.lower(), 'Google Analytics remains'
+          print(path)
+          PY
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: village-of-bacchus-mugen-v1.022-no-images
+          path: output/village-of-bacchus-mugen-v1.022-no-images.zip
+          if-no-files-found: error
