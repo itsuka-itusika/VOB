@@ -333,7 +333,7 @@ export async function advanceOneYear(village) {
     window.alert(`危険状態の村人がいるため1年経過できません。\n${text}`);
     return;
   }
-  if (!window.confirm("毎月の行動を自動割り振りで決めながら、最大12か月を自動で進めます。\n危篤・飢餓・凍え・絶望が発生した場合はその月で中断します。\n襲撃は自動割り振りで迎撃し、損壊建物は資源があれば自動修復します。\n進めますか？")) return;
+  if (!window.confirm("この先の1年を、村の営みに委ねますか？\n（危篤などが起きればその月で止まります）")) return;
 
   const report = createReport(village);
   const button = document.getElementById(BUTTON_ID);
