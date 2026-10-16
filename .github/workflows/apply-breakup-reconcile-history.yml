@@ -17,93 +17,16 @@ jobs:
           ref: codex/vob-next
           fetch-depth: 0
 
-      - name: Apply history changes
+      - name: Apply and verify
         shell: bash
         run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          path = Path('js/history.js')
-          s = path.read_text(encoding='utf-8')
-
-          old = '''export function recordLoverHistory(village, personA, personB, options = {}) {
-  if (!personA || !personB) return;
-  const source = options.source || "縁結び";
-  addHistoryEvent(village, {
-    type: HISTORY_EVENT_TYPES.LOVER,
-    title: `${personA.name}と${personB.name}、恋人となる`,
-    text: `${personA.name}と${personB.name}が恋人となった。`,
-    people: [personA, personB],
-    importance: "minor",
-    scope: HISTORY_SCOPES.PERSON,
-    tags: ["恋人", source]
-  });
-}
-'''
-          new = '''export function recordLoverHistory(village, personA, personB, options = {}) {
-  if (!personA || !personB) return;
-  const source = options.source || "縁結び";
-  const previousBreakup = ensureHistoryEvents(village).some(event => {
-    if (event?.type !== HISTORY_EVENT_TYPES.SOCIAL_RELATION || event?.tags?.[1] !== "元恋人") return false;
-    if (!Array.isArray(event.tags) || !event.tags.includes("破局")) return false;
-    const ids = Array.isArray(event.peopleIds) ? event.peopleIds.filter(id => id != null) : [];
-    if (personA.id != null && personB.id != null && ids.length > 0) {
-      return ids.includes(personA.id) && ids.includes(personB.id);
-    }
-    const names = Array.isArray(event.people) ? event.people : [];
-    return names.includes(personA.name) && names.includes(personB.name);
-  });
-  addHistoryEvent(village, {
-    type: HISTORY_EVENT_TYPES.LOVER,
-    title: previousBreakup
-      ? `${personA.name}と${personB.name}、ヨリを戻す`
-      : `${personA.name}と${personB.name}、恋人となる`,
-    text: previousBreakup
-      ? `${personA.name}と${personB.name}がヨリを戻し再び恋人となった。`
-      : `${personA.name}と${personB.name}が恋人となった。`,
-    people: [personA, personB],
-    importance: "minor",
-    scope: HISTORY_SCOPES.PERSON,
-    tags: ["恋人", source, previousBreakup ? "復縁" : ""].filter(Boolean)
-  });
-}
-'''
-          if s.count(old) != 1:
-              raise SystemExit(f'recordLoverHistory block count: {s.count(old)}')
-          s = s.replace(old, new)
-
-          old = '''    case HISTORY_EVENT_TYPES.LOVER:
-      return otherName ? `${otherName}と恋人になる。` : toPersonalTense(event.text);
-    case HISTORY_EVENT_TYPES.SOCIAL_RELATION: {
-      const relation = event.tags[1] || "関係";
-      const hobby = event.tags[2] || "";
-      if (relation === "趣味仲間") {
-'''
-          new = '''    case HISTORY_EVENT_TYPES.LOVER:
-      if (event.tags.includes("復縁")) {
-        return otherName ? `${otherName}とヨリを戻し再び恋人になる。` : toPersonalTense(event.text);
-      }
-      return otherName ? `${otherName}と恋人になる。` : toPersonalTense(event.text);
-    case HISTORY_EVENT_TYPES.SOCIAL_RELATION: {
-      const relation = event.tags[1] || "関係";
-      const hobby = event.tags[2] || "";
-      if (relation === "元恋人" && event.tags.includes("破局")) {
-        return otherName ? `${otherName}と破局する。` : toPersonalTense(event.text);
-      }
-      if (relation === "趣味仲間") {
-'''
-          if s.count(old) != 1:
-              raise SystemExit(f'personal history block count: {s.count(old)}')
-          s = s.replace(old, new)
-
-          path.write_text(s, encoding='utf-8')
-          PY
-
+          echo 'ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCgpwYXRoID0gUGF0aCgianMvaGlzdG9yeS5qcyIpCnMgPSBwYXRoLnJlYWRfdGV4dChlbmNvZGluZz0idXRmLTgiKQoKb2xkID0gIiIiZXhwb3J0IGZ1bmN0aW9uIHJlY29yZExvdmVySGlzdG9yeSh2aWxsYWdlLCBwZXJzb25BLCBwZXJzb25CLCBvcHRpb25zID0ge30pIHsKICBpZiAoIXBlcnNvbkEgfHwgIXBlcnNvbkIpIHJldHVybjsKICBjb25zdCBzb3VyY2UgPSBvcHRpb25zLnNvdXJjZSB8fCAi57iB57WQ44GzIjsKICBhZGRIaXN0b3J5RXZlbnQodmlsbGFnZSwgewogICAgdHlwZTogSElTVE9SWV9FVkVOVF9UWVBFUy5MT1ZFUiwKICAgIHRpdGxlOiBgJHtwZXJzb25BLm5hbWV944GoJHtwZXJzb25CLm5hbWV944CB5oGL5Lq644Go44Gq44KLYCwKICAgIHRleHQ6IGAke3BlcnNvbkEubmFtZX3jgagke3BlcnNvbkIubmFtZX3jgYzmgYvkurrjgajjgarjgaPjgZ/jgIJgLAogICAgcGVvcGxlOiBbcGVyc29uQSwgcGVyc29uQl0sCiAgICBpbXBvcnRhbmNlOiAibWlub3IiLAogICAgc2NvcGU6IEhJU1RPUllfU0NPUEVTLlBFUlNPTiwKICAgIHRhZ3M6IFsi5oGL5Lq6Iiwgc291cmNlXQogIH0pOwp9CiIiIgpuZXcgPSAiIiJleHBvcnQgZnVuY3Rpb24gcmVjb3JkTG92ZXJIaXN0b3J5KHZpbGxhZ2UsIHBlcnNvbkEsIHBlcnNvbkIsIG9wdGlvbnMgPSB7fSkgewogIGlmICghcGVyc29uQSB8fCAhcGVyc29uQikgcmV0dXJuOwogIGNvbnN0IHNvdXJjZSA9IG9wdGlvbnMuc291cmNlIHx8ICLnuIHntZDjgbMiOwogIGNvbnN0IHByZXZpb3VzQnJlYWt1cCA9IGVuc3VyZUhpc3RvcnlFdmVudHModmlsbGFnZSkuc29tZShldmVudCA9PiB7CiAgICBpZiAoZXZlbnQ/LnR5cGUgIT09IEhJU1RPUllfRVZFTlRfVFlQRVMuU09DSUFMX1JFTEFUSU9OIHx8IGV2ZW50Py50YWdzPy5bMV0gIT09ICLlhYPmgYvkuroiKSByZXR1cm4gZmFsc2U7CiAgICBpZiAoIUFycmF5LmlzQXJyYXkoZXZlbnQudGFncykgfHwgIWV2ZW50LnRhZ3MuaW5jbHVkZXMoIuegtOWxgCIpKSByZXR1cm4gZmFsc2U7CiAgICBjb25zdCBpZHMgPSBBcnJheS5pc0FycmF5KGV2ZW50LnBlb3BsZUlkcykgPyBldmVudC5wZW9wbGVJZHMuZmlsdGVyKGlkID0+IGlkICE9IG51bGwpIDogW107CiAgICBpZiAocGVyc29uQS5pZCAhPSBudWxsICYmIHBlcnNvbkIuaWQgIT0gbnVsbCAmJiBpZHMubGVuZ3RoID4gMCkgewogICAgICByZXR1cm4gaWRzLmluY2x1ZGVzKHBlcnNvbkEuaWQpICYmIGlkcy5pbmNsdWRlcyhwZXJzb25CLmlkKTsKICAgIH0KICAgIGNvbnN0IG5hbWVzID0gQXJyYXkuaXNBcnJheShldmVudC5wZW9wbGUpID8gZXZlbnQucGVvcGxlIDogW107CiAgICByZXR1cm4gbmFtZXMuaW5jbHVkZXMocGVyc29uQS5uYW1lKSAmJiBuYW1lcy5pbmNsdWRlcyhwZXJzb25CLm5hbWUpOwogIH0pOwogIGFkZEhpc3RvcnlFdmVudCh2aWxsYWdlLCB7CiAgICB0eXBlOiBISVNUT1JZX0VWRU5UX1RZUEVTLkxPVkVSLAogICAgdGl0bGU6IHByZXZpb3VzQnJlYWt1cAogICAgICA/IGAke3BlcnNvbkEubmFtZX3jgagke3BlcnNvbkIubmFtZX3jgIHjg6jjg6rjgpLmiLvjgZlgCiAgICAgIDogYCR7cGVyc29uQS5uYW1lfeOBqCR7cGVyc29uQi5uYW1lfeOAgeaBi+S6uuOBqOOBquOCi2AsCiAgICB0ZXh0OiBwcmV2aW91c0JyZWFrdXAKICAgICAgPyBgJHtwZXJzb25BLm5hbWV944GoJHtwZXJzb25CLm5hbWV944GM44Oo44Oq44KS5oi744GX5YaN44Gz5oGL5Lq644Go44Gq44Gj44Gf44CCYAogICAgICA6IGAke3BlcnNvbkEubmFtZX3jgagke3BlcnNvbkIubmFtZX3jgYzmgYvkurrjgajjgarjgaPjgZ/jgIJgLAogICAgcGVvcGxlOiBbcGVyc29uQSwgcGVyc29uQl0sCiAgICBpbXBvcnRhbmNlOiAibWlub3IiLAogICAgc2NvcGU6IEhJU1RPUllfU0NPUEVTLlBFUlNPTiwKICAgIHRhZ3M6IFsi5oGL5Lq6Iiwgc291cmNlLCBwcmV2aW91c0JyZWFrdXAgPyAi5b6p57iBIiA6ICIiXS5maWx0ZXIoQm9vbGVhbikKICB9KTsKfQoiIiIKaWYgcy5jb3VudChvbGQpICE9IDE6CiAgICByYWlzZSBTeXN0ZW1FeGl0KGYicmVjb3JkTG92ZXJIaXN0b3J5IGJsb2NrIGNvdW50OiB7cy5jb3VudChvbGQpfSIpCnMgPSBzLnJlcGxhY2Uob2xkLCBuZXcpCgpvbGQgPSAiIiIgICAgY2FzZSBISVNUT1JZX0VWRU5UX1RZUEVTLkxPVkVSOgogICAgICByZXR1cm4gb3RoZXJOYW1lID8gYCR7b3RoZXJOYW1lfeOBqOaBi+S6uuOBq+OBquOCi+OAgmAgOiB0b1BlcnNvbmFsVGVuc2UoZXZlbnQudGV4dCk7CiAgICBjYXNlIEhJU1RPUllfRVZFTlRfVFlQRVMuU09DSUFMX1JFTEFUSU9OOiB7CiAgICAgIGNvbnN0IHJlbGF0aW9uID0gZXZlbnQudGFnc1sxXSB8fCAi6Zai5L+CIjsKICAgICAgY29uc3QgaG9iYnkgPSBldmVudC50YWdzWzJdIHx8ICIiOwogICAgICBpZiAocmVsYXRpb24gPT09ICLotqPlkbPku7LplpMiKSB7CiIiIgpuZXcgPSAiIiIgICAgY2FzZSBISVNUT1JZX0VWRU5UX1RZUEVTLkxPVkVSOgogICAgICBpZiAoZXZlbnQudGFncy5pbmNsdWRlcygi5b6p57iBIikpIHsKICAgICAgICByZXR1cm4gb3RoZXJOYW1lID8gYCR7b3RoZXJOYW1lfeOBqOODqOODquOCkuaIu+OBl+WGjeOBs+aBi+S6uuOBq+OBquOCi+OAgmAgOiB0b1BlcnNvbmFsVGVuc2UoZXZlbnQudGV4dCk7CiAgICAgIH0KICAgICAgcmV0dXJuIG90aGVyTmFtZSA/IGAke290aGVyTmFtZX3jgajmgYvkurrjgavjgarjgovjgIJgIDogdG9QZXJzb25hbFRlbnNlKGV2ZW50LnRleHQpOwogICAgY2FzZSBISVNUT1JZX0VWRU5UX1RZUEVTLlNPQ0lBTF9SRUxBVElPTjogewogICAgICBjb25zdCByZWxhdGlvbiA9IGV2ZW50LnRhZ3NbMV0gfHwgIumWouS/giI7CiAgICAgIGNvbnN0IGhvYmJ5ID0gZXZlbnQudGFnc1syXSB8fCAiIjsKICAgICAgaWYgKHJlbGF0aW9uID09PSAi5YWD5oGL5Lq6IiAmJiBldmVudC50YWdzLmluY2x1ZGVzKCLnoLTlsYAiKSkgewogICAgICAgIHJldHVybiBvdGhlck5hbWUgPyBgJHtvdGhlck5hbWV944Go56C05bGA44GZ44KL44CCYCA6IHRvUGVyc29uYWxUZW5zZShldmVudC50ZXh0KTsKICAgICAgfQogICAgICBpZiAocmVsYXRpb24gPT09ICLotqPlkbPku7LplpMiKSB7CiIiIgppZiBzLmNvdW50KG9sZCkgIT0gMToKICAgIHJhaXNlIFN5c3RlbUV4aXQoZiJwZXJzb25hbCBoaXN0b3J5IGJsb2NrIGNvdW50OiB7cy5jb3VudChvbGQpfSIpCnMgPSBzLnJlcGxhY2Uob2xkLCBuZXcpCgpwYXRoLndyaXRlX3RleHQocywgZW5jb2Rpbmc9InV0Zi04IikK' | base64 -d > /tmp/apply.py
+          python /tmp/apply.py
           node --check js/history.js
           grep -F 'と破局する。' js/history.js
           grep -F 'とヨリを戻し再び恋人になる。' js/history.js
 
-      - name: Commit to codex/vob-next
+      - name: Commit
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
