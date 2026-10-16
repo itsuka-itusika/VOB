@@ -1,0 +1,203 @@
+name: Apply trait job bonuses and goblin names
+
+on:
+  push:
+    branches:
+      - codex/apply-trait-job-goblin-names
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout working branch
+        uses: actions/checkout@v4
+        with:
+          ref: codex/vob-next
+          fetch-depth: 0
+
+      - name: Apply requested changes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected 1 match, found {count}')
+              return text.replace(old, new, 1)
+
+          path = Path('js/domain/jobMath.js')
+          text = path.read_text(encoding='utf-8')
+          anchor = '  if (hasMindTrait(person, "海の知恵") && job === "漁") mul *= 1.2;\n  if (hasBodyTrait(person, SENSITIVE_FINGERS_TRAIT) && job === "内職") mul *= 1.2;'
+          replacement = '''  if (hasMindTrait(person, "海の知恵") && job === "漁") mul *= 1.2;
+  if (hasMindTrait(person, "本の虫") && job === "写本") mul *= 1.2;
+  if ((hasMindTrait(person, "天才肌") || hasMindTrait(person, "マッド")) && job === "研究") mul *= 1.2;
+  if ((hasMindTrait(person, "学者肌") || hasMindTrait(person, "好奇心旺盛")) && job === "研究") mul *= 1.1;
+  if ((hasMindTrait(person, "計算高い") || hasMindTrait(person, "守銭奴") || hasMindTrait(person, "抜け目がない")) && job === "行商") mul *= 1.1;
+  if (hasMindTrait(person, "職人気質") && job === "内職") mul *= 1.1;
+  if ((hasMindTrait(person, "強面") || hasMindTrait(person, "威圧的")) && job === "警備") mul *= 1.1;
+  if (hasBodyTrait(person, SENSITIVE_FINGERS_TRAIT) && job === "内職") mul *= 1.2;'''
+          text = replace_once(text, anchor, replacement, 'job trait multipliers')
+
+          old_guard = '''  if (hasBodyTrait(person, SENSITIVE_NOSE_TRAIT)) {
+    amount = Math.round(amount * 1.5);
+  }
+  return Math.max(1, amount);
+}'''
+          new_guard = '''  if (hasBodyTrait(person, SENSITIVE_NOSE_TRAIT)) {
+    amount = Math.round(amount * 1.5);
+  }
+  amount = Math.round(amount * getLaborYieldMultiplier("警備", person, null));
+  return Math.max(1, amount);
+}'''
+          text = replace_once(text, old_guard, new_guard, 'guard multiplier application')
+
+          old_copy = '''export function calculateCopyBookYield(person) {
+  const amount = Math.round(20 * statProduct(person, "vit", "int"));
+  return applyVillageRoleMultiplier(amount, person, VILLAGE_ROLE_LIBRARIAN);
+}'''
+          new_copy = '''export function calculateCopyBookYield(person) {
+  const amount = Math.round((20 * statProduct(person, "vit", "int")) * getLaborYieldMultiplier("写本", person, null));
+  return applyVillageRoleMultiplier(amount, person, VILLAGE_ROLE_LIBRARIAN);
+}'''
+          text = replace_once(text, old_copy, new_copy, 'copybook multiplier application')
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('js/data/nameData.js')
+          text = path.read_text(encoding='utf-8')
+          anchor = '''// 外から村へ来る翼人の肩書。どれも同じ WINGED_NAMES から名付ける。
+const WINGED_VISITOR_JOBS = new Set(["旅人", "翼人兵", "上位翼人"]);
+'''
+          replacement = '''// 外から村へ来る翼人の肩書。どれも同じ WINGED_NAMES から名付ける。
+const WINGED_VISITOR_JOBS = new Set(["旅人", "翼人兵", "上位翼人"]);
+
+// ゴブリン系だけが、通常の性別別名前テーブルへ追加して使う特殊名。
+// 専用テーブルだけから引くのではなく、通常名との混合集合から等確率で抽選する。
+export const GOBLIN_SPECIAL_NAMES = [
+  "ゴブタ", "ゴブキチ", "ゴブザエモン", "ゴブゾウ", "ゴブジロウ",
+  "ゴブヘイ", "ゴブオ", "ゴーブン", "ゴブッチ", "ゴブヒコ",
+  "ゴブベエ", "ゴブザル", "ゴブノスケ", "ゴブタロウ", "ゴブスケ"
+];
+const GOBLIN_NAME_JOBS = new Set(["ゴブリン", "ゴブリンリーダー", "ゴブリン射手"]);
+'''
+          text = replace_once(text, anchor, replacement, 'goblin special name table')
+
+          old = '''export function getNameList(sex, { race = "", job = "" } = {}) {
+  if (race === "エクイナ") return STEPPE_FEMALE_NAMES;'''
+          new = '''export function getNameList(sex, { race = "", job = "" } = {}) {
+  if (race === "ゴブリン" || GOBLIN_NAME_JOBS.has(job)) {
+    return [...getGeneralNameList(sex), ...GOBLIN_SPECIAL_NAMES];
+  }
+  if (race === "エクイナ") return STEPPE_FEMALE_NAMES;'''
+          text = replace_once(text, old, new, 'goblin mixed name selection')
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('js/data/dictionaryData.js')
+          lines = path.read_text(encoding='utf-8').splitlines(keepends=True)
+          details = {
+              '本の虫': '写本の成果が1.2倍になる',
+              '天才肌': '研究の成果が1.2倍になる',
+              'マッド': '研究の成果が1.2倍になる',
+              '学者肌': '研究の成果が1.1倍になる',
+              '好奇心旺盛': '研究の成果が1.1倍になる',
+              '計算高い': '行商の成果が1.1倍になる',
+              '守銭奴': '行商の成果が1.1倍になる',
+              '抜け目がない': '行商の成果が1.1倍になる',
+              '職人気質': '内職の成果が1.1倍になる',
+              '強面': '警備の成果が1.1倍になる',
+              '威圧的': '警備の成果が1.1倍になる',
+          }
+          found = set()
+          out = []
+          for line in lines:
+              matched = None
+              for trait, detail in details.items():
+                  if f'"{trait}": makeEntry(' in line:
+                      matched = (trait, detail)
+                      break
+              if matched:
+                  trait, detail = matched
+                  if detail not in line:
+                      pos = line.rfind('])')
+                      if pos < 0:
+                          raise SystemExit(f'dictionary entry for {trait} is not a one-line makeEntry with details array')
+                      prefix = line[:pos]
+                      insertion = f'"{detail}"' if prefix.rstrip().endswith('[') else f', "{detail}"'
+                      line = prefix + insertion + line[pos:]
+                  found.add(trait)
+              out.append(line)
+          missing = set(details) - found
+          if missing:
+              raise SystemExit(f'dictionary traits not found: {sorted(missing)}')
+          path.write_text(''.join(out), encoding='utf-8')
+          PY
+
+      - name: Syntax checks
+        run: |
+          node --check js/domain/jobMath.js
+          node --check js/data/nameData.js
+          node --check js/data/dictionaryData.js
+
+      - name: Behavior checks
+        shell: bash
+        run: |
+          node --input-type=module <<'JS'
+          import {
+            getLaborYieldMultiplier,
+            calculateCopyBookYield,
+            calculateGuardYield,
+            calculateHandiworkYield,
+            calculateResearchYield,
+            calculateTradingYield
+          } from './js/domain/jobMath.js';
+          import { MALE_NAMES, FEMALE_NAMES, GOBLIN_SPECIAL_NAMES, getNameList } from './js/data/nameData.js';
+
+          const person = (traits) => ({
+            mindTraits: traits, bodyTraits: [],
+            str: 20, vit: 20, dex: 20, mag: 20, chr: 20,
+            int: 20, ind: 20, eth: 20, cou: 20, sexdr: 20
+          });
+          const eq = (actual, expected, label) => {
+            if (actual !== expected) throw new Error(`${label}: ${actual} !== ${expected}`);
+          };
+
+          eq(getLaborYieldMultiplier('写本', person(['本の虫']), null), 1.2, '本の虫/写本');
+          eq(getLaborYieldMultiplier('研究', person(['天才肌']), null), 1.2, '天才肌/研究');
+          eq(getLaborYieldMultiplier('研究', person(['マッド']), null), 1.2, 'マッド/研究');
+          eq(getLaborYieldMultiplier('研究', person(['学者肌']), null), 1.1, '学者肌/研究');
+          eq(getLaborYieldMultiplier('研究', person(['好奇心旺盛']), null), 1.1, '好奇心旺盛/研究');
+          eq(getLaborYieldMultiplier('行商', person(['計算高い']), null), 1.1, '計算高い/行商');
+          eq(getLaborYieldMultiplier('行商', person(['守銭奴']), null), 1.1, '守銭奴/行商');
+          eq(getLaborYieldMultiplier('行商', person(['抜け目がない']), null), 1.1, '抜け目がない/行商');
+          eq(getLaborYieldMultiplier('内職', person(['職人気質']), null), 1.1, '職人気質/内職');
+          eq(getLaborYieldMultiplier('警備', person(['強面']), null), 1.1, '強面/警備');
+          eq(getLaborYieldMultiplier('警備', person(['威圧的']), null), 1.1, '威圧的/警備');
+
+          eq(calculateCopyBookYield(person(['本の虫'])), 24, '写本実計算');
+          eq(calculateResearchYield(person(['天才肌']), null), 36, '研究実計算');
+          eq(calculateTradingYield(person(['計算高い']), 30), 33, '行商実計算');
+          eq(calculateHandiworkYield(person(['職人気質']), null), 33, '内職実計算');
+          eq(calculateGuardYield(person(['強面'])), 13, '警備実計算');
+
+          const goblinMale = getNameList('男', { race: 'ゴブリン' });
+          const goblinFemale = getNameList('女', { race: 'ゴブリン' });
+          eq(goblinMale.length, MALE_NAMES.length + GOBLIN_SPECIAL_NAMES.length, 'ゴブリン男性名テーブル長');
+          eq(goblinFemale.length, FEMALE_NAMES.length + GOBLIN_SPECIAL_NAMES.length, 'ゴブリン女性名テーブル長');
+          if (!goblinMale.includes('ゴブザエモン') || !goblinFemale.includes('ゴブタロウ')) throw new Error('ゴブリン特殊名が混合されていない');
+          if (!goblinMale.includes(MALE_NAMES[0]) || !goblinFemale.includes(FEMALE_NAMES[0])) throw new Error('通常名がゴブリン名テーブルから消えている');
+          if (getNameList('男', { race: '人間' }).includes('ゴブタ')) throw new Error('通常種族へゴブリン特殊名が混入している');
+          console.log('behavior checks passed');
+          JS
+
+      - name: Commit to codex/vob-next
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add js/domain/jobMath.js js/data/nameData.js js/data/dictionaryData.js
+          git commit -m "feat: 排他特性の職業補正とゴブリン特殊名を追加"
+          git push origin HEAD:codex/vob-next
