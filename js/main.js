@@ -14,12 +14,14 @@ import { getRaidReadiness } from "./raidRules.js";
 import { hasDespairState } from "./domain/despair.js";
 import { getActiveVillagers } from "./domain/apocalypseRules.js";
 import { runAfterReproductionModals } from "./reproduction.js";
+import { installYearAdvanceFeature } from "./yearAdvance.js";
 
 // Villageインスタンスを生成
 export const theVillage = new Village();
 theVillage.villagers = createInitialVillagers();
 recordGameStartHistory(theVillage, theVillage.villagers);
 updateUI(theVillage);
+installYearAdvanceFeature(theVillage);
 
 function applyTurnStartRestrictions(village) {
   village.villagers.forEach(person => {
