@@ -400,14 +400,28 @@ export function recordMarriageHistory(village, personA, personB, options = {}) {
 export function recordLoverHistory(village, personA, personB, options = {}) {
   if (!personA || !personB) return;
   const source = options.source || "縁結び";
+  const previousBreakup = ensureHistoryEvents(village).some(event => {
+    if (event?.type !== HISTORY_EVENT_TYPES.SOCIAL_RELATION || event?.tags?.[1] !== "元恋人") return false;
+    if (!Array.isArray(event.tags) || !event.tags.includes("破局")) return false;
+    const ids = Array.isArray(event.peopleIds) ? event.peopleIds.filter(id => id != null) : [];
+    if (personA.id != null && personB.id != null && ids.length > 0) {
+      return ids.includes(personA.id) && ids.includes(personB.id);
+    }
+    const names = Array.isArray(event.people) ? event.people : [];
+    return names.includes(personA.name) && names.includes(personB.name);
+  });
   addHistoryEvent(village, {
     type: HISTORY_EVENT_TYPES.LOVER,
-    title: `${personA.name}と${personB.name}、恋人となる`,
-    text: `${personA.name}と${personB.name}が恋人となった。`,
+    title: previousBreakup
+      ? `${personA.name}と${personB.name}、ヨリを戻す`
+      : `${personA.name}と${personB.name}、恋人となる`,
+    text: previousBreakup
+      ? `${personA.name}と${personB.name}がヨリを戻し再び恋人となった。`
+      : `${personA.name}と${personB.name}が恋人となった。`,
     people: [personA, personB],
     importance: "minor",
     scope: HISTORY_SCOPES.PERSON,
-    tags: ["恋人", source]
+    tags: ["恋人", source, previousBreakup ? "復縁" : ""].filter(Boolean)
   });
 }
 
@@ -789,10 +803,16 @@ function getPersonalHistoryText(event, personName, personId = null) {
     case HISTORY_EVENT_TYPES.MARRIAGE:
       return otherName ? `${otherName}と夫婦となる。` : toPersonalTense(event.text);
     case HISTORY_EVENT_TYPES.LOVER:
+      if (event.tags.includes("復縁")) {
+        return otherName ? `${otherName}とヨリを戻し再び恋人になる。` : toPersonalTense(event.text);
+      }
       return otherName ? `${otherName}と恋人になる。` : toPersonalTense(event.text);
     case HISTORY_EVENT_TYPES.SOCIAL_RELATION: {
       const relation = event.tags[1] || "関係";
       const hobby = event.tags[2] || "";
+      if (relation === "元恋人" && event.tags.includes("破局")) {
+        return otherName ? `${otherName}と破局する。` : toPersonalTense(event.text);
+      }
       if (relation === "趣味仲間") {
         return otherName
           ? `${otherName}と${hobby ? `${hobby}の` : ""}趣味仲間になる。`
