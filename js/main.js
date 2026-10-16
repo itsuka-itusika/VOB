@@ -23,6 +23,21 @@ recordGameStartHistory(theVillage, theVillage.villagers);
 updateUI(theVillage);
 installYearAdvanceFeature(theVillage);
 
+// 自動修復は年送り中の裏方処理として扱い、年次レポートには載せない。
+if (typeof MutationObserver !== "undefined" && typeof document !== "undefined") {
+  const yearAdvanceReportObserver = new MutationObserver(() => {
+    const list = document.querySelector("#yearAdvanceReportModal .year-advance-events ol");
+    if (!list) return;
+    list.querySelectorAll("li").forEach(item => {
+      if (item.textContent.includes("自動修復")) item.remove();
+    });
+    if (list.children.length === 0) {
+      list.innerHTML = "<li>特筆すべき出来事はありませんでした。</li>";
+    }
+  });
+  yearAdvanceReportObserver.observe(document.body, { childList: true, subtree: true });
+}
+
 function applyTurnStartRestrictions(village) {
   village.villagers.forEach(person => {
     const restriction = applyForcedActionRestriction(person);
