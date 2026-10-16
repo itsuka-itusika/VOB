@@ -12,7 +12,7 @@ import {
 } from "./domain/buildingState.js";
 import { clampStoredResources } from "./domain/resourceLimits.js";
 import { isRaidActive } from "./raidRules.js";
-import { autoAssignRaidActions } from "./autoAssign.js";
+import { autoAssignJobs, autoAssignRaidActions } from "./autoAssign.js";
 import { resolveRaidWithoutModal } from "./raid.js";
 import { clearRaidWarningModal } from "./raidWarningModal.js";
 import { showPendingDivineMightLevelUpModal } from "./divineMight.js";
@@ -333,13 +333,15 @@ export async function advanceOneYear(village) {
     window.alert(`危険状態の村人がいるため1年経過できません。\n${text}`);
     return;
   }
-  if (!window.confirm("現在の行動設定を維持したまま、最大12か月を自動で進めます。\n危篤・飢餓・凍え・絶望が発生した場合はその月で中断します。\n襲撃は自動割り振りで迎撃し、損壊建物は資源があれば自動修復します。\n進めますか？")) return;
+  if (!window.confirm("毎月の行動を自動割り振りで決めながら、最大12か月を自動で進めます。\n危篤・飢餓・凍え・絶望が発生した場合はその月で中断します。\n襲撃は自動割り振りで迎撃し、損壊建物は資源があれば自動修復します。\n進めますか？")) return;
 
   const report = createReport(village);
   const button = document.getElementById(BUTTON_ID);
   if (button) button.disabled = true;
 
   try {
+    // 毎月の初め、プレイヤーが「自動割り振り」を押すのと同じ時点で行動を決める。
+    autoAssignJobs(village);
     for (let index = 0; index < MAX_MONTHS; index++) {
       autoRepairBuildings(village, report);
       applyTurnStartRestrictions(village);
@@ -367,6 +369,7 @@ export async function advanceOneYear(village) {
       if (village.month === 1) doAgingProcess(village);
       runMonthStartPhase(village);
       await closeAutoModals(village);
+      autoAssignJobs(village);
       resolveRaidByAutoAssign(village, report);
       await closeAutoModals(village);
 
