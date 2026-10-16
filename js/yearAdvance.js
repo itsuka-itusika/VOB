@@ -4,23 +4,18 @@ import { doFixedEventPost, endOfMonthProcess, doAgingProcess, runMonthStartPhase
 import { handleAllVillagerJobs } from "./jobs.js";
 import { applyForcedActionRestriction, refreshJobTable } from "./domain/jobTables.js";
 import { getActiveVillagers } from "./domain/apocalypseRules.js";
-import { BUILDINGS, damageRandomBuilding } from "./buildings.js";
+import { BUILDINGS } from "./buildings.js";
 import {
   countDamagedBuildings,
   recalculateBuildingDerivedState,
   repairDamagedBuilding
 } from "./domain/buildingState.js";
 import { clampStoredResources } from "./domain/resourceLimits.js";
-import {
-  ACTION_TRAP,
-  estimateRaidActionDamage,
-  getActiveRaidFrontliners,
-  getActiveRaidMiddleliners,
-  getActiveRaidTrapMakers,
-  getAverageEnemyAttack,
-  getEnemyTotalHp,
-  getRaidIncomingDamageMultiplier
-} from "./raidRules.js";
+import { isRaidActive } from "./raidRules.js";
+import { autoAssignRaidActions } from "./autoAssign.js";
+import { resolveRaidWithoutModal } from "./raid.js";
+import { clearRaidWarningModal } from "./raidWarningModal.js";
+import { showPendingDivineMightLevelUpModal } from "./divineMight.js";
 
 const STOP_BODY_TRAITS = ["危篤", "飢餓", "凍え"];
 const STOP_MIND_TRAITS = ["絶望"];
@@ -101,215 +96,93 @@ function autoRepairBuildings(village, report) {
   }
 }
 
-function clearRaidState(village) {
-  village.villageTraits = (village.villageTraits || []).filter(trait => trait !== "襲撃中");
-  village.currentRaid = null;
-  village.pendingRaid = null;
-  village.raidEnemies = [];
-  village.isRaidProcessDone = true;
-  village.isRaidFinalizing = false;
-  village.raidActionQueue = [];
-  village.raidPhase = "";
-  village.currentActionIndex = 0;
-  village.raidTurnCount = 0;
-}
+function resolveRaidByAutoAssign(village, report) {
+  if (!isRaidActive(village)) return null;
 
-function addTrait(person, trait) {
-  if (!Array.isArray(person.bodyTraits)) person.bodyTraits = [];
-  if (!person.bodyTraits.includes(trait)) person.bodyTraits.push(trait);
-}
-
-function sample(items, count) {
-  const pool = [...items];
-  const result = [];
-  while (pool.length > 0 && result.length < count) {
-    result.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
-  }
-  return result;
-}
-
-function applyRaidCasualties(village, tier, participants) {
-  const eligible = participants.length > 0 ? participants : getActiveVillagers(village);
-  if (eligible.length === 0) return [];
-
-  const plans = {
-    overwhelming: { count: 1, chance: 0.25, severe: 0, fatal: 0 },
-    win: { count: 2, chance: 0.55, severe: 0.12, fatal: 0 },
-    close: { count: 4, chance: 0.9, severe: 0.35, fatal: 0.08 },
-    loss: { count: 5, chance: 1, severe: 0.55, fatal: 0.18 },
-    disaster: { count: 7, chance: 1, severe: 0.7, fatal: 0.3 }
-  };
-  const plan = plans[tier];
-  const victims = sample(eligible, Math.min(plan.count, eligible.length));
-  const results = [];
-  victims.forEach(person => {
-    if (Math.random() > plan.chance) return;
-    const roll = Math.random();
-    let trait = "負傷";
-    let damage = 20 + Math.floor(Math.random() * 16);
-    if (roll < plan.fatal) {
-      trait = "致命傷";
-      damage = 55 + Math.floor(Math.random() * 21);
-    } else if (roll < plan.fatal + plan.severe) {
-      trait = "重体";
-      damage = 40 + Math.floor(Math.random() * 21);
-    }
-    person.hp = Math.max(1, (Number(person.hp) || 100) - damage);
-    addTrait(person, trait);
-    results.push({ person, trait });
-  });
-  return results;
-}
-
-function applyRaidBuildingDamage(village, tier) {
-  const plans = {
-    overwhelming: [0, 0],
-    win: [0.05, 1],
-    close: [0.2, 2],
-    loss: [0.5, 3],
-    disaster: [0.8, 4]
-  };
-  const [chance, max] = plans[tier];
-  if (Math.random() >= chance) return 0;
-  const count = 1 + Math.floor(Math.random() * max);
-  let damaged = 0;
-  for (let i = 0; i < count; i++) {
-    if (damageRandomBuilding(village)) damaged++;
-  }
-  return damaged;
-}
-
-function applyRaidResourceLoss(village, tier) {
-  const ranges = {
-    overwhelming: [0, 0],
-    win: [0, 0],
-    close: [0, 0],
-    loss: [0.05, 0.15],
-    disaster: [0.1, 0.3]
-  };
-  const [min, max] = ranges[tier];
-  if (max <= 0) return null;
-  const rate = min + Math.random() * (max - min);
-  const loss = {};
-  ["food", "materials", "funds"].forEach(key => {
-    loss[key] = Math.floor((Number(village[key]) || 0) * rate);
-    village[key] = Math.max(0, (Number(village[key]) || 0) - loss[key]);
-  });
-  return loss;
-}
-
-function resolveSimplifiedRaid(village, report) {
-  const enemies = Array.isArray(village.raidEnemies) ? village.raidEnemies.filter(enemy => (Number(enemy.hp) || 0) > 0) : [];
-  if (!village.currentRaid && enemies.length === 0 && !village.villageTraits?.includes("襲撃中")) return null;
-
-  village.villagers.forEach(person => refreshJobTable(person, village));
-  const front = getActiveRaidFrontliners(village);
-  const middle = getActiveRaidMiddleliners(village);
-  const traps = getActiveRaidTrapMakers(village);
-  const combatants = [...front, ...middle];
-  const raidName = village.currentRaid?.warningName || village.currentRaid?.name || village.currentRaid?.id || "襲撃者";
-  const enemyCount = enemies.length;
-  const enemyHp = Math.max(1, getEnemyTotalHp(village));
-  const averageEnemyAttack = Math.max(1, getAverageEnemyAttack(village));
-
-  const friendlyDamage = combatants.reduce((sum, person) => sum + estimateRaidActionDamage(person, person.action, village), 0);
-  const trapPower = traps.reduce((sum, person) => sum + estimateRaidActionDamage(person, ACTION_TRAP, village), 0);
-  const mitigation = Math.min(0.25, trapPower / Math.max(1, enemyHp) * 0.25);
-  const friendlyThreeTurn = Math.max(1, friendlyDamage * 3 + trapPower);
-
-  const participantHp = Math.max(1, combatants.reduce((sum, person) => sum + Math.max(1, Number(person.hp) || 1), 0));
-  const incomingMultiplier = combatants.length > 0
-    ? combatants.reduce((sum, person) => sum + getRaidIncomingDamageMultiplier(person.action, village), 0) / combatants.length
-    : 1.5;
-  const enemyPressure = averageEnemyAttack * Math.max(1, enemyCount) * 3 * incomingMultiplier * (1 - mitigation);
-
-  const offenseRatio = friendlyThreeTurn / enemyHp;
-  const survivalRatio = participantHp / Math.max(1, enemyPressure);
-  const randomFactor = 0.85 + Math.random() * 0.3;
-  const score = ((offenseRatio * 0.65) + (survivalRatio * 0.35)) * randomFactor;
-
-  let tier = "disaster";
-  if (score >= 1.6) tier = "overwhelming";
-  else if (score >= 1.2) tier = "win";
-  else if (score >= 0.8) tier = "close";
-  else if (score >= 0.5) tier = "loss";
-  const labels = {
-    overwhelming: "圧勝",
-    win: "勝利",
-    close: "辛勝",
-    loss: "敗北",
-    disaster: "壊滅的敗北"
-  };
-
-  const casualties = applyRaidCasualties(village, tier, combatants);
-  const damagedBuildings = applyRaidBuildingDamage(village, tier);
-  const resourceLoss = applyRaidResourceLoss(village, tier);
-  const injuryText = casualties.length > 0
-    ? casualties.map(item => `${item.person.name}：${item.trait}`).join("、")
-    : "人的被害なし";
-  const buildingText = damagedBuildings > 0 ? `、建築損壊${damagedBuildings}件` : "";
-  const lossText = resourceLoss
-    ? `、略奪 食料${resourceLoss.food}・資材${resourceLoss.materials}・資金${resourceLoss.funds}`
-    : "";
-  village.log(`【年次簡易襲撃】${raidName}${enemyCount ? `${enemyCount}体` : ""}：${labels[tier]}。${injuryText}${buildingText}${lossText}`);
+  const raidName = village.currentRaid?.warningName || village.currentRaid?.name || "襲撃者";
+  const enemyCount = village.raidEnemies.length;
+  // 実際の襲撃で「自動割り振り」を押して迎撃したときと同じ配置・戦闘で解決する。
+  autoAssignRaidActions(village);
+  const outcome = resolveRaidWithoutModal(village);
+  const info = outcome.resultInfo;
+  const title = !outcome.isSuccess ? "防衛失敗" : (outcome.isPartSuccess ? "防衛成功（敵撤退）" : "防衛成功");
+  const details = [
+    info.fallenNames.length > 0 ? `負傷離脱 ${info.fallenNames.join("、")}` : "負傷離脱なし",
+    info.capturedName ? `${info.capturedName}を捕虜に` : "",
+    ...info.penaltyLines
+  ].filter(Boolean).join("、");
   report.events.push({
     month: monthLabel(village),
-    text: `${raidName}${enemyCount ? ` ${enemyCount}体` : ""}の襲撃 ― ${labels[tier]}（${injuryText}${buildingText}${lossText}）`
+    text: `${raidName}${enemyCount ? ` ${enemyCount}体` : ""}の襲撃 ― ${title}（${details}）`
   });
-  clearRaidState(village);
-  return tier;
+  return outcome;
 }
 
-function clickButtonByText(root, text) {
-  const buttons = Array.from(root?.querySelectorAll?.("button") || []);
-  const button = buttons.find(item => item.textContent.trim() === text);
-  if (!button) return false;
-  button.click();
-  return true;
+// 自動進行中に出る通知。各モーダル自身の「閉じる」を押して片付ける。
+// 要素を消すだけでは各モジュールの表示待ちが進まず、後の通知が詰まったり、
+// 自動進行の後に古い通知がまとめて出たりする。
+const AUTO_CLOSE_MODAL_SELECTORS = [
+  "#actionPhaseModal",
+  "#seasonChangeDialog",
+  "#festivalModal",
+  "#buildingRequestModal",
+  "#buildingRequestCompleteModal",
+  "#wishModal",
+  "#wishCompleteModal",
+  "#villageScaleModal",
+  "#headmanElectionModal",
+  "#adventurerQuestResultModal",
+  "#secretTreasureEventModal"
+];
+// 決まったidを持たないモーダルは、閉じるボタンそのもので探す。出産は村人に命名を任せる。
+const AUTO_CLOSE_BUTTON_SELECTORS = [
+  "[data-leave-name]",
+  "[data-close-reproduction-modal]",
+  "[data-close-divine-might-level-up]",
+  "[data-close-relationship-modal]",
+  "[data-close-pinecone-staff-intro]",
+  "[data-close-event-modal]",
+  "[data-close-tutorial-modal]"
+];
+
+function findButtonByText(root, text) {
+  return Array.from(root?.querySelectorAll?.("button") || [])
+    .find(item => item.textContent.trim() === text) || null;
 }
 
-function drainAutoModals() {
-  if (typeof document === "undefined") return;
-  for (let guard = 0; guard < 30; guard++) {
-    let progressed = false;
-    const randomModal = document.getElementById("randomEventModal");
-    if (randomModal && clickButtonByText(randomModal, "村で飼う")) {
-      progressed = true;
-      continue;
-    }
-    const birthButton = document.querySelector("[data-leave-name]");
-    if (birthButton) {
-      birthButton.click();
-      progressed = true;
-      continue;
-    }
-    const reproduction = document.querySelector("[data-close-reproduction-modal]")?.closest(".event-modal") ||
-      document.querySelector(".reproduction-modal");
-    if (reproduction) {
-      if (!clickButtonByText(reproduction, "閉じる")) {
-        document.querySelector("[data-close-reproduction-modal]")?.click();
-      }
-      progressed = true;
-      continue;
-    }
-    if (!progressed) break;
+function findAutoCloseButton() {
+  const randomModal = document.getElementById("randomEventModal");
+  if (randomModal) {
+    // 迷い狼は迎え入れる。選択肢のない通知は閉じる。
+    return findButtonByText(randomModal, "村で飼う") || findButtonByText(randomModal, "閉じる");
   }
+  for (const selector of AUTO_CLOSE_MODAL_SELECTORS) {
+    const button = findButtonByText(document.querySelector(selector), "閉じる");
+    if (button) return button;
+  }
+  for (const selector of AUTO_CLOSE_BUTTON_SELECTORS) {
+    const button = document.querySelector(selector);
+    if (button) return button;
+  }
+  return null;
+}
 
-  const disposableSelectors = [
-    "#randomEventModal", "#randomEventOverlay",
-    "#festivalModal", "#festivalOverlay",
-    "#seasonChangeDialog", "#seasonChangeOverlay",
-    "#buildingRequestModal", "#buildingRequestOverlay",
-    "#buildingRequestCompleteModal", "#buildingRequestCompleteOverlay",
-    "#wishModal", "#wishOverlay", "#wishCompleteModal", "#wishCompleteOverlay",
-    "#raidWarningModal", "#raidWarningOverlay",
-    "#villageScaleModal", "#villageScaleOverlay",
-    "#divineMightLevelUpModal", "#divineMightLevelUpOverlay",
-    "#headmanElectionModal", "#headmanElectionOverlay",
-    "#adventurerQuestResultModal", "#adventurerQuestResultOverlay"
-  ];
-  disposableSelectors.forEach(selector => document.querySelectorAll(selector).forEach(node => node.remove()));
-  document.querySelectorAll("[data-close-relationship-modal]").forEach(button => button.click());
+async function closeAutoModals(village) {
+  if (typeof document === "undefined") return;
+  for (let guard = 0; guard < 200; guard++) {
+    // 襲撃はこの後その月のうちに解決するため、迎撃か回避かを尋ねる通知は出さない。
+    clearRaidWarningModal();
+    const button = findAutoCloseButton();
+    if (button) {
+      button.click();
+      continue;
+    }
+    // 神威Lvの通知は他の通知が閉じるのを待って出る。月初の襲撃判定はその後に回るため、ここで出し切る。
+    if (village.pendingDivineMightLevelUp && showPendingDivineMightLevelUpModal(village)) continue;
+    // 表示待ちの通知は監視処理から遅れて出るため、一度待ってから確かめ直す。
+    await new Promise(resolve => setTimeout(resolve, 0));
+    if (!findAutoCloseButton() && !village.pendingDivineMightLevelUp) break;
+  }
 }
 
 function parseImportantLogs(logs, report, label) {
@@ -328,6 +201,8 @@ function parseImportantLogs(logs, report, label) {
       "妊娠", "出産", "誕生", "死亡", "老衰", "破局", "結婚", "恋人", "復縁",
       "願望達成", "願望消失", "願望発生", "要望発生", "要望達成", "要望取り下げ"
     ];
+    // 「恋人判定:対象者なし」のような判定の経過は出来事ではないため載せない。
+    if (String(log).includes("判定")) return;
     if (importantPrefixes.some(prefix => String(log).includes(prefix))) {
       report.events.push({ month: label, text: String(log).replace(/^【[^】]+】/, "").trim() });
     }
@@ -456,7 +331,7 @@ export async function advanceOneYear(village) {
     window.alert(`危険状態の村人がいるため1年経過できません。\n${text}`);
     return;
   }
-  if (!window.confirm("現在の行動設定を維持したまま、最大12か月を自動で進めます。\n危篤・飢餓・凍え・絶望が発生した場合はその月で中断します。\n襲撃は簡易処理、損壊建物は資源があれば自動修復します。\n進めますか？")) return;
+  if (!window.confirm("現在の行動設定を維持したまま、最大12か月を自動で進めます。\n危篤・飢餓・凍え・絶望が発生した場合はその月で中断します。\n襲撃は自動割り振りで迎撃し、損壊建物は資源があれば自動修復します。\n進めますか？")) return;
 
   const report = createReport(village);
   const button = document.getElementById(BUTTON_ID);
@@ -471,7 +346,7 @@ export async function advanceOneYear(village) {
       handleAllVillagerJobs(village);
       doFixedEventPost(village);
       endOfMonthProcess(village);
-      drainAutoModals();
+      await closeAutoModals(village);
 
       if (getActiveVillagers(village).length === 0) {
         village.gameOver = true;
@@ -489,9 +364,9 @@ export async function advanceOneYear(village) {
       village.log(`=== ${village.year}年${village.month}月 ===`);
       if (village.month === 1) doAgingProcess(village);
       runMonthStartPhase(village);
-      drainAutoModals();
-      resolveSimplifiedRaid(village, report);
-      drainAutoModals();
+      await closeAutoModals(village);
+      resolveRaidByAutoAssign(village, report);
+      await closeAutoModals(village);
 
       report.months++;
       const newLogs = village.logs.slice(logStart);

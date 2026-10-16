@@ -1349,92 +1349,7 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
 
   setTimeout(()=>{
     closeRaidModal();
-    let idx=village.villageTraits.indexOf("襲撃中");
-    if (idx>=0) {
-      village.villageTraits.splice(idx,1);
-    }
-    // 結果モーダル用の集計。敵リストの破棄や敗北ペナルティで情報が消える前に行う。
-    const resultInfo = collectRaidResultInfo(village, isSuccess, isPartSuccess, options.resultReason);
-    if (isSuccess) recordRaidVictories(village);
-    if (isSuccess && !isPartSuccess) {
-      resultInfo.capturedName = tryCaptureRaidPrisoner(village)?.name || "";
-      grantSoloDefenderTitle(village);
-      grantTrapperTitles(village);
-    }
-    village.raidEnemies=[];
-    clearDefeatedRaidEnemies(village);
-
-    // 襲撃者一覧セクションを非表示に
-    const raidSection = document.getElementById("raidEnemiesSection");
-    if (raidSection) {
-      raidSection.style.display = "none";
-    }
-
-    const raidRules = getActiveRaidRules(village);
-    if (isSuccess) {
-      const happinessGain = Number(isPartSuccess
-        ? raidRules.successRewards?.partialHappiness
-        : raidRules.successRewards?.completeHappiness) || 0;
-      if (happinessGain !== 0) {
-        village.villagers.forEach(p=>{
-          if (isSaltPillar(p)) return;
-          p.happiness=clampValue(p.happiness+happinessGain,0,100);
-        });
-      }
-      const divineGain = isPartSuccess ? 1 : 5;
-      addDivineMight(village, divineGain);
-      resultInfo.happinessGain = happinessGain;
-      resultInfo.divineGain = divineGain;
-      village.log(isPartSuccess
-        ? `防衛成功(部分):村人幸福+${happinessGain},神威+${divineGain}`
-        : `防衛成功(敵全滅):村人幸福+${happinessGain},神威+${divineGain}`);
-    } else {
-      const penalty = calculateRaidFailurePenalty(village);
-
-      village.food=clampValue(village.food - penalty.foodLoss,0,99999);
-      village.materials=clampValue(village.materials - penalty.materialsLoss,0,99999);
-      village.funds=clampValue(village.funds - penalty.fundsLoss,0,99999);
-      village.mana=clampValue(village.mana - penalty.manaLoss,0,99999);
-      village.security=clampValue(village.security - penalty.securityLoss,0,100);
-
-      village.villagers.forEach(p=>{
-        if (isSaltPillar(p)) return;
-        if (penalty.hpMax > 0) {
-          p.hp=clampValue(p.hp - randInt(penalty.hpMin, penalty.hpMax),0,100);
-        }
-        if (penalty.happinessLoss !== 0) {
-          p.happiness=clampValue(p.happiness - penalty.happinessLoss,0,100);
-        }
-      });
-
-      resultInfo.penaltyLines = [
-        penalty.foodLoss > 0 ? `食料-${penalty.foodLoss}` : "",
-        penalty.materialsLoss > 0 ? `資材-${penalty.materialsLoss}` : "",
-        penalty.fundsLoss > 0 ? `資金-${penalty.fundsLoss}` : "",
-        penalty.manaLoss > 0 ? `魔素-${penalty.manaLoss}` : "",
-        penalty.securityLoss > 0 ? `治安-${penalty.securityLoss}` : "",
-        penalty.hpMax > 0 ? `村人HP-${penalty.hpMin}~${penalty.hpMax}` : "",
-        penalty.happinessLoss > 0 ? `幸福-${penalty.happinessLoss}` : "",
-        penalty.buildingDamage ? "建築損壊あり" : "",
-        penalty.goldenStatueDamage ? "バッカスの黄金像損壊" : "",
-        penalty.severeInjury ? "重体判定あり" : ""
-      ].filter(Boolean);
-      const penaltyLog = resultInfo.penaltyLines.join(",") || "追加被害なし";
-      village.log(`迎撃失敗:${penaltyLog}`);
-      if (penalty.buildingDamage) {
-        damageRandomBuilding(village);
-      }
-    }
-
-    const severeInjuryResult = rollRaidSevereInjuryCheck(village, raidRules);
-    applyHardModeAftereffects(village);
-    // 殊勲の願望と殿堂は、結果モーダルに殊勲として出る村人と同じ条件で扱う。
-    checkWishCompletion(village, { distinguishedIds: resultInfo.mvp?.ids || [] });
-    recordDistinguishedService(village, resultInfo.mvp?.ids || []);
-    applyRaidFriendshipResults(village);
-    handleApocalypseRaidResult(village, completedRaidId, isSuccess);
-    village.isRaidProcessDone=true;
-    village.currentRaid = null;
+    const { resultInfo, severeInjuryResult } = applyRaidOutcome(village, isSuccess, isPartSuccess, completedRaidId, options.resultReason);
 
     // nextTurnButton の表示を戻す
     let btn=document.getElementById("nextTurnButton");
@@ -1492,6 +1407,183 @@ function endRaidProcess(isSuccess, isPartSuccess, village, options = {}) {
     showRaidResultModal(resultInfo);
 
   }, closeDelayMs);
+}
+
+// 画面なし解決で、双方が削り合えないまま終わらない戦闘を打ち切るターン数。
+const RAID_WITHOUT_MODAL_TURN_LIMIT = 30;
+
+/**
+ * 迎撃画面を開かずに、迎撃画面と同じ行動順・計算で襲撃を最後まで戦う。
+ * 戻り値は決着の種類だけで、村への反映は resolveRaidWithoutModal が行う。
+ */
+function fightRaidWithoutModal(village) {
+  const win = reason => ({ isSuccess: true, isPartSuccess: false, reason });
+  const lose = reason => ({ isSuccess: false, isPartSuccess: false, reason });
+  if (getTrapMakers(village).length === 0 && getVillageCombatants(village).length === 0) {
+    return lose("戦闘部隊0");
+  }
+
+  village.raidTurnCount = 0;
+  createRearActionQueue(village);
+  for (const action of village.raidActionQueue) {
+    doOneTrapAction(action, village);
+    village.currentActionIndex++;
+    clearPendingRaidDepartures(village);
+    if (getAliveEnemies(village).length === 0) return win("敵全滅");
+  }
+
+  village.raidTurnCount = 1;
+  while (village.raidTurnCount <= RAID_WITHOUT_MODAL_TURN_LIMIT) {
+    village.raidPhase = RAID_PHASE_COMBAT;
+    if (getAliveEnemies(village).length === 0) return win("罠作成だけで撃退");
+    if (getVillageCombatants(village).length === 0) return lose("戦闘部隊なし(行動不能)");
+    if (hasSurvivedRaidTurns(village)) return { isSuccess: true, isPartSuccess: true, reason: "敵撤退" };
+
+    village.raidActionQueue = createCombatActions(village);
+    village.currentActionIndex = 0;
+    for (const action of village.raidActionQueue) {
+      if (action.type === "COMBAT") doOneCombatAction(action, village);
+      else if (action.type === "FORTIFY_GROUP") doFortifyGroupAction(action, village);
+      else if (action.type === "WAR_LIGHT_PILLAR") doWarLightPillarAction(action, village);
+      else if (action.type === "CONQUEST_JUDGMENT_LIGHT") doConquestJudgmentLightAction(action, village);
+      village.currentActionIndex++;
+      clearPendingRaidDepartures(village);
+      if (getAliveEnemies(village).length === 0) return win("敵全滅");
+      if (getVillageCombatants(village).length === 0) return lose("戦闘部隊全滅");
+    }
+    clearAllRaidStunEffects(village);
+    village.raidTurnCount++;
+  }
+  // 迎撃画面なら撤退を選ぶ場面。
+  return lose("撤退");
+}
+
+/**
+ * 1年経過の自動進行で、迎撃画面を開かずに襲撃を解決する。
+ * 配置は呼び出し側で済ませておく。月の残り処理と翌月への進行は呼び出し側が行う。
+ */
+export function resolveRaidWithoutModal(village) {
+  const completedRaidId = village.currentRaid?.id || "";
+  liftZeroHpEnemiesAtRaidStart(village);
+  startRaidFriendshipTracking(village, {
+    participants: getTrapMakers(village).concat(getVillageCombatants(village)),
+    frontliners: getActiveRaidFrontliners(village).filter(person => person.hp > 0)
+  });
+
+  const outcome = fightRaidWithoutModal(village);
+  const turns = Math.max(0, Number(village.raidTurnCount) || 0);
+  village.log(outcome.isPartSuccess
+    ? `【襲撃結果】${getRaidSurviveTurns(village) || 5}ターン粘って敵撤退→部分的成功`
+    : `【襲撃結果】${outcome.isSuccess ? "防衛成功" : "防衛失敗"} : ${outcome.reason}`);
+
+  village.isRaidFinalizing = true;
+  village.isRaidProcessDone = true;
+  village.raidActionQueue = [];
+  village.raidPhase = "";
+  village.currentActionIndex = 0;
+  clearAllRaidStunEffects(village);
+  const { resultInfo, severeInjuryResult } = applyRaidOutcome(
+    village, outcome.isSuccess, outcome.isPartSuccess, completedRaidId, outcome.reason
+  );
+  if (!village.battleDebugMode) {
+    applyRaidSevereInjuryResult(village, severeInjuryResult);
+  }
+  village.isRaidFinalizing = false;
+  return { ...outcome, turns, resultInfo };
+}
+
+/**
+ * 襲撃の決着を村へ反映する。迎撃画面の終了時と、1年経過の画面なし解決で共通に使う。
+ * 月の残り処理と翌月への進行は含まない。
+ */
+function applyRaidOutcome(village, isSuccess, isPartSuccess, completedRaidId, resultReason = "") {
+  let idx=village.villageTraits.indexOf("襲撃中");
+  if (idx>=0) {
+    village.villageTraits.splice(idx,1);
+  }
+  // 結果モーダル用の集計。敵リストの破棄や敗北ペナルティで情報が消える前に行う。
+  const resultInfo = collectRaidResultInfo(village, isSuccess, isPartSuccess, resultReason);
+  if (isSuccess) recordRaidVictories(village);
+  if (isSuccess && !isPartSuccess) {
+    resultInfo.capturedName = tryCaptureRaidPrisoner(village)?.name || "";
+    grantSoloDefenderTitle(village);
+    grantTrapperTitles(village);
+  }
+  village.raidEnemies=[];
+  clearDefeatedRaidEnemies(village);
+
+  // 襲撃者一覧セクションを非表示に
+  const raidSection = document.getElementById("raidEnemiesSection");
+  if (raidSection) {
+    raidSection.style.display = "none";
+  }
+
+  const raidRules = getActiveRaidRules(village);
+  if (isSuccess) {
+    const happinessGain = Number(isPartSuccess
+      ? raidRules.successRewards?.partialHappiness
+      : raidRules.successRewards?.completeHappiness) || 0;
+    if (happinessGain !== 0) {
+      village.villagers.forEach(p=>{
+        if (isSaltPillar(p)) return;
+        p.happiness=clampValue(p.happiness+happinessGain,0,100);
+      });
+    }
+    const divineGain = isPartSuccess ? 1 : 5;
+    addDivineMight(village, divineGain);
+    resultInfo.happinessGain = happinessGain;
+    resultInfo.divineGain = divineGain;
+    village.log(isPartSuccess
+      ? `防衛成功(部分):村人幸福+${happinessGain},神威+${divineGain}`
+      : `防衛成功(敵全滅):村人幸福+${happinessGain},神威+${divineGain}`);
+  } else {
+    const penalty = calculateRaidFailurePenalty(village);
+
+    village.food=clampValue(village.food - penalty.foodLoss,0,99999);
+    village.materials=clampValue(village.materials - penalty.materialsLoss,0,99999);
+    village.funds=clampValue(village.funds - penalty.fundsLoss,0,99999);
+    village.mana=clampValue(village.mana - penalty.manaLoss,0,99999);
+    village.security=clampValue(village.security - penalty.securityLoss,0,100);
+
+    village.villagers.forEach(p=>{
+      if (isSaltPillar(p)) return;
+      if (penalty.hpMax > 0) {
+        p.hp=clampValue(p.hp - randInt(penalty.hpMin, penalty.hpMax),0,100);
+      }
+      if (penalty.happinessLoss !== 0) {
+        p.happiness=clampValue(p.happiness - penalty.happinessLoss,0,100);
+      }
+    });
+
+    resultInfo.penaltyLines = [
+      penalty.foodLoss > 0 ? `食料-${penalty.foodLoss}` : "",
+      penalty.materialsLoss > 0 ? `資材-${penalty.materialsLoss}` : "",
+      penalty.fundsLoss > 0 ? `資金-${penalty.fundsLoss}` : "",
+      penalty.manaLoss > 0 ? `魔素-${penalty.manaLoss}` : "",
+      penalty.securityLoss > 0 ? `治安-${penalty.securityLoss}` : "",
+      penalty.hpMax > 0 ? `村人HP-${penalty.hpMin}~${penalty.hpMax}` : "",
+      penalty.happinessLoss > 0 ? `幸福-${penalty.happinessLoss}` : "",
+      penalty.buildingDamage ? "建築損壊あり" : "",
+      penalty.goldenStatueDamage ? "バッカスの黄金像損壊" : "",
+      penalty.severeInjury ? "重体判定あり" : ""
+    ].filter(Boolean);
+    const penaltyLog = resultInfo.penaltyLines.join(",") || "追加被害なし";
+    village.log(`迎撃失敗:${penaltyLog}`);
+    if (penalty.buildingDamage) {
+      damageRandomBuilding(village);
+    }
+  }
+
+  const severeInjuryResult = rollRaidSevereInjuryCheck(village, raidRules);
+  applyHardModeAftereffects(village);
+  // 殊勲の願望と殿堂は、結果モーダルに殊勲として出る村人と同じ条件で扱う。
+  checkWishCompletion(village, { distinguishedIds: resultInfo.mvp?.ids || [] });
+  recordDistinguishedService(village, resultInfo.mvp?.ids || []);
+  applyRaidFriendshipResults(village);
+  handleApocalypseRaidResult(village, completedRaidId, isSuccess);
+  village.isRaidProcessDone=true;
+  village.currentRaid = null;
+  return { resultInfo, severeInjuryResult };
 }
 
 /** 結果モーダル用の集計。敵リスト破棄・敗北ペナルティ適用の前に呼ぶこと。 */
