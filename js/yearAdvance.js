@@ -16,6 +16,7 @@ import { autoAssignJobs, autoAssignRaidActions } from "./autoAssign.js";
 import { resolveRaidWithoutModal } from "./raid.js";
 import { clearRaidWarningModal } from "./raidWarningModal.js";
 import { showPendingDivineMightLevelUpModal } from "./divineMight.js";
+import { getRelationshipEntries } from "./relationships.js";
 
 const STOP_BODY_TRAITS = ["危篤", "飢餓", "凍え"];
 const STOP_MIND_TRAITS = ["絶望"];
@@ -197,15 +198,60 @@ function parseImportantLogs(logs, report, label) {
       report.events.push({ month: label, text: `迷い狼${match[1]}を迎え入れた` });
       return;
     }
-    const importantPrefixes = [
-      "妊娠", "出産", "誕生", "死亡", "老衰", "破局", "結婚", "恋人", "復縁",
-      "願望達成", "願望消失", "願望発生", "要望発生", "要望達成", "要望取り下げ"
-    ];
-    // 「恋人判定:対象者なし」のような判定の経過は出来事ではないため載せない。
-    if (String(log).includes("判定")) return;
+    // 人間関係は collectRelationshipChanges で関係の増減から拾う。
+    const importantPrefixes = ["妊娠", "出産", "誕生", "死亡", "老衰"];
     if (importantPrefixes.some(prefix => String(log).includes(prefix))) {
       report.events.push({ month: label, text: String(log).replace(/^【[^】]+】/, "").trim() });
     }
+  });
+}
+
+// 年次レポートに載せる人間関係。仕事仲間・戦友・趣味仲間や家族の続柄は載せない。
+const REPORTED_RELATIONSHIPS = ["恋人", "夫", "妻", "親友", "天敵", "元恋人", "かつての天敵"];
+
+/** 村人ごとに、載せる関係の相手idを「関係:相手id」の集合で持つ。 */
+function snapshotRelationships(village) {
+  const snapshot = new Map();
+  village.villagers.forEach(person => {
+    const keys = new Set();
+    getRelationshipEntries(person).forEach(entry => {
+      if (REPORTED_RELATIONSHIPS.includes(entry.prefix) && entry.targetId != null) {
+        keys.add(`${entry.prefix}:${entry.targetId}`);
+      }
+    });
+    snapshot.set(person.id, keys);
+  });
+  return snapshot;
+}
+
+function describeRelationshipChange(prefix, a, b, hadBefore) {
+  if (prefix === "恋人") return hadBefore(`元恋人:${b.id}`) ? `${a.name}と${b.name}が復縁した` : `${a.name}と${b.name}が恋人になった`;
+  if (prefix === "夫" || prefix === "妻") return `${a.name}と${b.name}が結婚した`;
+  if (prefix === "親友") return `${a.name}と${b.name}が親友になった`;
+  if (prefix === "天敵") return `${a.name}と${b.name}が天敵になった`;
+  if (prefix === "元恋人") return `${a.name}と${b.name}が破局した`;
+  return `${a.name}は${b.name}を許し、天敵ではなくなった`;
+}
+
+/** 前の月と比べて新しくできた関係を、組ごとに1件ずつ載せる。 */
+function collectRelationshipChanges(village, before, report, label) {
+  const after = snapshotRelationships(village);
+  const reported = new Set();
+  village.villagers.forEach(a => {
+    const old = before.get(a.id);
+    if (!old) return;
+    after.get(a.id).forEach(key => {
+      if (old.has(key)) return;
+      const [prefix, targetText] = key.split(":");
+      const b = village.villagers.find(person => String(person.id) === targetText);
+      if (!b) return;
+      // 互いに付く関係は片側だけ載せる。夫と妻は同じ結婚として扱う。
+      const kind = prefix === "妻" ? "夫" : prefix;
+      const pairKey = prefix === "かつての天敵" ? `${kind}:${a.id}>${b.id}` : `${kind}:${[a.id, b.id].sort().join("-")}`;
+      if (reported.has(pairKey)) return;
+      reported.add(pairKey);
+      report.events.push({ month: label, text: describeRelationshipChange(prefix, a, b, item => old.has(item)) });
+    });
   });
 }
 
@@ -346,6 +392,7 @@ export async function advanceOneYear(village) {
       autoRepairBuildings(village, report);
       applyTurnStartRestrictions(village);
       const logStart = village.logs.length;
+      const relationshipsBefore = snapshotRelationships(village);
 
       handleAllVillagerJobs(village);
       doFixedEventPost(village);
@@ -376,6 +423,7 @@ export async function advanceOneYear(village) {
       report.months++;
       const newLogs = village.logs.slice(logStart);
       parseImportantLogs(newLogs, report, monthLabel(village));
+      collectRelationshipChanges(village, relationshipsBefore, report, monthLabel(village));
       updateUI(village);
       await new Promise(resolve => setTimeout(resolve, 0));
 
