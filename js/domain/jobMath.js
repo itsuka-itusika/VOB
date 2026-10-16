@@ -180,6 +180,12 @@ export function getLaborYieldMultiplier(job, person = null, village = null) {
   if (hasBodyTrait(person, "半人半馬") && HALF_HORSE_JOBS.includes(job)) mul *= 1.2;
   if (hasMindTrait(person, "森の知恵") && job === "採集") mul *= 1.2;
   if (hasMindTrait(person, "海の知恵") && job === "漁") mul *= 1.2;
+  if (hasMindTrait(person, "本の虫") && job === "写本") mul *= 1.2;
+  if ((hasMindTrait(person, "天才肌") || hasMindTrait(person, "マッド")) && job === "研究") mul *= 1.2;
+  if ((hasMindTrait(person, "学者肌") || hasMindTrait(person, "好奇心旺盛")) && job === "研究") mul *= 1.1;
+  if ((hasMindTrait(person, "計算高い") || hasMindTrait(person, "守銭奴") || hasMindTrait(person, "抜け目がない")) && job === "行商") mul *= 1.1;
+  if (hasMindTrait(person, "職人気質") && job === "内職") mul *= 1.1;
+  if ((hasBodyTrait(person, "強面") || hasBodyTrait(person, "威圧的")) && job === "警備") mul *= 1.1;
   if (hasBodyTrait(person, SENSITIVE_FINGERS_TRAIT) && job === "内職") mul *= 1.2;
   if ((person?.hobby === "ハンティング" || person?.hobby === "狩猟" || person?.hobby === "狩り") && job === "狩猟") mul *= 1.1;
   if (person?.hobby === "釣り" && job === "漁") mul *= 1.1;
@@ -256,6 +262,7 @@ export function calculateGuardYield(person) {
   if (hasBodyTrait(person, SENSITIVE_NOSE_TRAIT)) {
     amount = Math.round(amount * 1.5);
   }
+  amount = Math.round(amount * getLaborYieldMultiplier("警備", person, null));
   return Math.max(1, amount);
 }
 
@@ -354,7 +361,7 @@ export function calculateAlchemyYield(person) {
 }
 
 export function calculateCopyBookYield(person) {
-  const amount = Math.round(20 * statProduct(person, "vit", "int"));
+  const amount = Math.round(20 * statProduct(person, "vit", "int") * getLaborYieldMultiplier("写本", person, null));
   return applyVillageRoleMultiplier(amount, person, VILLAGE_ROLE_LIBRARIAN);
 }
 

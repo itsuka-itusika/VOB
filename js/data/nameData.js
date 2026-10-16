@@ -134,6 +134,13 @@ export const WINGED_NAMES = [
 // 外から村へ来る翼人の肩書。どれも同じ WINGED_NAMES から名付ける。
 const WINGED_VISITOR_JOBS = new Set(["旅人", "翼人兵", "上位翼人"]);
 
+export const GOBLIN_SPECIAL_NAMES = [
+  "ゴブタ", "ゴブキチ", "ゴブザエモン", "ゴブゾウ", "ゴブジロウ",
+  "ゴブヘイ", "ゴブオ", "ゴーブン", "ゴブッチ", "ゴブヒコ",
+  "ゴブベエ", "ゴブザル", "ゴブノスケ", "ゴブタロウ", "ゴブスケ"
+];
+const GOBLIN_NAME_JOBS = new Set(["ゴブリン", "ゴブリンリーダー", "ゴブリン射手"]);
+
 /** 肉体性別だけで決まる、村人と同じ一般の一覧。 */
 function getGeneralNameList(sex) {
   return sex === "男" ? MALE_NAMES : FEMALE_NAMES;
@@ -141,6 +148,9 @@ function getGeneralNameList(sex) {
 
 /** 肉体性別と種族・肩書から、使う名前一覧を選ぶ。 */
 export function getNameList(sex, { race = "", job = "" } = {}) {
+  if (race === "ゴブリン" || GOBLIN_NAME_JOBS.has(job)) {
+    return [...getGeneralNameList(sex), ...GOBLIN_SPECIAL_NAMES];
+  }
   if (race === "エクイナ") return STEPPE_FEMALE_NAMES;
   if (race === "セントール" || job === "セントール" || job === "遊牧民" || job === "騎馬兵団") {
     return STEPPE_MALE_NAMES;
