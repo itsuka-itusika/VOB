@@ -350,10 +350,18 @@ function pickVisitorLine(lines) {
   return lines[Math.floor(Math.random() * lines.length)] || "";
 }
 
+// 肉体交換で別の体にいるか。種族は肉体側の値なので、その間は種族の文で話させない。
+function isInOtherBody(visitor) {
+  if (visitor?.id != null && visitor?.bodyOwnerId != null) return visitor.bodyOwnerId !== visitor.id;
+  const name = String(visitor?.name || "").trim();
+  const bodyOwner = String(visitor?.bodyOwner || "").trim();
+  return name !== "" && bodyOwner !== "" && name !== bodyOwner;
+}
+
 export function getVisitorLineKey(visitor, table) {
   if (!visitor || !table) return null;
   if (visitor.rareVisitorType && table[visitor.rareVisitorType]) return visitor.rareVisitorType;
-  if (visitor.race && visitor.race !== "人間" && table[visitor.race]) return visitor.race;
+  if (!isInOtherBody(visitor) && visitor.race && visitor.race !== "人間" && table[visitor.race]) return visitor.race;
   const match = String(visitor.name || "").match(/^(.+)の/);
   return match && table[match[1]] ? match[1] : null;
 }
@@ -649,7 +657,9 @@ export const VISITOR_GOBLIN_KIN_LINES = [
 ];
 
 export function getGoblinVillageVisitorLine(visitor) {
-  if (visitor?.race === "ゴブリン") return pickVisitorLine(VISITOR_GOBLIN_KIN_LINES);
+  // 同族かどうかは精神側で見る。ゴブリンの口調は精神に残る。
+  const isGoblinSpirit = visitor?.speechType === "ゴブリン" || (!isInOtherBody(visitor) && visitor?.race === "ゴブリン");
+  if (isGoblinSpirit) return pickVisitorLine(VISITOR_GOBLIN_KIN_LINES);
   const key = getVisitorLineKey(visitor, VISITOR_GOBLIN_VILLAGE_LINES);
   const typeLines = (key && VISITOR_GOBLIN_VILLAGE_LINES[key]) || {};
   const mindTraits = Array.isArray(visitor?.mindTraits) ? visitor.mindTraits : [];
