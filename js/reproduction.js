@@ -687,7 +687,11 @@ export function updateChildGrowthStage(child, village, { announce = false } = {}
 
   applyGrowthStats(child);
 
-  if (child.bodyAge <= 3) {
+  // 狼の体は人の子の成長段階を踏まない。人の精神が入っていても赤子・幼児などを付けず、
+  // 以前の処理で付いたものはここで外す。
+  if (child.race === "狼") {
+    child.bodyTraits = removeTraits(child.bodyTraits, CHILD_BODY_TRAITS);
+  } else if (child.bodyAge <= 3) {
     child.bodyTraits = removeTraits(child.bodyTraits, CHILD_BODY_TRAITS);
     addUnique(child.bodyTraits, "赤子");
   } else if (child.bodyAge <= 9) {
@@ -703,7 +707,10 @@ export function updateChildGrowthStage(child, village, { announce = false } = {}
 
   // 狼の精神は人の子の成長段階を踏まない。人の子の身体へ入っても、無垢・萌芽・思春期と
   // 子どもの特性を付けず、趣味も消さない。以前の処理で付いたものはここで外す。
-  if (child.speechType === "狼") {
+  // 狼の精神は潜在能力を持たないため、口調が狼でも精神側の潜在能力があれば、
+  // 狼の体にいた間に口調を書き換えられた人の精神として扱う。
+  const isWolfSpirit = child.speechType === "狼" && !mindPotential;
+  if (isWolfSpirit) {
     child.mindTraits = removeTraits(child.mindTraits, [...CHILD_MIND_TRAITS, child.childMindTrait].filter(Boolean));
   } else if (child.spiritAge <= 3) {
     child.mindTraits = removeTraits(child.mindTraits, CHILD_MIND_TRAITS);
@@ -735,8 +742,14 @@ export function updateChildGrowthStage(child, village, { announce = false } = {}
 
   // 狼・ゴブリン・ハーピーの口調は精神側に残る種族口調。子どもの身体へ入った獣を
   // 成長させても、身体側の種族から人間の口調へ書き換えない。
-  if (!isSpeciesSpeechType(child.speechType)) {
-    child.speechType = determineSpeechType(child);
+  // 口調は精神の特性と性別だけで決め、狼の体に入った人の精神を狼の口調にしない。
+  const keepsSpeciesSpeech = child.speechType === "狼" ? isWolfSpirit : isSpeciesSpeechType(child.speechType);
+  if (!keepsSpeciesSpeech) {
+    child.speechType = determineSpeechType({
+      spiritSex: child.spiritSex,
+      bodySex: child.bodySex,
+      mindTraits: child.mindTraits
+    });
   }
   syncWolfSpeciesTraits(child);
   syncEffectiveStats(child);
