@@ -6,14 +6,14 @@ export const CHAOS_ALCHEMY_KILN_FLAG = "hasChaosAlchemyKiln";
 export const CHAOS_ALCHEMY_RECIPES = [
   {
     techCost: 300,
-    treasureIds: ["annunciation_painting", "grotesque_portrait", "pan_flute", "lachesis_lot", "goblin_statue"]
+    treasureIds: ["grotesque_portrait", "pan_flute", "goblin_statue", "lachesis_lot"]
   },
   {
     techCost: 600,
-    treasureIds: ["dryad_fruit", "serpent_staff", "book_of_the_dead", "lachesis_ledger"]
+    treasureIds: ["annunciation_painting", "dryad_fruit", "serpent_staff", "lachesis_ledger"]
   },
   {
     techCost: 1000,
-    treasureIds: ["chronos_elixir", "arcadia_nectar"]
+    treasureIds: ["book_of_the_dead", "chronos_elixir", "arcadia_nectar"]
   }
 ];

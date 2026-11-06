@@ -744,7 +744,9 @@ export function updateChildGrowthStage(child, village, { announce = false } = {}
   // 成長させても、身体側の種族から人間の口調へ書き換えない。
   // 口調は精神の特性と性別だけで決め、狼の体に入った人の精神を狼の口調にしない。
   const keepsSpeciesSpeech = child.speechType === "狼" ? isWolfSpirit : isSpeciesSpeechType(child.speechType);
-  if (!keepsSpeciesSpeech) {
+  // 死者の書で大人の精神のまま転生した者は、前世の口調を保つ。
+  const keepsInheritedSpeech = child.reincarnatedFromId != null && Number(child.spiritAge) > 16;
+  if (!keepsSpeciesSpeech && !keepsInheritedSpeech) {
     child.speechType = determineSpeechType({
       spiritSex: child.spiritSex,
       bodySex: child.bodySex,
@@ -1024,9 +1026,12 @@ function giveBirth(village, mother) {
   const inheritedName = data.reincarnation?.name && !getChildNameError(data.reincarnation.name, village)
     ? data.reincarnation.name
     : "";
+  const childLine = data.reincarnation
+    ? getDialogueLine({ character: child, scene: "reincarnation", key: "birth" })
+    : "";
   showBirthModal(village, mother, getBirthSpouse(mother, data, village), child, childName => {
     finalizeBirth(village, mother, data, child, childName);
-  }, { inheritedName });
+  }, { inheritedName, childLine });
 }
 
 /** 赤子を名前なしで生成する。名前と bodyOwner は命名確定時に入れる。 */
@@ -1038,12 +1043,7 @@ function createNewbornChild(village, data) {
   child.potentialStats = { ...data.potentialStats };
   child.bodyPotentialStats = { ...data.potentialStats };
   child.mindPotentialStats = { ...data.potentialStats };
-  // 死者の書: 精神の伸びしろは故人の精神ステータス、成人後の精神特性は故人のものにする。
   const reincarnation = data.reincarnation || null;
-  if (reincarnation) {
-    child.mindPotentialStats = { ...child.mindPotentialStats, ...reincarnation.mentalStats };
-    child.reincarnatedFromId = reincarnation.departedId;
-  }
   Object.assign(child, child.potentialStats);
   setBaseStatsFromEffective(child);
   child.bodyTraits = ["赤子"];
@@ -1058,11 +1058,39 @@ function createNewbornChild(village, data) {
 
   const adult = buildAdultTemplate(child, child.potentialStats);
   child.adultBodyTraits = adult.bodyTraits;
-  child.adultMindTraits = reincarnation ? [...reincarnation.mindTraits] : adult.mindTraits;
+  child.adultMindTraits = adult.mindTraits;
   child.adultHobby = adult.hobby;
   child.adultPortraitFile = adult.portraitFile;
+  // 死者の書: 意識を保ったまま転生した精神を、生まれた身体へ宿す。
+  if (reincarnation) applyReincarnatedSpirit(child, reincarnation);
   updateChildGrowthStage(child, village);
   return child;
+}
+
+/**
+ * 死者の書で宿った精神を赤子へ写す。精神性別・精神年齢・口調・精神ステータス・精神特性・趣味は故人のまま。
+ * 育ち切っていない子どもの精神だけが伸びしろを持ち、それ以外は生まれた時点で完成した値になる。
+ */
+function applyReincarnatedSpirit(child, reincarnation) {
+  child.reincarnatedFromId = reincarnation.departedId;
+  // 旧形式の予約（精神年齢を持たない）は、成人した精神として扱う。
+  child.spiritAge = Number(reincarnation.spiritAge ?? 16) || 0;
+  child.spiritSex = reincarnation.spiritSex || child.spiritSex;
+  child.hobby = reincarnation.hobby || "";
+  child.mindTraits = [...(reincarnation.mindTraits || [])];
+  child.childMindTrait = reincarnation.childMindTrait || "";
+  child.adultMindTraits = [...(reincarnation.adultMindTraits || [])];
+  child.adultHobby = reincarnation.adultHobby || "";
+  child.adultMindReached = !!reincarnation.adultMindReached;
+  child.mindPotentialStats = reincarnation.mindPotentialStats ? { ...reincarnation.mindPotentialStats } : null;
+  const base = reincarnation.mentalBase || reincarnation.mentalStats || {};
+  const acquired = reincarnation.mentalAcquired || {};
+  MENTAL_STATS.forEach(stat => {
+    setBaseStat(child, stat, Number(base[stat]) || 0, { sync: false });
+    child.acquiredStatMods[stat] = Number(acquired[stat]) || 0;
+  });
+  child.speechType = reincarnation.speechType || determineSpeechType(child);
+  syncEffectiveStats(child);
 }
 
 /** 命名確定後の出産処理。ここで初めて子が村へ加わる。 */
@@ -1106,7 +1134,9 @@ function finalizeBirth(village, mother, data, child, childName) {
   });
   village.log(`${mother.name}が${child.name}を出産しました。人口上限+1`);
   if (data.reincarnation) {
-    village.log(`${child.name}は${data.reincarnation.name}の魂を受け継いで生まれました`);
+    // 生後1年の専用会話のため、転生して生まれた月を残す。
+    child.reincarnatedAt = (Number(village.year) || 0) * 12 + (Number(village.month) || 1) - 1;
+    village.log(`${child.name}は${data.reincarnation.name}の意識を保ったまま生まれました`);
   }
 }
 
@@ -1289,7 +1319,7 @@ function getChildNameError(name, village) {
   return "";
 }
 
-function showBirthModal(village, mother, father, child, onNamed, { inheritedName = "" } = {}) {
+function showBirthModal(village, mother, father, child, onNamed, { inheritedName = "", childLine = "" } = {}) {
   enqueueReproductionModal(onClosed => {
     const overlay = document.createElement("div");
     overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;";
@@ -1300,7 +1330,7 @@ function showBirthModal(village, mother, father, child, onNamed, { inheritedName
       <p>${mother.name}が${child.bodySex === "男" ? "男児" : "女児"}を産みました。${isCaptive(mother, village) ? "子は村で育てられることになりました。" : ""}</p>
       ${renderPortraitLine(mother, getBirthLine(mother, "母"))}
       ${father ? renderPortraitLine(father, getBirthLine(father, "父")) : ""}
-      ${renderPortraitLine(child, "……すやすや眠っている。", getUnnamedChildLabel(child))}
+      ${renderPortraitLine(child, childLine || "……すやすや眠っている。", getUnnamedChildLabel(child))}
       ${inheritedName ? `
       <div data-birth-inherit>
         <p>この子は前世の名「${inheritedName}」を受け継いでいます。</p>

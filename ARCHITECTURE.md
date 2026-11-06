@@ -84,7 +84,9 @@
 - `js/lachesisTreasures.js`
   - 秘宝「ラケシスの台帳」（登録）と「ラケシスの神籤」（呼び出し）の処理と選択画面、開始画面の「はじめから（転生）」の選択画面を扱う。
 - `js/bookOfTheDead.js`
-  - 秘宝「死者の書」。過去帳を模した故人の一覧から選び、母体の `pregnancy.reincarnation` に故人の名前・精神ステータス（基礎値と獲得値）・受け継ぐ精神特性を記す。出産時に `js/reproduction.js` が子の `mindPotentialStats` と `adultMindTraits` へ反映し、子に `reincarnatedFromId` を残す。転生済みの判定はこの値と、待機中の `pregnancy.reincarnation` で行う。
+  - 秘宝「死者の書」。過去帳を模した故人の一覧から選び、母体の `pregnancy.reincarnation` に故人の精神側の持ち物（名前・精神性別・精神年齢・口調・精神ステータスの基礎値と獲得値・精神の伸びしろ・精神特性・趣味など）を記す。出産時に `js/reproduction.js` の `applyReincarnatedSpirit` が赤子へ写し、子に `reincarnatedFromId` と生まれた月 `reincarnatedAt` を残す。大人の精神は伸びしろを持たないため、精神ステータスは生まれた時点で完成した値のまま変わらない。成長処理は、精神年齢が16を超えて転生した者の口調を書き換えない。転生済みの判定は `reincarnatedFromId` と、待機中の `pregnancy.reincarnation` で行う。生後1年の会話は `js/dialogue/dialogueEngine.js` の `getReincarnationTalkKey` が、前世の身体（過去帳の記録）と今の身体の性別・種族を比べて場面を選ぶ。
+- `js/personStatusDetail.js`
+  - 神籤と死者の書の選択画面から開く、村の外の人物（帳簿の記録・過去帳の故人）の詳細ステータス画面。
 - `js/chaosAlchemy.js`
   - 混沌錬金窯の「錬金」画面。技術を消費して秘宝を錬成する。錬成できる秘宝と消費技術は `js/data/chaosAlchemyData.js` に置く。メニューの「錬金」ボタンは窯が有効な間だけ `updateUI` が表示する。
 - `js/secretTreasureEvents.js`
@@ -207,7 +209,7 @@
 
 「はじめから（転生）」では、`js/app.js` の `prepareNewGame` が初期村人のうち選んだ人数分を帳簿の村人へ置き換え、村設立の同志の関係と好感度を結び直してから開村の村史を記録します。
 
-村の識別子は `villageUid` に、帳簿の村人の印は人物ごとの `lachesisId` に、神籤で呼んだ旅人の印は `lachesisSummoned` に、死者の書で生まれた子の故人IDは `reincarnatedFromId` に保存します。`villageUid` を持たない既存セーブデータは読込時に新しい識別子を付け、ほかの項目は未設定として読み込みます。
+村の識別子は `villageUid` に、帳簿の村人の印は人物ごとの `lachesisId` に、神籤で呼んだ旅人の印は `lachesisSummoned` に、死者の書で生まれた子の故人IDは `reincarnatedFromId`、生まれた月は `reincarnatedAt` に保存します。`villageUid` を持たない既存セーブデータは読込時に新しい識別子を付け、ほかの項目は未設定として読み込みます。
 
 自動割り振り詳細設定は `autoAssignSettings` に保存します。段階ごとの倍率・区切りと、行ごとの手動フラグを持ち、読込時に正規化して範囲外の値や昇順でない区切りを整えます。これを持たない既存セーブデータは、既定値として読み込みます。
 

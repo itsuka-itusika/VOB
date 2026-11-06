@@ -28,6 +28,7 @@
 - `captiveLines.js`: 収監中の様子、懐柔・誘惑での加入時、解放時、加入後3ヶ月の会話。
 - `slaveTradeLines.js`: 奴隷商人に連れられた奴隷の来訪時・通常会話、解放奴隷の通常会話、買い取り・勧誘や誘惑での加入時のセリフと、奴隷商人の売り渡し後・交換後の会話。奴隷商人の通常会話・来訪時・加入時は `visitorLines.js` の「奴隷商人」、奴隷と奴隷商人の交換時の反応は `exchangeLines.js` に置く。
 - `randomEventLines.js`: ランダムイベント用の口調別セリフ。
+- `reincarnationLines.js`: 死者の書で意識を保ったまま転生した赤子の、出産時の第一声（`birth`）と生後1年の会話（前世と比べた今の身体で `sameBody` / `sexChanged` / `raceChanged` / `bothChanged`）。口調は転生元のもの。種族名は文脈 `race`、今の身体の性別は `bodySex` で文に入れ、種族ごとの身体の特徴には触れない。
 - `lachesisLines.js`: ラケシスの帳簿から来た旅人（神籤での呼び出し・別の村への来訪）の第一声と通常会話（`visitor`）、ラケシスの台帳で帳簿に記された村人の反応（`register`）。肉体交換で別の身体にいることがあるため、身体を前提にした描写は入れない。
 - `toneProfiles.js`: 口調キー、alias、fallback、口調解決。
 

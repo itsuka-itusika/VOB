@@ -18,6 +18,7 @@ import { REPRODUCTION_LINES } from "../data/dialogue/reproductionLines.js";
 import { EXCHANGE_SITUATION_LINES } from "../data/dialogue/exchangeSituationLines.js";
 import { SECRET_TREASURE_LINES } from "../data/dialogue/secretTreasureLines.js";
 import { LACHESIS_LINES } from "../data/dialogue/lachesisLines.js";
+import { REINCARNATION_LINES } from "../data/dialogue/reincarnationLines.js";
 import { MIRACLE_RESULT_LINES, THUNDERBOLT_RAIDER_LINES } from "../data/dialogue/miracleLines.js";
 import { TUTORIAL_LINES } from "../data/dialogue/tutorialLines.js";
 import {
@@ -353,6 +354,13 @@ export function getDialogueLines({ character, scene, key, context = {} }) {
       return selectToneLines(SECRET_TREASURE_LINES[key], character, context);
     case "lachesis":
       return selectToneLines(LACHESIS_LINES[key], character, context);
+    case "reincarnation":
+      // 文に入れる今の身体の種族と性別は、話す本人から取る。
+      return selectToneLines(REINCARNATION_LINES[key], character, {
+        ...context,
+        race: character?.race || "人間",
+        bodySex: character?.bodySex === "女" ? "女" : "男"
+      });
     case "miracle":
       return getMiracleLines(character, key, context);
     case "tutorial":
@@ -495,6 +503,25 @@ export function getExchangeSituationKey(character, village) {
   return hasRecentBodyExchange(character, village) ? "discomfort" : "";
 }
 
+// 死者の書で転生した者が、生まれてから1年の間に話す会話の場面。前世と比べた今の身体の違いで分ける。
+const REINCARNATION_TALK_MONTHS = 12;
+
+export function getReincarnationTalkKey(character, village) {
+  if (character?.reincarnatedFromId == null || character?.reincarnatedAt == null) return "";
+  const currentMonth = getAbsoluteMonth(village?.year, village?.month);
+  if (currentMonth === null) return "";
+  const elapsedMonths = currentMonth - Number(character.reincarnatedAt);
+  if (!(elapsedMonths >= 0 && elapsedMonths < REINCARNATION_TALK_MONTHS)) return "";
+  const departed = Array.isArray(village?.departedVillagers) ? village.departedVillagers : [];
+  const previous = departed.find(person => person?.id === character.reincarnatedFromId);
+  const raceChanged = !!previous && (previous.race || "人間") !== (character.race || "人間");
+  const sexChanged = (character.spiritSex || character.bodySex) !== character.bodySex;
+  if (raceChanged && sexChanged) return "bothChanged";
+  if (raceChanged) return "raceChanged";
+  if (sexChanged) return "sexChanged";
+  return "sameBody";
+}
+
 // 元捕虜が加入してから3ヶ月以内かを、加入月の記録から判定する。
 export function getFormerCaptiveKey(character, village) {
   const joinMonth = getAbsoluteMonth(character?.formerCaptiveJoinYear, character?.formerCaptiveJoinMonth);
@@ -571,6 +598,16 @@ export function collectConversationCandidates({ character, village, context = {}
       scene: "formerCaptive",
       key: formerCaptiveKey,
       priority: CONVERSATION_PRIORITY.NORMAL
+    }, sharedContext);
+  }
+
+  // 転生して1年の間は、新しい身体への戸惑いを他の雑談より優先して話す。
+  const reincarnationTalkKey = getReincarnationTalkKey(character, village);
+  if (reincarnationTalkKey) {
+    addCandidate(candidates, character, {
+      scene: "reincarnation",
+      key: reincarnationTalkKey,
+      priority: CONVERSATION_PRIORITY.SEVERE
     }, sharedContext);
   }
 

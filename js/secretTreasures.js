@@ -173,14 +173,16 @@ function applyGoblinStatue(village) {
   );
 }
 
-/** アルカディアの神酒: 村特性「加護」を6か月付与する。 */
+const ARCADIA_NECTAR_PROTECTION_MONTHS = 12;
+
+/** アルカディアの神酒: 村特性「加護」を1年付与する。 */
 function applyArcadiaNectar(village) {
-  const canceledRaid = grantBacchusProtection(village);
-  village.log(`【秘宝】アルカディアの神酒を使いました。村特性「加護」を6か月付与${canceledRaid ? "、襲撃予約を解除" : ""}`);
+  const canceledRaid = grantBacchusProtection(village, ARCADIA_NECTAR_PROTECTION_MONTHS);
+  village.log(`【秘宝】アルカディアの神酒を使いました。村特性「加護」を${ARCADIA_NECTAR_PROTECTION_MONTHS}か月付与${canceledRaid ? "、襲撃予約を解除" : ""}`);
   showSecretTreasureResult(
     village,
     "アルカディアの神酒",
-    `楽園の神酒の香りが村を包み、バッカスの加護が降りました。6か月の間、通常の襲撃は起こりません。${canceledRaid ? "予約されていた襲撃は消え去りました。" : ""}`,
+    `楽園の神酒の香りが村を包み、バッカスの加護が降りました。1年の間、通常の襲撃は起こりません。${canceledRaid ? "予約されていた襲撃は消え去りました。" : ""}`,
     getVillagers(village)
   );
 }
@@ -662,7 +664,7 @@ export const SECRET_TREASURES = [
   {
     id: ARCADIA_NECTAR_SECRET_TREASURE_ID,
     name: "アルカディアの神酒",
-    desc: "村特性「加護」を6か月付与する。加護の間は通常襲撃が起こらず、予約済みの通常襲撃も取り消される。",
+    desc: "村特性「加護」を1年（12か月）付与する。加護の間は通常襲撃が起こらず、予約済みの通常襲撃も取り消される。",
     sellPrice: SECRET_TREASURE_SELL_PRICES[ARCADIA_NECTAR_SECRET_TREASURE_ID],
     use: applyArcadiaNectar
   }

@@ -22,17 +22,17 @@ export function advanceBacchusProtectionMonth(village) {
 }
 
 /**
- * 村特性「加護」を6か月付与し、予約済みの通常襲撃を取り消す。切なる祈りとアルカディアの神酒で共有する。
+ * 村特性「加護」を付与し、予約済みの通常襲撃を取り消す。切なる祈り（6か月）とアルカディアの神酒（12か月）で共有する。
  * @returns {boolean} 予約済みの襲撃を取り消したか
  */
-export function grantBacchusProtection(village) {
+export function grantBacchusProtection(village, months = BACCHUS_PROTECTION_MONTHS) {
   const canceledRaid = !!village.pendingRaid;
   village.pendingRaid = null;
   village.villageTraits = Array.isArray(village.villageTraits) ? village.villageTraits : [];
   if (!village.villageTraits.includes(BACCHUS_PROTECTION_TRAIT)) {
     village.villageTraits.push(BACCHUS_PROTECTION_TRAIT);
   }
-  village.bacchusProtectionMonths = BACCHUS_PROTECTION_MONTHS;
+  village.bacchusProtectionMonths = months;
   return canceledRaid;
 }
 

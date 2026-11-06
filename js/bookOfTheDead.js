@@ -1,19 +1,21 @@
 // bookOfTheDead.js
 // 秘宝「死者の書」。妊娠・臨月の村人のお腹の子へ、過去帳に記された故人の魂を宿らせる。
-// 子は生まれる時に、故人の名前・精神ステータス・精神特性を受け継ぐ（reproduction.js の出産処理で反映）。
-// 顔・性別・身体特性・身体ステータスは、本来の赤子のまま。
+// 故人は意識を保ったまま転生する。子は生まれた時から、故人の名前・精神性別・精神年齢・口調・
+// 精神ステータス・精神特性・趣味を持つ（reproduction.js の出産処理で反映）。
+// 顔・肉体の性別・身体特性・身体ステータスは、本来の赤子のまま。
 
 import { formatDepartureSentence } from "./history.js";
 import { getPortraitSpriteHtml } from "./data/portraitAtlas.js";
 import { showMiracleResultModal } from "./miracles.js";
 import { getVillagersIncludingSaltPillar } from "./domain/apocalypseRules.js";
 import { updateUI } from "./ui.js";
+import { openPersonStatusDetailModal } from "./personStatusDetail.js";
 
 const OVERLAY_ID = "bookOfTheDeadOverlay";
 const MODAL_ID = "bookOfTheDeadModal";
 const MENTAL_STATS = ["int", "ind", "eth", "cou", "sexdr"];
 
-// 来世へ持ち越さない精神特性。発達段階、一時的な状態、村での立場を表すもの。
+// 来世へ持ち越さない精神特性。発達段階（精神年齢から成長処理が付け直す）、一時的な状態、村での立場を表すもの。
 const NON_INHERITED_MIND_TRAITS = new Set([
   "無垢", "萌芽", "思春期", "未成熟",
   "心労", "抑鬱", "失望", "絶望", "狂乱",
@@ -60,21 +62,36 @@ export function getReincarnationCandidates(village) {
   return departed.filter(person => !isDepartedReincarnated(village, person.id));
 }
 
-function getMentalStat(departed, stat) {
-  const base = Number(departed?.baseStats?.[stat]);
-  if (Number.isFinite(base)) return base + (Number(departed?.acquiredStatMods?.[stat]) || 0);
-  return Number(departed?.[stat]) || 0;
+function pickMentalStats(source, fallback = null) {
+  return Object.fromEntries(MENTAL_STATS.map(stat => {
+    const value = Number(source?.[stat]);
+    return [stat, Number.isFinite(value) ? value : (Number(fallback?.[stat]) || 0)];
+  }));
 }
 
-/** お腹の子へ渡す前世の記録。精神ステータスは特性補正を除いた素の値で持つ。 */
+/**
+ * お腹の子へ渡す前世の精神。精神ステータスは特性補正を除いた基礎値と獲得値で持ち、
+ * 生まれた時点で完成した値として使う。まだ育ち切っていない子どもの精神なら、伸びしろも引き継ぐ。
+ */
 function buildReincarnation(departed) {
-  const childMindTrait = departed.childMindTrait || "";
+  const mindPotential = departed.mindPotentialStats !== undefined ? departed.mindPotentialStats : departed.potentialStats;
   return {
     departedId: departed.id,
     name: departed.name,
-    mentalStats: Object.fromEntries(MENTAL_STATS.map(stat => [stat, getMentalStat(departed, stat)])),
+    previousRace: departed.race || "人間",
+    spiritAge: Number(departed.spiritAge) || 0,
+    spiritSex: departed.spiritSex || departed.bodySex || "男",
+    speechType: departed.speechType || "",
+    hobby: departed.hobby || "",
+    mentalBase: pickMentalStats(departed.baseStats, departed),
+    mentalAcquired: pickMentalStats(departed.acquiredStatMods),
+    mindPotentialStats: mindPotential ? pickMentalStats(mindPotential) : null,
     mindTraits: (Array.isArray(departed.mindTraits) ? departed.mindTraits : [])
-      .filter(trait => !NON_INHERITED_MIND_TRAITS.has(trait) && trait !== childMindTrait)
+      .filter(trait => !NON_INHERITED_MIND_TRAITS.has(trait)),
+    childMindTrait: departed.childMindTrait || "",
+    adultMindTraits: Array.isArray(departed.adultMindTraits) ? [...departed.adultMindTraits] : [],
+    adultHobby: departed.adultHobby || "",
+    adultMindReached: !!departed.adultMindReached
   };
 }
 
@@ -89,7 +106,7 @@ function applyReincarnation(village, mother, departed) {
   showMiracleResultModal(
     village,
     "死者の書",
-    `死者の書の頁がひとりでにめくれ、${departed.name}の名が光りました。${mother.name}のお腹の子は、${departed.name}の名と心を受け継いで生まれてきます。`,
+    `死者の書の頁がひとりでにめくれ、${departed.name}の名が光りました。${mother.name}のお腹の子は、${departed.name}の意識を保ったまま生まれてきます。`,
     [mother],
     { dialogue: { scene: "secretTreasure", key: "bookOfTheDead", context: { departedName: departed.name } } }
   );
@@ -113,7 +130,10 @@ export function openBookOfTheDeadModal(village, mother, { onChosen = null } = {}
         </td>
         <td>${escapeHtml(formatDepartureSentence(person.departure))}</td>
         <td>
-          <button type="button" data-reincarnate="${index}" ${taken ? "disabled" : ""}>転生させる</button>
+          <div class="fate-picker-actions">
+            <button type="button" data-book-detail="${index}">詳細</button>
+            <button type="button" data-reincarnate="${index}" ${taken ? "disabled" : ""}>転生させる</button>
+          </div>
           ${taken ? `<div class="fate-picker-note">転生済み</div>` : ""}
         </td>
       </tr>
@@ -130,7 +150,7 @@ export function openBookOfTheDeadModal(village, mother, { onChosen = null } = {}
   modal.setAttribute("aria-modal", "true");
   modal.innerHTML = `
     <div class="modal-header">死者の書</div>
-    <p class="fate-picker-lead">${escapeHtml(mother.name)}のお腹の子に宿す魂を選びます。子は名前・精神ステータス・精神特性を受け継ぎ、顔・性別・身体は本来の赤子のまま生まれます。</p>
+    <p class="fate-picker-lead">${escapeHtml(mother.name)}のお腹の子に宿す魂を選びます。選んだ者は意識を保ったまま転生し、名前・精神性別・精神年齢・口調・精神ステータス・精神特性・趣味を受け継ぎます。顔・肉体の性別・身体は本来の赤子のまま生まれます。</p>
     <div class="friendship-detail-content">
       <table class="friendship-detail-table fate-picker-table">
         <colgroup>
@@ -153,6 +173,12 @@ export function openBookOfTheDeadModal(village, mother, { onChosen = null } = {}
   document.body.appendChild(overlay);
   document.body.appendChild(modal);
 
+  modal.querySelectorAll("[data-book-detail]").forEach(button => {
+    button.addEventListener("click", () => {
+      const person = departed[Number(button.dataset.bookDetail)];
+      if (person) openPersonStatusDetailModal(person);
+    });
+  });
   modal.querySelectorAll("[data-reincarnate]").forEach(button => {
     button.addEventListener("click", () => {
       const person = departed[Number(button.dataset.reincarnate)];

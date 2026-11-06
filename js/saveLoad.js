@@ -441,7 +441,8 @@ export function convertVillagerToObject(vill) {
     adultModalShown: !!vill.adultModalShown,
     ...(vill.lachesisId ? { lachesisId: String(vill.lachesisId) } : {}),
     ...(vill.lachesisSummoned ? { lachesisSummoned: true } : {}),
-    ...(normalizePersonId(vill.reincarnatedFromId) != null ? { reincarnatedFromId: normalizePersonId(vill.reincarnatedFromId) } : {})
+    ...(normalizePersonId(vill.reincarnatedFromId) != null ? { reincarnatedFromId: normalizePersonId(vill.reincarnatedFromId) } : {}),
+    ...(Number.isFinite(Number(vill.reincarnatedAt)) && vill.reincarnatedAt !== null ? { reincarnatedAt: Number(vill.reincarnatedAt) } : {})
   };
 }
 
@@ -834,6 +835,7 @@ export function convertObjectToVillager(obj) {
   vill.lachesisId = String(obj.lachesisId || "");
   vill.lachesisSummoned = !!obj.lachesisSummoned;
   vill.reincarnatedFromId = normalizePersonId(obj.reincarnatedFromId);
+  vill.reincarnatedAt = Number.isFinite(Number(obj.reincarnatedAt)) && obj.reincarnatedAt !== null ? Number(obj.reincarnatedAt) : null;
   if (["翼人兵", "黙示録の騎士・支配"].includes(vill.raiderType)) {
     vill.raidAttackType = "rangedMagic";
   }

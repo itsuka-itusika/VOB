@@ -11,6 +11,7 @@ import {
 import { getPortraitSpriteHtml } from "./data/portraitAtlas.js";
 import { showMiracleResultModal } from "./miracles.js";
 import { updateUI } from "./ui.js";
+import { openPersonStatusDetailModal } from "./personStatusDetail.js";
 
 const LOT_OVERLAY_ID = "lachesisLotOverlay";
 const LOT_MODAL_ID = "lachesisLotModal";
@@ -91,7 +92,10 @@ export function openLachesisLotModal(village, { onSummoned = null } = {}) {
         </td>
         <td>${describeEntry(entry, village)}</td>
         <td>
-          <button type="button" data-summon-lachesis="${index}" ${reason ? "disabled" : ""}>呼び出す</button>
+          <div class="fate-picker-actions">
+            <button type="button" data-lachesis-detail="${index}">詳細</button>
+            <button type="button" data-summon-lachesis="${index}" ${reason ? "disabled" : ""}>呼び出す</button>
+          </div>
           ${reason ? `<div class="fate-picker-note">${escapeHtml(reason)}</div>` : ""}
         </td>
       </tr>
@@ -131,6 +135,12 @@ export function openLachesisLotModal(village, { onSummoned = null } = {}) {
   document.body.appendChild(overlay);
   document.body.appendChild(modal);
 
+  modal.querySelectorAll("[data-lachesis-detail]").forEach(button => {
+    button.addEventListener("click", () => {
+      const entry = entries[Number(button.dataset.lachesisDetail)];
+      if (entry) openPersonStatusDetailModal(entry.person, { name: entry.name });
+    });
+  });
   modal.querySelectorAll("[data-summon-lachesis]").forEach(button => {
     button.addEventListener("click", () => {
       const entry = entries[Number(button.dataset.summonLachesis)];

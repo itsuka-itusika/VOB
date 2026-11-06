@@ -2554,11 +2554,88 @@ button.family-tree-card:focus {
   width: 36%;
 }
 .fate-picker-col-action {
-  width: 104px;
+  width: 132px;
 }
 .fate-picker-note {
   color: #73654b;
   font-size: 0.82rem;
+}
+.fate-picker-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
+}
+/* 選択画面の上に重ねる詳細ステータス */
+.status-detail-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 1300;
+}
+.status-detail-modal {
+  width: min(560px, calc(100vw - 32px));
+  z-index: 1301;
+}
+.status-detail-body {
+  overflow: auto;
+}
+.status-detail-head {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+.status-detail-head .portrait-sprite {
+  flex: none;
+  border: 1px solid #bda978;
+  background-color: #f0f0f0;
+}
+.status-detail-head h3 {
+  margin: 0 0 6px;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+}
+.status-detail-profile,
+.status-detail-traits {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 0;
+  font-size: 0.92rem;
+}
+.status-detail-profile dt,
+.status-detail-traits dt {
+  color: #73654b;
+}
+.status-detail-profile dd,
+.status-detail-traits dd {
+  margin: 0;
+}
+.status-detail-stats {
+  width: 100%;
+  margin-bottom: 10px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  text-align: center;
+  font-size: 0.92rem;
+}
+.status-detail-stats caption {
+  text-align: left;
+  color: #73654b;
+  font-weight: bold;
+  padding-bottom: 2px;
+}
+.status-detail-stats th,
+.status-detail-stats td {
+  padding: 4px;
+  border: 1px solid #e0d1ad;
+}
+.status-detail-stats th {
+  background: #ead9b8;
+  font-weight: normal;
+}
+.status-detail-stats td {
+  background: #fbf6ea;
 }
 .secret-treasure-target-label {
   display: grid;

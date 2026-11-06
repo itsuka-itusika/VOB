@@ -254,6 +254,7 @@ export class Villager {
     this.lachesisId = "";
     this.lachesisSummoned = false;
     this.reincarnatedFromId = null;
+    this.reincarnatedAt = null;
   }
 
   setPortrait(portraitFile) {
