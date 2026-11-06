@@ -701,7 +701,11 @@ export function updateChildGrowthStage(child, village, { announce = false } = {}
     child.bodyTraits = [...new Set([...(child.adultBodyTraits || []), ...currentBodyTraits])];
   }
 
-  if (child.spiritAge <= 3) {
+  // 狼の精神は人の子の成長段階を踏まない。人の子の身体へ入っても、無垢・萌芽・思春期と
+  // 子どもの特性を付けず、趣味も消さない。以前の処理で付いたものはここで外す。
+  if (child.speechType === "狼") {
+    child.mindTraits = removeTraits(child.mindTraits, [...CHILD_MIND_TRAITS, child.childMindTrait].filter(Boolean));
+  } else if (child.spiritAge <= 3) {
     child.mindTraits = removeTraits(child.mindTraits, CHILD_MIND_TRAITS);
     addUnique(child.mindTraits, "無垢");
     child.hobby = "";
