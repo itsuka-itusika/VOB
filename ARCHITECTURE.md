@@ -82,7 +82,7 @@
 - `js/lachesisLedger.js`
   - ラケシスの帳簿。登録した村人をセーブデータの外（localStorage の `vobLachesisLedger`）に `convertVillagerToObject` の形で保存し、帳簿の村人を訪問者や初期村人として作り直す。作り直す時は人物IDを採番し直し、関係・好感度・役職・妊娠と一時的な状態を落とす。村の識別子 `villageUid` で登録した村を見分け、別の村にだけ自然来訪（訪問者が来る時の5%）させる。同じ村人の在村判定は人物の `lachesisId` で行う。
 - `js/lachesisTreasures.js`
-  - 秘宝「ラケシスの台帳」（登録）と「ラケシスの神籤」（呼び出し）の処理と選択画面、開始画面の「はじめから（転生）」の選択画面を扱う。
+  - 秘宝「ラケシスの糸車」（登録。使ってもなくならない）と「ラケシスの神籤」（呼び出し）の処理と選択画面、開始画面の「はじめから（転生）」の選択画面を扱う。糸車の秘宝IDは、旧名「ラケシスの台帳」の頃の保存データを読めるよう `lachesis_ledger` のまま使う。
 - `js/bookOfTheDead.js`
   - 秘宝「死者の書」。過去帳を模した故人の一覧から選び、母体の `pregnancy.reincarnation` に故人の精神側の持ち物（名前・精神性別・精神年齢・口調・精神ステータスの基礎値と獲得値・精神の伸びしろ・精神特性・趣味など）を記す。出産時に `js/reproduction.js` の `applyReincarnatedSpirit` が赤子へ写し、子に `reincarnatedFromId` と生まれた月 `reincarnatedAt` を残す。大人の精神は伸びしろを持たないため、精神ステータスは生まれた時点で完成した値のまま変わらない。成長処理は、精神年齢が16を超えて転生した者の口調を書き換えない。転生済みの判定は `reincarnatedFromId` と、待機中の `pregnancy.reincarnation` で行う。生後1年の会話は `js/dialogue/dialogueEngine.js` の `getReincarnationTalkKey` が、前世の身体（過去帳の記録）と今の身体の性別・種族を比べて場面を選ぶ。
 - `js/personStatusDetail.js`

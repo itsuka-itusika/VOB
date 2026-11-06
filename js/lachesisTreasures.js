@@ -1,5 +1,5 @@
 // lachesisTreasures.js
-// 秘宝「ラケシスの台帳」（帳簿への登録）と「ラケシスの神籤」（帳簿の村人の呼び出し）の処理と画面。
+// 秘宝「ラケシスの糸車」（帳簿への登録）と「ラケシスの神籤」（帳簿の村人の呼び出し）の処理と画面。
 // 帳簿そのものの保存と人物の作り直しは lachesisLedger.js が受け持つ。
 
 import {
@@ -26,7 +26,7 @@ function escapeHtml(value) {
   }[char]));
 }
 
-/** ラケシスの台帳: 村人を帳簿へ登録する。保存できなければ秘宝を残す。 */
+/** ラケシスの糸車: 村人を帳簿へ登録する。糸車は使ってもなくならない。 */
 export function applyLachesisLedger(village, target) {
   const { overwritten, saved } = registerToLachesisLedger(village, target);
   if (!saved) {
@@ -34,13 +34,13 @@ export function applyLachesisLedger(village, target) {
     window.alert("ラケシスの帳簿へ書き込めませんでした。ブラウザの保存領域を確認してください。");
     return false;
   }
-  village.log(`【秘宝】ラケシスの台帳により、${target.name}をラケシスの帳簿に${overwritten ? "記し直しました" : "記しました"}`);
+  village.log(`【秘宝】ラケシスの糸車により、${target.name}をラケシスの帳簿に${overwritten ? "記し直しました" : "記しました"}`);
   showMiracleResultModal(
     village,
-    "ラケシスの台帳",
+    "ラケシスの糸車",
     overwritten
-      ? `運命の女神の帳面に、${target.name}の今の姿が記し直されました。`
-      : `運命の女神の帳面に、${target.name}の名が記されました。いつか別の村で、この糸が手繰られるかもしれません。`,
+      ? `ラケシスの糸車が回り、${target.name}の今の姿が運命の帳簿に紡ぎ直されました。`
+      : `ラケシスの糸車が回り、${target.name}の運命の糸が帳簿に紡ぎ込まれました。いつか別の村で、この糸が手繰られるかもしれません。`,
     [target]
   );
   return true;

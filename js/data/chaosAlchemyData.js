@@ -5,15 +5,16 @@ export const CHAOS_ALCHEMY_KILN_FLAG = "hasChaosAlchemyKiln";
 
 export const CHAOS_ALCHEMY_RECIPES = [
   {
-    techCost: 300,
+    techCost: 400,
     treasureIds: ["grotesque_portrait", "pan_flute", "goblin_statue", "lachesis_lot"]
   },
   {
-    techCost: 600,
-    treasureIds: ["annunciation_painting", "dryad_fruit", "serpent_staff", "lachesis_ledger"]
+    techCost: 800,
+    treasureIds: ["annunciation_painting", "dryad_fruit", "serpent_staff", "book_of_the_dead"]
   },
   {
-    techCost: 1000,
-    treasureIds: ["book_of_the_dead", "chronos_elixir", "arcadia_nectar"]
+    techCost: 1200,
+    // lachesis_ledger はラケシスの糸車（旧名ラケシスの台帳）。
+    treasureIds: ["chronos_elixir", "arcadia_nectar", "lachesis_ledger"]
   }
 ];

@@ -62,7 +62,7 @@ const EFFECT_RESULT_DIALOGUES = {
   "腕の無い天使像": { scene: "secretTreasure", key: "armlessAngel" },
   "悍ましい肖像画": { scene: "miracle", key: "grotesquePortrait" },
   "アルカディアの神酒": { scene: "secretTreasure", key: "arcadiaNectar" },
-  "ラケシスの台帳": { scene: "lachesis", key: "register" },
+  "ラケシスの糸車": { scene: "lachesis", key: "register" },
   "ラケシスの神籤": { scene: "lachesis", key: "visitor" },
   "旅人の奇跡": { scene: "miracle", key: "traveler" },
   "市場の奇跡": { scene: "miracle", key: "market" },

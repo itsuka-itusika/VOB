@@ -45,6 +45,7 @@ export const DRYAD_FRUIT_SECRET_TREASURE_ID = "dryad_fruit";
 export const ANNUNCIATION_PAINTING_SECRET_TREASURE_ID = "annunciation_painting";
 export const GOBLIN_STATUE_SECRET_TREASURE_ID = "goblin_statue";
 export const LACHESIS_LOT_SECRET_TREASURE_ID = "lachesis_lot";
+// ラケシスの糸車。旧名「ラケシスの台帳」の頃の保存データを読めるよう、IDは元のまま使う。
 export const LACHESIS_LEDGER_SECRET_TREASURE_ID = "lachesis_ledger";
 export const BOOK_OF_THE_DEAD_SECRET_TREASURE_ID = "book_of_the_dead";
 export const ARCADIA_NECTAR_SECRET_TREASURE_ID = "arcadia_nectar";
@@ -69,7 +70,7 @@ const SECRET_TREASURE_SELL_PRICES = {
   [MESSENGER_PASS_SECRET_TREASURE_ID]: 50,
   [GOBLIN_STATUE_SECRET_TREASURE_ID]: 100,
   [LACHESIS_LOT_SECRET_TREASURE_ID]: 100,
-  [LACHESIS_LEDGER_SECRET_TREASURE_ID]: 300,
+  [LACHESIS_LEDGER_SECRET_TREASURE_ID]: 500,
   [BOOK_OF_THE_DEAD_SECRET_TREASURE_ID]: 200,
   [ARCADIA_NECTAR_SECRET_TREASURE_ID]: 300
 };
@@ -637,16 +638,17 @@ export const SECRET_TREASURES = [
   },
   {
     id: LACHESIS_LEDGER_SECRET_TREASURE_ID,
-    name: "ラケシスの台帳",
-    desc: "村人1名をラケシスの帳簿に記す。記された村人は別のセーブデータの村へ訪問者として現れることがあり、ラケシスの神籤や「はじめから（転生）」で呼び出せる。記録済みの村人に使うと、その時点の姿で記し直す。",
+    name: "ラケシスの糸車",
+    desc: "使ってもなくならない。村人1名の運命の糸をラケシスの帳簿に紡ぎ込む。記された村人は別のセーブデータの村へ訪問者として現れることがあり、ラケシスの神籤や「はじめから（転生）」で呼び出せる。記録済みの村人に使うと、その時点の姿で記し直す。",
     sellPrice: SECRET_TREASURE_SELL_PRICES[LACHESIS_LEDGER_SECRET_TREASURE_ID],
+    consumable: false,
     target: "villager",
     use: (village, target) => applyLachesisLedger(village, target)
   },
   {
     id: BOOK_OF_THE_DEAD_SECRET_TREASURE_ID,
     name: "死者の書",
-    desc: "妊娠・臨月の村人1名に使用可能。村を去った者・亡くなった者から1人を選び、生まれてくる子に名前・精神ステータス・精神特性を受け継がせる。顔・性別・身体特性・身体ステータスは本来の赤子のまま。すでに転生した者は選べない。",
+    desc: "妊娠・臨月の村人1名に使用可能。村を去った者・亡くなった者から1人を選び、意識を保ったままお腹の子へ転生させる。子は名前・精神性別・精神年齢・口調・精神ステータス・精神特性・趣味を受け継ぐ。顔・肉体の性別・身体特性・身体ステータスは本来の赤子のまま。すでに転生した者は選べない。",
     sellPrice: SECRET_TREASURE_SELL_PRICES[BOOK_OF_THE_DEAD_SECRET_TREASURE_ID],
     target: "villager",
     targetFilter: canUseBookOfTheDeadOn,
@@ -991,7 +993,7 @@ function useSecretTreasureAt(village, index) {
   if (!window.confirm(`${definition.name}を使いますか？`)) return;
   const result = definition.use(village, target);
   if (result === false) return;
-  // 使ってもなくならない秘宝（ゴブリンの彫像）は所持品に残す。
+  // 使ってもなくならない秘宝（ゴブリンの彫像・ラケシスの糸車）は所持品に残す。
   if (definition.consumable !== false) secretTreasures.splice(index, 1);
   village.secretTreasures = secretTreasures;
   renderSecretTreasureModal(village);
