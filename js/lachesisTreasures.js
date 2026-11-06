@@ -69,7 +69,7 @@ function summonLachesisEntry(village, entry) {
   showMiracleResultModal(
     village,
     "ラケシスの神籤",
-    `運命の糸が手繰られ、${entry.name}が旅人として村を訪れました。この旅人は、勧誘すれば必ず村に加わります。`,
+    `運命の糸が手繰られ、${entry.name}が旅人として村を訪れました。`,
     [visitor]
   );
   updateUI(village);
