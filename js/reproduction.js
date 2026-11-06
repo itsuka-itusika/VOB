@@ -1020,9 +1020,13 @@ function giveBirth(village, mother) {
   // 命名が決まるまで村へは加えない。母体の変化だけは先に確定させる。
   applyPostpartumToMother(mother);
   const child = createNewbornChild(village, data);
+  // 死者の書で魂を宿した子は、名前が使える限り前世の名を受け継ぐ。
+  const inheritedName = data.reincarnation?.name && !getChildNameError(data.reincarnation.name, village)
+    ? data.reincarnation.name
+    : "";
   showBirthModal(village, mother, getBirthSpouse(mother, data, village), child, childName => {
     finalizeBirth(village, mother, data, child, childName);
-  });
+  }, { inheritedName });
 }
 
 /** 赤子を名前なしで生成する。名前と bodyOwner は命名確定時に入れる。 */
@@ -1034,13 +1038,19 @@ function createNewbornChild(village, data) {
   child.potentialStats = { ...data.potentialStats };
   child.bodyPotentialStats = { ...data.potentialStats };
   child.mindPotentialStats = { ...data.potentialStats };
+  // 死者の書: 精神の伸びしろは故人の精神ステータス、成人後の精神特性は故人のものにする。
+  const reincarnation = data.reincarnation || null;
+  if (reincarnation) {
+    child.mindPotentialStats = { ...child.mindPotentialStats, ...reincarnation.mentalStats };
+    child.reincarnatedFromId = reincarnation.departedId;
+  }
   Object.assign(child, child.potentialStats);
   setBaseStatsFromEffective(child);
   child.bodyTraits = ["赤子"];
   child.mindTraits = ["無垢"];
   applyRaceBodyTraits(child);
   applyInheritedBodyTraits(child, data.inheritedBodyTraits || []);
-  applyInheritedMindTraits(child, data.inheritedMindTraits || []);
+  if (!reincarnation) applyInheritedMindTraits(child, data.inheritedMindTraits || []);
   child.hobby = "";
   child.hp = 100;
   child.mp = 100;
@@ -1048,7 +1058,7 @@ function createNewbornChild(village, data) {
 
   const adult = buildAdultTemplate(child, child.potentialStats);
   child.adultBodyTraits = adult.bodyTraits;
-  child.adultMindTraits = adult.mindTraits;
+  child.adultMindTraits = reincarnation ? [...reincarnation.mindTraits] : adult.mindTraits;
   child.adultHobby = adult.hobby;
   child.adultPortraitFile = adult.portraitFile;
   updateChildGrowthStage(child, village);
@@ -1095,6 +1105,9 @@ function finalizeBirth(village, mother, data, child, childName) {
     geneticFatherUnknown: !!data.geneticFatherUnknown
   });
   village.log(`${mother.name}が${child.name}を出産しました。人口上限+1`);
+  if (data.reincarnation) {
+    village.log(`${child.name}は${data.reincarnation.name}の魂を受け継いで生まれました`);
+  }
 }
 
 export function getReproductiveStatusLine(character) {
@@ -1276,7 +1289,7 @@ function getChildNameError(name, village) {
   return "";
 }
 
-function showBirthModal(village, mother, father, child, onNamed) {
+function showBirthModal(village, mother, father, child, onNamed, { inheritedName = "" } = {}) {
   enqueueReproductionModal(onClosed => {
     const overlay = document.createElement("div");
     overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;";
@@ -1288,7 +1301,12 @@ function showBirthModal(village, mother, father, child, onNamed) {
       ${renderPortraitLine(mother, getBirthLine(mother, "母"))}
       ${father ? renderPortraitLine(father, getBirthLine(father, "父")) : ""}
       ${renderPortraitLine(child, "……すやすや眠っている。", getUnnamedChildLabel(child))}
-      <div data-birth-choice>
+      ${inheritedName ? `
+      <div data-birth-inherit>
+        <p>この子は前世の名「${inheritedName}」を受け継いでいます。</p>
+        <button type="button" data-inherit-name>名を受け継ぐ</button>
+      </div>` : ""}
+      <div data-birth-choice ${inheritedName ? "hidden" : ""}>
         <button type="button" data-name-child>バッカスが命名する</button>
         <button type="button" data-leave-name>村人に任せる</button>
       </div>
@@ -1316,6 +1334,8 @@ function showBirthModal(village, mother, father, child, onNamed) {
     modal.querySelector("[data-leave-name]").onclick = () => {
       decideName(rollChildName(village, child));
     };
+    const inheritButton = modal.querySelector("[data-inherit-name]");
+    if (inheritButton) inheritButton.onclick = () => decideName(inheritedName);
     modal.querySelector("[data-name-child]").onclick = () => {
       choiceArea.hidden = true;
       namingArea.hidden = false;

@@ -21,6 +21,21 @@ export function advanceBacchusProtectionMonth(village) {
   village.log("【加護】バッカスの加護が消え、村の周囲に再び不穏な気配が戻った。");
 }
 
+/**
+ * 村特性「加護」を6か月付与し、予約済みの通常襲撃を取り消す。切なる祈りとアルカディアの神酒で共有する。
+ * @returns {boolean} 予約済みの襲撃を取り消したか
+ */
+export function grantBacchusProtection(village) {
+  const canceledRaid = !!village.pendingRaid;
+  village.pendingRaid = null;
+  village.villageTraits = Array.isArray(village.villageTraits) ? village.villageTraits : [];
+  if (!village.villageTraits.includes(BACCHUS_PROTECTION_TRAIT)) {
+    village.villageTraits.push(BACCHUS_PROTECTION_TRAIT);
+  }
+  village.bacchusProtectionMonths = BACCHUS_PROTECTION_MONTHS;
+  return canceledRaid;
+}
+
 export function tryTriggerEarnestPrayer(village) {
   if (!village || isApocalypseActive(village)) return false;
   const population = Array.isArray(village.villagers) ? village.villagers.length : 0;
@@ -32,14 +47,8 @@ export function tryTriggerEarnestPrayer(village) {
     : Number(village.lastEarnestPrayerMonth);
   if (lastMonth != null && Number.isFinite(lastMonth) && currentMonth - lastMonth < EARNEST_PRAYER_COOLDOWN_MONTHS) return false;
 
-  const canceledRaid = !!village.pendingRaid;
-  village.pendingRaid = null;
+  const canceledRaid = grantBacchusProtection(village);
   village.mana = clampValue(Number(village.mana) + EARNEST_PRAYER_MANA_GAIN, 0, 99999);
-  village.villageTraits = Array.isArray(village.villageTraits) ? village.villageTraits : [];
-  if (!village.villageTraits.includes(BACCHUS_PROTECTION_TRAIT)) {
-    village.villageTraits.push(BACCHUS_PROTECTION_TRAIT);
-  }
-  village.bacchusProtectionMonths = BACCHUS_PROTECTION_MONTHS;
   village.lastEarnestPrayerMonth = currentMonth;
 
   village.log(`【切なる祈り】魔素+${EARNEST_PRAYER_MANA_GAIN}、村特性「加護」を${BACCHUS_PROTECTION_MONTHS}か月付与${canceledRaid ? "、襲撃予約を解除" : ""}`);

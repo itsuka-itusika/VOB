@@ -113,5 +113,8 @@ export const ADVENTURER_QUEST_BASE_SUCCESS_RATES = {
   old_priest_statue: 37.5,
   pan_flute: 32.5,
   golden_mask: 20,
-  [MESSENGER_PASS_SECRET_TREASURE_ID]: 30
+  [MESSENGER_PASS_SECRET_TREASURE_ID]: 30,
+  goblin_statue: 30,
+  lachesis_lot: 30,
+  book_of_the_dead: 25
 };

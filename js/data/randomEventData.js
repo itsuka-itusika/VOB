@@ -11,7 +11,7 @@ export const EVENT_KIND_TITLES = {
 };
 
 export const EVENT_POOLS = {
-  good: ["wolfChild", "cat", "gold", "strangeRain", "fireworks", "hotSpring", "bathPerk", "hobbyFriends", "thaw", "menFriendship", "lover", "hitItOff", "pickup", "yuri", "tattoo", "fashion", "muscle", "selfPleasure"],
+  good: ["wolfChild", "cat", "gold", "strangeRain", "fireworks", "hotSpring", "bathPerk", "hobbyFriends", "thaw", "menFriendship", "lover", "hitItOff", "pickup", "yuri", "tattoo", "fashion", "muscle", "selfPleasure", "digWolf", "junkDealer"],
   bad: ["storm", "greatStorm", "downpour", "heat", "fire", "thief", "rats", "lightning1", "lightning2", "snow", "fight", "loverArgument", "argument", "drunk", "epidemic"]
 };
 
@@ -19,7 +19,22 @@ export const EVENT_POOLS = {
 export const SINGLE_SPEAKER_EVENTS = new Set(["fireworks", "hotSpring", "heat", "snow"]);
 
 // 当事者だけが話すイベント。周囲の好感度が動いた村人まで当事者向けのセリフを話さないようにする。
-export const FORCED_SPEAKER_ONLY_EVENTS = new Set(["pickup"]);
+export const FORCED_SPEAKER_ONLY_EVENTS = new Set(["pickup", "digWolf"]);
+
+// ここほれ狼: 精神特性「野生」の村人が掘り当て、口にくわえて運べる大きさの秘宝。
+export const DIG_WOLF_SECRET_TREASURE_IDS = new Set([
+  "golden_arrow", "golden_apple", "messenger_pass", "ambrosia", "nectar", "chronos_elixir",
+  "dryad_fruit", "serpent_staff", "pan_flute", "golden_mask", "lachesis_lot", "book_of_the_dead"
+]);
+export const DIG_WOLF_LINE = "へっへっへ（何かをくわえている）";
+
+// がらくた屋: がらくたに紛れて見過ごされそうな秘宝。黄金の品や霊薬のような、ひと目で値の張る物は除く。
+export const JUNK_DEALER_SECRET_TREASURE_IDS = new Set([
+  "armless_angel", "annunciation_painting", "strange_calculator", "grotesque_portrait", "old_priest_statue",
+  "pan_flute", "messenger_pass", "serpent_staff", "book_of_the_dead", "goblin_statue", "lachesis_lot"
+]);
+// がらくた屋が訪れる村の規模。旅人の立ち寄る村（段階3）まで。
+export const JUNK_DEALER_MAX_SCALE_STAGE_INDEX = 3;
 
 export const EVENT_SUBJECTS = {
   "狩猟神": "狩女神の祝福",
@@ -48,6 +63,8 @@ export const EVENT_SUBJECTS = {
   fashion: "ファッションショー",
   muscle: "筋トレ",
   selfPleasure: "自家発電にはまった",
+  digWolf: "ここほれ狼",
+  junkDealer: "がらくた屋",
   storm: "春の嵐",
   greatStorm: "大嵐",
   downpour: "豪雨",
@@ -91,6 +108,8 @@ export const EVENT_MOODS = {
   fashion: "selfChange",
   muscle: "selfChange",
   selfPleasure: "selfChange",
+  digWolf: "gain",
+  junkDealer: "gain",
   storm: "loss",
   greatStorm: "loss",
   downpour: "loss",

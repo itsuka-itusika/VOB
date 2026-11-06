@@ -1,7 +1,8 @@
 // gameSettings.js
 // オープニングの「設定」画面と、その内容（モード・難易度・オートセーブ）の保存。
 // 設定は localStorage に保存する。モードと難易度は「はじめから」の開始時に村へ適用され、
-// 以後はセーブデータ側の値に従う（途中変更はできない）。
+// 以後はセーブデータ側の値に従う。ゲーム中の「設定」では、遊んでいる村の難易度と
+// 共通のオートセーブだけを変えられる（開始画面の難易度の既定値は変えない）。
 
 import { DIFFICULTY_HARD, DIFFICULTY_NORMAL, normalizeDifficulty } from "./domain/difficulty.js";
 import { GAME_MODE_GOBLIN, GAME_MODE_NORMAL, normalizeGameMode } from "./domain/gameMode.js";
@@ -89,25 +90,130 @@ export function closeGameSettingsModal() {
   document.getElementById(MODAL_ID)?.remove();
 }
 
-export function openGameSettingsModal() {
-  if (typeof document === "undefined") return;
-  closeGameSettingsModal();
-  const editing = loadGameSettings();
+function renderDifficultyCards() {
+  return `
+    <div class="gs-cards">
+      <div class="gs-card" data-gs-difficulty="${DIFFICULTY_NORMAL}" role="button" tabindex="0">
+        <h4>ノーマル<span class="gs-badge">推奨</span></h4>
+        <p>これまでどおりのバランスで遊べます。はじめての方はこちら。</p>
+      </div>
+      <div class="gs-card is-hard" data-gs-difficulty="${DIFFICULTY_HARD}" role="button" tabindex="0">
+        <h4>難しい</h4>
+        <p><b>襲撃が起こりやすくなります。</b>襲撃で体力0になった時に<b>重体になりやすく</b>、低確率で<b>危篤</b>や<b>後遺症</b>が発生します。</p>
+      </div>
+    </div>
+  `;
+}
 
+function renderAutosaveSegments() {
+  return `
+    <div class="gs-seg">
+      ${AUTOSAVE_MODES.map(mode =>
+        `<span data-gs-autosave="${mode}" role="button" tabindex="0">${AUTOSAVE_LABELS[mode]}</span>`
+      ).join("")}
+    </div>
+    <p class="gs-note">ローカル＝ブラウザ保存へ自動上書き。json＝毎年1月にセーブファイルを自動ダウンロード。</p>
+  `;
+}
+
+function bindPress(element, onPress) {
+  element.addEventListener("click", onPress);
+  element.addEventListener("keydown", event => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onPress();
+    }
+  });
+}
+
+function createSettingsModalShell() {
   const overlay = document.createElement("div");
   overlay.id = OVERLAY_ID;
   overlay.className = "gs-overlay";
-
   const modal = document.createElement("div");
   modal.id = MODAL_ID;
   modal.className = "gs-modal";
   modal.setAttribute("role", "dialog");
   modal.setAttribute("aria-modal", "true");
   modal.setAttribute("aria-labelledby", `${MODAL_ID}Title`);
+  return { overlay, modal };
+}
+
+/**
+ * ゲーム中の「設定」。遊んでいる村の難易度と、共通のオートセーブを切り替える。
+ */
+export function openInGameSettingsModal(village, { onApplied = null } = {}) {
+  if (typeof document === "undefined" || !village) return;
+  closeGameSettingsModal();
+  const stored = loadGameSettings();
+  const editing = {
+    difficulty: normalizeDifficulty(village.difficulty),
+    autosave: stored.autosave
+  };
+  const { overlay, modal } = createSettingsModalShell();
+  modal.innerHTML = `
+    <h2 id="${MODAL_ID}Title" class="gs-title">設定</h2>
+    <div class="gs-section">難易度（この村）</div>
+    <p class="gs-note">遊んでいる村の難易度を切り替えます。次の判定から新しい難易度が使われます。</p>
+    ${renderDifficultyCards()}
+    <div class="gs-section">オートセーブ</div>
+    ${renderAutosaveSegments()}
+    <div class="gs-buttons">
+      <button type="button" data-gs-cancel>取り消す</button>
+      <button type="button" class="gs-apply" data-gs-apply>適用する</button>
+    </div>
+  `;
+
+  const refresh = () => {
+    modal.querySelectorAll("[data-gs-difficulty]").forEach(card => {
+      card.classList.toggle("is-selected", card.dataset.gsDifficulty === editing.difficulty);
+    });
+    modal.querySelectorAll("[data-gs-autosave]").forEach(seg => {
+      seg.classList.toggle("is-on", seg.dataset.gsAutosave === editing.autosave);
+    });
+  };
+  modal.querySelectorAll("[data-gs-difficulty]").forEach(card => {
+    bindPress(card, () => {
+      editing.difficulty = normalizeDifficulty(card.dataset.gsDifficulty);
+      refresh();
+    });
+  });
+  modal.querySelectorAll("[data-gs-autosave]").forEach(seg => {
+    bindPress(seg, () => {
+      editing.autosave = normalizeAutosaveMode(seg.dataset.gsAutosave);
+      refresh();
+    });
+  });
+  modal.querySelector("[data-gs-cancel]").onclick = closeGameSettingsModal;
+  overlay.onclick = closeGameSettingsModal;
+  modal.querySelector("[data-gs-apply]").onclick = () => {
+    const previousDifficulty = normalizeDifficulty(village.difficulty);
+    village.difficulty = editing.difficulty;
+    // 開始画面で選ぶモードと難易度の既定値は残し、オートセーブだけを書き換える。
+    saveGameSettings({ ...stored, autosave: editing.autosave });
+    if (previousDifficulty !== editing.difficulty) {
+      village.log(`【設定】難易度を${editing.difficulty === DIFFICULTY_HARD ? "難しい" : "ノーマル"}に変更しました`);
+    }
+    closeGameSettingsModal();
+    if (typeof onApplied === "function") onApplied();
+  };
+
+  document.body.appendChild(overlay);
+  document.body.appendChild(modal);
+  refresh();
+  modal.querySelector("[data-gs-apply]")?.focus();
+}
+
+export function openGameSettingsModal() {
+  if (typeof document === "undefined") return;
+  closeGameSettingsModal();
+  const editing = loadGameSettings();
+
+  const { overlay, modal } = createSettingsModalShell();
   modal.innerHTML = `
     <h2 id="${MODAL_ID}Title" class="gs-title">設定</h2>
     <div class="gs-section">モード</div>
-    <p class="gs-note">モードと難易度は「はじめから」で開始する時に適用されます。開始後は変更できません。</p>
+    <p class="gs-note">モードと難易度は「はじめから」で開始する時に適用されます。開始後も、難易度はメニューの「設定」で、モードは秘宝「ゴブリンの彫像」で変えられます。</p>
     <div class="gs-cards">
       <div class="gs-card" data-gs-mode="${GAME_MODE_NORMAL}" role="button" tabindex="0">
         <h4>ノーマル</h4>
@@ -119,23 +225,9 @@ export function openGameSettingsModal() {
       </div>
     </div>
     <div class="gs-section">難易度</div>
-    <div class="gs-cards">
-      <div class="gs-card" data-gs-difficulty="${DIFFICULTY_NORMAL}" role="button" tabindex="0">
-        <h4>ノーマル<span class="gs-badge">推奨</span></h4>
-        <p>これまでどおりのバランスで遊べます。はじめての方はこちら。</p>
-      </div>
-      <div class="gs-card is-hard" data-gs-difficulty="${DIFFICULTY_HARD}" role="button" tabindex="0">
-        <h4>難しい</h4>
-        <p><b>襲撃が起こりやすくなります。</b>襲撃で体力0になった時に<b>重体になりやすく</b>、低確率で<b>危篤</b>や<b>後遺症</b>が発生します。</p>
-      </div>
-    </div>
+    ${renderDifficultyCards()}
     <div class="gs-section">オートセーブ</div>
-    <div class="gs-seg">
-      ${AUTOSAVE_MODES.map(mode =>
-        `<span data-gs-autosave="${mode}" role="button" tabindex="0">${AUTOSAVE_LABELS[mode]}</span>`
-      ).join("")}
-    </div>
-    <p class="gs-note">ローカル＝ブラウザ保存へ自動上書き。json＝毎年1月にセーブファイルを自動ダウンロード。</p>
+    ${renderAutosaveSegments()}
     <div class="gs-buttons">
       <button type="button" data-gs-cancel>取り消す</button>
       <button type="button" class="gs-apply" data-gs-apply>適用する</button>
@@ -151,16 +243,6 @@ export function openGameSettingsModal() {
     });
     modal.querySelectorAll("[data-gs-autosave]").forEach(seg => {
       seg.classList.toggle("is-on", seg.dataset.gsAutosave === editing.autosave);
-    });
-  };
-
-  const bindPress = (element, onPress) => {
-    element.addEventListener("click", onPress);
-    element.addEventListener("keydown", event => {
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        onPress();
-      }
     });
   };
 

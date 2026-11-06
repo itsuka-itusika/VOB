@@ -23,6 +23,7 @@ import {
   startApocalypseFromGoldenStatue
 } from "./bacchusGoldenStatue.js";
 import { destroyBacchusGoldenStatue } from "./apocalypse.js";
+import { CHAOS_ALCHEMY_KILN_BUILDING_ID, CHAOS_ALCHEMY_KILN_FLAG } from "./data/chaosAlchemyData.js";
 
 function ensureBuildingFlags(village) {
   if (!village.buildingFlags) village.buildingFlags = {};
@@ -337,6 +338,20 @@ export const BUILDINGS = [
     desc: "繁栄した郷村で解放。毎月、棄民20%・移民80%の専用訪問者判定枠を1つ追加する。規模+30",
     isUnlocked: (village) => isScaleAtLeast(village, 250),
     effect: standardBuildingEffect({ scale: 30, flag: "hasPoorhouse", log: "救貧院建設完了: 棄民20%・移民80%の専用訪問者判定枠+1、規模+30" })
+  },
+  {
+    id: CHAOS_ALCHEMY_KILN_BUILDING_ID,
+    name: "混沌錬金窯",
+    materials: 200,
+    funds: 200,
+    tech: 300,
+    desc: "黙示録クリアで解放。メニューに「錬金」が加わり、技術を消費して秘宝を錬成できる。規模+40",
+    isUnlocked: (village) => !!village?.apocalypseCleared,
+    effect: standardBuildingEffect({
+      scale: 40,
+      flag: CHAOS_ALCHEMY_KILN_FLAG,
+      log: "混沌錬金窯建設完了: メニューに「錬金」解放、規模+40"
+    })
   },
   {
     id: BACCHUS_GOLDEN_STATUE_BUILDING_ID,

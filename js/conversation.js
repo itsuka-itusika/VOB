@@ -493,6 +493,8 @@ function calculateCaptiveSeductionSuccessRate(captive, seducer) {
 }
 
 function calculateRecruitmentSuccessRate(visitor, recruiter) {
+  // ラケシスの神籤で呼んだ村人は、縁を結び直しに来ているため必ず応じる。
+  if (visitor?.lachesisSummoned) return 100;
   const coefficient = getRecruitmentCoefficient(visitor);
   return Math.min(100, Math.max(0,
     coefficient * (recruiter.chr / 20) * (recruiter.int / 20) * 100
@@ -1172,6 +1174,7 @@ function handleRecruitmentSuccess(visitor, recruiter, successRate = 0, source = 
   delete visitor.slaveTrade;
 
   visitor.mindTraits = visitor.mindTraits.filter(t => t !== "訪問者");
+  visitor.lachesisSummoned = false;
   setPreferredAction(visitor, ACTION_NONE);
   visitor.action = ACTION_NONE;
   visitor.jobTable = [];

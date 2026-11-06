@@ -33,6 +33,10 @@ import {
   saveVillageToLocalStorage
 } from "./saveLoad.js";
 import { closeDryadFruitModal, closeSecretTreasureModal, openSecretTreasureModal, SECRET_TREASURES } from "./secretTreasures.js";
+import { closeAlchemyModal, openAlchemyModal } from "./chaosAlchemy.js";
+import { createLachesisFounder, hasLachesisEntries } from "./lachesisLedger.js";
+import { openLachesisRebirthModal } from "./lachesisTreasures.js";
+import { initializeFoundingFriendships } from "./relationships.js";
 import { RAID_MODULES } from "./data/raidData.js";
 import { resetVillagerFilter, updateUI } from "./ui.js";
 import { getCaptives } from "./captives.js";
@@ -44,7 +48,7 @@ import { DIVINE_MIGHT_LEVELS } from "./divineMight.js";
 import { resumePendingHeresyInquisition } from "./heresyInquisition.js";
 import { openAutoAssignSettingsModal } from "./autoAssignSettings.js";
 import { closeWarCouncilModal, isWarCouncilOpen, openWarCouncilModal, refreshWarCouncil } from "./warCouncil.js";
-import { getStartingDifficulty, getStartingGameMode, openGameSettingsModal } from "./gameSettings.js";
+import { getStartingDifficulty, getStartingGameMode, openGameSettingsModal, openInGameSettingsModal } from "./gameSettings.js";
 
 const APOCALYPSE_DEBUG_VILLAGER_COUNT = 15;
 const APOCALYPSE_DEBUG_RESOURCE_AMOUNT = 10000;
@@ -318,6 +322,8 @@ function runUtilityAction() {
     openAutoAssignSettingsModal(theVillage, { onApplied: () => updateUI(theVillage) });
   } else if (action === "opening") {
     replayOpeningStory();
+  } else if (action === "settings") {
+    openInGameSettingsModal(theVillage, { onApplied: () => updateUI(theVillage) });
   } else if (action === "readme") {
     window.open("Readme.txt", "_blank");
   } else if (action === "debug") {
@@ -363,6 +369,8 @@ function bindGlobalHandlers() {
     closeBuildingModal,
     openSecretTreasureModal: () => openSecretTreasureModal(theVillage),
     closeSecretTreasureModal,
+    openAlchemyModal: () => openAlchemyModal(theVillage),
+    closeAlchemyModal,
     closeDryadFruitModal,
     closePersonalHistoryModal,
     closeFamilyTreeModal,
@@ -460,6 +468,7 @@ function bindModalOverlayClickClose() {
   bindOverlayClickClose("modalOverlay", closeMiracleModal);
   bindOverlayClickClose("buildingOverlay", closeBuildingModal);
   bindOverlayClickClose("secretTreasureOverlay", closeSecretTreasureModal);
+  bindOverlayClickClose("alchemyOverlay", closeAlchemyModal);
   bindOverlayClickClose("dryadFruitOverlay", closeDryadFruitModal);
   bindOverlayClickClose("historyOverlay", closeHistoryModal);
   bindOverlayClickClose("personalHistoryOverlay", closePersonalHistoryModal);
@@ -471,6 +480,54 @@ function bindModalOverlayClickClose() {
   bindOverlayClickClose("managementGoalsOverlay", closeManagementGoalsModal);
 }
 
+/**
+ * 「はじめから（転生）」: 初期村人のうち選んだ人数分を、帳簿の村人に置き換える。
+ * 同じ名の初期村人がいればその者を、いなければ同じ肉体性別の者を優先して入れ替える。
+ */
+function placeLachesisFounders(villagers, entries) {
+  const replaced = new Set();
+  const placedNames = new Set();
+  entries.forEach(entry => {
+    if (placedNames.has(entry.name)) return;
+    const founder = createLachesisFounder(entry, theVillage);
+    const open = villagers.map((_, index) => index).filter(index => !replaced.has(index));
+    if (open.length === 0) return;
+    const index = open.find(i => villagers[i].name === founder.name)
+      ?? open.find(i => villagers[i].bodySex === founder.bodySex)
+      ?? open[0];
+    villagers[index] = founder;
+    replaced.add(index);
+    placedNames.add(founder.name);
+  });
+  // 入れ替えた顔ぶれで、村設立の同志の関係と好感度を結び直す。
+  villagers.forEach(person => {
+    person.relationships = [];
+    person.friendships = {};
+    person.friendshipStats = {};
+  });
+  initializeFoundingFriendships(villagers);
+}
+
+// 「はじめから」の開始時だけ、設定のモードと難易度を新しい村へ適用する。
+// ゴブリンモードや転生では最初の村人を入れ替え、開村の記録もその顔ぶれで残し直す。
+// 開始モーダルはここで予約し、オープニングの暗転が明けてから表示される。
+function prepareNewGame(founderEntries = []) {
+  theVillage.difficulty = getStartingDifficulty();
+  theVillage.gameMode = getStartingGameMode();
+  if (isGoblinMode(theVillage)) {
+    theVillage.villagers = createGoblinModeVillagers();
+  }
+  if (founderEntries.length > 0) {
+    placeLachesisFounders(theVillage.villagers, founderEntries);
+  }
+  if (isGoblinMode(theVillage) || founderEntries.length > 0) {
+    theVillage.historyEvents = [];
+    recordGameStartHistory(theVillage, theVillage.villagers);
+    updateUI(theVillage);
+  }
+  queueTutorialStartModal(theVillage);
+}
+
 bindGlobalHandlers();
 exposeBalanceApi();
 bindModalOverlayClickClose();
@@ -478,20 +535,14 @@ bindDebugTitleActions();
 initOpeningScreen({
   onLoadLocal: loadFromLocalStorage,
   onLoadJson: openJsonLoadDialog,
-  // 「はじめから」の開始時だけ、設定のモードと難易度を新しい村へ適用する。
-  // ゴブリンモードでは最初の村人をゴブリンに入れ替え、開村の記録もその顔ぶれで残し直す。
-  // 開始モーダルはここで予約し、オープニングの暗転が明けてから表示される。
-  onNewGame: () => {
-    theVillage.difficulty = getStartingDifficulty();
-    theVillage.gameMode = getStartingGameMode();
-    if (isGoblinMode(theVillage)) {
-      theVillage.villagers = createGoblinModeVillagers();
-      theVillage.historyEvents = [];
-      recordGameStartHistory(theVillage, theVillage.villagers);
-      updateUI(theVillage);
+  onNewGame: () => prepareNewGame(),
+  canRebirth: hasLachesisEntries,
+  onRebirth: startStory => openLachesisRebirthModal({
+    onConfirm: entries => {
+      prepareNewGame(entries);
+      startStory();
     }
-    queueTutorialStartModal(theVillage);
-  },
+  }),
   onOpenSettings: openGameSettingsModal,
   getLocalSaveLabel: () => {
     const summary = getLocalSaveSummary();

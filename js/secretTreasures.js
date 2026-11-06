@@ -31,6 +31,11 @@ import { getDialogueLine } from "./dialogue/dialogueEngine.js";
 import { getActiveVillagers, getVillagersIncludingSaltPillar } from "./domain/apocalypseRules.js";
 import { FOUR_LEGGED_TRAIT } from "./domain/speciesTraits.js";
 import { checkWishCompletion } from "./wishes.js";
+import { GAME_MODE_GOBLIN, GAME_MODE_NORMAL, isGoblinMode } from "./domain/gameMode.js";
+import { grantBacchusProtection } from "./earnestPrayer.js";
+import { getSummonableLachesisEntries, hasLachesisEntries } from "./lachesisLedger.js";
+import { applyLachesisLedger, openLachesisLotModal } from "./lachesisTreasures.js";
+import { canUseBookOfTheDeadOn, getReincarnationCandidates, openBookOfTheDeadModal } from "./bookOfTheDead.js";
 
 const SEASON_TRAITS_TO_REMOVE = ["夏", "秋", "冬", "冷夏", "飛蝗", "厳冬"];
 const BAD_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "凍え", "疫病", "産褥", "危篤"];
@@ -38,6 +43,11 @@ const BAD_MIND_TRAITS = ["心労", "抑鬱"];
 export const PINECONE_STAFF_SECRET_TREASURE_ID = "pinecone_staff";
 export const DRYAD_FRUIT_SECRET_TREASURE_ID = "dryad_fruit";
 export const ANNUNCIATION_PAINTING_SECRET_TREASURE_ID = "annunciation_painting";
+export const GOBLIN_STATUE_SECRET_TREASURE_ID = "goblin_statue";
+export const LACHESIS_LOT_SECRET_TREASURE_ID = "lachesis_lot";
+export const LACHESIS_LEDGER_SECRET_TREASURE_ID = "lachesis_ledger";
+export const BOOK_OF_THE_DEAD_SECRET_TREASURE_ID = "book_of_the_dead";
+export const ARCADIA_NECTAR_SECRET_TREASURE_ID = "arcadia_nectar";
 const SECRET_TREASURE_SELL_PRICES = {
   persephone_statue: 300,
   abundance_horn: 300,
@@ -56,10 +66,20 @@ const SECRET_TREASURE_SELL_PRICES = {
   pan_flute: 100,
   grotesque_portrait: 200,
   golden_mask: 500,
-  [MESSENGER_PASS_SECRET_TREASURE_ID]: 50
+  [MESSENGER_PASS_SECRET_TREASURE_ID]: 50,
+  [GOBLIN_STATUE_SECRET_TREASURE_ID]: 100,
+  [LACHESIS_LOT_SECRET_TREASURE_ID]: 100,
+  [LACHESIS_LEDGER_SECRET_TREASURE_ID]: 300,
+  [BOOK_OF_THE_DEAD_SECRET_TREASURE_ID]: 200,
+  [ARCADIA_NECTAR_SECRET_TREASURE_ID]: 300
 };
 const DISABLED_RANDOM_SECRET_TREASURE_IDS = new Set([
   PINECONE_STAFF_SECRET_TREASURE_ID
+]);
+// 混沌錬金窯でしか作れない秘宝。発見・行商人・冒険者クエストなどの秘宝テーブルには出さない。
+const ALCHEMY_ONLY_SECRET_TREASURE_IDS = new Set([
+  ARCADIA_NECTAR_SECRET_TREASURE_ID,
+  LACHESIS_LEDGER_SECRET_TREASURE_ID
 ]);
 
 function getVillagers(village, includeSaltPillar = false) {
@@ -133,8 +153,44 @@ function forceMarriage(a, b, village) {
   village.log(`【秘宝】黄金の矢により${a.name}と${b.name}が結ばれました`);
 }
 
-function showSecretTreasureResult(village, title, message, people = []) {
-  showMiracleResultModal(village, title, message, people, { allowEmpty: true });
+function showSecretTreasureResult(village, title, message, people = [], options = {}) {
+  showMiracleResultModal(village, title, message, people, { allowEmpty: true, ...options });
+}
+
+/** ゴブリンの彫像: ゴブリンモードと通常のモードを切り替える。彫像そのものは残る。 */
+function applyGoblinStatue(village) {
+  const toGoblin = !isGoblinMode(village);
+  village.gameMode = toGoblin ? GAME_MODE_GOBLIN : GAME_MODE_NORMAL;
+  village.log(`【秘宝】ゴブリンの彫像を使いました。${toGoblin ? "ゴブリンモード" : "通常のモード"}になりました`);
+  showSecretTreasureResult(
+    village,
+    "ゴブリンの彫像",
+    toGoblin
+      ? "彫像の目に濁った光が灯りました。村はゴブリンを引き寄せるようになります（ゴブリンモード）。"
+      : "彫像の目から光が消えました。村はもうゴブリンを引き寄せません（通常のモード）。",
+    getVillagers(village),
+    { dialogue: { scene: "secretTreasure", key: toGoblin ? "goblinStatueToGoblin" : "goblinStatueToNormal" } }
+  );
+}
+
+/** アルカディアの神酒: 村特性「加護」を6か月付与する。 */
+function applyArcadiaNectar(village) {
+  const canceledRaid = grantBacchusProtection(village);
+  village.log(`【秘宝】アルカディアの神酒を使いました。村特性「加護」を6か月付与${canceledRaid ? "、襲撃予約を解除" : ""}`);
+  showSecretTreasureResult(
+    village,
+    "アルカディアの神酒",
+    `楽園の神酒の香りが村を包み、バッカスの加護が降りました。6か月の間、通常の襲撃は起こりません。${canceledRaid ? "予約されていた襲撃は消え去りました。" : ""}`,
+    getVillagers(village)
+  );
+}
+
+/** 所持している秘宝を1つ取り除く。対象を別画面で選ぶ秘宝が、選び終えた時に呼ぶ。 */
+function consumeSecretTreasureById(village, id) {
+  const secretTreasures = ensureSecretTreasures(village);
+  const index = secretTreasures.findIndex(entry => getSecretTreasureDefinition(entry)?.id === id);
+  if (index >= 0) secretTreasures.splice(index, 1);
+  village.secretTreasures = secretTreasures;
 }
 
 function restoreBadStatus(person, village, options = {}) {
@@ -551,6 +607,64 @@ export const SECRET_TREASURES = [
     sellPrice: SECRET_TREASURE_SELL_PRICES.golden_mask,
     canUse: () => false,
     blockedReason: "使用効果はありません"
+  },
+  {
+    id: GOBLIN_STATUE_SECRET_TREASURE_ID,
+    name: "ゴブリンの彫像",
+    desc: "使ってもなくならない。通常の村で使うとゴブリンモードに、ゴブリンモードの村で使うと通常のモードに切り替わる。",
+    sellPrice: SECRET_TREASURE_SELL_PRICES[GOBLIN_STATUE_SECRET_TREASURE_ID],
+    consumable: false,
+    use: applyGoblinStatue
+  },
+  {
+    id: LACHESIS_LOT_SECRET_TREASURE_ID,
+    name: "ラケシスの神籤",
+    desc: "ラケシスの帳簿に記された村人を1人選び、職業「旅人」の訪問者として呼び出す。呼び出した訪問者への勧誘は必ず成功する。同じ村人がすでに村にいる場合は選べない。",
+    sellPrice: SECRET_TREASURE_SELL_PRICES[LACHESIS_LOT_SECRET_TREASURE_ID],
+    canUse: (village) => getSummonableLachesisEntries(village).length > 0,
+    blockedReason: () => hasLachesisEntries()
+      ? "呼び出せる村人がいません（すでに村にいるか、同じ名の者がいます）"
+      : "ラケシスの帳簿に記された村人がいません",
+    use: (village) => {
+      closeSecretTreasureModal();
+      openLachesisLotModal(village, {
+        onSummoned: () => consumeSecretTreasureById(village, LACHESIS_LOT_SECRET_TREASURE_ID)
+      });
+      return false;
+    }
+  },
+  {
+    id: LACHESIS_LEDGER_SECRET_TREASURE_ID,
+    name: "ラケシスの台帳",
+    desc: "村人1名をラケシスの帳簿に記す。記された村人は別のセーブデータの村へ訪問者として現れることがあり、ラケシスの神籤や「はじめから（転生）」で呼び出せる。記録済みの村人に使うと、その時点の姿で記し直す。",
+    sellPrice: SECRET_TREASURE_SELL_PRICES[LACHESIS_LEDGER_SECRET_TREASURE_ID],
+    target: "villager",
+    use: (village, target) => applyLachesisLedger(village, target)
+  },
+  {
+    id: BOOK_OF_THE_DEAD_SECRET_TREASURE_ID,
+    name: "死者の書",
+    desc: "妊娠・臨月の村人1名に使用可能。村を去った者・亡くなった者から1人を選び、生まれてくる子に名前・精神ステータス・精神特性を受け継がせる。顔・性別・身体特性・身体ステータスは本来の赤子のまま。すでに転生した者は選べない。",
+    sellPrice: SECRET_TREASURE_SELL_PRICES[BOOK_OF_THE_DEAD_SECRET_TREASURE_ID],
+    target: "villager",
+    targetFilter: canUseBookOfTheDeadOn,
+    targetBlockedReason: "妊娠・臨月で、まだ死者の書を使っていない村人が必要です",
+    canUse: (village) => getReincarnationCandidates(village).length > 0,
+    blockedReason: "転生させられる故人がいません",
+    use: (village, target) => {
+      closeSecretTreasureModal();
+      openBookOfTheDeadModal(village, target, {
+        onChosen: () => consumeSecretTreasureById(village, BOOK_OF_THE_DEAD_SECRET_TREASURE_ID)
+      });
+      return false;
+    }
+  },
+  {
+    id: ARCADIA_NECTAR_SECRET_TREASURE_ID,
+    name: "アルカディアの神酒",
+    desc: "村特性「加護」を6か月付与する。加護の間は通常襲撃が起こらず、予約済みの通常襲撃も取り消される。",
+    sellPrice: SECRET_TREASURE_SELL_PRICES[ARCADIA_NECTAR_SECRET_TREASURE_ID],
+    use: applyArcadiaNectar
   }
 ];
 
@@ -562,14 +676,31 @@ export function grantSecretTreasure(village, id) {
   return definition;
 }
 
-export function grantRandomSecretTreasure(village) {
-  const [definition] = pickRandomSecretTreasureDefinitions(1);
+export function grantRandomSecretTreasure(village, options = {}) {
+  const [definition] = pickRandomSecretTreasureDefinitions(1, options);
   if (!definition) return null;
   return grantSecretTreasure(village, definition.id);
 }
 
-export function pickRandomSecretTreasureDefinitions(count = 1) {
-  const candidates = SECRET_TREASURES.filter(definition => !DISABLED_RANDOM_SECRET_TREASURE_IDS.has(definition.id));
+/** 混沌錬金窯でしか作れない秘宝か。 */
+export function isAlchemyOnlySecretTreasure(id) {
+  return ALCHEMY_ONLY_SECRET_TREASURE_IDS.has(id);
+}
+
+/** 秘宝テーブルに出る秘宝か。神籤は帳簿に村人が記されている時だけ加わる。 */
+function isRandomSecretTreasureCandidate(definition) {
+  if (DISABLED_RANDOM_SECRET_TREASURE_IDS.has(definition.id)) return false;
+  if (ALCHEMY_ONLY_SECRET_TREASURE_IDS.has(definition.id)) return false;
+  if (definition.id === LACHESIS_LOT_SECRET_TREASURE_ID) return hasLachesisEntries();
+  return true;
+}
+
+/**
+ * 秘宝テーブルから秘宝を選ぶ。allowedIds を渡すと、その中だけから選ぶ（イベントごとの品の大きさや見た目の制限）。
+ */
+export function pickRandomSecretTreasureDefinitions(count = 1, { allowedIds = null } = {}) {
+  const candidates = SECRET_TREASURES.filter(definition =>
+    isRandomSecretTreasureCandidate(definition) && (!allowedIds || allowedIds.has(definition.id)));
   return shuffled(candidates).slice(0, Math.max(0, Math.floor(Number(count) || 0)));
 }
 
@@ -858,7 +989,8 @@ function useSecretTreasureAt(village, index) {
   if (!window.confirm(`${definition.name}を使いますか？`)) return;
   const result = definition.use(village, target);
   if (result === false) return;
-  secretTreasures.splice(index, 1);
+  // 使ってもなくならない秘宝（ゴブリンの彫像）は所持品に残す。
+  if (definition.consumable !== false) secretTreasures.splice(index, 1);
   village.secretTreasures = secretTreasures;
   renderSecretTreasureModal(village);
   updateUI(village);

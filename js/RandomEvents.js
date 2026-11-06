@@ -32,6 +32,8 @@ import {
 } from "./dialogue/dialogueEngine.js";
 
 import {
+  DIG_WOLF_LINE,
+  DIG_WOLF_SECRET_TREASURE_IDS,
   EVENT_KIND_TABLE,
   EVENT_KIND_TITLES,
   EVENT_MOODS,
@@ -39,9 +41,13 @@ import {
   EVENT_SECOND_LINE_BASES,
   EVENT_SUBJECTS,
   FORCED_SPEAKER_ONLY_EVENTS,
+  JUNK_DEALER_MAX_SCALE_STAGE_INDEX,
+  JUNK_DEALER_SECRET_TREASURE_IDS,
   SINGLE_SPEAKER_EVENTS
 } from "./data/randomEventData.js";
 import { WOLF_FOUNDLING_LINES } from "./data/dialogue/randomEventLines.js";
+import { grantRandomSecretTreasure } from "./secretTreasures.js";
+import { getVillageScaleStage } from "./villageScale.js";
 
 const VILLAGER_STATE_KEYS = [
   "hp", "mp", "happiness",
@@ -445,6 +451,23 @@ export class RandomEvents {
             }
           ]
         });
+        break;
+      }
+      case "digWolf": {
+        const diggers = getActiveVillagers(v).filter(person => hasMindTrait(person, "野生"));
+        if (diggers.length === 0) return null;
+        const digger = this.randChoice(diggers);
+        const treasure = grantRandomSecretTreasure(v, { allowedIds: DIG_WOLF_SECRET_TREASURE_IDS });
+        if (!treasure) return null;
+        v.log(`${digger.name}が地面を掘り返し、何かをくわえて戻ってきた。秘宝「${treasure.name}」を入手した`);
+        this.addForcedSpeaker(digger, DIG_WOLF_LINE);
+        break;
+      }
+      case "junkDealer": {
+        if (getVillageScaleStage(v.building).index > JUNK_DEALER_MAX_SCALE_STAGE_INDEX) return null;
+        const treasure = grantRandomSecretTreasure(v, { allowedIds: JUNK_DEALER_SECRET_TREASURE_IDS });
+        if (!treasure) return null;
+        v.log(`村を訪れた古道具屋が、がらくたを押し付けて帰っていった。がらくたの中から秘宝「${treasure.name}」が見つかった`);
         break;
       }
       case "cat": {

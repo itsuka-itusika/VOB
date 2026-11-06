@@ -262,7 +262,7 @@ export function replayOpeningStory() {
   setOpeningView("story");
 }
 
-export function initOpeningScreen({ onLoadLocal, onLoadJson, onNewGame, onOpenSettings, getLocalSaveLabel } = {}) {
+export function initOpeningScreen({ onLoadLocal, onLoadJson, onNewGame, onRebirth, canRebirth, onOpenSettings, getLocalSaveLabel } = {}) {
   const screen = getElement("openingScreen");
   if (!screen) return;
 
@@ -276,6 +276,17 @@ export function initOpeningScreen({ onLoadLocal, onLoadJson, onNewGame, onOpenSe
     newGameHandler?.();
     setOpeningView("story");
   });
+  // ラケシスの帳簿に村人が記されている時だけ、転生した者たちで始める入口を出す。
+  const rebirthButton = getElement("openingRebirthButton");
+  if (rebirthButton) {
+    rebirthButton.hidden = typeof canRebirth !== "function" || !canRebirth();
+    rebirthButton.addEventListener("click", () => {
+      onRebirth?.(() => {
+        isReplayMode = false;
+        setOpeningView("story");
+      });
+    });
+  }
   getElement("openingSettingsButton")?.addEventListener("click", () => onOpenSettings?.());
   getElement("openingStorySkipButton")?.addEventListener("click", () => enterGame());
   getElement("openingStoryContinueButton")?.addEventListener("click", finishOpeningStory);

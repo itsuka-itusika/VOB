@@ -32,6 +32,7 @@
     <h1 class="opening-visually-hidden">Village of Bacchus</h1>
     <div class="opening-menu-panel" role="group" aria-label="ゲーム開始メニュー">
       <button type="button" id="openingNewGameButton" class="opening-menu-button">はじめから</button>
+      <button type="button" id="openingRebirthButton" class="opening-menu-button" hidden>はじめから（転生）</button>
       <button type="button" id="openingLoadLocalButton" class="opening-menu-button">
         <span class="opening-menu-label">つづきから（ローカル読込）</span>
         <span class="opening-menu-note" id="openingLoadLocalNote" hidden></span>
@@ -81,6 +82,7 @@
           <button onclick="openMiracleModal()">奇跡の行使</button>
           <button onclick="openBuildingModal()">建築</button>
           <button onclick="openSecretTreasureModal()">秘宝</button>
+          <button id="alchemyButton" onclick="openAlchemyModal()" style="display:none;">錬金</button>
           <button onclick="openLedgerModal()">台帳</button>
         </div>
         <div class="utility-actions">
@@ -91,6 +93,7 @@
             <option value="save-local">ローカル保存</option>
             <option value="load-local">ローカル読込</option>
             <option value="opening">オープニングを見る</option>
+            <option value="settings">設定</option>
           </select>
           <button type="button" onclick="runUtilityAction()">実行</button>
         </div>
@@ -427,6 +430,16 @@
   </div>
   <div class="modal-buttons">
     <button onclick="closeBuildingModal()">閉じる</button>
+  </div>
+</div>
+
+<!-- モーダル: 錬金（混沌錬金窯） -->
+<div id="alchemyOverlay"></div>
+<div id="alchemyModal">
+  <div class="modal-header">錬金</div>
+  <div id="alchemyContent" class="modal-content"></div>
+  <div class="modal-buttons">
+    <button onclick="closeAlchemyModal()">閉じる</button>
   </div>
 </div>
 

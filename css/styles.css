@@ -810,6 +810,23 @@ th, td {
   display: flex;
   gap: 12px;
 }
+/* はじめから（転生）: 帳簿の村人を顔つきのカードで並べる */
+.rebirth-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  margin: 10px 0;
+}
+.rebirth-card {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.rebirth-card .portrait-sprite {
+  flex: none;
+  border: 1px solid #d8c9a4;
+  background-color: #f0f0f0;
+}
 .gs-card {
   flex: 1;
   border: 2px solid #d8c9a4;
@@ -1701,6 +1718,7 @@ section h2 {
 /* モーダル: 建築・秘宝・村史・個人記録 */
 #buildingOverlay,
 #secretTreasureOverlay,
+#alchemyOverlay,
 #dryadFruitOverlay,
 #historyOverlay,
 #personalHistoryOverlay,
@@ -1719,6 +1737,7 @@ section h2 {
 }
 #buildingModal,
 #secretTreasureModal,
+#alchemyModal,
 #dryadFruitModal,
 #historyModal,
 #personalHistoryModal,
@@ -2469,13 +2488,15 @@ button.family-tree-card:focus {
   line-height: 1.8;
 }
 /* 秘宝モーダルも奇跡と同じ軽銀プレートの帳簿意匠 */
-#secretTreasureModal {
+#secretTreasureModal,
+#alchemyModal {
   background: #fdfdfe;
   border: 1px solid #c6cacf;
   box-shadow: 0 18px 48px rgba(30, 34, 40, 0.35);
 }
 #miracleModal .modal-header,
-#secretTreasureModal .modal-header {
+#secretTreasureModal .modal-header,
+#alchemyModal .modal-header {
   padding-bottom: 8px;
   border-bottom: 2px solid #aab0b7;
   color: #3c4248;
@@ -2484,7 +2505,8 @@ button.family-tree-card:focus {
   letter-spacing: 0.18em;
 }
 #miracleModal .modal-buttons button,
-#secretTreasureModal .modal-buttons button {
+#secretTreasureModal .modal-buttons button,
+#alchemyModal .modal-buttons button {
   background: linear-gradient(180deg, #f6f8f9, #d9dee2);
   border: 1px solid;
   border-color: #ffffff #7f868d #7f868d #f0f2f4;
@@ -2496,8 +2518,47 @@ button.family-tree-card:focus {
   padding: 4px 14px;
 }
 #miracleModal .modal-buttons button:hover,
-#secretTreasureModal .modal-buttons button:hover {
+#secretTreasureModal .modal-buttons button:hover,
+#alchemyModal .modal-buttons button:hover {
   background: linear-gradient(180deg, #eaeef0, #cbd1d6);
+}
+/* 錬金: 消費技術ごとに秘宝を並べる */
+.alchemy-lead {
+  margin: 0 0 8px;
+  color: #3d444b;
+}
+.alchemy-result {
+  margin: 0 0 8px;
+  padding: 6px 10px;
+  background: #eef4ec;
+  border: 1px solid #a9c2a2;
+  color: #2f4a2a;
+}
+.alchemy-tier-heading {
+  margin: 16px 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #c6cacf;
+  color: #3c4248;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+  font-size: 1rem;
+}
+/* ラケシスの帳簿・死者の書の選択画面（過去帳と同じ帳面の意匠） */
+.fate-picker-lead {
+  margin: 0 0 10px;
+  font-size: 0.92rem;
+}
+.fate-picker-table {
+  min-width: 0;
+}
+.fate-picker-table .friendship-detail-col-person {
+  width: 36%;
+}
+.fate-picker-col-action {
+  width: 104px;
+}
+.fate-picker-note {
+  color: #73654b;
+  font-size: 0.82rem;
 }
 .secret-treasure-target-label {
   display: grid;

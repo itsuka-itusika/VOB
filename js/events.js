@@ -46,6 +46,7 @@ import {
   promoteDisappointmentToDespair
 } from "./domain/despair.js";
 import { getVisitorArrivalLine } from "./data/dialogue/visitorLines.js";
+import { getDialogueLine } from "./dialogue/dialogueEngine.js";
 import { addDivineMight, getDivineMightGainFromMonthlyMana, runAfterPendingDivineMightLevelUp } from "./divineMight.js";
 import { BUILDINGS } from "./buildings.js";
 import { advanceBuildingRequestMonth, tryStartBuildingRequest } from "./buildingRequests.js";
@@ -64,6 +65,7 @@ import {
 import { processAdventurerQuestReturns, showAdventurerQuestResultModals } from "./adventurerQuests.js";
 import { getDespairDepartureLine } from "./data/dialogue/despairDepartureLines.js";
 import { advanceBacchusProtectionMonth, tryTriggerEarnestPrayer } from "./earnestPrayer.js";
+import { rollLachesisNaturalVisitor } from "./lachesisLedger.js";
 import { showRandomEventModal } from "./randomEventModal.js";
 
 const OPENING_RAID_GRACE_YEAR = 1195;
@@ -944,8 +946,10 @@ export function doMonthStartProcess(v, simulationOptions = {}) {
   if (!simulationOptions.suppressVisitors) {
     for (let i = 0; i < visitorLimit; i++) {
       if (Math.random() < 0.5) {
+        // 5%で、別の村でラケシスの帳簿に登録された村人が代わりに訪れる。
+        const lachesisVisitor = rollLachesisNaturalVisitor(v);
         // 奴隷商人は奴隷を連れて来るが、枠は1つしか使わない。
-        const arrivals = createVisitorGroup([
+        const arrivals = lachesisVisitor ? [lachesisVisitor] : createVisitorGroup([
           ...v.villagers.map(person => person.name),
           ...v.visitors.map(person => person.name),
           ...(Array.isArray(v.activeAdventurerQuests)
@@ -955,7 +959,9 @@ export function doMonthStartProcess(v, simulationOptions = {}) {
         arrivals.forEach(visitor => {
           v.visitors.push(visitor);
           v.log(`訪問者 ${visitor.name} が村を訪れました`);
-          const arrivalLine = getVisitorArrivalLine(visitor, v);
+          const arrivalLine = visitor.lachesisId
+            ? getDialogueLine({ character: visitor, scene: "lachesis", key: "visitor" })
+            : getVisitorArrivalLine(visitor, v);
           if (arrivalLine) v.log(`${visitor.name}「${arrivalLine}」`);
         });
       }

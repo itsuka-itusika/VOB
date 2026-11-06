@@ -13,6 +13,11 @@ import { allocatePersonId } from "./domain/personId.js";
 // 同じ描画フレーム内のスクロールは1回にまとめる。
 let isLogScrollScheduled = false;
 
+/** 村ごとの識別子。ラケシスの帳簿で、登録した村と別の村を見分けるために使う。 */
+function createVillageUid() {
+  return `v${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+}
+
 function scheduleLogScroll(logArea) {
   if (isLogScrollScheduled) return;
   isLogScrollScheduled = true;
@@ -87,6 +92,7 @@ export class Village {
     this.battleDebugMode = false;
     this.difficulty = "normal";
     this.gameMode = "normal";
+    this.villageUid = createVillageUid();
     this.isRaidProcessDone = false;
     this.isRaidFinalizing = false;
     this.raidTurnCount = 0;
@@ -243,6 +249,11 @@ export class Villager {
     this.adultBodyReached = false;
     this.adultMindReached = false;
     this.adultModalShown = false;
+
+    /** ラケシスの帳簿と死者の書 */
+    this.lachesisId = "";
+    this.lachesisSummoned = false;
+    this.reincarnatedFromId = null;
   }
 
   setPortrait(portraitFile) {

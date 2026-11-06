@@ -290,6 +290,7 @@ function convertVillageToObject(village) {
     raidCooldown: normalizeFiniteNumber(village.raidCooldown, 0),
     difficulty: normalizeDifficulty(village.difficulty),
     gameMode: normalizeGameMode(village.gameMode),
+    villageUid: String(village.villageUid || ""),
     pendingRaid: cloneNullableDeepObject(village.pendingRaid),
     battleDebugMode: !!village.battleDebugMode,
     // raidEnemies (Villager互換配列)
@@ -317,7 +318,7 @@ function convertVillageToObject(village) {
 /**
  * villager(Villager) → object
  */
-function convertVillagerToObject(vill) {
+export function convertVillagerToObject(vill) {
   syncWolfSpeciesTraits(vill);
   syncGoblinSpeciesTraits(vill);
   normalizeVillageRoleForPerson(vill);
@@ -437,7 +438,10 @@ function convertVillagerToObject(vill) {
     adultMindReached: vill.adultMindReached !== undefined
       ? !!vill.adultMindReached
       : !!(vill.potentialStats && Number(vill.spiritAge) >= 16),
-    adultModalShown: !!vill.adultModalShown
+    adultModalShown: !!vill.adultModalShown,
+    ...(vill.lachesisId ? { lachesisId: String(vill.lachesisId) } : {}),
+    ...(vill.lachesisSummoned ? { lachesisSummoned: true } : {}),
+    ...(normalizePersonId(vill.reincarnatedFromId) != null ? { reincarnatedFromId: normalizePersonId(vill.reincarnatedFromId) } : {})
   };
 }
 
@@ -565,6 +569,8 @@ function convertObjectToVillage(dataObj) {
   v.raidCooldown = Math.max(0, Math.floor(normalizeFiniteNumber(dataObj.raidCooldown, 0)));
   v.difficulty = normalizeDifficulty(dataObj.difficulty);
   v.gameMode = normalizeGameMode(dataObj.gameMode);
+  // 旧セーブには識別子がないため、コンストラクタで作った新しい識別子をそのまま使う。
+  if (dataObj.villageUid) v.villageUid = String(dataObj.villageUid);
   v.pendingRaid = cloneNullableDeepObject(dataObj.pendingRaid);
   v.battleDebugMode = !!dataObj.battleDebugMode;
   if (Array.isArray(dataObj.raidEnemies)) {
@@ -690,7 +696,7 @@ function finalizePersonIds(village, dataObj) {
 /**
  * オブジェクト → Villagerインスタンス
  */
-function convertObjectToVillager(obj) {
+export function convertObjectToVillager(obj) {
   let vill = new Villager(obj.name, obj.bodySex, obj.bodyAge);
   // 保存済みIDを復元する。旧セーブでIDが無い場合はコンストラクタの採番を使う。
   vill.id = normalizePersonId(obj.id) ?? vill.id;
@@ -825,6 +831,9 @@ function convertObjectToVillager(obj) {
   if (obj.uiAgeDisplay) {
     vill.uiAgeDisplay = obj.uiAgeDisplay;
   }
+  vill.lachesisId = String(obj.lachesisId || "");
+  vill.lachesisSummoned = !!obj.lachesisSummoned;
+  vill.reincarnatedFromId = normalizePersonId(obj.reincarnatedFromId);
   if (["翼人兵", "黙示録の騎士・支配"].includes(vill.raiderType)) {
     vill.raidAttackType = "rangedMagic";
   }

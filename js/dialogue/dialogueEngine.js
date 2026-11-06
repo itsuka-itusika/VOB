@@ -17,6 +17,7 @@ import { JOB_LINES } from "../data/dialogue/jobLines.js";
 import { REPRODUCTION_LINES } from "../data/dialogue/reproductionLines.js";
 import { EXCHANGE_SITUATION_LINES } from "../data/dialogue/exchangeSituationLines.js";
 import { SECRET_TREASURE_LINES } from "../data/dialogue/secretTreasureLines.js";
+import { LACHESIS_LINES } from "../data/dialogue/lachesisLines.js";
 import { MIRACLE_RESULT_LINES, THUNDERBOLT_RAIDER_LINES } from "../data/dialogue/miracleLines.js";
 import { TUTORIAL_LINES } from "../data/dialogue/tutorialLines.js";
 import {
@@ -350,6 +351,8 @@ export function getDialogueLines({ character, scene, key, context = {} }) {
       return selectToneLines(EXCHANGE_SITUATION_LINES[key], character, context);
     case "secretTreasure":
       return selectToneLines(SECRET_TREASURE_LINES[key], character, context);
+    case "lachesis":
+      return selectToneLines(LACHESIS_LINES[key], character, context);
     case "miracle":
       return getMiracleLines(character, key, context);
     case "tutorial":
@@ -667,6 +670,11 @@ export function selectConversationCandidate(candidates) {
 
 export function getConversationLine({ character, village, context = {} }) {
   if (hasTrait(character, "訪問者", "mindTraits")) {
+    // ラケシスの帳簿から来た村人は、村の様子より前の村から糸に導かれた話をする。
+    if (character?.lachesisId) {
+      const lachesisLine = getDialogueLine({ character, scene: "lachesis", key: "visitor", context });
+      if (lachesisLine) return lachesisLine;
+    }
     // 平時は村の肉体構成への反応を優先。黙示録中は従来の専用会話を維持。
     if (!isApocalypseActive(village) && isYoungFemaleMajorityVillage(village)) {
       const villageLine = pickDialogueLine(getYoungFemaleVillageVisitorLines(character), context);

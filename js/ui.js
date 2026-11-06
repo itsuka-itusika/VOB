@@ -46,6 +46,7 @@ import {
 } from "./domain/jobTables.js";
 import { getResourceStorageStatus, getResourceStorageWarningRatio } from "./domain/resourceLimits.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
+import { isChaosAlchemyAvailable } from "./chaosAlchemy.js";
 import { getWinterMaterialRequirement } from "./domain/winterMaterials.js";
 import { getPopulationCount, getUncountedPopulationCount } from "./domain/speciesTraits.js";
 import { isUnassignedActionVillager } from "./domain/rules.js";
@@ -1288,6 +1289,10 @@ export function updateUI(v) {
     const warCouncilButton = document.getElementById("warCouncilButton");
     if (warCouncilButton) {
       warCouncilButton.style.display = raidMode ? "" : "none";
+    }
+    const alchemyButton = document.getElementById("alchemyButton");
+    if (alchemyButton) {
+      alchemyButton.style.display = isChaosAlchemyAvailable(v) ? "" : "none";
     }
     // 襲撃中に月を進める操作は作戦会議の「迎撃開始」へ寄せるため、ボタンごと隠す。
     const nextTurnButton = document.getElementById("nextTurnButton");

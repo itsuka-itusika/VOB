@@ -61,6 +61,9 @@ const EFFECT_RESULT_DIALOGUES = {
   "クロノスの秘薬": { scene: "secretTreasure", key: "chronosElixir" },
   "腕の無い天使像": { scene: "secretTreasure", key: "armlessAngel" },
   "悍ましい肖像画": { scene: "miracle", key: "grotesquePortrait" },
+  "アルカディアの神酒": { scene: "secretTreasure", key: "arcadiaNectar" },
+  "ラケシスの台帳": { scene: "lachesis", key: "register" },
+  "ラケシスの神籤": { scene: "lachesis", key: "visitor" },
   "旅人の奇跡": { scene: "miracle", key: "traveler" },
   "市場の奇跡": { scene: "miracle", key: "market" },
   "出立の奇跡": { scene: "miracle", key: "departure" }
@@ -1480,8 +1483,8 @@ function departureMiracle(p,v,{ showModal = true } = {}) {
 
 
 
-function getGenericMiracleLine(person, miracleName) {
-  const dedicatedDialogue = EFFECT_RESULT_DIALOGUES[miracleName];
+function getGenericMiracleLine(person, miracleName, dialogue = null) {
+  const dedicatedDialogue = dialogue || EFFECT_RESULT_DIALOGUES[miracleName];
   if (dedicatedDialogue) {
     return getDialogueLine({ character: person, ...dedicatedDialogue });
   }
@@ -1505,14 +1508,14 @@ function getCleanlinessMiracleSpeaker(village) {
 const MIRACLE_RESULT_MAX_SPEAKERS = 4;
 
 // 代表を選ぶ際、同じセリフになる相手は後回しにしてセリフの重複を避ける。
-function pickMiracleResultSpeakers(targets, miracleName) {
+function pickMiracleResultSpeakers(targets, miracleName, dialogue = null) {
   const picked = [];
   const usedLines = new Set();
   // 上限より多いときだけ、誰が代表になるかを毎回変える。
   const candidates = targets.length > MIRACLE_RESULT_MAX_SPEAKERS ? shuffleArray(targets) : targets;
   candidates.forEach(person => {
     if (picked.length >= MIRACLE_RESULT_MAX_SPEAKERS) return;
-    const line = getGenericMiracleLine(person, miracleName);
+    const line = getGenericMiracleLine(person, miracleName, dialogue);
     if (line && usedLines.has(line)) return;
     if (line) usedLines.add(line);
     picked.push({ person, line });
@@ -1524,7 +1527,8 @@ export function showMiracleResultModal(village, miracleName, message, people = [
   if (typeof document === "undefined") return;
   const targets = (people || []).filter(Boolean);
   if (targets.length === 0 && !options.allowEmpty) return;
-  const entries = pickMiracleResultSpeakers(targets, miracleName);
+  // options.dialogue で、同じ名前の効果でも状況ごとのセリフ表と文脈を指定できる。
+  const entries = pickMiracleResultSpeakers(targets, miracleName, options.dialogue || null);
   const overlay = document.createElement("div");
   overlay.className = "effect-result-overlay";
   overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;";

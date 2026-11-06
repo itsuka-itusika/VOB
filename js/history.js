@@ -1343,7 +1343,7 @@ const DEPARTURE_SENTENCES = {
   "光の柱への曝露": "光の柱への曝露により死亡する"
 };
 
-function formatDepartureSentence(departure) {
+export function formatDepartureSentence(departure) {
   const reason = departure?.reason || "離村";
   const body = DEPARTURE_SENTENCES[reason] || `${reason}により村を去る`;
   return `${departure?.year ?? "?"}年${departure?.month ?? "?"}月に${body}`;
