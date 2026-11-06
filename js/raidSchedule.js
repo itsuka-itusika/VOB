@@ -180,6 +180,8 @@ export function processRaidScheduleAtMonthStart(village, options = {}) {
 
   if (village?.villageTraits?.includes(RAID_PROTECTION_TRAIT)) {
     village.pendingRaid = null;
+    // 加護の間は襲撃のない月数を積まない。明けた後は襲撃直後と同じ確率から始める。
+    village.monthsSinceRaid = 0;
     return;
   }
 
