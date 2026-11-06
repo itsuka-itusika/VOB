@@ -166,9 +166,7 @@ function applyGoblinStatue(village) {
   showSecretTreasureResult(
     village,
     "ゴブリンの彫像",
-    toGoblin
-      ? "彫像の目に濁った光が灯りました。村はゴブリンを引き寄せるようになります（ゴブリンモード）。"
-      : "彫像の目から光が消えました。村はもうゴブリンを引き寄せません（通常のモード）。",
+    toGoblin ? "彫像の目に濁った光が灯りました。" : "彫像の目から光が消えました。",
     getVillagers(village),
     { dialogue: { scene: "secretTreasure", key: toGoblin ? "goblinStatueToGoblin" : "goblinStatueToNormal" } }
   );
@@ -183,7 +181,7 @@ function applyArcadiaNectar(village) {
   showSecretTreasureResult(
     village,
     "アルカディアの神酒",
-    `楽園の神酒の香りが村を包み、バッカスの加護が降りました。1年の間、通常の襲撃は起こりません。${canceledRaid ? "予約されていた襲撃は消え去りました。" : ""}`,
+    "楽園の神酒の香りが村を包み、バッカスの加護が降りました。",
     getVillagers(village)
   );
 }
@@ -622,7 +620,7 @@ export const SECRET_TREASURES = [
   {
     id: LACHESIS_LOT_SECRET_TREASURE_ID,
     name: "ラケシスの神籤",
-    desc: "ラケシスの帳簿に記された村人を1人選び、職業「旅人」の訪問者として呼び出す。呼び出した訪問者への勧誘は必ず成功する。同じ村人がすでに村にいる場合は選べない。",
+    desc: "ラケシスの帳簿に記された村人を1人選び、職業「旅人」の訪問者として呼び出す。呼び出した訪問者への勧誘は必ず成功する。",
     sellPrice: SECRET_TREASURE_SELL_PRICES[LACHESIS_LOT_SECRET_TREASURE_ID],
     canUse: (village) => getSummonableLachesisEntries(village).length > 0,
     blockedReason: () => hasLachesisEntries()
@@ -639,7 +637,7 @@ export const SECRET_TREASURES = [
   {
     id: LACHESIS_LEDGER_SECRET_TREASURE_ID,
     name: "ラケシスの糸車",
-    desc: "使ってもなくならない。村人1名の運命の糸をラケシスの帳簿に紡ぎ込む。記された村人は別のセーブデータの村へ訪問者として現れることがあり、ラケシスの神籤や「はじめから（転生）」で呼び出せる。記録済みの村人に使うと、その時点の姿で記し直す。",
+    desc: "使ってもなくならない。村人1名の運命の糸をラケシスの帳簿に紡ぎ込む。記された村人は別のセーブデータの村へ訪問者として現れることがある。記録済みの村人に使うと、その時点の姿で記し直す。",
     sellPrice: SECRET_TREASURE_SELL_PRICES[LACHESIS_LEDGER_SECRET_TREASURE_ID],
     consumable: false,
     target: "villager",
@@ -648,7 +646,7 @@ export const SECRET_TREASURES = [
   {
     id: BOOK_OF_THE_DEAD_SECRET_TREASURE_ID,
     name: "死者の書",
-    desc: "妊娠・臨月の村人1名に使用可能。村を去った者・亡くなった者から1人を選び、意識を保ったままお腹の子へ転生させる。子は名前・精神性別・精神年齢・口調・精神ステータス・精神特性・趣味を受け継ぐ。顔・肉体の性別・身体特性・身体ステータスは本来の赤子のまま。すでに転生した者は選べない。",
+    desc: "妊娠・臨月の村人1名に使用可能。村を去った者・亡くなった者から1人を選び、意識を保ったままお腹の子へ転生させる。子は名前・精神性別・精神年齢・口調・精神ステータス・精神特性・趣味を受け継ぐ。顔・肉体の性別・身体特性・身体ステータスは本来の赤子のまま。",
     sellPrice: SECRET_TREASURE_SELL_PRICES[BOOK_OF_THE_DEAD_SECRET_TREASURE_ID],
     target: "villager",
     targetFilter: canUseBookOfTheDeadOn,
@@ -666,7 +664,7 @@ export const SECRET_TREASURES = [
   {
     id: ARCADIA_NECTAR_SECRET_TREASURE_ID,
     name: "アルカディアの神酒",
-    desc: "村特性「加護」を1年（12か月）付与する。加護の間は通常襲撃が起こらず、予約済みの通常襲撃も取り消される。",
+    desc: "村特性「加護」を1年付与する。加護の間は通常襲撃が起こらず、予約済みの通常襲撃も取り消される。",
     sellPrice: SECRET_TREASURE_SELL_PRICES[ARCADIA_NECTAR_SECRET_TREASURE_ID],
     use: applyArcadiaNectar
   }

@@ -106,7 +106,7 @@ function applyReincarnation(village, mother, departed) {
   showMiracleResultModal(
     village,
     "死者の書",
-    `死者の書の頁がひとりでにめくれ、${departed.name}の名が光りました。${mother.name}のお腹の子は、${departed.name}の意識を保ったまま生まれてきます。`,
+    `死者の書の頁がひとりでにめくれ、${departed.name}の名が光りました。`,
     [mother],
     { dialogue: { scene: "secretTreasure", key: "bookOfTheDead", context: { departedName: departed.name } } }
   );
@@ -150,7 +150,7 @@ export function openBookOfTheDeadModal(village, mother, { onChosen = null } = {}
   modal.setAttribute("aria-modal", "true");
   modal.innerHTML = `
     <div class="modal-header">死者の書</div>
-    <p class="fate-picker-lead">${escapeHtml(mother.name)}のお腹の子に宿す魂を選びます。選んだ者は意識を保ったまま転生し、名前・精神性別・精神年齢・口調・精神ステータス・精神特性・趣味を受け継ぎます。顔・肉体の性別・身体は本来の赤子のまま生まれます。</p>
+    <p class="fate-picker-lead">${escapeHtml(mother.name)}のお腹の子に宿す魂を選びます。</p>
     <div class="friendship-detail-content">
       <table class="friendship-detail-table fate-picker-table">
         <colgroup>

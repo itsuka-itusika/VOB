@@ -39,8 +39,8 @@ export function applyLachesisLedger(village, target) {
     village,
     "ラケシスの糸車",
     overwritten
-      ? `ラケシスの糸車が回り、${target.name}の今の姿が運命の帳簿に紡ぎ直されました。`
-      : `ラケシスの糸車が回り、${target.name}の運命の糸が帳簿に紡ぎ込まれました。いつか別の村で、この糸が手繰られるかもしれません。`,
+      ? `ラケシスの糸車が回り、${target.name}の運命の糸が紡ぎ直されました。`
+      : `ラケシスの糸車が回り、${target.name}の運命の糸が紡ぎ込まれました。`,
     [target]
   );
   return true;
@@ -112,7 +112,6 @@ export function openLachesisLotModal(village, { onSummoned = null } = {}) {
   modal.setAttribute("aria-modal", "true");
   modal.innerHTML = `
     <div class="modal-header">ラケシスの帳簿</div>
-    <p class="fate-picker-lead">運命の糸を手繰り、帳簿に記された者を一人、旅人として呼び寄せます。</p>
     <div class="friendship-detail-content">
       <table class="friendship-detail-table fate-picker-table">
         <colgroup>
@@ -184,7 +183,7 @@ export function openLachesisRebirthModal({ onConfirm = null } = {}) {
   modal.setAttribute("aria-labelledby", `${REBIRTH_MODAL_ID}Title`);
   modal.innerHTML = `
     <h2 id="${REBIRTH_MODAL_ID}Title" class="gs-title">はじめから（転生）</h2>
-    <p class="gs-note">ラケシスの帳簿から、新しい村の初期村人になる者を1〜2人選びます。初期村人6人のうち、選んだ人数分がこの者たちに置き換わります。</p>
+    <p class="gs-note">新しい村の初期村人になる者を1〜2人選びます。</p>
     <div class="rebirth-grid">
       ${entries.map((entry, index) => `
         <div class="gs-card rebirth-card" data-rebirth-entry="${index}" role="button" tabindex="0" aria-pressed="false">

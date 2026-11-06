@@ -154,7 +154,6 @@ export function openInGameSettingsModal(village, { onApplied = null } = {}) {
   modal.innerHTML = `
     <h2 id="${MODAL_ID}Title" class="gs-title">設定</h2>
     <div class="gs-section">難易度（この村）</div>
-    <p class="gs-note">遊んでいる村の難易度を切り替えます。次の判定から新しい難易度が使われます。</p>
     ${renderDifficultyCards()}
     <div class="gs-section">オートセーブ</div>
     ${renderAutosaveSegments()}
@@ -213,7 +212,7 @@ export function openGameSettingsModal() {
   modal.innerHTML = `
     <h2 id="${MODAL_ID}Title" class="gs-title">設定</h2>
     <div class="gs-section">モード</div>
-    <p class="gs-note">モードと難易度は「はじめから」で開始する時に適用されます。開始後も、難易度はメニューの「設定」で、モードは秘宝「ゴブリンの彫像」で変えられます。</p>
+    <p class="gs-note">モードと難易度は「はじめから」で開始する時に適用されます。</p>
     <div class="gs-cards">
       <div class="gs-card" data-gs-mode="${GAME_MODE_NORMAL}" role="button" tabindex="0">
         <h4>ノーマル</h4>
