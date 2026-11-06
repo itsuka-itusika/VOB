@@ -345,8 +345,11 @@ export const BUILDINGS = [
     materials: 200,
     funds: 200,
     tech: 300,
-    desc: "黙示録クリアで解放。メニューに「錬金」が加わり、技術を消費して秘宝を錬成できる。規模+40",
-    isUnlocked: (village) => !!village?.apocalypseCleared,
+    desc: "黙示録クリアで解放。錬金工房の建設後に建設可能。メニューに「錬金」が加わり、技術を消費して秘宝を錬成できる。規模+40",
+    // 黙示録クリアまでは一覧に出さない。クリア後は表示し、錬金工房が未建設なら理由を示す。
+    requiredBuildingIds: ["alchemy"],
+    isRevealed: (village) => !!village?.apocalypseCleared,
+    isUnlocked: (village) => !!village?.apocalypseCleared && hasActiveBuilding(village, "alchemy"),
     effect: standardBuildingEffect({
       scale: 40,
       flag: CHAOS_ALCHEMY_KILN_FLAG,
