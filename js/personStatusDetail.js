@@ -3,6 +3,7 @@
 // 個人記録そのものに、人物欄と個人史の間へステータスと特性を挟んだもの。閉じると元の選択画面に戻る。
 
 import { bindPersonalRecordContent, renderDictionaryTermList, renderPersonalRecordHtml } from "./history.js";
+import { renderRecordTitle } from "./personMarks.js";
 
 const OVERLAY_ID = "personStatusDetailOverlay";
 const MODAL_ID = "personStatusDetailModal";
@@ -63,7 +64,7 @@ export function openPersonStatusDetailModal(person, { name = "", village = null,
       <button type="button" data-close-status-detail>閉じる</button>
     </div>
   `;
-  modal.querySelector(".modal-header").textContent = `${shown.name || "不明"}の記録`;
+  renderRecordTitle(modal.querySelector(".modal-header"), shown.name || "不明", person);
   const body = modal.querySelector(".status-detail-body");
   body.innerHTML = renderPersonalRecordHtml(village, shown, {
     archived: Boolean(person.departure),

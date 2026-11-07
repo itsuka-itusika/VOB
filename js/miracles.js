@@ -20,6 +20,7 @@ import { getSelectableRaidTables, startRaidEvent } from "./raidStart.js";
 import { getRaiderIncomingDamageMultiplier } from "./raidRules.js";
 import { completeTutorialTask } from "./tutorial.js";
 import { createStatusDetailSelectRow } from "./personStatusDetail.js";
+import { getPersonMark } from "./personMarks.js";
 import { isWarCouncilOpen, refreshWarCouncil } from "./warCouncil.js";
 import { getCaptives, normalizeCaptive } from "./captives.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
@@ -419,8 +420,10 @@ function formatMiracleTargetName(person) {
   return `${person.name}${position ? `(${position})` : ""}`;
 }
 
+// マークは選択肢の一番後ろに添える（…/体力72/⭐）。
 function formatMiracleOptionLabel(person, detailKind) {
-  return `${formatMiracleTargetName(person)}　${getMiracleTargetParts(person, detailKind).join("/")}`;
+  const mark = getPersonMark(person);
+  return `${formatMiracleTargetName(person)}　${[...getMiracleTargetParts(person, detailKind), ...(mark ? [mark] : [])].join("/")}`;
 }
 
 function getMiracleTargetOptions(mid) {

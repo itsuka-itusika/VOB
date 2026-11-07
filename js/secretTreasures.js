@@ -37,6 +37,7 @@ import { getSummonableLachesisEntries, hasLachesisEntries } from "./lachesisLedg
 import { applyLachesisLedger, openLachesisLotModal } from "./lachesisTreasures.js";
 import { canUseBookOfTheDeadOn, getReincarnationCandidates, openBookOfTheDeadModal } from "./bookOfTheDead.js";
 import { createStatusDetailSelectRow } from "./personStatusDetail.js";
+import { getPersonMark } from "./personMarks.js";
 
 const SEASON_TRAITS_TO_REMOVE = ["夏", "秋", "冬", "冷夏", "飛蝗", "厳冬"];
 const BAD_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "凍え", "疫病", "産褥", "危篤"];
@@ -769,7 +770,13 @@ function getTargetOptionLabel(person, village) {
     : (getCaptives(village).includes(person)
       ? "捕虜"
       : (Array.isArray(village.visitors) && village.visitors.includes(person) ? "訪問者" : "襲撃者"));
-  return `${person.name}（${role} / 肉体${person.bodyAge ?? "-"}歳 / 精神${person.spiritAge ?? "-"}歳）`;
+  return `${person.name}（${role} / 肉体${person.bodyAge ?? "-"}歳 / 精神${person.spiritAge ?? "-"}歳${formatMarkSuffix(person)}）`;
+}
+
+// マークは選択肢の一番後ろに添える。
+function formatMarkSuffix(person) {
+  const mark = getPersonMark(person);
+  return mark ? ` / ${mark}` : "";
 }
 
 function renderTargetSelect(village, definition, container) {
@@ -785,7 +792,7 @@ function renderTargetSelect(village, definition, container) {
   const optionLabel = (person) => {
     if (detailKind) return formatMiracleStyleOptionLabel(person, detailKind);
     if (definition.target === "exchangePair") return getTargetOptionLabel(person, village);
-    return `${person.name}（肉体${person.bodyAge}歳 / 精神${person.spiritAge}歳）`;
+    return `${person.name}（肉体${person.bodyAge}歳 / 精神${person.spiritAge}歳${formatMarkSuffix(person)}）`;
   };
 
   const selects = [];

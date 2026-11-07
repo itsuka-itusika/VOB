@@ -366,6 +366,7 @@ export function convertVillagerToObject(vill) {
     bodyTraits,
     mindTraits,
     hobby: vill.hobby,
+    mark: String(vill.mark || ""),
     relationships: normalizeRelationships(vill).map(entry => ({ ...entry })),
     friendships: { ...vill.friendships },
     friendshipStats: {
@@ -741,6 +742,7 @@ export function convertObjectToVillager(obj) {
   } else {
     vill.hobby = obj.hobby;
   }
+  vill.mark = typeof obj.mark === "string" ? obj.mark : "";
   vill.relationships = Array.isArray(obj.relationships) ? [...obj.relationships] : [];
   normalizeRelationships(vill);
   vill.friendships = obj.friendships && typeof obj.friendships === "object" && !Array.isArray(obj.friendships)

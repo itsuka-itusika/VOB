@@ -10,6 +10,7 @@ import { syncTitleCountRecord } from "./records.js";
 import { findPersonEverywhereById, normalizePersonId } from "./domain/personId.js";
 import { EXCLUSIVE_BODY_TRAITS } from "./createVillagers.js";
 import { FREED_SLAVE_TITLE, SLAVE_TITLE } from "./domain/slaveTrade.js";
+import { openPersonMarkPicker, renderRecordTitle } from "./personMarks.js";
 
 // 最初からいる村人だけが互いに持つ続柄。旧セーブで開村の記録を補うときの目印にする。
 const FOUNDING_RELATION_PREFIX = "村設立の同志";
@@ -1345,7 +1346,18 @@ export function openPersonalHistoryModal(village, person, options = {}) {
   const content = document.getElementById("personalHistoryContent");
   if (!overlay || !modal || !title || !content || !person) return;
 
-  title.textContent = `${person.name}の記録`;
+  renderRecordTitle(title, person.name, person);
+  const markButton = document.getElementById("personalHistoryMarkButton");
+  if (markButton) {
+    markButton.title = `${person.name}にマークを付ける`;
+    markButton.onclick = () => openPersonMarkPicker(person, {
+      onChange: async () => {
+        renderRecordTitle(title, person.name, person);
+        const { updateUI } = await import("./ui.js");
+        updateUI(village);
+      }
+    });
+  }
   content.innerHTML = renderPersonalRecordHtml(village, person, options);
   bindPersonalRecordContent(content, village, person);
 

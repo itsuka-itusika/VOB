@@ -26,6 +26,7 @@ import {
   releaseCaptive
 } from "./captives.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
+import { getPersonMark, openPersonMarkPicker } from "./personMarks.js";
 import {
   buyMerchantSecretTreasure,
   MERCHANT_SECRET_TREASURE_CHANCE,
@@ -100,12 +101,7 @@ function openCharacterLineModal(person, { scene, key = "" }) {
   portrait.title = "";
   portrait.onclick = null;
 
-  const characterInfo = document.getElementById("characterInfo");
-  if (characterInfo) {
-    characterInfo.innerHTML = `
-      <div class="character-name">${person.name}｜${person.race}｜${person.uiSexDisplay || person.bodySex}｜${person.uiAgeDisplay || `${person.bodyAge}歳`}</div>
-    `;
-  }
+  renderConversationCharacterInfo(person);
 
   profileButtons.hidden = true;
 
@@ -176,6 +172,16 @@ function ensureMerchantStock(visitor) {
   return visitor.merchantStock;
 }
 
+/** 会話モーダルの名前の行。マークがあれば年齢の右に添える。 */
+function renderConversationCharacterInfo(person) {
+  const characterInfo = document.getElementById("characterInfo");
+  if (!characterInfo) return;
+  const mark = getPersonMark(person);
+  characterInfo.innerHTML = `
+      <div class="character-name">${person.name}｜${person.race}｜${person.uiSexDisplay || person.bodySex}｜${person.uiAgeDisplay || `${person.bodyAge}歳`}${mark ? `<span class="person-mark">${mark}</span>` : ""}</div>
+    `;
+}
+
 /**
  * 会話モーダルを開く
  */
@@ -198,12 +204,7 @@ export function openConversationModal(character) {
   portrait.onclick = isSilentSaltPillar ? null : () => refreshConversationText(character);
 
   // キャラクター情報を表示するためのHTML要素を追加
-  const characterInfo = document.getElementById("characterInfo");
-  if (characterInfo) {
-    characterInfo.innerHTML = `
-      <div class="character-name">${character.name}｜${character.race}｜${character.uiSexDisplay || character.bodySex}｜${character.uiAgeDisplay || `${character.bodyAge}歳`}</div>
-    `;
-  }
+  renderConversationCharacterInfo(character);
 
   const isVillageMember = theVillage.villagers.includes(character);
   profileButtons.hidden = !isVillageMember;
@@ -216,6 +217,18 @@ export function openConversationModal(character) {
           closeConversationModal();
           openPersonalHistoryModal(theVillage, character);
         }
+      : null;
+  }
+  const markButton = document.getElementById("conversationMarkButton");
+  if (markButton) {
+    markButton.title = isVillageMember ? `${character.name}にマークを付ける` : "";
+    markButton.onclick = isVillageMember
+      ? () => openPersonMarkPicker(character, {
+          onChange: () => {
+            renderConversationCharacterInfo(character);
+            updateUI(theVillage);
+          }
+        })
       : null;
   }
   if (friendshipButton) {

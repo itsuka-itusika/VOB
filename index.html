@@ -82,8 +82,8 @@
           <button onclick="openMiracleModal()">奇跡の行使</button>
           <button onclick="openBuildingModal()">建築</button>
           <button onclick="openSecretTreasureModal()">秘宝</button>
-          <button id="alchemyButton" class="alchemy-menu-button" onclick="openAlchemyModal()" style="display:none;">錬金</button>
           <button onclick="openLedgerModal()">台帳</button>
+          <button id="alchemyButton" class="alchemy-menu-button" onclick="openAlchemyModal()" style="display:none;">錬金</button>
         </div>
         <div class="utility-actions">
           <select id="utilityActionSelect" aria-label="保存・読込操作">
@@ -527,7 +527,10 @@
 <!-- モーダル: 個人記録 -->
 <div id="personalHistoryOverlay"></div>
 <div id="personalHistoryModal">
-  <div class="modal-header" id="personalHistoryTitle">個人記録</div>
+  <div class="modal-header personal-history-header">
+    <span id="personalHistoryTitle">個人記録</span>
+    <button type="button" id="personalHistoryMarkButton" class="personal-history-detail-button">マーク</button>
+  </div>
   <div id="personalHistoryContent" class="modal-content"></div>
   <div class="modal-buttons">
     <button onclick="closePersonalHistoryModal()">閉じる</button>
@@ -556,6 +559,7 @@
       <div id="conversationProfileButtons" class="conversation-profile-buttons" hidden>
         <button type="button" id="conversationHistoryButton">個人史</button>
         <button type="button" id="conversationFriendshipButton">人間関係</button>
+        <button type="button" id="conversationMarkButton">マーク</button>
       </div>
     </div>
     <div class="dialogue-area">
