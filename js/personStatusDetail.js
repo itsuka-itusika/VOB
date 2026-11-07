@@ -53,7 +53,7 @@ export function openPersonStatusDetailModal(person, { name = "", village = null,
   overlay.className = "status-detail-overlay";
   const modal = document.createElement("div");
   modal.id = MODAL_ID;
-  modal.className = "friendship-detail-modal status-detail-modal";
+  modal.className = "friendship-detail-modal silver-ledger-modal status-detail-modal";
   modal.setAttribute("role", "dialog");
   modal.setAttribute("aria-modal", "true");
   modal.innerHTML = `

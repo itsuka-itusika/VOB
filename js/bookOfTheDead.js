@@ -124,9 +124,11 @@ export function openBookOfTheDeadModal(village, mother, { onChosen = null } = {}
     const taken = isDepartedReincarnated(village, person.id);
     return `
       <tr>
-        <td class="friendship-detail-person">
-          ${getPortraitSpriteHtml(person, { alt: person.name })}
-          <span>${escapeHtml(person.name)}</span>
+        <td>
+          <div class="friendship-detail-person">
+            ${getPortraitSpriteHtml(person, { alt: person.name })}
+            <span>${escapeHtml(person.name)}</span>
+          </div>
         </td>
         <td>${escapeHtml(formatDepartureSentence(person.departure))}</td>
         <td>
@@ -145,7 +147,7 @@ export function openBookOfTheDeadModal(village, mother, { onChosen = null } = {}
   overlay.className = "friendship-detail-overlay";
   const modal = document.createElement("div");
   modal.id = MODAL_ID;
-  modal.className = "friendship-detail-modal";
+  modal.className = "friendship-detail-modal silver-ledger-modal";
   modal.setAttribute("role", "dialog");
   modal.setAttribute("aria-modal", "true");
   modal.innerHTML = `

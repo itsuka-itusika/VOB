@@ -86,9 +86,11 @@ export function openLachesisLotModal(village, { onSummoned = null } = {}) {
     const reason = getLachesisEntryBlockedReason(village, entry);
     return `
       <tr>
-        <td class="friendship-detail-person">
-          ${getPortraitSpriteHtml(entry.person, { alt: entry.name })}
-          <span>${escapeHtml(entry.name)}</span>
+        <td>
+          <div class="friendship-detail-person">
+            ${getPortraitSpriteHtml(entry.person, { alt: entry.name })}
+            <span>${escapeHtml(entry.name)}</span>
+          </div>
         </td>
         <td>${describeEntry(entry, village)}</td>
         <td>
@@ -107,7 +109,7 @@ export function openLachesisLotModal(village, { onSummoned = null } = {}) {
   overlay.className = "friendship-detail-overlay";
   const modal = document.createElement("div");
   modal.id = LOT_MODAL_ID;
-  modal.className = "friendship-detail-modal";
+  modal.className = "friendship-detail-modal silver-ledger-modal";
   modal.setAttribute("role", "dialog");
   modal.setAttribute("aria-modal", "true");
   modal.innerHTML = `
@@ -177,7 +179,7 @@ export function openLachesisRebirthModal({ onConfirm = null } = {}) {
   overlay.className = "gs-overlay";
   const modal = document.createElement("div");
   modal.id = REBIRTH_MODAL_ID;
-  modal.className = "gs-modal";
+  modal.className = "gs-modal silver-ledger-modal";
   modal.setAttribute("role", "dialog");
   modal.setAttribute("aria-modal", "true");
   modal.setAttribute("aria-labelledby", `${REBIRTH_MODAL_ID}Title`);

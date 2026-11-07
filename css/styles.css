@@ -2571,7 +2571,7 @@ button.family-tree-card:focus {
   font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
   font-size: 1rem;
 }
-/* ラケシスの帳簿・死者の書の選択画面（過去帳と同じ帳面の意匠） */
+/* ラケシスの帳簿・死者の書の選択画面 */
 .fate-picker-lead {
   margin: 0 0 10px;
   font-size: 0.92rem;
@@ -2609,43 +2609,65 @@ body.status-detail-open #friendshipDetailModal { z-index: 12501; }
   background: rgba(0,0,0,0.35);
   z-index: 12200;
 }
-/* 詳細ステータスは奇跡・秘宝と同じ「神界の事務帳簿」: 白地の枠に、軽銀のプレートを1枚敷いて個人記録を載せる。 */
-.status-detail-modal {
-  width: min(880px, calc(100vw - 32px));
-  z-index: 12201;
+/* 奇跡・秘宝と同じ「神界の事務帳簿」: 白地の枠に軽銀のプレートを敷く。
+   詳細ステータスと、死者の書・ラケシスの神籤・はじめから（転生）の選択画面で使う。 */
+.silver-ledger-modal {
   background: #fdfdfe;
   border: 1px solid #c6cacf;
+  border-radius: 2px;
   box-shadow: 0 18px 48px rgba(30, 34, 40, 0.35);
   color: #2f353b;
   font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", "Times New Roman", serif;
 }
-.status-detail-modal .modal-header {
+.silver-ledger-modal .modal-header,
+.silver-ledger-modal .gs-title {
   padding-bottom: 8px;
   border-bottom: 2px solid #aab0b7;
   color: #3c4248;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
   font-size: 1.15rem;
   letter-spacing: 0.18em;
 }
-.status-detail-modal .modal-buttons button {
+/* ボタン = プレスした軽銀の金具 */
+.silver-ledger-modal button {
   background: linear-gradient(180deg, #f6f8f9, #d9dee2);
   border: 1px solid;
   border-color: #ffffff #7f868d #7f868d #f0f2f4;
   border-radius: 2px;
   color: #2b3036;
   font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.08em;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
-  padding: 4px 14px;
+  cursor: pointer;
 }
-.status-detail-modal .modal-buttons button:hover {
+.silver-ledger-modal .modal-buttons button,
+.silver-ledger-modal .gs-buttons button {
+  padding: 4px 14px;
+  letter-spacing: 0.14em;
+}
+.silver-ledger-modal button:not(:disabled):hover,
+.silver-ledger-modal button:not(:disabled):focus {
   background: linear-gradient(180deg, #eaeef0, #cbd1d6);
 }
-/* 本文 = 奇跡のカードと同じ軽銀のプレート。個人史が長い時はこの中だけ流す。 */
+.silver-ledger-modal button:disabled {
+  background: #e4e7ea;
+  border-color: #a2a9b0;
+  color: #7b838a;
+  text-shadow: none;
+  cursor: not-allowed;
+}
+/* 肖像を送る「<<」「>>」は、個人記録と同じく文字だけのボタンのままにする。 */
+.silver-ledger-modal button.personal-history-portrait-nav-button,
+.silver-ledger-modal button.personal-history-portrait-nav-button:not(:disabled):hover,
+.silver-ledger-modal button.personal-history-portrait-nav-button:not(:disabled):focus,
+.silver-ledger-modal button.personal-history-portrait-nav-button:disabled {
+  background: transparent;
+  border: 0;
+  text-shadow: none;
+}
+/* 一覧や本文を載せる軽銀のプレート。面取りは左上から光が当たる4辺別色で表す。 */
+.silver-ledger-modal .friendship-detail-content,
 .status-detail-body {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto;
-  padding: 18px 22px;
   background: linear-gradient(165deg, #eef1f3 0%, #dfe4e8 48%, #d4dade 74%, #e8ebee 100%);
   border: 3px solid;
   border-color: #fafbfc #8d949b #7f868d #edf0f2;
@@ -2653,6 +2675,57 @@ body.status-detail-open #friendshipDetailModal { z-index: 12501; }
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.85),
     inset 0 -2px 5px rgba(55, 62, 70, 0.16);
+}
+.silver-ledger-modal .friendship-detail-table th {
+  background: linear-gradient(180deg, #f6f8f9, #d9dee2);
+  color: #3c4248;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+.silver-ledger-modal .friendship-detail-table th,
+.silver-ledger-modal .friendship-detail-table td {
+  border-bottom-color: #aab0b7;
+}
+.silver-ledger-modal .friendship-detail-person .portrait-sprite,
+.silver-ledger-modal .rebirth-card .portrait-sprite {
+  border-color: #8d949b;
+}
+.silver-ledger-modal .fate-picker-lead,
+.silver-ledger-modal .fate-picker-note,
+.silver-ledger-modal .friendship-detail-empty,
+.silver-ledger-modal .gs-note,
+.silver-ledger-modal .gs-card p {
+  color: #545c64;
+}
+/* はじめから（転生）のカードも軽銀のプレート。選んだ札は奇跡の選択中と同じく縁を締めて光らせる。 */
+.silver-ledger-modal .gs-card {
+  background: linear-gradient(165deg, #eef1f3 0%, #dfe4e8 48%, #d4dade 74%, #e8ebee 100%);
+  border: 3px solid;
+  border-color: #fafbfc #8d949b #7f868d #edf0f2;
+  border-radius: 2px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -2px 5px rgba(55, 62, 70, 0.16),
+    0 3px 10px rgba(55, 62, 70, 0.20);
+  color: #2f353b;
+}
+.silver-ledger-modal .gs-card.is-selected {
+  background: linear-gradient(165deg, #f5f7f8 0%, #e8ecef 48%, #dde2e6 74%, #f0f2f4 100%);
+  border-color: #ffffff #4f565d #454c53 #f4f6f8;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 0 0 2px #5d656d,
+    0 0 12px rgba(93, 101, 109, 0.55);
+}
+.status-detail-modal {
+  width: min(880px, calc(100vw - 32px));
+  z-index: 12201;
+}
+/* 本文が長い時はプレートの中だけ流す。 */
+.status-detail-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 18px 22px;
 }
 /* 個人記録の茶の線と文字色を、プレートに合う銀灰へ置き換える。 */
 .status-detail-body .personal-history-summary,
@@ -2678,16 +2751,6 @@ body.status-detail-open #friendshipDetailModal { z-index: 12501; }
 }
 .status-detail-body .personal-history-portrait-frame {
   border-color: #8d949b;
-}
-.status-detail-body .personal-history-detail-button {
-  background: linear-gradient(180deg, #f6f8f9, #d9dee2);
-  border-color: #ffffff #7f868d #7f868d #f0f2f4;
-  border-radius: 2px;
-  color: #2b3036;
-}
-.status-detail-body .personal-history-detail-button:hover,
-.status-detail-body .personal-history-detail-button:focus {
-  background: linear-gradient(180deg, #eaeef0, #cbd1d6);
 }
 .status-detail-stats {
   width: 100%;
