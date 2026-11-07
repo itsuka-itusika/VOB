@@ -82,54 +82,40 @@ export function openLachesisLotModal(village, { onSummoned = null } = {}) {
   if (typeof document === "undefined") return;
   closeLachesisLotModal();
   const entries = loadLachesisLedger();
-  const rows = entries.map((entry, index) => {
+  const cards = entries.map((entry, index) => {
     const reason = getLachesisEntryBlockedReason(village, entry);
     return `
-      <tr>
-        <td>
-          <div class="friendship-detail-person">
-            ${getPortraitSpriteHtml(entry.person, { alt: entry.name })}
-            <span>${escapeHtml(entry.name)}</span>
+      <div class="gs-card rebirth-card fate-card">
+        ${getPortraitSpriteHtml(entry.person, { size: 56, alt: entry.name })}
+        <div class="rebirth-card-body">
+          <h4>${escapeHtml(entry.name)}</h4>
+          <p>${describeEntry(entry, village)}</p>
+          <div class="fate-card-actions">
+            <button type="button" class="rebirth-detail-button" data-lachesis-detail="${index}">詳細</button>
+            <button type="button" class="rebirth-detail-button" data-summon-lachesis="${index}" ${reason ? "disabled" : ""}>呼び出す</button>
           </div>
-        </td>
-        <td>${describeEntry(entry, village)}</td>
-        <td>
-          <div class="fate-picker-actions">
-            <button type="button" data-lachesis-detail="${index}">詳細</button>
-            <button type="button" data-summon-lachesis="${index}" ${reason ? "disabled" : ""}>呼び出す</button>
-          </div>
-          ${reason ? `<div class="fate-picker-note">${escapeHtml(reason)}</div>` : ""}
-        </td>
-      </tr>
+          ${reason ? `<p class="fate-picker-note">${escapeHtml(reason)}</p>` : ""}
+        </div>
+      </div>
     `;
   }).join("");
 
+  // 見た目は「はじめから（転生）」の選択画面と揃える。
   const overlay = document.createElement("div");
   overlay.id = LOT_OVERLAY_ID;
-  overlay.className = "friendship-detail-overlay";
+  overlay.className = "gs-overlay";
   const modal = document.createElement("div");
   modal.id = LOT_MODAL_ID;
-  modal.className = "friendship-detail-modal silver-ledger-modal";
+  modal.className = "gs-modal silver-ledger-modal";
   modal.setAttribute("role", "dialog");
   modal.setAttribute("aria-modal", "true");
+  modal.setAttribute("aria-labelledby", `${LOT_MODAL_ID}Title`);
   modal.innerHTML = `
-    <div class="modal-header">ラケシスの帳簿</div>
-    <div class="friendship-detail-content">
-      <table class="friendship-detail-table fate-picker-table">
-        <colgroup>
-          <col class="friendship-detail-col-person">
-          <col class="friendship-detail-col-relation">
-          <col class="fate-picker-col-action">
-        </colgroup>
-        <thead>
-          <tr><th>人物</th><th>記録</th><th></th></tr>
-        </thead>
-        <tbody>
-          ${rows || `<tr><td colspan="3" class="friendship-detail-empty">帳簿には、まだ誰の名も記されていない。</td></tr>`}
-        </tbody>
-      </table>
-    </div>
-    <div class="modal-buttons">
+    <h2 id="${LOT_MODAL_ID}Title" class="gs-title">ラケシスの帳簿</h2>
+    ${cards
+      ? `<div class="rebirth-grid">${cards}</div>`
+      : `<p class="gs-note">帳簿には、まだ誰の名も記されていない。</p>`}
+    <div class="gs-buttons">
       <button type="button" data-close-lachesis-lot>やめる</button>
     </div>
   `;

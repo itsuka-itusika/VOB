@@ -95,6 +95,10 @@ function buildReincarnation(departed) {
   };
 }
 
+function describeDeparted(person) {
+  return `${person.race || "人間"}・肉体${person.bodySex || "-"}${person.bodyAge ?? "-"}歳／精神${person.spiritSex || "-"}${person.spiritAge ?? "-"}歳`;
+}
+
 export function closeBookOfTheDeadModal() {
   document.getElementById(OVERLAY_ID)?.remove();
   document.getElementById(MODAL_ID)?.remove();
@@ -114,61 +118,47 @@ function applyReincarnation(village, mother, departed) {
 }
 
 /**
- * 過去帳を模した故人の一覧を開く。選んだ時だけ onChosen を呼ぶ。
+ * 故人の一覧を開く。選んだ時だけ onChosen を呼ぶ。
  */
 export function openBookOfTheDeadModal(village, mother, { onChosen = null } = {}) {
   if (typeof document === "undefined" || !mother) return;
   closeBookOfTheDeadModal();
   const departed = Array.isArray(village?.departedVillagers) ? [...village.departedVillagers].reverse() : [];
-  const rows = departed.map((person, index) => {
+  const cards = departed.map((person, index) => {
     const taken = isDepartedReincarnated(village, person.id);
     return `
-      <tr>
-        <td>
-          <div class="friendship-detail-person">
-            ${getPortraitSpriteHtml(person, { alt: person.name })}
-            <span>${escapeHtml(person.name)}</span>
+      <div class="gs-card rebirth-card fate-card">
+        ${getPortraitSpriteHtml(person, { size: 56, alt: person.name })}
+        <div class="rebirth-card-body">
+          <h4>${escapeHtml(person.name)}</h4>
+          <p>${escapeHtml(describeDeparted(person))}<br><span class="fate-picker-note">${escapeHtml(formatDepartureSentence(person.departure))}</span></p>
+          <div class="fate-card-actions">
+            <button type="button" class="rebirth-detail-button" data-book-detail="${index}">詳細</button>
+            <button type="button" class="rebirth-detail-button" data-reincarnate="${index}" ${taken ? "disabled" : ""}>転生させる</button>
           </div>
-        </td>
-        <td>${escapeHtml(formatDepartureSentence(person.departure))}</td>
-        <td>
-          <div class="fate-picker-actions">
-            <button type="button" data-book-detail="${index}">詳細</button>
-            <button type="button" data-reincarnate="${index}" ${taken ? "disabled" : ""}>転生させる</button>
-          </div>
-          ${taken ? `<div class="fate-picker-note">転生済み</div>` : ""}
-        </td>
-      </tr>
+          ${taken ? `<p class="fate-picker-note">転生済み</p>` : ""}
+        </div>
+      </div>
     `;
   }).join("");
 
+  // 見た目は「はじめから（転生）」の選択画面と揃える。
   const overlay = document.createElement("div");
   overlay.id = OVERLAY_ID;
-  overlay.className = "friendship-detail-overlay";
+  overlay.className = "gs-overlay";
   const modal = document.createElement("div");
   modal.id = MODAL_ID;
-  modal.className = "friendship-detail-modal silver-ledger-modal";
+  modal.className = "gs-modal silver-ledger-modal";
   modal.setAttribute("role", "dialog");
   modal.setAttribute("aria-modal", "true");
+  modal.setAttribute("aria-labelledby", `${MODAL_ID}Title`);
   modal.innerHTML = `
-    <div class="modal-header">死者の書</div>
-    <p class="fate-picker-lead">${escapeHtml(mother.name)}のお腹の子に宿す魂を選びます。</p>
-    <div class="friendship-detail-content">
-      <table class="friendship-detail-table fate-picker-table">
-        <colgroup>
-          <col class="friendship-detail-col-person">
-          <col class="friendship-detail-col-relation">
-          <col class="fate-picker-col-action">
-        </colgroup>
-        <thead>
-          <tr><th>人物</th><th>記録</th><th></th></tr>
-        </thead>
-        <tbody>
-          ${rows || `<tr><td colspan="3" class="friendship-detail-empty">村を去った者は、まだ帳面に記されていない。</td></tr>`}
-        </tbody>
-      </table>
-    </div>
-    <div class="modal-buttons">
+    <h2 id="${MODAL_ID}Title" class="gs-title">死者の書</h2>
+    <p class="gs-note">${escapeHtml(mother.name)}のお腹の子に宿す魂を選びます。</p>
+    ${cards
+      ? `<div class="rebirth-grid">${cards}</div>`
+      : `<p class="gs-note">村を去った者は、まだ帳面に記されていない。</p>`}
+    <div class="gs-buttons">
       <button type="button" data-close-book-of-the-dead>やめる</button>
     </div>
   `;

@@ -2571,29 +2571,18 @@ button.family-tree-card:focus {
   font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
   font-size: 1rem;
 }
-/* ラケシスの帳簿・死者の書の選択画面 */
-.fate-picker-lead {
-  margin: 0 0 10px;
-  font-size: 0.92rem;
+/* ラケシスの帳簿・死者の書の選択画面。転生の選択と同じカードに、詳細と実行のボタンを並べる。 */
+.fate-card {
+  cursor: default;
 }
-.fate-picker-table {
-  min-width: 0;
-}
-.fate-picker-table .friendship-detail-col-person {
-  width: 36%;
-}
-.fate-picker-col-action {
-  width: 132px;
+.fate-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 .fate-picker-note {
   color: #73654b;
   font-size: 0.82rem;
-}
-.fate-picker-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: stretch;
 }
 /* 詳細ステータスから開いた個人記録・家系図・好感度は、詳細ステータスより上に出す。並びの順は普段と同じ。 */
 body.status-detail-open #personalHistoryOverlay { z-index: 12300; }
@@ -2665,8 +2654,7 @@ body.status-detail-open #friendshipDetailModal { z-index: 12501; }
   border: 0;
   text-shadow: none;
 }
-/* 一覧や本文を載せる軽銀のプレート。面取りは左上から光が当たる4辺別色で表す。 */
-.silver-ledger-modal .friendship-detail-content,
+/* 詳細ステータスの本文を載せる軽銀のプレート。面取りは左上から光が当たる4辺別色で表す。 */
 .status-detail-body {
   background: linear-gradient(165deg, #eef1f3 0%, #dfe4e8 48%, #d4dade 74%, #e8ebee 100%);
   border: 3px solid;
@@ -2676,27 +2664,15 @@ body.status-detail-open #friendshipDetailModal { z-index: 12501; }
     inset 0 1px 0 rgba(255, 255, 255, 0.85),
     inset 0 -2px 5px rgba(55, 62, 70, 0.16);
 }
-.silver-ledger-modal .friendship-detail-table th {
-  background: linear-gradient(180deg, #f6f8f9, #d9dee2);
-  color: #3c4248;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
-}
-.silver-ledger-modal .friendship-detail-table th,
-.silver-ledger-modal .friendship-detail-table td {
-  border-bottom-color: #aab0b7;
-}
-.silver-ledger-modal .friendship-detail-person .portrait-sprite,
 .silver-ledger-modal .rebirth-card .portrait-sprite {
   border-color: #8d949b;
 }
-.silver-ledger-modal .fate-picker-lead,
 .silver-ledger-modal .fate-picker-note,
-.silver-ledger-modal .friendship-detail-empty,
 .silver-ledger-modal .gs-note,
 .silver-ledger-modal .gs-card p {
   color: #545c64;
 }
-/* はじめから（転生）のカードも軽銀のプレート。選んだ札は奇跡の選択中と同じく縁を締めて光らせる。 */
+/* 選択画面のカードも軽銀のプレート。転生で選んだ札は奇跡の選択中と同じく縁を締めて光らせる。 */
 .silver-ledger-modal .gs-card {
   background: linear-gradient(165deg, #eef1f3 0%, #dfe4e8 48%, #d4dade 74%, #e8ebee 100%);
   border: 3px solid;
