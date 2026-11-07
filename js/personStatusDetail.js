@@ -1,5 +1,5 @@
 // personStatusDetail.js
-// 村の外の人物（ラケシスの帳簿の記録、過去帳の故人）や奇跡・秘宝の対象の詳細ステータスを見る画面。
+// 村の外の人物（ラケシスの運命帳の記録、過去帳の故人）や奇跡・秘宝の対象の詳細ステータスを見る画面。
 // 個人記録そのものに、人物欄と個人史の間へステータスと特性を挟んだもの。閉じると元の選択画面に戻る。
 
 import { bindPersonalRecordContent, renderDictionaryTermList, renderPersonalRecordHtml } from "./history.js";

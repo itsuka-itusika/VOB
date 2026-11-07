@@ -621,12 +621,12 @@ export const SECRET_TREASURES = [
   {
     id: LACHESIS_LOT_SECRET_TREASURE_ID,
     name: "ラケシスの神籤",
-    desc: "ラケシスの帳簿に記された村人を1人選び、訪問者として呼び出す。",
+    desc: "ラケシスの運命帳に記された村人を1人選び、訪問者として呼び出す。",
     sellPrice: SECRET_TREASURE_SELL_PRICES[LACHESIS_LOT_SECRET_TREASURE_ID],
     canUse: (village) => getSummonableLachesisEntries(village).length > 0,
     blockedReason: () => hasLachesisEntries()
       ? "呼び出せる村人がいません（すでに村にいるか、同じ名の者がいます）"
-      : "ラケシスの帳簿に記された村人がいません",
+      : "ラケシスの運命帳に記された村人がいません",
     use: (village) => {
       closeSecretTreasureModal();
       openLachesisLotModal(village, {
@@ -638,7 +638,7 @@ export const SECRET_TREASURES = [
   {
     id: LACHESIS_LEDGER_SECRET_TREASURE_ID,
     name: "ラケシスの糸車",
-    desc: "<strong>使ってもなくならない。</strong>村人1名の記録をラケシスの帳簿に紡ぎ込む。記された村人は別の村へ訪問者として現れることがある。",
+    desc: "<strong>使ってもなくならない。</strong>村人1名の記録をラケシスの運命帳に紡ぎ込む。記された村人は別の村へ訪問者として現れることがある。",
     sellPrice: SECRET_TREASURE_SELL_PRICES[LACHESIS_LEDGER_SECRET_TREASURE_ID],
     consumable: false,
     target: "villager",

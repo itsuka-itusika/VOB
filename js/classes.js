@@ -13,7 +13,7 @@ import { allocatePersonId } from "./domain/personId.js";
 // 同じ描画フレーム内のスクロールは1回にまとめる。
 let isLogScrollScheduled = false;
 
-/** 村ごとの識別子。ラケシスの帳簿で、登録した村と別の村を見分けるために使う。 */
+/** 村ごとの識別子。ラケシスの運命帳で、登録した村と別の村を見分けるために使う。 */
 function createVillageUid() {
   return `v${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -250,7 +250,7 @@ export class Villager {
     this.adultMindReached = false;
     this.adultModalShown = false;
 
-    /** ラケシスの帳簿と死者の書 */
+    /** ラケシスの運命帳と死者の書 */
     this.lachesisId = "";
     this.lachesisSummoned = false;
     this.reincarnatedFromId = null;

@@ -276,7 +276,7 @@ export function initOpeningScreen({ onLoadLocal, onLoadJson, onNewGame, onRebirt
     newGameHandler?.();
     setOpeningView("story");
   });
-  // ラケシスの帳簿に村人が記されている時だけ、転生した者たちで始める入口を出す。
+  // ラケシスの運命帳に村人が記されている時だけ、転生した者たちで始める入口を出す。
   const rebirthButton = getElement("openingRebirthButton");
   if (rebirthButton) {
     rebirthButton.hidden = typeof canRebirth !== "function" || !canRebirth();

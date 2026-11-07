@@ -946,7 +946,7 @@ export function doMonthStartProcess(v, simulationOptions = {}) {
   if (!simulationOptions.suppressVisitors) {
     for (let i = 0; i < visitorLimit; i++) {
       if (Math.random() < 0.5) {
-        // 5%で、別の村でラケシスの帳簿に登録された村人が代わりに訪れる。
+        // 5%で、別の村でラケシスの運命帳に登録された村人が代わりに訪れる。
         const lachesisVisitor = rollLachesisNaturalVisitor(v);
         // 奴隷商人は奴隷を連れて来るが、枠は1つしか使わない。
         const arrivals = lachesisVisitor ? [lachesisVisitor] : createVisitorGroup([

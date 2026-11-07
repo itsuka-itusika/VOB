@@ -80,7 +80,7 @@
 - `js/secretTreasures.js`
   - 秘宝データ、秘宝モーダル、使い切り効果、ドライアドの果実による専用変化モーダル、告天使の絵画の対象判定と妊娠予約を扱う。
 - `js/lachesisLedger.js`
-  - ラケシスの帳簿。登録した村人をセーブデータの外（localStorage の `vobLachesisLedger`）に `convertVillagerToObject` の形で保存し（登録時点の個人史も `history` に写す）、帳簿の村人を訪問者や初期村人として作り直す。作り直す時は人物IDを採番し直し、関係・好感度・役職・妊娠と一時的な状態を落とす。村の識別子 `villageUid` で登録した村を見分け、別の村にだけ自然来訪（訪問者が来る時の5%）させる。同じ村人の在村判定は人物の `lachesisId` で行う。
+  - ラケシスの運命帳。登録した村人をセーブデータの外（localStorage の `vobLachesisLedger`）に `convertVillagerToObject` の形で保存し（登録時点の個人史も `history` に写す）、帳簿の村人を訪問者や初期村人として作り直す。作り直す時は人物IDを採番し直し、関係・好感度・役職・妊娠と一時的な状態を落とす。村の識別子 `villageUid` で登録した村を見分け、別の村にだけ自然来訪（訪問者が来る時の5%）させる。同じ村人の在村判定は人物の `lachesisId` で行う。
 - `js/lachesisTreasures.js`
   - 秘宝「ラケシスの糸車」（登録。使ってもなくならない）と「ラケシスの神籤」（呼び出し）の処理と選択画面、開始画面の「はじめから（転生）」の選択画面を扱う。糸車の秘宝IDは、旧名「ラケシスの台帳」の頃の保存データを読めるよう `lachesis_ledger` のまま使う。
 - `js/bookOfTheDead.js`

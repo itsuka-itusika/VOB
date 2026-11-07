@@ -707,7 +707,7 @@ export function selectConversationCandidate(candidates) {
 
 export function getConversationLine({ character, village, context = {} }) {
   if (hasTrait(character, "訪問者", "mindTraits")) {
-    // ラケシスの帳簿から来た村人は、村の様子より前の村から糸に導かれた話をする。
+    // ラケシスの運命帳から来た村人は、村の様子より前の村から糸に導かれた話をする。
     if (character?.lachesisId) {
       const lachesisLine = getDialogueLine({ character, scene: "lachesis", key: "visitor", context });
       if (lachesisLine) return lachesisLine;

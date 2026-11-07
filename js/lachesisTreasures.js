@@ -30,11 +30,11 @@ function escapeHtml(value) {
 export function applyLachesisLedger(village, target) {
   const { overwritten, saved } = registerToLachesisLedger(village, target);
   if (!saved) {
-    village.log("【秘宝】ラケシスの帳簿へ書き込めませんでした。ブラウザの保存領域を確認してください");
-    window.alert("ラケシスの帳簿へ書き込めませんでした。ブラウザの保存領域を確認してください。");
+    village.log("【秘宝】ラケシスの運命帳へ書き込めませんでした。ブラウザの保存領域を確認してください");
+    window.alert("ラケシスの運命帳へ書き込めませんでした。ブラウザの保存領域を確認してください。");
     return false;
   }
-  village.log(`【秘宝】ラケシスの糸車により、${target.name}をラケシスの帳簿に${overwritten ? "記し直しました" : "記しました"}`);
+  village.log(`【秘宝】ラケシスの糸車により、${target.name}をラケシスの運命帳に${overwritten ? "記し直しました" : "記しました"}`);
   showMiracleResultModal(
     village,
     "ラケシスの糸車",
@@ -107,10 +107,10 @@ export function openLachesisLotModal(village, { onSummoned = null } = {}) {
   modal.setAttribute("aria-modal", "true");
   modal.setAttribute("aria-labelledby", `${LOT_MODAL_ID}Title`);
   modal.innerHTML = `
-    <h2 id="${LOT_MODAL_ID}Title" class="gs-title">ラケシスの帳簿</h2>
+    <h2 id="${LOT_MODAL_ID}Title" class="gs-title">ラケシスの運命帳</h2>
     ${cards
       ? `<div class="rebirth-grid">${cards}</div>`
-      : `<p class="gs-note">帳簿には、まだ誰の名も記されていない。</p>`}
+      : `<p class="gs-note">運命帳には、まだ誰の名も記されていない。</p>`}
     <div class="gs-buttons">
       <button type="button" data-close-lachesis-lot>やめる</button>
     </div>
