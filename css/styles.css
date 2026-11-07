@@ -2584,11 +2584,13 @@ button.family-tree-card:focus {
   color: #73654b;
   font-size: 0.82rem;
 }
+/* 呼び出せない理由は名前の右に添える。 */
 .fate-picker-reason {
-  margin: 4px 0 0;
+  margin-left: 10px;
   font-size: 0.76rem;
+  font-weight: normal;
 }
-.silver-ledger-modal .gs-card p.fate-picker-reason {
+.silver-ledger-modal .fate-picker-reason {
   color: #96242c;
 }
 /* 選択画面のカードは2列のまま、記録が1行に収まるよう幅を取る。 */

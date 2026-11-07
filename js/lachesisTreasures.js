@@ -85,13 +85,12 @@ export function openLachesisLotModal(village, { onSummoned = null } = {}) {
       <div class="gs-card rebirth-card fate-card">
         ${getPortraitSpriteHtml(entry.person, { size: 56, alt: entry.name })}
         <div class="rebirth-card-body">
-          <h4>${escapeHtml(entry.name)}</h4>
+          <h4>${escapeHtml(entry.name)}${reason ? `<span class="fate-picker-reason">${escapeHtml(reason)}</span>` : ""}</h4>
           <p>${describeEntry(entry)}</p>
           <div class="fate-card-actions">
             <button type="button" class="rebirth-detail-button" data-lachesis-detail="${index}">詳細</button>
             <button type="button" class="rebirth-detail-button" data-summon-lachesis="${index}" ${reason ? "disabled" : ""}>呼び出す</button>
           </div>
-          ${reason ? `<p class="fate-picker-reason">${escapeHtml(reason)}</p>` : ""}
         </div>
       </div>
     `;
