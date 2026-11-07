@@ -2,7 +2,7 @@
 // 人物に付けるマーク（⭐や♥などの目印）。会話モーダルと個人記録の「マーク」ボタンから付け外しする。
 // マークは人物の mark に保存し、会話・個人記録・詳細ステータスの名前の横と、奇跡・秘宝の対象の選択肢に出す。
 
-import { PERSON_MARK_ALIASES, PERSON_MARKS } from "./data/personMarkData.js";
+import { PERSON_MARK_ALIASES, PERSON_MARK_GROUPS, PERSON_MARKS } from "./data/personMarkData.js";
 
 const OVERLAY_ID = "personMarkOverlay";
 const MODAL_ID = "personMarkModal";
@@ -47,11 +47,14 @@ export function openPersonMarkPicker(person, { onChange = null } = {}) {
   modal.setAttribute("aria-modal", "true");
   modal.innerHTML = `
     <div class="modal-header"></div>
-    <div class="person-mark-grid">
-      ${PERSON_MARKS.map(mark => `
-        <button type="button" class="person-mark-choice${mark === current ? " is-selected" : ""}" data-person-mark="${mark}" aria-pressed="${mark === current}">${mark}</button>
-      `).join("")}
-    </div>
+    ${PERSON_MARK_GROUPS.map(group => `
+      <h4 class="person-mark-group">${group.label}</h4>
+      <div class="person-mark-grid">
+        ${group.marks.map(mark => `
+          <button type="button" class="person-mark-choice${mark === current ? " is-selected" : ""}" data-person-mark="${mark}" aria-pressed="${mark === current}">${mark}</button>
+        `).join("")}
+      </div>
+    `).join("")}
     <div class="modal-buttons">
       <button type="button" data-clear-person-mark ${current ? "" : "disabled"}>外す</button>
       <button type="button" data-close-person-mark>閉じる</button>

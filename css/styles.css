@@ -5407,6 +5407,8 @@ body.status-detail-open #friendshipDetailModal { z-index: 12501; }
   transform: translate(-50%, -50%);
   box-sizing: border-box;
   width: min(420px, calc(100vw - 32px));
+  max-height: 90vh;
+  overflow-y: auto;
   padding: 18px;
   z-index: 12601;
 }
@@ -5414,7 +5416,14 @@ body.status-detail-open #friendshipDetailModal { z-index: 12501; }
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 6px;
-  margin: 12px 0 4px;
+  margin: 0 0 4px;
+}
+.person-mark-group {
+  margin: 12px 0 6px;
+  color: #545c64;
+  font-size: 0.85rem;
+  font-weight: normal;
+  letter-spacing: 0.1em;
 }
 .silver-ledger-modal button.person-mark-choice {
   padding: 6px 0;
