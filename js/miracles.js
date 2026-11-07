@@ -19,6 +19,7 @@ import { getActiveVillagers, isSaltPillar, SALT_PILLAR_TRAIT } from "./domain/ap
 import { getSelectableRaidTables, startRaidEvent } from "./raidStart.js";
 import { getRaiderIncomingDamageMultiplier } from "./raidRules.js";
 import { completeTutorialTask } from "./tutorial.js";
+import { createStatusDetailSelectRow } from "./personStatusDetail.js";
 import { isWarCouncilOpen, refreshWarCouncil } from "./warCouncil.js";
 import { getCaptives, normalizeCaptive } from "./captives.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
@@ -668,7 +669,7 @@ function createMiracleTargetControls(miracle, village, button, costInfo) {
     const span = document.createElement("span");
     span.textContent = labelText;
     label.appendChild(span);
-    label.appendChild(select);
+    label.appendChild(createStatusDetailSelectRow(select, () => findMiracleTargetById(select.value, village)));
     controls.appendChild(label);
     return label;
   };

@@ -2651,12 +2651,18 @@ button.family-tree-card:focus {
   width: 100%;
   max-width: 360px;
 }
-.secret-treasure-target-row {
+/* 対象のプルダウンと、その人物の詳細ステータスを開くボタン（奇跡・秘宝）。 */
+.status-detail-select-row {
   display: flex;
   gap: 6px;
   align-items: center;
+  min-width: 0;
 }
-.secret-treasure-target-row button {
+.status-detail-select-row select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.status-detail-select-row button {
   flex: none;
   margin: 0;
 }

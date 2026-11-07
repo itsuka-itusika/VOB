@@ -64,3 +64,28 @@ export function openPersonStatusDetailModal(person, { name = "" } = {}) {
   modal.querySelector("[data-close-status-detail]").addEventListener("click", closePersonStatusDetailModal);
   overlay.addEventListener("click", closePersonStatusDetailModal);
 }
+
+/**
+ * 対象を選ぶプルダウンの右に「詳細」ボタンを並べた行を作る。select はこの行の中へ移し、
+ * すでに画面の部品に入っていれば、その位置に行を置く。
+ * @param {HTMLSelectElement} select
+ * @param {() => object|null} getPerson 今選ばれている人物を返す
+ */
+export function createStatusDetailSelectRow(select, getPerson) {
+  const row = document.createElement("div");
+  row.className = "status-detail-select-row";
+  const button = document.createElement("button");
+  button.type = "button";
+  button.textContent = "詳細";
+  const sync = () => { button.disabled = !getPerson(); };
+  button.addEventListener("click", event => {
+    event.preventDefault();
+    const person = getPerson();
+    if (person) openPersonStatusDetailModal(person);
+  });
+  select.addEventListener("change", sync);
+  if (select.parentNode) select.before(row);
+  row.append(select, button);
+  sync();
+  return row;
+}

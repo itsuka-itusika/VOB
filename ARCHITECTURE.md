@@ -86,7 +86,7 @@
 - `js/bookOfTheDead.js`
   - 秘宝「死者の書」。過去帳を模した故人の一覧から選び、母体の `pregnancy.reincarnation` に故人の精神側の持ち物（名前・精神性別・精神年齢・口調・精神ステータスの基礎値と獲得値・精神の伸びしろ・精神特性・趣味など）を記す。出産時に `js/reproduction.js` の `applyReincarnatedSpirit` が赤子へ写し、子に `reincarnatedFromId` と生まれた月 `reincarnatedAt` を残す。大人の精神は伸びしろを持たないため、精神ステータスは生まれた時点で完成した値のまま変わらない。成長処理は、精神年齢が16を超えて転生した者の口調を書き換えない。転生済みの判定は `reincarnatedFromId` と、待機中の `pregnancy.reincarnation` で行う。生後1年の会話は `js/dialogue/dialogueEngine.js` の `getReincarnationTalkKey` が、前世の身体（過去帳の記録）と今の身体の性別・種族を比べて場面を選ぶ。
 - `js/personStatusDetail.js`
-  - 神籤・死者の書・ラケシスの糸車・転生の選択画面から開く詳細ステータス画面。顔写真と人物欄は `js/history.js` の `renderPersonProfileSummary`（個人記録から家族・人間関係を除いたもの）を使い、その下にステータスと特性を並べる。
+  - 神籤・死者の書・転生の選択画面と、奇跡・秘宝の対象のプルダウン（`createStatusDetailSelectRow` で右に「詳細」ボタンを置く）から開く詳細ステータス画面。顔写真と人物欄は `js/history.js` の `renderPersonProfileSummary`（個人記録から家族・人間関係を除いたもの）を使い、その下にステータスと特性を並べる。
 - `js/chaosAlchemy.js`
   - 混沌錬金窯の「錬金」画面。技術を消費して秘宝を錬成する。錬成できる秘宝と消費技術は `js/data/chaosAlchemyData.js` に置く。メニューの「錬金」ボタンは窯が有効な間だけ `updateUI` が表示する。
 - `js/secretTreasureEvents.js`

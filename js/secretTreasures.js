@@ -36,7 +36,7 @@ import { grantBacchusProtection } from "./earnestPrayer.js";
 import { getSummonableLachesisEntries, hasLachesisEntries } from "./lachesisLedger.js";
 import { applyLachesisLedger, openLachesisLotModal } from "./lachesisTreasures.js";
 import { canUseBookOfTheDeadOn, getReincarnationCandidates, openBookOfTheDeadModal } from "./bookOfTheDead.js";
-import { openPersonStatusDetailModal } from "./personStatusDetail.js";
+import { createStatusDetailSelectRow } from "./personStatusDetail.js";
 
 const SEASON_TRAITS_TO_REMOVE = ["夏", "秋", "冬", "冷夏", "飛蝗", "厳冬"];
 const BAD_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "凍え", "疫病", "産褥", "危篤"];
@@ -643,7 +643,6 @@ export const SECRET_TREASURES = [
     consumable: false,
     target: "villager",
     // 帳簿へ残す相手を見比べて選べるよう、選択欄の横に詳細ステータスを開くボタンを出す。
-    targetStatusDetail: true,
     use: (village, target) => applyLachesisLedger(village, target)
   },
   {
@@ -806,6 +805,7 @@ function renderTargetSelect(village, definition, container) {
         option.textContent = optionLabel(person);
         select.appendChild(option);
       });
+      createStatusDetailSelectRow(select, () => (select.value === "" ? null : candidates[Number(select.value)] || null));
       container.appendChild(label);
       selects.push(select);
     });
@@ -820,19 +820,7 @@ function renderTargetSelect(village, definition, container) {
       option.textContent = optionLabel(person);
       select.appendChild(option);
     });
-    if (definition.targetStatusDetail) {
-      const row = document.createElement("div");
-      row.className = "secret-treasure-target-row";
-      select.replaceWith(row);
-      const detailButton = document.createElement("button");
-      detailButton.type = "button";
-      detailButton.textContent = "詳細";
-      detailButton.onclick = () => {
-        const person = candidates[Number(select.value)];
-        if (person) openPersonStatusDetailModal(person);
-      };
-      row.append(select, detailButton);
-    }
+    createStatusDetailSelectRow(select, () => (select.value === "" ? null : candidates[Number(select.value)] || null));
     container.appendChild(label);
     selects.push(select);
   }
