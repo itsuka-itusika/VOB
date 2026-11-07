@@ -135,13 +135,12 @@ export function openBookOfTheDeadModal(village, mother, { onChosen = null } = {}
       <div class="gs-card rebirth-card fate-card">
         ${getPortraitSpriteHtml(person, { size: 56, alt: person.name })}
         <div class="rebirth-card-body">
-          <h4>${escapeHtml(person.name)}</h4>
+          <h4>${escapeHtml(person.name)}${taken ? `<span class="fate-picker-reason">転生済み</span>` : ""}</h4>
           <p>${escapeHtml(describeDeparted(person))}<br><span class="fate-picker-note">${escapeHtml(describeDepartureShort(person.departure))}</span></p>
           <div class="fate-card-actions">
             <button type="button" class="rebirth-detail-button" data-book-detail="${index}">詳細</button>
             <button type="button" class="rebirth-detail-button" data-reincarnate="${index}" ${taken ? "disabled" : ""}>転生する</button>
           </div>
-          ${taken ? `<p class="fate-picker-note">転生済み</p>` : ""}
         </div>
       </div>
     `;
