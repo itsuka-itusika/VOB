@@ -2584,6 +2584,20 @@ button.family-tree-card:focus {
   color: #73654b;
   font-size: 0.82rem;
 }
+.fate-picker-reason {
+  margin: 4px 0 0;
+  font-size: 0.76rem;
+}
+.silver-ledger-modal .gs-card p.fate-picker-reason {
+  color: #96242c;
+}
+/* 選択画面のカードは2列のまま、記録が1行に収まるよう幅を取る。 */
+.gs-modal.silver-ledger-modal {
+  width: min(800px, calc(100vw - 32px));
+}
+.silver-ledger-modal .rebirth-grid {
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+}
 /* 詳細ステータスから開いた個人記録・家系図・好感度は、詳細ステータスより上に出す。並びの順は普段と同じ。 */
 body.status-detail-open #personalHistoryOverlay { z-index: 12300; }
 body.status-detail-open #personalHistoryModal { z-index: 12301; }

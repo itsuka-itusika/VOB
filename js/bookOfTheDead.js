@@ -99,6 +99,11 @@ function describeDeparted(person) {
   return `${person.race || "人間"}・肉体${person.bodySex || "-"}${person.bodyAge ?? "-"}歳／精神${person.spiritSex || "-"}${person.spiritAge ?? "-"}歳`;
 }
 
+// カードを1行に収めるため、去り方の文末「する」は落とす（老衰により死亡する → 老衰により死亡）。
+function describeDepartureShort(departure) {
+  return formatDepartureSentence(departure).replace(/する$/, "");
+}
+
 export function closeBookOfTheDeadModal() {
   document.getElementById(OVERLAY_ID)?.remove();
   document.getElementById(MODAL_ID)?.remove();
@@ -131,10 +136,10 @@ export function openBookOfTheDeadModal(village, mother, { onChosen = null } = {}
         ${getPortraitSpriteHtml(person, { size: 56, alt: person.name })}
         <div class="rebirth-card-body">
           <h4>${escapeHtml(person.name)}</h4>
-          <p>${escapeHtml(describeDeparted(person))}<br><span class="fate-picker-note">${escapeHtml(formatDepartureSentence(person.departure))}</span></p>
+          <p>${escapeHtml(describeDeparted(person))}<br><span class="fate-picker-note">${escapeHtml(describeDepartureShort(person.departure))}</span></p>
           <div class="fate-card-actions">
             <button type="button" class="rebirth-detail-button" data-book-detail="${index}">詳細</button>
-            <button type="button" class="rebirth-detail-button" data-reincarnate="${index}" ${taken ? "disabled" : ""}>転生させる</button>
+            <button type="button" class="rebirth-detail-button" data-reincarnate="${index}" ${taken ? "disabled" : ""}>転生する</button>
           </div>
           ${taken ? `<p class="fate-picker-note">転生済み</p>` : ""}
         </div>

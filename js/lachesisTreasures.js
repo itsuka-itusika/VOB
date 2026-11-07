@@ -46,13 +46,10 @@ export function applyLachesisLedger(village, target) {
   return true;
 }
 
-function describeEntry(entry, village) {
+function describeEntry(entry) {
   const person = entry.person || {};
-  const origin = !village
-    ? "登録"
-    : (entry.originVillageUid && entry.originVillageUid === village.villageUid ? "この村で登録" : "別の村で登録");
   return `${person.race || "人間"}・肉体${person.bodySex || "-"}${person.bodyAge ?? "-"}歳／精神${person.spiritSex || "-"}${person.spiritAge ?? "-"}歳`
-    + `<br><span class="fate-picker-note">${entry.registeredYear}年${entry.registeredMonth}月に${origin}</span>`;
+    + `<br><span class="fate-picker-note">${entry.registeredYear}年${entry.registeredMonth}月に登録</span>`;
 }
 
 export function closeLachesisLotModal() {
@@ -89,12 +86,12 @@ export function openLachesisLotModal(village, { onSummoned = null } = {}) {
         ${getPortraitSpriteHtml(entry.person, { size: 56, alt: entry.name })}
         <div class="rebirth-card-body">
           <h4>${escapeHtml(entry.name)}</h4>
-          <p>${describeEntry(entry, village)}</p>
+          <p>${describeEntry(entry)}</p>
           <div class="fate-card-actions">
             <button type="button" class="rebirth-detail-button" data-lachesis-detail="${index}">詳細</button>
             <button type="button" class="rebirth-detail-button" data-summon-lachesis="${index}" ${reason ? "disabled" : ""}>呼び出す</button>
           </div>
-          ${reason ? `<p class="fate-picker-note">${escapeHtml(reason)}</p>` : ""}
+          ${reason ? `<p class="fate-picker-reason">${escapeHtml(reason)}</p>` : ""}
         </div>
       </div>
     `;
@@ -178,7 +175,7 @@ export function openLachesisRebirthModal({ onConfirm = null } = {}) {
           ${getPortraitSpriteHtml(entry.person, { size: 56, alt: entry.name })}
           <div class="rebirth-card-body">
             <h4>${escapeHtml(entry.name)}</h4>
-            <p>${describeEntry(entry, null)}</p>
+            <p>${describeEntry(entry)}</p>
             <button type="button" class="rebirth-detail-button" data-rebirth-detail="${index}">詳細</button>
           </div>
         </div>
