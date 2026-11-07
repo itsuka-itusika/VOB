@@ -1,7 +1,7 @@
 // gameSettings.js
 // オープニングの「設定」画面と、その内容（モード・難易度・オートセーブ）の保存。
 // 設定は localStorage に保存する。モードと難易度は「はじめから」の開始時に村へ適用され、
-// 以後はセーブデータ側の値に従う。ゲーム中の「設定」では、遊んでいる村の難易度と
+// 以後はセーブデータ側の値に従う。ゲーム中の「設定変更」では、遊んでいる村の難易度と
 // 共通のオートセーブだけを変えられる（開始画面の難易度の既定値は変えない）。
 
 import { DIFFICULTY_HARD, DIFFICULTY_NORMAL, normalizeDifficulty } from "./domain/difficulty.js";

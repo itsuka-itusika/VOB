@@ -500,6 +500,28 @@ button {
   text-shadow: none;
   cursor: default;
 }
+/* メニューの「錬金」だけは、黄金像と同じ打ち出しの黄金の板にする。 */
+.special-action-buttons .alchemy-menu-button {
+  color: #432d05;
+  border-color: #fffbe8 #b08a35 #9a7526 #f8eec6;
+  background-color: #eed68d;
+  background-image: linear-gradient(180deg, #fbeec2 0%, #eed68d 55%, #dcbb62 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 253, 240, 0.9),
+    inset 0 -2px 4px rgba(112, 82, 20, 0.18),
+    0 1px 2px rgba(92, 68, 16, 0.25);
+  text-shadow: 0 1px 0 rgba(255, 252, 232, 0.8);
+}
+.special-action-buttons .alchemy-menu-button:hover {
+  background-image: linear-gradient(180deg, #fdf3d3 0%, #f2dd9c 55%, #e3c472 100%);
+}
+.special-action-buttons .alchemy-menu-button:active {
+  border-color: #9a7526 #f8eec6 #fffbe8 #b08a35;
+  background-image: linear-gradient(180deg, #d6b65c 0%, #e4c87a 55%, #efd896 100%);
+  box-shadow:
+    inset 0 2px 4px rgba(92, 68, 16, 0.32),
+    inset 0 -1px 0 rgba(255, 253, 240, 0.4);
+}
 .special-action-buttons {
   display: flex;
   align-items: center;
@@ -821,6 +843,13 @@ th, td {
   display: flex;
   gap: 10px;
   align-items: center;
+}
+.rebirth-card-body p {
+  margin: 4px 0 6px;
+}
+.rebirth-detail-button {
+  margin: 0;
+  padding: 2px 10px;
 }
 .rebirth-card .portrait-sprite {
   flex: none;
@@ -2566,16 +2595,16 @@ button.family-tree-card:focus {
   gap: 6px;
   align-items: stretch;
 }
-/* 選択画面の上に重ねる詳細ステータス */
+/* 選択画面の上に重ねる詳細ステータス。開始画面の転生の選択（12100台）より上に出す。 */
 .status-detail-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.35);
-  z-index: 1300;
+  z-index: 12200;
 }
 .status-detail-modal {
   width: min(560px, calc(100vw - 32px));
-  z-index: 1301;
+  z-index: 12201;
 }
 .status-detail-body {
   overflow: auto;
@@ -2645,6 +2674,15 @@ button.family-tree-card:focus {
 .secret-treasure-target-label select {
   width: 100%;
   max-width: 360px;
+}
+.secret-treasure-target-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.secret-treasure-target-row button {
+  flex: none;
+  margin: 0;
 }
 .secret-treasure-grid {
   display: grid;
@@ -3334,6 +3372,33 @@ button.family-tree-card:focus {
 }
 .building-item.is-golden .building-cost-original {
   color: #8a7238;
+}
+/* 混沌錬金窯は、奇跡・秘宝のカードと同じ軽銀の板に載せる。 */
+.building-item.is-silver,
+.building-item.is-silver:hover {
+  background-image: linear-gradient(165deg, #eef1f3 0%, #dfe4e8 48%, #d4dade 74%, #e8ebee 100%);
+  background-size: auto;
+  border-color: #fafbfc #8d949b #7f868d #edf0f2;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -2px 5px rgba(55, 62, 70, 0.16),
+    0 3px 10px rgba(55, 62, 70, 0.20);
+  color: #2f353b;
+}
+.building-item.is-silver .building-header h4 {
+  color: #2b3036;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+.building-item.is-silver .building-desc,
+.building-item.is-silver .building-cost,
+.building-item.is-silver .building-status,
+.building-item.is-silver .building-repair-cost {
+  color: #3d444b;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+.building-item.is-silver .building-reason {
+  color: #96242c;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 .building-header {

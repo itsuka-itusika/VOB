@@ -8,7 +8,7 @@ import {
   CHAOS_ALCHEMY_RECIPES
 } from "./data/chaosAlchemyData.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
-import { SECRET_TREASURES, grantSecretTreasure, isAlchemyOnlySecretTreasure } from "./secretTreasures.js";
+import { SECRET_TREASURES, grantSecretTreasure } from "./secretTreasures.js";
 import { updateUI } from "./ui.js";
 
 let lastCraftMessage = "";
@@ -31,7 +31,6 @@ function createRecipeCard(village, definition, techCost) {
   card.innerHTML = `
     <div class="secret-treasure-item-header">
       <h4>${definition.name}</h4>
-      ${isAlchemyOnlySecretTreasure(definition.id) ? `<span class="secret-treasure-count">錬金窯限定</span>` : ""}
     </div>
     <div class="secret-treasure-desc">${definition.desc}</div>
     <div class="secret-treasure-price">消費: 技術${techCost}${owned > 0 ? `　／　所持数: ${owned}` : ""}</div>

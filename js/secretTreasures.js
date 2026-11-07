@@ -36,6 +36,7 @@ import { grantBacchusProtection } from "./earnestPrayer.js";
 import { getSummonableLachesisEntries, hasLachesisEntries } from "./lachesisLedger.js";
 import { applyLachesisLedger, openLachesisLotModal } from "./lachesisTreasures.js";
 import { canUseBookOfTheDeadOn, getReincarnationCandidates, openBookOfTheDeadModal } from "./bookOfTheDead.js";
+import { openPersonStatusDetailModal } from "./personStatusDetail.js";
 
 const SEASON_TRAITS_TO_REMOVE = ["夏", "秋", "冬", "冷夏", "飛蝗", "厳冬"];
 const BAD_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "凍え", "疫病", "産褥", "危篤"];
@@ -407,7 +408,7 @@ export const SECRET_TREASURES = [
   {
     id: ANNUNCIATION_PAINTING_SECRET_TREASURE_ID,
     name: "告天使の絵画",
-    desc: "人型種族・身体性別が女・肉体年齢16歳以上の村人1名に使用可能。種族による年齢上限の違いはない。翌月、遺伝父不明の神秘的な妊娠が訪れる。",
+    desc: "村人1名に受胎の奇跡を与える。",
     sellPrice: SECRET_TREASURE_SELL_PRICES[ANNUNCIATION_PAINTING_SECRET_TREASURE_ID],
     target: "villager",
     targetDetailKind: "exchange",
@@ -536,7 +537,7 @@ export const SECRET_TREASURES = [
   {
     id: "chronos_elixir",
     name: "クロノスの秘薬",
-    desc: "四足歩行を持たず、肉体年齢15以下または精神年齢15以下の村人に使用可能。該当する年齢を16まで成長させ、潜在成長も反映する。",
+    desc: "時を加速させる秘薬。肉体年齢15または精神年齢15以下の村人に使用可能。該当する年齢を16まで成長させる。",
     sellPrice: SECRET_TREASURE_SELL_PRICES.chronos_elixir,
     target: "childVillager",
     targetFilter: canUseChronosElixirOn,
@@ -546,7 +547,7 @@ export const SECRET_TREASURES = [
   {
     id: DRYAD_FRUIT_SECRET_TREASURE_ID,
     name: "ドライアドの果実",
-    desc: "塩の柱状態を含む指定した村人1名をドライアドの身体にする。",
+    desc: "村人1名をドライアドの身体にする。",
     sellPrice: SECRET_TREASURE_SELL_PRICES[DRYAD_FRUIT_SECRET_TREASURE_ID],
     target: "villager",
     targetDetailKind: "exchange",
@@ -586,7 +587,7 @@ export const SECRET_TREASURES = [
   {
     id: "pan_flute",
     name: "牧神の管笛",
-    desc: "塩の柱状態を含む村人・捕虜・訪問者・襲撃者から、笛の音がおのずと6名を選び、3組の肉体を入れ替える。対象は選べない。",
+    desc: "訪問者や襲撃者を含む村にいる人間6名をランダムに入れ替える。",
     sellPrice: SECRET_TREASURE_SELL_PRICES.pan_flute,
     canUse: (village) => getPanFluteCandidates(village).length > 5,
     blockedReason: "村人・捕虜・訪問者・襲撃者の合計が6名以上必要です",
@@ -612,7 +613,7 @@ export const SECRET_TREASURES = [
   {
     id: GOBLIN_STATUE_SECRET_TREASURE_ID,
     name: "ゴブリンの彫像",
-    desc: "使ってもなくならない。通常の村で使うとゴブリンモードに、ゴブリンモードの村で使うと通常のモードに切り替わる。",
+    desc: "<strong>使ってもなくならない。</strong>通常の村にゴブリンの加護を与える。ゴブリンの加護のある村からそれを取り除く。",
     sellPrice: SECRET_TREASURE_SELL_PRICES[GOBLIN_STATUE_SECRET_TREASURE_ID],
     consumable: false,
     use: applyGoblinStatue
@@ -620,7 +621,7 @@ export const SECRET_TREASURES = [
   {
     id: LACHESIS_LOT_SECRET_TREASURE_ID,
     name: "ラケシスの神籤",
-    desc: "ラケシスの帳簿に記された村人を1人選び、職業「旅人」の訪問者として呼び出す。呼び出した訪問者への勧誘は必ず成功する。",
+    desc: "ラケシスの帳簿に記された村人を1人選び、訪問者として呼び出す。",
     sellPrice: SECRET_TREASURE_SELL_PRICES[LACHESIS_LOT_SECRET_TREASURE_ID],
     canUse: (village) => getSummonableLachesisEntries(village).length > 0,
     blockedReason: () => hasLachesisEntries()
@@ -637,16 +638,18 @@ export const SECRET_TREASURES = [
   {
     id: LACHESIS_LEDGER_SECRET_TREASURE_ID,
     name: "ラケシスの糸車",
-    desc: "使ってもなくならない。村人1名の運命の糸をラケシスの帳簿に紡ぎ込む。記された村人は別のセーブデータの村へ訪問者として現れることがある。記録済みの村人に使うと、その時点の姿で記し直す。",
+    desc: "<strong>使ってもなくならない。</strong>村人1名の記録をラケシスの帳簿に紡ぎ込む。記された村人は別の村へ訪問者として現れることがある。",
     sellPrice: SECRET_TREASURE_SELL_PRICES[LACHESIS_LEDGER_SECRET_TREASURE_ID],
     consumable: false,
     target: "villager",
+    // 帳簿へ残す相手を見比べて選べるよう、選択欄の横に詳細ステータスを開くボタンを出す。
+    targetStatusDetail: true,
     use: (village, target) => applyLachesisLedger(village, target)
   },
   {
     id: BOOK_OF_THE_DEAD_SECRET_TREASURE_ID,
     name: "死者の書",
-    desc: "妊娠・臨月の村人1名に使用可能。村を去った者・亡くなった者から1人を選び、意識を保ったままお腹の子へ転生させる。子は名前・精神性別・精神年齢・口調・精神ステータス・精神特性・趣味を受け継ぐ。顔・肉体の性別・身体特性・身体ステータスは本来の赤子のまま。",
+    desc: "妊娠・臨月の村人がいる時使用可能。村を去った者・亡くなった者を胎児へと転生させる。",
     sellPrice: SECRET_TREASURE_SELL_PRICES[BOOK_OF_THE_DEAD_SECRET_TREASURE_ID],
     target: "villager",
     targetFilter: canUseBookOfTheDeadOn,
@@ -664,7 +667,7 @@ export const SECRET_TREASURES = [
   {
     id: ARCADIA_NECTAR_SECRET_TREASURE_ID,
     name: "アルカディアの神酒",
-    desc: "村特性「加護」を1年付与する。加護の間は通常襲撃が起こらず、予約済みの通常襲撃も取り消される。",
+    desc: "酒気の霞で村を覆い保護し、村特性「加護」を1年付与する。加護の間は通常襲撃が発生しない。",
     sellPrice: SECRET_TREASURE_SELL_PRICES[ARCADIA_NECTAR_SECRET_TREASURE_ID],
     use: applyArcadiaNectar
   }
@@ -682,11 +685,6 @@ export function grantRandomSecretTreasure(village, options = {}) {
   const [definition] = pickRandomSecretTreasureDefinitions(1, options);
   if (!definition) return null;
   return grantSecretTreasure(village, definition.id);
-}
-
-/** 混沌錬金窯でしか作れない秘宝か。 */
-export function isAlchemyOnlySecretTreasure(id) {
-  return ALCHEMY_ONLY_SECRET_TREASURE_IDS.has(id);
 }
 
 /** 秘宝テーブルに出る秘宝か。神籤は帳簿に村人が記されている時だけ加わる。 */
@@ -822,6 +820,19 @@ function renderTargetSelect(village, definition, container) {
       option.textContent = optionLabel(person);
       select.appendChild(option);
     });
+    if (definition.targetStatusDetail) {
+      const row = document.createElement("div");
+      row.className = "secret-treasure-target-row";
+      select.replaceWith(row);
+      const detailButton = document.createElement("button");
+      detailButton.type = "button";
+      detailButton.textContent = "詳細";
+      detailButton.onclick = () => {
+        const person = candidates[Number(select.value)];
+        if (person) openPersonStatusDetailModal(person);
+      };
+      row.append(select, detailButton);
+    }
     container.appendChild(label);
     selects.push(select);
   }

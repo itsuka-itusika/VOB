@@ -523,10 +523,10 @@ function renderBuiltBuildings(builtList, village) {
 
 function createBuildingItem(building, village) {
   const div = document.createElement("div");
-  // 黄金像だけは木の板ではなく黄金の板で出す。
+  // 黄金像は黄金の板、混沌錬金窯は奇跡・秘宝と同じ銀の板で出す。ほかは木の板。
   div.className = building.id === BACCHUS_GOLDEN_STATUE_BUILDING_ID
     ? "building-item is-golden"
-    : "building-item";
+    : (building.id === CHAOS_ALCHEMY_KILN_BUILDING_ID ? "building-item is-silver" : "building-item");
 
   const builtCount = countBuiltBuildings(village, building.id);
   const activeCount = countActiveBuildings(village, building.id);

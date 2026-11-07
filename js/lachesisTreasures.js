@@ -188,9 +188,10 @@ export function openLachesisRebirthModal({ onConfirm = null } = {}) {
       ${entries.map((entry, index) => `
         <div class="gs-card rebirth-card" data-rebirth-entry="${index}" role="button" tabindex="0" aria-pressed="false">
           ${getPortraitSpriteHtml(entry.person, { size: 56, alt: entry.name })}
-          <div>
+          <div class="rebirth-card-body">
             <h4>${escapeHtml(entry.name)}</h4>
             <p>${describeEntry(entry, null)}</p>
+            <button type="button" class="rebirth-detail-button" data-rebirth-detail="${index}">詳細</button>
           </div>
         </div>
       `).join("")}
@@ -218,6 +219,15 @@ export function openLachesisRebirthModal({ onConfirm = null } = {}) {
     else if (selected.size < LACHESIS_REBIRTH_MAX_FOUNDERS) selected.add(index);
     refresh();
   };
+  // 詳細ボタンはカードの選択を切り替えずに、その人物のステータスだけを開く。
+  modal.querySelectorAll("[data-rebirth-detail]").forEach(button => {
+    button.addEventListener("click", event => {
+      event.stopPropagation();
+      const entry = entries[Number(button.dataset.rebirthDetail)];
+      if (entry) openPersonStatusDetailModal(entry.person, { name: entry.name });
+    });
+    button.addEventListener("keydown", event => event.stopPropagation());
+  });
   modal.querySelectorAll("[data-rebirth-entry]").forEach(card => {
     const index = Number(card.dataset.rebirthEntry);
     card.addEventListener("click", () => toggle(index));
