@@ -2609,24 +2609,85 @@ body.status-detail-open #friendshipDetailModal { z-index: 12501; }
   background: rgba(0,0,0,0.35);
   z-index: 12200;
 }
+/* 詳細ステータスは奇跡・秘宝と同じ「神界の事務帳簿」: 白地の枠に、軽銀のプレートを1枚敷いて個人記録を載せる。 */
 .status-detail-modal {
   width: min(880px, calc(100vw - 32px));
   z-index: 12201;
+  background: #fdfdfe;
+  border: 1px solid #c6cacf;
+  box-shadow: 0 18px 48px rgba(30, 34, 40, 0.35);
+  color: #2f353b;
   font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", "Times New Roman", serif;
 }
 .status-detail-modal .modal-header {
-  font-size: 1.22rem;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #aab0b7;
+  color: #3c4248;
+  font-size: 1.15rem;
+  letter-spacing: 0.18em;
 }
-/* 個人記録の本文と同じ紙の地にする。個人史が長い時はこの中だけ流す。 */
+.status-detail-modal .modal-buttons button {
+  background: linear-gradient(180deg, #f6f8f9, #d9dee2);
+  border: 1px solid;
+  border-color: #ffffff #7f868d #7f868d #f0f2f4;
+  border-radius: 2px;
+  color: #2b3036;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+  letter-spacing: 0.14em;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+  padding: 4px 14px;
+}
+.status-detail-modal .modal-buttons button:hover {
+  background: linear-gradient(180deg, #eaeef0, #cbd1d6);
+}
+/* 本文 = 奇跡のカードと同じ軽銀のプレート。個人史が長い時はこの中だけ流す。 */
 .status-detail-body {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
   padding: 18px 22px;
-  background:
-    linear-gradient(90deg, rgba(122, 94, 45, 0.06) 0, rgba(122, 94, 45, 0) 18px),
-    #fbf6ea;
-  border: 1px solid #e0d1ad;
+  background: linear-gradient(165deg, #eef1f3 0%, #dfe4e8 48%, #d4dade 74%, #e8ebee 100%);
+  border: 3px solid;
+  border-color: #fafbfc #8d949b #7f868d #edf0f2;
+  border-radius: 2px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -2px 5px rgba(55, 62, 70, 0.16);
+}
+/* 個人記録の茶の線と文字色を、プレートに合う銀灰へ置き換える。 */
+.status-detail-body .personal-history-summary,
+.status-detail-body .history-record-text {
+  color: #2f353b;
+}
+.status-detail-body .personal-history-profile-label,
+.status-detail-body .personal-history-profile-field > span,
+.status-detail-body .history-date,
+.status-detail-body .history-empty,
+.status-detail-body .personal-history-note,
+.status-detail-body .personal-history-portrait-caption,
+.status-detail-body .personal-history-portrait-nav-button {
+  color: #545c64;
+}
+.status-detail-body .personal-history-profile-table,
+.status-detail-body .personal-history-profile-field.is-detail,
+.status-detail-body .history-entry {
+  border-bottom-color: #aab0b7;
+}
+.status-detail-body .personal-history-note {
+  border-color: #aab0b7;
+}
+.status-detail-body .personal-history-portrait-frame {
+  border-color: #8d949b;
+}
+.status-detail-body .personal-history-detail-button {
+  background: linear-gradient(180deg, #f6f8f9, #d9dee2);
+  border-color: #ffffff #7f868d #7f868d #f0f2f4;
+  border-radius: 2px;
+  color: #2b3036;
+}
+.status-detail-body .personal-history-detail-button:hover,
+.status-detail-body .personal-history-detail-button:focus {
+  background: linear-gradient(180deg, #eaeef0, #cbd1d6);
 }
 .status-detail-stats {
   width: 100%;
@@ -2643,13 +2704,17 @@ body.status-detail-open #friendshipDetailModal { z-index: 12501; }
 .status-detail-stats th,
 .status-detail-stats td {
   padding: 4px 6px;
-  border: 1px solid #d9ccb0;
+  border: 1px solid #aab0b7;
 }
 .status-detail-stats th {
-  background: #efe3c8;
-  color: #6d5b34;
+  background: linear-gradient(180deg, #f6f8f9, #d9dee2);
+  color: #545c64;
   font-size: 0.76rem;
   font-weight: normal;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+.status-detail-stats td {
+  background: rgba(253, 253, 254, 0.7);
 }
 .status-detail-stats .status-detail-trait-cell {
   text-align: left;
