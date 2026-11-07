@@ -420,10 +420,10 @@ function formatMiracleTargetName(person) {
   return `${person.name}${position ? `(${position})` : ""}`;
 }
 
-// マークは選択肢の一番後ろに添える（…/体力72/⭐）。
+// マークは名前の左に添える（⭐ リブシェ　翼人/女/…）。
 function formatMiracleOptionLabel(person, detailKind) {
   const mark = getPersonMark(person);
-  return `${formatMiracleTargetName(person)}　${[...getMiracleTargetParts(person, detailKind), ...(mark ? [mark] : [])].join("/")}`;
+  return `${mark ? `${mark} ` : ""}${formatMiracleTargetName(person)}　${getMiracleTargetParts(person, detailKind).join("/")}`;
 }
 
 function getMiracleTargetOptions(mid) {

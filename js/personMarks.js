@@ -2,14 +2,15 @@
 // 人物に付けるマーク（⭐や♥などの目印）。会話モーダルと個人記録の「マーク」ボタンから付け外しする。
 // マークは人物の mark に保存し、会話・個人記録・詳細ステータスの名前の横と、奇跡・秘宝の対象の選択肢に出す。
 
-import { PERSON_MARKS } from "./data/personMarkData.js";
+import { PERSON_MARK_ALIASES, PERSON_MARKS } from "./data/personMarkData.js";
 
 const OVERLAY_ID = "personMarkOverlay";
 const MODAL_ID = "personMarkModal";
 
-/** 付いているマーク。一覧に無い値は出さない。 */
+/** 付いているマーク。以前の文字の記号は絵文字に読み替え、一覧に無い値は出さない。 */
 export function getPersonMark(person) {
-  const mark = String(person?.mark || "");
+  const raw = String(person?.mark || "");
+  const mark = PERSON_MARK_ALIASES[raw] || raw;
   return PERSON_MARKS.includes(mark) ? mark : "";
 }
 

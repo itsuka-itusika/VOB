@@ -5418,7 +5418,7 @@ body.status-detail-open #friendshipDetailModal { z-index: 12501; }
 }
 .silver-ledger-modal button.person-mark-choice {
   padding: 6px 0;
-  font-family: "Segoe UI Symbol", "Noto Sans Symbols", "Yu Gothic", sans-serif;
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
   font-size: 1.2rem;
   letter-spacing: 0;
   line-height: 1.2;

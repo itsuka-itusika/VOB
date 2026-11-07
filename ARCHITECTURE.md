@@ -86,7 +86,7 @@
 - `js/bookOfTheDead.js`
   - 秘宝「死者の書」。故人（過去帳の記録）を「はじめから（転生）」と同じカード並びの選択画面から選び、母体の `pregnancy.reincarnation` に故人の精神側の持ち物（名前・精神性別・精神年齢・口調・精神ステータスの基礎値と獲得値・精神の伸びしろ・精神特性・趣味など）を記す。出産時に `js/reproduction.js` の `applyReincarnatedSpirit` が赤子へ写し、子に `reincarnatedFromId` と生まれた月 `reincarnatedAt` を残す。大人の精神は伸びしろを持たないため、精神ステータスは生まれた時点で完成した値のまま変わらない。成長処理は、精神年齢が16を超えて転生した者の口調を書き換えない。転生済みの判定は `reincarnatedFromId` と、待機中の `pregnancy.reincarnation` で行う。生後1年の会話は `js/dialogue/dialogueEngine.js` の `getReincarnationTalkKey` が、前世の身体（過去帳の記録）と今の身体の性別・種族を比べて場面を選ぶ。
 - `js/personMarks.js`
-  - 人物のマーク（⭐や♥などの目印）。会話モーダルと個人記録の「マーク」ボタンから選ぶ画面を開き、人物の `mark` に保存する。選べる記号は `js/data/personMarkData.js`。会話の年齢の右、個人記録・詳細ステータスの見出しの右、奇跡・秘宝の対象の選択肢の最後に表示する。
+  - 人物のマーク（⭐や♥などの目印）。会話モーダルと個人記録の「マーク」ボタンから選ぶ画面を開き、人物の `mark` に保存する。選べる記号は `js/data/personMarkData.js`。会話の年齢の右、個人記録・詳細ステータスの見出しの右、奇跡・秘宝の対象の選択肢の名前の左に表示する。以前の文字の記号で付けたマークは `PERSON_MARK_ALIASES` で絵文字に読み替える。
 - `js/personStatusDetail.js`
   - 神籤・死者の書・転生の選択画面と、奇跡・秘宝の対象のプルダウン（`createStatusDetailSelectRow` で右に「詳細」ボタンを置く）から開く詳細ステータス画面。中身は個人記録と同じ `js/history.js` の `renderPersonalRecordHtml` / `bindPersonalRecordContent` で描き、人物欄と個人史の間にステータスと特性の表を挟む。村の人物は名前の入口・家系図・好感度の詳細も個人記録どおりに動き、開いた画面は `body.status-detail-open` の間だけ詳細ステータスより上に出す。帳簿の記録は村を渡さず、写しておいた `history` を個人史に出す（名前の入口とボタンは無い）。
 - `js/chaosAlchemy.js`
