@@ -149,7 +149,7 @@ export function closeLachesisRebirthModal() {
 }
 
 /**
- * 「はじめから（転生）」: 帳簿の村人を1〜2人選ぶ画面。決めた時に onConfirm(選んだ記録) を呼ぶ。
+ * 「はじめから（転生）」: 帳簿の村人を最大2人選ぶ画面。決めた時に onConfirm(選んだ記録) を呼ぶ。
  */
 export function openLachesisRebirthModal({ onConfirm = null } = {}) {
   if (typeof document === "undefined") return;
@@ -168,7 +168,7 @@ export function openLachesisRebirthModal({ onConfirm = null } = {}) {
   modal.setAttribute("aria-labelledby", `${REBIRTH_MODAL_ID}Title`);
   modal.innerHTML = `
     <h2 id="${REBIRTH_MODAL_ID}Title" class="gs-title">はじめから（転生）</h2>
-    <p class="gs-note">新しい村の初期村人になる者を1〜2人選びます。</p>
+    <p class="gs-note">新しい村の初期村人になる者を最大2人選びます。</p>
     <div class="rebirth-grid">
       ${entries.map((entry, index) => `
         <div class="gs-card rebirth-card" data-rebirth-entry="${index}" role="button" tabindex="0" aria-pressed="false">
@@ -181,7 +181,7 @@ export function openLachesisRebirthModal({ onConfirm = null } = {}) {
         </div>
       `).join("")}
     </div>
-    <p class="gs-note" data-rebirth-count>0人を選択中（1〜2人）</p>
+    <p class="gs-note" data-rebirth-count>0人を選択中（最大2人）</p>
     <div class="gs-buttons">
       <button type="button" data-rebirth-cancel>やめる</button>
       <button type="button" class="gs-apply" data-rebirth-start disabled>この顔ぶれで始める</button>
@@ -196,7 +196,7 @@ export function openLachesisRebirthModal({ onConfirm = null } = {}) {
       card.classList.toggle("is-selected", isSelected);
       card.setAttribute("aria-pressed", String(isSelected));
     });
-    countText.textContent = `${selected.size}人を選択中（1〜${LACHESIS_REBIRTH_MAX_FOUNDERS}人）`;
+    countText.textContent = `${selected.size}人を選択中（最大${LACHESIS_REBIRTH_MAX_FOUNDERS}人）`;
     startButton.disabled = selected.size === 0;
   };
   const toggle = index => {
