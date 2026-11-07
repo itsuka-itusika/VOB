@@ -1243,13 +1243,13 @@ function renderPersonalHistorySummary(village, person, options = {}) {
   ];
   const familyRelations = renderRelationshipLines(village, person, "family");
   const socialRelations = renderRelationshipLines(village, person, "social");
-  // 詳細ステータス（readOnly）は選択画面の上に重ねるため、別の画面へ移るボタンを置かない。
-  const familyTreeButtonHtml = options.readOnly ? "" : `
+  // 帳簿の記録（村の外の人物）は、家系図も好感度もこの村に無いため、ボタンを置かない。
+  const familyTreeButtonHtml = village ? `
         <span class="personal-history-detail-row">
           <button type="button" class="personal-history-detail-button" data-open-family-tree>家系図</button>
-        </span>`;
+        </span>` : "";
   // 過去帳の人物は好感度が残っていないため、詳細ボタンを出さない。
-  const detailButtonHtml = options.archived || options.readOnly ? "" : `
+  const detailButtonHtml = options.archived || !village ? "" : `
         <span class="personal-history-detail-row">
           <button type="button" class="personal-history-detail-button" data-open-friendship-detail>詳細</button>
         </span>`;
@@ -1294,47 +1294,23 @@ function renderPersonalHistorySummary(village, person, options = {}) {
   `;
 }
 
-/** 個人記録と同じ顔写真と人物欄（詳細ステータス用）。名前の入口や別画面へのボタンは置かない。 */
-export function renderPersonProfileSummary(person, options = {}) {
-  return renderPersonalHistorySummary(null, person, { ...options, readOnly: true });
-}
-
-/** 個人史の一覧（詳細ステータス用）。名前の入口は置かない。 */
-export function renderPersonHistoryList(person, events) {
-  const list = Array.isArray(events) ? events : [];
-  if (list.length === 0) return `<div class="history-empty">この人物の歩みは、まだ村の帳面には記されていない。</div>`;
-  return `<div class="history-list">${list.map(event => renderHistoryEntry(event, {
-    personName: person.name,
-    personId: person.id ?? null
-  })).join("")}</div>`;
-}
-
-export function bindPersonProfileSummary(content, person) {
-  bindPersonalHistoryPortrait(content, person);
-  bindPastPortraitControls(content);
-  bindDictionaryTerms(content);
-}
-
 export function renderDictionaryTermList(terms) {
   const list = Array.isArray(terms) ? terms.filter(Boolean) : [];
   return list.length > 0 ? list.map(renderDictionaryTerm).join("、") : "なし";
 }
 
-export function openPersonalHistoryModal(village, person, options = {}) {
-  const overlay = document.getElementById("personalHistoryOverlay");
-  const modal = document.getElementById("personalHistoryModal");
-  const title = document.getElementById("personalHistoryTitle");
-  const content = document.getElementById("personalHistoryContent");
-  if (!overlay || !modal || !title || !content || !person) return;
-
-  const events = getPersonalHistoryEvents(village, person);
-  const archiveGapNote = hasArchiveGap(village)
+/**
+ * 個人記録の本文。詳細ステータスも同じものを使い、人物欄の下に afterSummaryHtml を挟む。
+ * village が無い時（帳簿の記録）は、historyEvents に写しておいた個人史を出す。
+ */
+export function renderPersonalRecordHtml(village, person, options = {}) {
+  const events = options.historyEvents ?? getPersonalHistoryEvents(village, person);
+  const archiveGapNote = village && hasArchiveGap(village)
     ? `<div class="personal-history-note">古い村史の欠落以前の個人記録は残っていません。</div>`
     : "";
-
-  title.textContent = `${person.name}の記録`;
-  content.innerHTML = `
+  return `
     ${renderPersonalHistorySummary(village, person, options)}
+    ${options.afterSummaryHtml || ""}
     ${archiveGapNote}
     ${events.length > 0
       ? `<div class="history-list">${events.map(event => renderHistoryEntry(event, {
@@ -1344,9 +1320,13 @@ export function openPersonalHistoryModal(village, person, options = {}) {
       })).join("")}</div>`
       : `<div class="history-empty">この人物の歩みは、まだ村の帳面には記されていない。</div>`}
   `;
+}
+
+export function bindPersonalRecordContent(content, village, person) {
   bindPersonalHistoryPortrait(content, person);
   bindPastPortraitControls(content);
   bindDictionaryTerms(content);
+  if (!village) return;
   bindPersonLinks(content, village);
   content.querySelector("[data-open-friendship-detail]")?.addEventListener("click", async () => {
     const { openFriendshipDetailModal } = await import("./relationships.js");
@@ -1356,6 +1336,18 @@ export function openPersonalHistoryModal(village, person, options = {}) {
     const { openFamilyTreeModal } = await import("./familyTree.js");
     openFamilyTreeModal(village, person);
   });
+}
+
+export function openPersonalHistoryModal(village, person, options = {}) {
+  const overlay = document.getElementById("personalHistoryOverlay");
+  const modal = document.getElementById("personalHistoryModal");
+  const title = document.getElementById("personalHistoryTitle");
+  const content = document.getElementById("personalHistoryContent");
+  if (!overlay || !modal || !title || !content || !person) return;
+
+  title.textContent = `${person.name}の記録`;
+  content.innerHTML = renderPersonalRecordHtml(village, person, options);
+  bindPersonalRecordContent(content, village, person);
 
   overlay.style.display = "block";
   modal.style.display = "block";

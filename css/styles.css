@@ -2595,6 +2595,13 @@ button.family-tree-card:focus {
   gap: 6px;
   align-items: stretch;
 }
+/* 詳細ステータスから開いた個人記録・家系図・好感度は、詳細ステータスより上に出す。並びの順は普段と同じ。 */
+body.status-detail-open #personalHistoryOverlay { z-index: 12300; }
+body.status-detail-open #personalHistoryModal { z-index: 12301; }
+body.status-detail-open #familyTreeOverlay { z-index: 12400; }
+body.status-detail-open #familyTreeModal { z-index: 12401; }
+body.status-detail-open #friendshipDetailOverlay { z-index: 12500; }
+body.status-detail-open #friendshipDetailModal { z-index: 12501; }
 /* 選択画面の上に重ねる詳細ステータス。開始画面の転生の選択（12100台）より上に出す。 */
 .status-detail-overlay {
   position: fixed;
@@ -2606,6 +2613,9 @@ button.family-tree-card:focus {
   width: min(880px, calc(100vw - 32px));
   z-index: 12201;
   font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", "Times New Roman", serif;
+}
+.status-detail-modal .modal-header {
+  font-size: 1.22rem;
 }
 /* 個人記録の本文と同じ紙の地にする。個人史が長い時はこの中だけ流す。 */
 .status-detail-body {
@@ -2620,6 +2630,7 @@ button.family-tree-card:focus {
 }
 .status-detail-stats {
   width: 100%;
+  margin-bottom: 16px;
   border-collapse: collapse;
   table-layout: fixed;
   text-align: center;
@@ -2639,13 +2650,6 @@ button.family-tree-card:focus {
   color: #6d5b34;
   font-size: 0.76rem;
   font-weight: normal;
-}
-.status-detail-history-heading {
-  margin: 18px 0 8px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid #d9ccb0;
-  color: #6d5b34;
-  font-size: 1rem;
 }
 .status-detail-stats .status-detail-trait-cell {
   text-align: left;

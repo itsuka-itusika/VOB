@@ -86,7 +86,7 @@
 - `js/bookOfTheDead.js`
   - 秘宝「死者の書」。過去帳を模した故人の一覧から選び、母体の `pregnancy.reincarnation` に故人の精神側の持ち物（名前・精神性別・精神年齢・口調・精神ステータスの基礎値と獲得値・精神の伸びしろ・精神特性・趣味など）を記す。出産時に `js/reproduction.js` の `applyReincarnatedSpirit` が赤子へ写し、子に `reincarnatedFromId` と生まれた月 `reincarnatedAt` を残す。大人の精神は伸びしろを持たないため、精神ステータスは生まれた時点で完成した値のまま変わらない。成長処理は、精神年齢が16を超えて転生した者の口調を書き換えない。転生済みの判定は `reincarnatedFromId` と、待機中の `pregnancy.reincarnation` で行う。生後1年の会話は `js/dialogue/dialogueEngine.js` の `getReincarnationTalkKey` が、前世の身体（過去帳の記録）と今の身体の性別・種族を比べて場面を選ぶ。
 - `js/personStatusDetail.js`
-  - 神籤・死者の書・転生の選択画面と、奇跡・秘宝の対象のプルダウン（`createStatusDetailSelectRow` で右に「詳細」ボタンを置く）から開く詳細ステータス画面。顔写真・人物欄・家族関係・人間関係・称号は `js/history.js` の `renderPersonProfileSummary`（個人記録から名前の入口と別画面へのボタンを除いたもの）を使い、その下にステータスと特性、個人史を並べる。個人史は村の人物なら村の記録から、帳簿の記録なら写しておいた `history` から出す。
+  - 神籤・死者の書・転生の選択画面と、奇跡・秘宝の対象のプルダウン（`createStatusDetailSelectRow` で右に「詳細」ボタンを置く）から開く詳細ステータス画面。中身は個人記録と同じ `js/history.js` の `renderPersonalRecordHtml` / `bindPersonalRecordContent` で描き、人物欄と個人史の間にステータスと特性の表を挟む。村の人物は名前の入口・家系図・好感度の詳細も個人記録どおりに動き、開いた画面は `body.status-detail-open` の間だけ詳細ステータスより上に出す。帳簿の記録は村を渡さず、写しておいた `history` を個人史に出す（名前の入口とボタンは無い）。
 - `js/chaosAlchemy.js`
   - 混沌錬金窯の「錬金」画面。技術を消費して秘宝を錬成する。錬成できる秘宝と消費技術は `js/data/chaosAlchemyData.js` に置く。メニューの「錬金」ボタンは窯が有効な間だけ `updateUI` が表示する。
 - `js/secretTreasureEvents.js`

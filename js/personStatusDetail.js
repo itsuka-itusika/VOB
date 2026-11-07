@@ -1,14 +1,8 @@
 // personStatusDetail.js
 // 村の外の人物（ラケシスの帳簿の記録、過去帳の故人）や奇跡・秘宝の対象の詳細ステータスを見る画面。
-// 個人記録の顔写真と人物欄の下にステータスと特性を並べ、その下に個人史を載せる。閉じると元の選択画面に戻る。
+// 個人記録そのものに、人物欄と個人史の間へステータスと特性を挟んだもの。閉じると元の選択画面に戻る。
 
-import {
-  bindPersonProfileSummary,
-  getPersonalHistoryEvents,
-  renderDictionaryTermList,
-  renderPersonHistoryList,
-  renderPersonProfileSummary
-} from "./history.js";
+import { bindPersonalRecordContent, renderDictionaryTermList, renderPersonalRecordHtml } from "./history.js";
 
 const OVERLAY_ID = "personStatusDetailOverlay";
 const MODAL_ID = "personStatusDetailModal";
@@ -24,22 +18,35 @@ function renderStatRows(person, stats, traitLabel, traits) {
   `;
 }
 
+// 詳細ステータスの上から開いた個人記録・家系図・好感度の画面を、さらに上へ出すための印。
+const OPEN_BODY_CLASS = "status-detail-open";
+
 export function closePersonStatusDetailModal() {
   document.getElementById(OVERLAY_ID)?.remove();
   document.getElementById(MODAL_ID)?.remove();
+  document.body?.classList.remove(OPEN_BODY_CLASS);
 }
 
 /**
  * 人物の詳細ステータスを開く。person は村人と同じ形の記録（保存形式でよい）。
+ * 個人史は village から引く。村の外の人物（帳簿の記録）は village を渡さず、写しておいた historyEvents を渡す。
  * @param {object} person
- * 個人史は village から引く。村の外の人物（帳簿の記録）は、記録に写した historyEvents を渡す。
  * @param {{ name?: string, village?: object|null, historyEvents?: object[]|null }} options name は表示名（帳簿の素の名など）
  */
 export function openPersonStatusDetailModal(person, { name = "", village = null, historyEvents = null } = {}) {
   if (typeof document === "undefined" || !person) return;
   closePersonStatusDetailModal();
-  const shown = { ...person, name: name || person.name || "不明" };
-  const events = historyEvents ?? (village ? getPersonalHistoryEvents(village, person) : []);
+  const shown = name ? { ...person, name } : person;
+  const statsHtml = `
+    <table class="status-detail-stats">
+      <colgroup>
+        ${BODY_STATS.map(() => `<col class="status-detail-stat-col">`).join("")}
+        <col>
+      </colgroup>
+      ${renderStatRows(person, BODY_STATS, "身体特性", person.bodyTraits)}
+      ${renderStatRows(person, MIND_STATS, "精神特性", person.mindTraits)}
+    </table>
+  `;
 
   const overlay = document.createElement("div");
   overlay.id = OVERLAY_ID;
@@ -50,27 +57,23 @@ export function openPersonStatusDetailModal(person, { name = "", village = null,
   modal.setAttribute("role", "dialog");
   modal.setAttribute("aria-modal", "true");
   modal.innerHTML = `
-    <div class="modal-header">詳細ステータス</div>
-    <div class="status-detail-body">
-      ${renderPersonProfileSummary(shown, { archived: !!person.departure })}
-      <table class="status-detail-stats">
-        <colgroup>
-          ${BODY_STATS.map(() => `<col class="status-detail-stat-col">`).join("")}
-          <col>
-        </colgroup>
-        ${renderStatRows(person, BODY_STATS, "身体特性", person.bodyTraits)}
-        ${renderStatRows(person, MIND_STATS, "精神特性", person.mindTraits)}
-      </table>
-      <h3 class="status-detail-history-heading">個人史</h3>
-      ${renderPersonHistoryList(person, events)}
-    </div>
+    <div class="modal-header"></div>
+    <div class="status-detail-body"></div>
     <div class="modal-buttons">
       <button type="button" data-close-status-detail>閉じる</button>
     </div>
   `;
+  modal.querySelector(".modal-header").textContent = `${shown.name || "不明"}の記録`;
+  const body = modal.querySelector(".status-detail-body");
+  body.innerHTML = renderPersonalRecordHtml(village, shown, {
+    archived: Boolean(person.departure),
+    historyEvents,
+    afterSummaryHtml: statsHtml
+  });
   document.body.appendChild(overlay);
   document.body.appendChild(modal);
-  bindPersonProfileSummary(modal, shown);
+  document.body.classList.add(OPEN_BODY_CLASS);
+  bindPersonalRecordContent(body, village, shown);
   modal.querySelector("[data-close-status-detail]").addEventListener("click", closePersonStatusDetailModal);
   overlay.addEventListener("click", closePersonStatusDetailModal);
 }
