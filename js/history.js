@@ -1241,8 +1241,9 @@ function renderPersonalHistorySummary(village, person, options = {}) {
     { label: "性格", value: getPersonalityTrait(person), className: "is-personality" },
     { label: "趣味", value: person.hobby || "なし", className: "is-hobby" }
   ];
-  const familyRelations = renderRelationshipLines(village, person, "family");
-  const socialRelations = renderRelationshipLines(village, person, "social");
+  // 詳細ステータスでは村の外の人物も見せるため、家族・人間関係は載せない。
+  const familyRelations = options.profileOnly ? "" : renderRelationshipLines(village, person, "family");
+  const socialRelations = options.profileOnly ? "" : renderRelationshipLines(village, person, "social");
   const familyTreeButtonHtml = `
         <span class="personal-history-detail-row">
           <button type="button" class="personal-history-detail-button" data-open-family-tree>家系図</button>
@@ -1262,7 +1263,7 @@ function renderPersonalHistorySummary(village, person, options = {}) {
     }
   ];
   const detailFields = [
-    ...relationshipFields,
+    ...(options.profileOnly ? [] : relationshipFields),
     { label: "称号", valueHtml: renderPersonalTitleSummary(person) },
     ...(person.departure ? [{
       label: "離村",
@@ -1291,6 +1292,22 @@ function renderPersonalHistorySummary(village, person, options = {}) {
       </div>
     </section>
   `;
+}
+
+/** 個人記録と同じ顔写真と人物欄。家族・人間関係を除く（詳細ステータス用）。 */
+export function renderPersonProfileSummary(person, options = {}) {
+  return renderPersonalHistorySummary(null, person, { ...options, profileOnly: true });
+}
+
+export function bindPersonProfileSummary(content, person) {
+  bindPersonalHistoryPortrait(content, person);
+  bindPastPortraitControls(content);
+  bindDictionaryTerms(content);
+}
+
+export function renderDictionaryTermList(terms) {
+  const list = Array.isArray(terms) ? terms.filter(Boolean) : [];
+  return list.length > 0 ? list.map(renderDictionaryTerm).join("、") : "なし";
 }
 
 export function openPersonalHistoryModal(village, person, options = {}) {
