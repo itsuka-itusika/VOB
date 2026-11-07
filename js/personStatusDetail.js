@@ -1,8 +1,14 @@
 // personStatusDetail.js
-// 村の外の人物（ラケシスの帳簿の記録、過去帳の故人）や秘宝の対象の詳細ステータスを見る画面。
-// 個人記録の顔写真と人物欄の下に、ステータスと特性を並べる。閉じると元の選択画面に戻る。
+// 村の外の人物（ラケシスの帳簿の記録、過去帳の故人）や奇跡・秘宝の対象の詳細ステータスを見る画面。
+// 個人記録の顔写真と人物欄の下にステータスと特性を並べ、その下に個人史を載せる。閉じると元の選択画面に戻る。
 
-import { bindPersonProfileSummary, renderDictionaryTermList, renderPersonProfileSummary } from "./history.js";
+import {
+  bindPersonProfileSummary,
+  getPersonalHistoryEvents,
+  renderDictionaryTermList,
+  renderPersonHistoryList,
+  renderPersonProfileSummary
+} from "./history.js";
 
 const OVERLAY_ID = "personStatusDetailOverlay";
 const MODAL_ID = "personStatusDetailModal";
@@ -26,12 +32,14 @@ export function closePersonStatusDetailModal() {
 /**
  * 人物の詳細ステータスを開く。person は村人と同じ形の記録（保存形式でよい）。
  * @param {object} person
- * @param {{ name?: string }} options name は表示名（帳簿の素の名など）
+ * 個人史は village から引く。村の外の人物（帳簿の記録）は、記録に写した historyEvents を渡す。
+ * @param {{ name?: string, village?: object|null, historyEvents?: object[]|null }} options name は表示名（帳簿の素の名など）
  */
-export function openPersonStatusDetailModal(person, { name = "" } = {}) {
+export function openPersonStatusDetailModal(person, { name = "", village = null, historyEvents = null } = {}) {
   if (typeof document === "undefined" || !person) return;
   closePersonStatusDetailModal();
   const shown = { ...person, name: name || person.name || "不明" };
+  const events = historyEvents ?? (village ? getPersonalHistoryEvents(village, person) : []);
 
   const overlay = document.createElement("div");
   overlay.id = OVERLAY_ID;
@@ -53,6 +61,8 @@ export function openPersonStatusDetailModal(person, { name = "" } = {}) {
         ${renderStatRows(person, BODY_STATS, "身体特性", person.bodyTraits)}
         ${renderStatRows(person, MIND_STATS, "精神特性", person.mindTraits)}
       </table>
+      <h3 class="status-detail-history-heading">個人史</h3>
+      ${renderPersonHistoryList(person, events)}
     </div>
     <div class="modal-buttons">
       <button type="button" data-close-status-detail>閉じる</button>
@@ -70,8 +80,9 @@ export function openPersonStatusDetailModal(person, { name = "" } = {}) {
  * すでに画面の部品に入っていれば、その位置に行を置く。
  * @param {HTMLSelectElement} select
  * @param {() => object|null} getPerson 今選ばれている人物を返す
+ * @param {object} village 個人史を引く村
  */
-export function createStatusDetailSelectRow(select, getPerson) {
+export function createStatusDetailSelectRow(select, getPerson, village) {
   const row = document.createElement("div");
   row.className = "status-detail-select-row";
   const button = document.createElement("button");
@@ -81,7 +92,7 @@ export function createStatusDetailSelectRow(select, getPerson) {
   button.addEventListener("click", event => {
     event.preventDefault();
     const person = getPerson();
-    if (person) openPersonStatusDetailModal(person);
+    if (person) openPersonStatusDetailModal(person, { village });
   });
   select.addEventListener("change", sync);
   if (select.parentNode) select.before(row);

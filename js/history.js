@@ -1241,15 +1241,15 @@ function renderPersonalHistorySummary(village, person, options = {}) {
     { label: "性格", value: getPersonalityTrait(person), className: "is-personality" },
     { label: "趣味", value: person.hobby || "なし", className: "is-hobby" }
   ];
-  // 詳細ステータスでは村の外の人物も見せるため、家族・人間関係は載せない。
-  const familyRelations = options.profileOnly ? "" : renderRelationshipLines(village, person, "family");
-  const socialRelations = options.profileOnly ? "" : renderRelationshipLines(village, person, "social");
-  const familyTreeButtonHtml = `
+  const familyRelations = renderRelationshipLines(village, person, "family");
+  const socialRelations = renderRelationshipLines(village, person, "social");
+  // 詳細ステータス（readOnly）は選択画面の上に重ねるため、別の画面へ移るボタンを置かない。
+  const familyTreeButtonHtml = options.readOnly ? "" : `
         <span class="personal-history-detail-row">
           <button type="button" class="personal-history-detail-button" data-open-family-tree>家系図</button>
         </span>`;
   // 過去帳の人物は好感度が残っていないため、詳細ボタンを出さない。
-  const detailButtonHtml = options.archived ? "" : `
+  const detailButtonHtml = options.archived || options.readOnly ? "" : `
         <span class="personal-history-detail-row">
           <button type="button" class="personal-history-detail-button" data-open-friendship-detail>詳細</button>
         </span>`;
@@ -1263,7 +1263,7 @@ function renderPersonalHistorySummary(village, person, options = {}) {
     }
   ];
   const detailFields = [
-    ...(options.profileOnly ? [] : relationshipFields),
+    ...relationshipFields,
     { label: "称号", valueHtml: renderPersonalTitleSummary(person) },
     ...(person.departure ? [{
       label: "離村",
@@ -1294,9 +1294,19 @@ function renderPersonalHistorySummary(village, person, options = {}) {
   `;
 }
 
-/** 個人記録と同じ顔写真と人物欄。家族・人間関係を除く（詳細ステータス用）。 */
+/** 個人記録と同じ顔写真と人物欄（詳細ステータス用）。名前の入口や別画面へのボタンは置かない。 */
 export function renderPersonProfileSummary(person, options = {}) {
-  return renderPersonalHistorySummary(null, person, { ...options, profileOnly: true });
+  return renderPersonalHistorySummary(null, person, { ...options, readOnly: true });
+}
+
+/** 個人史の一覧（詳細ステータス用）。名前の入口は置かない。 */
+export function renderPersonHistoryList(person, events) {
+  const list = Array.isArray(events) ? events : [];
+  if (list.length === 0) return `<div class="history-empty">この人物の歩みは、まだ村の帳面には記されていない。</div>`;
+  return `<div class="history-list">${list.map(event => renderHistoryEntry(event, {
+    personName: person.name,
+    personId: person.id ?? null
+  })).join("")}</div>`;
 }
 
 export function bindPersonProfileSummary(content, person) {

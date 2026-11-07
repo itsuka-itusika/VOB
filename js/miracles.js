@@ -669,7 +669,7 @@ function createMiracleTargetControls(miracle, village, button, costInfo) {
     const span = document.createElement("span");
     span.textContent = labelText;
     label.appendChild(span);
-    label.appendChild(createStatusDetailSelectRow(select, () => findMiracleTargetById(select.value, village)));
+    label.appendChild(createStatusDetailSelectRow(select, () => findMiracleTargetById(select.value, village), village));
     controls.appendChild(label);
     return label;
   };

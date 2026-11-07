@@ -805,7 +805,7 @@ function renderTargetSelect(village, definition, container) {
         option.textContent = optionLabel(person);
         select.appendChild(option);
       });
-      createStatusDetailSelectRow(select, () => (select.value === "" ? null : candidates[Number(select.value)] || null));
+      createStatusDetailSelectRow(select, () => (select.value === "" ? null : candidates[Number(select.value)] || null), village);
       container.appendChild(label);
       selects.push(select);
     });
@@ -820,7 +820,7 @@ function renderTargetSelect(village, definition, container) {
       option.textContent = optionLabel(person);
       select.appendChild(option);
     });
-    createStatusDetailSelectRow(select, () => (select.value === "" ? null : candidates[Number(select.value)] || null));
+    createStatusDetailSelectRow(select, () => (select.value === "" ? null : candidates[Number(select.value)] || null), village);
     container.appendChild(label);
     selects.push(select);
   }

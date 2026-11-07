@@ -2607,8 +2607,10 @@ button.family-tree-card:focus {
   z-index: 12201;
   font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", "Times New Roman", serif;
 }
-/* 個人記録の本文と同じ紙の地にする。 */
+/* 個人記録の本文と同じ紙の地にする。個人史が長い時はこの中だけ流す。 */
 .status-detail-body {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
   padding: 18px 22px;
   background:
@@ -2637,6 +2639,13 @@ button.family-tree-card:focus {
   color: #6d5b34;
   font-size: 0.76rem;
   font-weight: normal;
+}
+.status-detail-history-heading {
+  margin: 18px 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #d9ccb0;
+  color: #6d5b34;
+  font-size: 1rem;
 }
 .status-detail-stats .status-detail-trait-cell {
   text-align: left;

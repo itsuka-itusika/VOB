@@ -137,7 +137,7 @@ export function openLachesisLotModal(village, { onSummoned = null } = {}) {
   modal.querySelectorAll("[data-lachesis-detail]").forEach(button => {
     button.addEventListener("click", () => {
       const entry = entries[Number(button.dataset.lachesisDetail)];
-      if (entry) openPersonStatusDetailModal(entry.person, { name: entry.name });
+      if (entry) openPersonStatusDetailModal(entry.person, { name: entry.name, historyEvents: entry.history || [] });
     });
   });
   modal.querySelectorAll("[data-summon-lachesis]").forEach(button => {
@@ -224,7 +224,7 @@ export function openLachesisRebirthModal({ onConfirm = null } = {}) {
     button.addEventListener("click", event => {
       event.stopPropagation();
       const entry = entries[Number(button.dataset.rebirthDetail)];
-      if (entry) openPersonStatusDetailModal(entry.person, { name: entry.name });
+      if (entry) openPersonStatusDetailModal(entry.person, { name: entry.name, historyEvents: entry.history || [] });
     });
     button.addEventListener("keydown", event => event.stopPropagation());
   });

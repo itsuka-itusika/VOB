@@ -9,6 +9,7 @@ import { allocatePersonId, normalizePersonId } from "./domain/personId.js";
 import { normalizeFriendshipState } from "./relationships.js";
 import { syncEffectiveStats } from "./domain/statLayers.js";
 import { getVillagersIncludingSaltPillar } from "./domain/apocalypseRules.js";
+import { getPersonalHistoryEvents } from "./history.js";
 import { VILLAGE_ROLE_NONE, setVillageRole } from "./domain/villageRoles.js";
 
 const STORAGE_KEY = "vobLachesisLedger";
@@ -72,7 +73,9 @@ export function registerToLachesisLedger(village, person) {
     registeredYear: Number(village?.year) || 1,
     registeredMonth: Number(village?.month) || 1,
     originVillageUid: String(village?.villageUid || ""),
-    person: convertVillagerToObject(person)
+    person: convertVillagerToObject(person),
+    // 別の村で選ぶ時に、元の村での歩みを確かめられるよう個人史も写す。
+    history: getPersonalHistoryEvents(village, person)
   };
   if (index >= 0) entries[index] = entry;
   else entries.push(entry);

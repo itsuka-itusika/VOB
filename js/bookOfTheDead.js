@@ -176,7 +176,7 @@ export function openBookOfTheDeadModal(village, mother, { onChosen = null } = {}
   modal.querySelectorAll("[data-book-detail]").forEach(button => {
     button.addEventListener("click", () => {
       const person = departed[Number(button.dataset.bookDetail)];
-      if (person) openPersonStatusDetailModal(person);
+      if (person) openPersonStatusDetailModal(person, { village });
     });
   });
   modal.querySelectorAll("[data-reincarnate]").forEach(button => {
