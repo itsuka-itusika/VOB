@@ -2,6 +2,7 @@
 // 奇跡・秘宝の対象を、村人一覧と同じ条件で絞り込み、名前で探して選ぶ画面。
 // 元のプルダウンの選択肢をそのまま並べ、選んだ値をプルダウンへ戻して change を送る。
 
+import { applyPortraitToElement } from "./data/portraitAtlas.js";
 import { getPresentPersonMarks, getVillagerJobLabel, MARK_FILTER_ANY, matchesVillagerFilter } from "./domain/villagerFilter.js";
 
 const OVERLAY_ID = "targetFilterOverlay";
@@ -151,7 +152,13 @@ export function openTargetFilterModal(select, resolvePerson) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = `target-filter-choice${entry.value === select.value ? " is-selected" : ""}`;
-      button.textContent = entry.label;
+      // 名前の左に小さな顔を添える。
+      const portrait = document.createElement("span");
+      portrait.className = "target-filter-portrait";
+      applyPortraitToElement(portrait, entry.person);
+      const text = document.createElement("span");
+      text.textContent = entry.label;
+      button.append(portrait, text);
       button.addEventListener("click", () => pick(entry.value));
       return button;
     }));

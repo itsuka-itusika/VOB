@@ -5457,10 +5457,20 @@ body.status-detail-open #friendshipDetailModal { z-index: 12501; }
   font-size: 0.9rem;
 }
 .silver-ledger-modal button.target-filter-choice {
-  padding: 5px 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 8px;
   text-align: left;
   letter-spacing: 0;
   overflow-wrap: anywhere;
+}
+.target-filter-portrait {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #a0a6ad;
+  border-radius: 2px;
 }
 .silver-ledger-modal button.target-filter-choice.is-selected {
   border-color: #4f565d;

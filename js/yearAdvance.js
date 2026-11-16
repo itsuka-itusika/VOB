@@ -422,6 +422,10 @@ export async function advanceOneYear(village) {
 
       report.months++;
       const newLogs = village.logs.slice(logStart);
+      // 依頼していた冒険者が月初に帰還したら、その月で止める。結果の報告は自動で閉じるため、ログの文面を中断理由に出す。
+      const questReturnLogs = newLogs
+        .map(log => String(log).match(/^【冒険者クエスト(?:成功|失敗)】(.+)$/)?.[1])
+        .filter(Boolean);
       parseImportantLogs(newLogs, report, monthLabel(village));
       collectRelationshipChanges(village, relationshipsBefore, report, monthLabel(village));
       updateUI(village);
@@ -434,6 +438,10 @@ export async function advanceOneYear(village) {
       }
       if (village.gameOver) {
         report.stopReason = "ゲームオーバーになりました。";
+        break;
+      }
+      if (questReturnLogs.length > 0) {
+        report.stopReason = questReturnLogs.join("、");
         break;
       }
       runAutosave(village);
