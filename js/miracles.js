@@ -679,7 +679,7 @@ function createMiracleTargetControls(miracle, village, button, costInfo) {
   const preview = document.createElement("div");
   preview.className = "miracle-preview";
 
-  // 秘宝と同じく、見出しの下にプルダウンを置く。見出しの右端に絞り込みを置く。
+  // 秘宝と同じく、見出しの下にプルダウンを置く。見出しの右端に「検索」を置く。
   const addControl = (labelText, select) => {
     const label = document.createElement("label");
     label.className = "miracle-target";

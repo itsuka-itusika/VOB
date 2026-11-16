@@ -1,5 +1,5 @@
 // targetFilterModal.js
-// 奇跡・秘宝の対象を、村人一覧と同じ条件で絞り込み、名前で探して選ぶ画面。
+// 奇跡・秘宝の対象の「検索」画面。村人一覧と同じ条件で絞り込み、名前で探して選ぶ。
 // 元のプルダウンの選択肢をそのまま並べ、選んだ値をプルダウンへ戻して change を送る。
 
 import { applyPortraitToElement } from "./data/portraitAtlas.js";
@@ -10,7 +10,7 @@ const OVERLAY_ID = "targetFilterOverlay";
 const MODAL_ID = "targetFilterModal";
 
 /**
- * 「対象を選択:」などの見出し。右端に絞り込みボタンを置く。resolvePerson は選択肢の値から人物を引く。
+ * 「対象を選択:」などの見出し。右端に「検索」ボタンを置く。resolvePerson は選択肢の値から人物を引く。
  * village は各候補の「詳細」から開く詳細ステータスに渡す。
  */
 export function createTargetLabelHeader(text, select, resolvePerson, village) {
@@ -21,7 +21,7 @@ export function createTargetLabelHeader(text, select, resolvePerson, village) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "target-filter-button";
-  button.textContent = "絞り込み";
+  button.textContent = "検索";
   button.addEventListener("click", event => {
     event.preventDefault();
     openTargetFilterModal(select, resolvePerson, village);
@@ -80,7 +80,7 @@ export function openTargetFilterModal(select, resolvePerson, village = null) {
 
   const header = document.createElement("div");
   header.className = "modal-header";
-  header.textContent = "対象の絞り込み";
+  header.textContent = "対象の検索";
 
   // 村人一覧の絞り込みと同じ並び。選択肢は候補にいる人物から作る。
   const bodySex = createFilterSelect("肉体性別で絞り込み", "肉体：すべて", [["男", "肉体：男"], ["女", "肉体：女"]]);
@@ -153,7 +153,7 @@ export function openTargetFilterModal(select, resolvePerson, village = null) {
       return;
     }
     list.replaceChildren(...shown.map(entry => {
-      // 左端の「詳細」で詳細ステータスを開く。この画面は閉じずに上へ重ねる。
+      // 右端の「詳細」で詳細ステータスを開く。この画面は閉じずに上へ重ねる。
       const row = document.createElement("div");
       row.className = "target-filter-row";
       const detailButton = document.createElement("button");
@@ -172,7 +172,7 @@ export function openTargetFilterModal(select, resolvePerson, village = null) {
       text.textContent = entry.label;
       button.append(portrait, text);
       button.addEventListener("click", () => pick(entry.value));
-      row.append(detailButton, button);
+      row.append(button, detailButton);
       return row;
     }));
   };

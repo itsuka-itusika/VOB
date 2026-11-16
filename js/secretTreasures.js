@@ -856,7 +856,10 @@ function getSecretTreasureGroupKey(entry) {
   return definition ? definition.id : getSecretTreasureLabel(entry);
 }
 
-/** 同じ秘宝をまとめ、代表エントリと所持数、先頭の所持位置を返す。 */
+/**
+ * 同じ秘宝をまとめ、代表エントリと所持数、末尾の所持位置を返す。並びは最初に手に入れた順。
+ * 使用・売却では末尾の1個を取り除き、残りがある間はカードの並び位置を動かさない。
+ */
 function groupSecretTreasures(secretTreasures) {
   const groups = new Map();
   secretTreasures.forEach((entry, index) => {
@@ -864,7 +867,9 @@ function groupSecretTreasures(secretTreasures) {
     if (!groups.has(key)) {
       groups.set(key, { key, entry, index, count: 0 });
     }
-    groups.get(key).count++;
+    const group = groups.get(key);
+    group.index = index;
+    group.count++;
   });
   return [...groups.values()];
 }
@@ -918,6 +923,14 @@ function createSecretTreasureItem(group, village) {
   sellButton.textContent = "売る";
   sellButton.onclick = () => sellSecretTreasureAt(village, group.index);
   actions.appendChild(sellButton);
+
+  if (group.count >= 2 && definition) {
+    const bulkSellButton = document.createElement("button");
+    bulkSellButton.type = "button";
+    bulkSellButton.textContent = "まとめて売る";
+    bulkSellButton.onclick = () => sellSecretTreasureGroup(village, group);
+    actions.appendChild(bulkSellButton);
+  }
 
   div.appendChild(actions);
   return div;
@@ -1000,6 +1013,34 @@ function useSecretTreasureAt(village, index) {
   // 使ってもなくならない秘宝（ゴブリンの彫像・ラケシスの糸車）は所持品に残す。
   if (definition.consumable !== false) secretTreasures.splice(index, 1);
   village.secretTreasures = secretTreasures;
+  renderSecretTreasureModal(village);
+  updateUI(village);
+}
+
+/** 同じ秘宝を個数を選んでまとめて売る。末尾から取り除くので、残りがあればカードの位置は動かない。 */
+function sellSecretTreasureGroup(village, group) {
+  const definition = getSecretTreasureDefinition(group.entry);
+  if (!definition) return;
+  const price = Number(definition.sellPrice) || 0;
+  const answer = window.prompt(`${definition.name}を何個売却しますか？（1〜${group.count}個、1個につき資金${price}）`, String(group.count));
+  if (answer === null) return;
+  const count = Math.floor(Number(answer.trim()));
+  if (!Number.isFinite(count) || count < 1 || count > group.count) {
+    window.alert(`1〜${group.count}の数を入力してください。`);
+    return;
+  }
+
+  const secretTreasures = ensureSecretTreasures(village);
+  let sold = 0;
+  for (let index = secretTreasures.length - 1; index >= 0 && sold < count; index--) {
+    if (getSecretTreasureGroupKey(secretTreasures[index]) !== group.key) continue;
+    secretTreasures.splice(index, 1);
+    sold++;
+  }
+  const total = price * sold;
+  village.funds = clampValue((Number(village.funds) || 0) + total, 0, 99999);
+  village.secretTreasures = secretTreasures;
+  village.log(`【秘宝売却】${definition.name}を${sold}個売却しました。資金+${total}`);
   renderSecretTreasureModal(village);
   updateUI(village);
 }

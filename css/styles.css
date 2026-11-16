@@ -5392,7 +5392,7 @@ body.status-detail-open #friendshipDetailModal { z-index: 12501; }
   min-height: 1.2em;
 }
 
-/* 奇跡・秘宝の対象の見出し。右端に絞り込みボタンを置く。 */
+/* 奇跡・秘宝の対象の見出し。右端に「検索」ボタンを置く。 */
 .target-label-header {
   display: flex;
   align-items: center;
@@ -5405,7 +5405,7 @@ body.status-detail-open #friendshipDetailModal { z-index: 12501; }
   padding: 1px 8px;
   font-size: 0.85em;
 }
-/* 奇跡・秘宝の対象の絞り込み画面。奇跡・秘宝の画面より上、詳細ステータスより下に出す。 */
+/* 奇跡・秘宝の対象の検索画面。奇跡・秘宝の画面より上、詳細ステータスより下に出す。 */
 .target-filter-overlay {
   position: fixed;
   inset: 0;
@@ -5456,7 +5456,7 @@ body.status-detail-open #friendshipDetailModal { z-index: 12501; }
   box-shadow: inset 0 1px 3px rgba(55, 62, 70, 0.14);
   font-size: 0.9rem;
 }
-/* 左端に「詳細」、その右に候補を選ぶボタンを並べる */
+/* 候補を選ぶボタンの右端に「詳細」を並べる */
 .target-filter-row {
   display: flex;
   align-items: stretch;

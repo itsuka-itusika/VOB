@@ -78,7 +78,7 @@
 - `js/miracles.js`
   - 奇跡モーダル、奇跡の実行、交換の奇跡、奇跡結果を扱う。
 - `js/secretTreasures.js`
-  - 秘宝データ、秘宝モーダル、使い切り効果、ドライアドの果実による専用変化モーダル、告天使の絵画の対象判定と妊娠予約を扱う。
+  - 秘宝データ、秘宝モーダル（同じ秘宝はまとめて1枚に出し、使用・売却では末尾の1個を取り除いて並び位置を保つ。2個以上なら「まとめて売る」）、使い切り効果、ドライアドの果実による専用変化モーダル、告天使の絵画の対象判定と妊娠予約を扱う。
 - `js/lachesisLedger.js`
   - ラケシスの運命帳。登録した村人をセーブデータの外（localStorage の `vobLachesisLedger`）に `convertVillagerToObject` の形で保存し（登録時点の個人史も `history` に写す）、帳簿の村人を訪問者や初期村人として作り直す。作り直す時は人物IDを採番し直し、関係・好感度・役職・妊娠と一時的な状態を落とす。村の識別子 `villageUid` で登録した村を見分け、別の村にだけ自然来訪（訪問者が来る時の5%）させる。同じ村人の在村判定は人物の `lachesisId` で行う。
 - `js/lachesisTreasures.js`
@@ -88,9 +88,9 @@
 - `js/personMarks.js`
   - 人物のマーク（⭐や♥などの目印）。会話モーダルと個人記録の「マーク」ボタンから選ぶ画面を開き、人物の `mark` に保存する。選べる記号は `js/data/personMarkData.js`。会話の年齢の右、個人記録・詳細ステータスの見出しの右、村人一覧の名前の右、奇跡・秘宝の対象の選択肢の名前の右に表示する。以前の文字の記号で付けたマークは `PERSON_MARK_ALIASES` で絵文字に読み替える。
 - `js/targetFilterModal.js`
-  - 奇跡・秘宝の対象の見出し（`createTargetLabelHeader`）の右端に置く「絞り込み」と、その画面。元のプルダウンの選択肢を小さな顔と並べ（左端の「詳細」で詳細ステータスを上に重ねて開く）、村人一覧と同じ条件に名前の検索を加えて絞り込み、選んだ値をプルダウンへ戻して `change` を送る。
+  - 奇跡・秘宝の対象の見出し（`createTargetLabelHeader`）の右端に置く「検索」と、その画面。元のプルダウンの選択肢を小さな顔と並べ（右端の「詳細」で詳細ステータスを上に重ねて開く）、村人一覧と同じ条件に名前の検索を加えて絞り込み、選んだ値をプルダウンへ戻して `change` を送る。
 - `js/domain/villagerFilter.js`
-  - 村人一覧の絞り込み条件の判定（`matchesVillagerFilter`）。村人一覧（`js/ui.js`）と対象の絞り込み画面で共有する。マークの「あり」は `MARK_FILTER_ANY`。
+  - 村人一覧の絞り込み条件の判定（`matchesVillagerFilter`）。村人一覧（`js/ui.js`）と対象の検索画面で共有する。マークの「あり」は `MARK_FILTER_ANY`。
 - `js/personStatusDetail.js`
   - 神籤・死者の書・転生の選択画面と、奇跡・秘宝の対象のプルダウン（`createStatusDetailSelectRow` で右に「詳細」ボタンを置く）から開く詳細ステータス画面。中身は個人記録と同じ `js/history.js` の `renderPersonalRecordHtml` / `bindPersonalRecordContent` で描き、人物欄と個人史の間にステータスと特性の表を挟む。村の人物は名前の入口・家系図・好感度の詳細も個人記録どおりに動き、開いた画面は `body.status-detail-open` の間だけ詳細ステータスより上に出す。帳簿の記録は村を渡さず、写しておいた `history` を個人史に出す（名前の入口とボタンは無い）。
 - `js/chaosAlchemy.js`
