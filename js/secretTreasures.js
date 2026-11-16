@@ -921,16 +921,8 @@ function createSecretTreasureItem(group, village) {
   const sellButton = document.createElement("button");
   sellButton.type = "button";
   sellButton.textContent = "売る";
-  sellButton.onclick = () => sellSecretTreasureAt(village, group.index);
+  sellButton.onclick = () => openSecretTreasureSellModal(village, group);
   actions.appendChild(sellButton);
-
-  if (group.count >= 2 && definition) {
-    const bulkSellButton = document.createElement("button");
-    bulkSellButton.type = "button";
-    bulkSellButton.textContent = "まとめて売る";
-    bulkSellButton.onclick = () => sellSecretTreasureGroup(village, group);
-    actions.appendChild(bulkSellButton);
-  }
 
   div.appendChild(actions);
   return div;
@@ -1017,49 +1009,110 @@ function useSecretTreasureAt(village, index) {
   updateUI(village);
 }
 
-/** 同じ秘宝を個数を選んでまとめて売る。末尾から取り除くので、残りがあればカードの位置は動かない。 */
-function sellSecretTreasureGroup(village, group) {
-  const definition = getSecretTreasureDefinition(group.entry);
-  if (!definition) return;
-  const price = Number(definition.sellPrice) || 0;
-  const answer = window.prompt(`${definition.name}を何個売却しますか？（1〜${group.count}個、1個につき資金${price}）`, String(group.count));
-  if (answer === null) return;
-  const count = Math.floor(Number(answer.trim()));
-  if (!Number.isFinite(count) || count < 1 || count > group.count) {
-    window.alert(`1〜${group.count}の数を入力してください。`);
-    return;
-  }
+const SELL_OVERLAY_ID = "secretTreasureSellOverlay";
+const SELL_MODAL_ID = "secretTreasureSellModal";
 
-  const secretTreasures = ensureSecretTreasures(village);
-  let sold = 0;
-  for (let index = secretTreasures.length - 1; index >= 0 && sold < count; index--) {
-    if (getSecretTreasureGroupKey(secretTreasures[index]) !== group.key) continue;
-    secretTreasures.splice(index, 1);
-    sold++;
-  }
-  const total = price * sold;
-  village.funds = clampValue((Number(village.funds) || 0) + total, 0, 99999);
-  village.secretTreasures = secretTreasures;
-  village.log(`【秘宝売却】${definition.name}を${sold}個売却しました。資金+${total}`);
-  renderSecretTreasureModal(village);
-  updateUI(village);
+function closeSecretTreasureSellModal() {
+  document.getElementById(SELL_OVERLAY_ID)?.remove();
+  document.getElementById(SELL_MODAL_ID)?.remove();
 }
 
-function sellSecretTreasureAt(village, index) {
-  const secretTreasures = ensureSecretTreasures(village);
-  const definition = getSecretTreasureDefinition(secretTreasures[index]);
+/**
+ * 売却画面。売る個数を選ぶと、売却益と売却後の資金を見せる。個数の初期値は1。
+ * 同じ秘宝の末尾から取り除くので、残りがあればカードの位置は動かない。
+ */
+function openSecretTreasureSellModal(village, group) {
+  const definition = getSecretTreasureDefinition(group.entry);
   if (!definition) {
     village.log("【秘宝】売却できない秘宝です");
     renderSecretTreasureModal(village);
     return;
   }
-
+  closeSecretTreasureSellModal();
   const price = Number(definition.sellPrice) || 0;
-  if (!window.confirm(`${definition.name}を資金${price}で売却しますか？`)) return;
-  village.funds = clampValue((Number(village.funds) || 0) + price, 0, 99999);
-  secretTreasures.splice(index, 1);
+  const max = group.count;
+
+  const overlay = document.createElement("div");
+  overlay.id = SELL_OVERLAY_ID;
+  overlay.className = "secret-treasure-sell-overlay";
+  const modal = document.createElement("div");
+  modal.id = SELL_MODAL_ID;
+  modal.className = "secret-treasure-sell-modal silver-ledger-modal";
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-modal", "true");
+  modal.innerHTML = `
+    <div class="modal-header">秘宝の売却</div>
+    <dl class="secret-treasure-sell-table">
+      <dt>秘宝</dt><dd data-sell-name></dd>
+      <dt>所持数</dt><dd>${max}個</dd>
+      <dt>売却価格</dt><dd>1個につき資金${price}</dd>
+      <dt>売る個数</dt>
+      <dd class="secret-treasure-sell-count">
+        <button type="button" data-sell-step="-1" aria-label="1個減らす">－</button>
+        <input type="number" min="1" max="${max}" step="1" value="1" aria-label="売る個数">
+        <button type="button" data-sell-step="1" aria-label="1個増やす">＋</button>
+        <button type="button" data-sell-all>すべて</button>
+      </dd>
+      <dt>売却益</dt><dd data-sell-total></dd>
+      <dt>資金</dt><dd data-sell-funds></dd>
+    </dl>
+    <div class="modal-buttons">
+      <button type="button" data-sell-confirm>売却する</button>
+      <button type="button" data-sell-cancel>やめる</button>
+    </div>
+  `;
+  modal.querySelector("[data-sell-name]").textContent = definition.name;
+  document.body.append(overlay, modal);
+
+  const input = modal.querySelector("input");
+  const getCount = () => Math.min(max, Math.max(1, Math.floor(Number(input.value)) || 1));
+  const render = () => {
+    const count = getCount();
+    const funds = Number(village.funds) || 0;
+    const total = price * count;
+    modal.querySelector("[data-sell-total]").textContent = `資金+${total}（${count}個）`;
+    modal.querySelector("[data-sell-funds]").textContent = `${funds} → ${clampValue(funds + total, 0, 99999)}`;
+    modal.querySelector('[data-sell-step="-1"]').disabled = count <= 1;
+    modal.querySelector('[data-sell-step="1"]').disabled = count >= max;
+    modal.querySelector("[data-sell-all]").disabled = count >= max;
+  };
+  const setCount = count => {
+    input.value = String(Math.min(max, Math.max(1, count)));
+    render();
+  };
+
+  modal.querySelectorAll("[data-sell-step]").forEach(button => {
+    button.addEventListener("click", () => setCount(getCount() + Number(button.dataset.sellStep)));
+  });
+  modal.querySelector("[data-sell-all]").addEventListener("click", () => setCount(max));
+  input.addEventListener("input", render);
+  input.addEventListener("change", () => setCount(getCount()));
+  modal.querySelector("[data-sell-confirm]").addEventListener("click", () => {
+    const count = getCount();
+    closeSecretTreasureSellModal();
+    sellSecretTreasures(village, group.key, definition, count);
+  });
+  modal.querySelector("[data-sell-cancel]").addEventListener("click", closeSecretTreasureSellModal);
+  overlay.addEventListener("click", closeSecretTreasureSellModal);
+  render();
+  modal.querySelector("[data-sell-confirm]").focus();
+}
+
+function sellSecretTreasures(village, groupKey, definition, count) {
+  const secretTreasures = ensureSecretTreasures(village);
+  let sold = 0;
+  for (let index = secretTreasures.length - 1; index >= 0 && sold < count; index--) {
+    if (getSecretTreasureGroupKey(secretTreasures[index]) !== groupKey) continue;
+    secretTreasures.splice(index, 1);
+    sold++;
+  }
+  if (sold === 0) return;
+  const total = (Number(definition.sellPrice) || 0) * sold;
+  village.funds = clampValue((Number(village.funds) || 0) + total, 0, 99999);
   village.secretTreasures = secretTreasures;
-  village.log(`【秘宝売却】${definition.name}を売却しました。資金+${price}`);
+  village.log(sold === 1
+    ? `【秘宝売却】${definition.name}を売却しました。資金+${total}`
+    : `【秘宝売却】${definition.name}を${sold}個売却しました。資金+${total}`);
   renderSecretTreasureModal(village);
   updateUI(village);
 }
