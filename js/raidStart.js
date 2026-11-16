@@ -152,12 +152,11 @@ function matchesRaidEntryConditions(village, entry, stageIndex) {
   return true;
 }
 
-function selectRaidDefinition(village, raidTableId = "") {
-  const selectedRaidTable = RAID_SCALE_TABLES.find(table => table.id === raidTableId);
-  const raidTable = selectedRaidTable || getRaidTableForVillage(village);
+/** 襲撃テーブルから実際に引かれうる襲撃と、その重み。抽選と騒擾の奇跡の内訳表示で共有する。 */
+function getRaidCandidates(village, raidTable) {
   const stageIndex = getVillageScaleStageIndex(village);
   const goblinMode = isGoblinMode(village);
-  const candidates = raidTable.entries
+  return raidTable.entries
     .filter(entry => matchesRaidEntryConditions(village, entry, stageIndex))
     .map(entry => {
       const raidDefinition = getRaidModuleById(entry.raidId);
@@ -172,6 +171,25 @@ function selectRaidDefinition(village, raidTableId = "") {
       };
     })
     .filter(candidate => candidate && candidate.weight > 0);
+}
+
+/** 騒擾の奇跡で選んだ襲撃テーブルの内訳。襲撃名と、今の村で引かれる割合(%)を返す。 */
+export function getRaidTableBreakdown(village, raidTableId) {
+  const raidTable = RAID_SCALE_TABLES.find(table => table.id === raidTableId);
+  if (!raidTable) return [];
+  const candidates = getRaidCandidates(village, raidTable);
+  const totalWeight = candidates.reduce((sum, candidate) => sum + candidate.weight, 0);
+  if (totalWeight <= 0) return [];
+  return candidates.map(candidate => ({
+    name: candidate.raidDefinition.name,
+    percent: Math.round(candidate.weight / totalWeight * 1000) / 10
+  }));
+}
+
+function selectRaidDefinition(village, raidTableId = "") {
+  const selectedRaidTable = RAID_SCALE_TABLES.find(table => table.id === raidTableId);
+  const raidTable = selectedRaidTable || getRaidTableForVillage(village);
+  const candidates = getRaidCandidates(village, raidTable);
 
   const totalWeight = candidates.reduce((sum, candidate) => {
     return sum + candidate.weight;

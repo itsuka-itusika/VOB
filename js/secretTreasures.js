@@ -38,6 +38,7 @@ import { applyLachesisLedger, openLachesisLotModal } from "./lachesisTreasures.j
 import { canUseBookOfTheDeadOn, getReincarnationCandidates, openBookOfTheDeadModal } from "./bookOfTheDead.js";
 import { createStatusDetailSelectRow } from "./personStatusDetail.js";
 import { getPersonMark } from "./personMarks.js";
+import { createTargetLabelHeader } from "./targetFilterModal.js";
 
 const SEASON_TRAITS_TO_REMOVE = ["夏", "秋", "冬", "冷夏", "飛蝗", "厳冬"];
 const BAD_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "凍え", "疫病", "産褥", "危篤"];
@@ -770,13 +771,7 @@ function getTargetOptionLabel(person, village) {
     : (getCaptives(village).includes(person)
       ? "捕虜"
       : (Array.isArray(village.visitors) && village.visitors.includes(person) ? "訪問者" : "襲撃者"));
-  return `${formatMarkPrefix(person)}${person.name}（${role} / 肉体${person.bodyAge ?? "-"}歳 / 精神${person.spiritAge ?? "-"}歳）`;
-}
-
-// マークは選択肢の名前の左に添える。
-function formatMarkPrefix(person) {
-  const mark = getPersonMark(person);
-  return mark ? `${mark} ` : "";
+  return `${person.name}${getPersonMark(person)}（${role} / 肉体${person.bodyAge ?? "-"}歳 / 精神${person.spiritAge ?? "-"}歳）`;
 }
 
 function renderTargetSelect(village, definition, container) {
@@ -792,16 +787,18 @@ function renderTargetSelect(village, definition, container) {
   const optionLabel = (person) => {
     if (detailKind) return formatMiracleStyleOptionLabel(person, detailKind);
     if (definition.target === "exchangePair") return getTargetOptionLabel(person, village);
-    return `${formatMarkPrefix(person)}${person.name}（肉体${person.bodyAge}歳 / 精神${person.spiritAge}歳）`;
+    return `${person.name}${getPersonMark(person)}（肉体${person.bodyAge}歳 / 精神${person.spiritAge}歳）`;
   };
 
+  const resolvePerson = value => (value === "" ? null : candidates[Number(value)] || null);
   const selects = [];
   if (definition.target === "exchangePair") {
     ["A", "B"].forEach(suffix => {
       const label = document.createElement("label");
       label.className = "secret-treasure-target-label";
-      label.innerHTML = `<span>対象${suffix}:</span><select id="secretTreasureTargetSelect${suffix}"></select>`;
+      label.innerHTML = `<select id="secretTreasureTargetSelect${suffix}"></select>`;
       const select = label.querySelector("select");
+      label.prepend(createTargetLabelHeader(`対象${suffix}:`, select, resolvePerson));
       const emptyOption = document.createElement("option");
       emptyOption.value = "";
       emptyOption.textContent = "(選択)";
@@ -812,22 +809,23 @@ function renderTargetSelect(village, definition, container) {
         option.textContent = optionLabel(person);
         select.appendChild(option);
       });
-      createStatusDetailSelectRow(select, () => (select.value === "" ? null : candidates[Number(select.value)] || null), village);
+      createStatusDetailSelectRow(select, () => resolvePerson(select.value), village);
       container.appendChild(label);
       selects.push(select);
     });
   } else {
     const label = document.createElement("label");
     label.className = "secret-treasure-target-label";
-    label.innerHTML = `<span>対象を選択:</span><select id="secretTreasureTargetSelect"></select>`;
+    label.innerHTML = `<select id="secretTreasureTargetSelect"></select>`;
     const select = label.querySelector("select");
+    label.prepend(createTargetLabelHeader("対象を選択:", select, resolvePerson));
     displayList.forEach(({ person, index }) => {
       const option = document.createElement("option");
       option.value = String(index);
       option.textContent = optionLabel(person);
       select.appendChild(option);
     });
-    createStatusDetailSelectRow(select, () => (select.value === "" ? null : candidates[Number(select.value)] || null), village);
+    createStatusDetailSelectRow(select, () => resolvePerson(select.value), village);
     container.appendChild(label);
     selects.push(select);
   }
@@ -908,6 +906,8 @@ function createSecretTreasureItem(group, village) {
       renderSecretTreasureModal(village);
     };
   } else {
+    // 使用そのものを行うボタンだけ金色にする。対象選択や売却のボタンは軽銀のまま。
+    useButton.classList.add("secret-treasure-use-button");
     useButton.textContent = "使う";
     useButton.onclick = () => useSecretTreasureAt(village, group.index);
   }

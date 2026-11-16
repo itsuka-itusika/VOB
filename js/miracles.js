@@ -16,11 +16,12 @@ import { getBodyReturnReactionLines, getBodyExchangeSourceRaceLines, getDialogue
 import { BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
 import { getVisitorArrivalLine } from "./data/dialogue/visitorLines.js";
 import { getActiveVillagers, isSaltPillar, SALT_PILLAR_TRAIT } from "./domain/apocalypseRules.js";
-import { getSelectableRaidTables, startRaidEvent } from "./raidStart.js";
+import { getRaidTableBreakdown, getSelectableRaidTables, startRaidEvent } from "./raidStart.js";
 import { getRaiderIncomingDamageMultiplier } from "./raidRules.js";
 import { completeTutorialTask } from "./tutorial.js";
 import { createStatusDetailSelectRow } from "./personStatusDetail.js";
 import { getPersonMark } from "./personMarks.js";
+import { createTargetLabelHeader } from "./targetFilterModal.js";
 import { isWarCouncilOpen, refreshWarCouncil } from "./warCouncil.js";
 import { getCaptives, normalizeCaptive } from "./captives.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
@@ -420,10 +421,9 @@ function formatMiracleTargetName(person) {
   return `${person.name}${position ? `(${position})` : ""}`;
 }
 
-// マークは名前の左に添える（⭐ リブシェ　翼人/女/…）。
+// マークは名前の右に添える（リブシェ(村長)⭐　翼人/女/…）。
 function formatMiracleOptionLabel(person, detailKind) {
-  const mark = getPersonMark(person);
-  return `${mark ? `${mark} ` : ""}${formatMiracleTargetName(person)}　${getMiracleTargetParts(person, detailKind).join("/")}`;
+  return `${formatMiracleTargetName(person)}${getPersonMark(person)}　${getMiracleTargetParts(person, detailKind).join("/")}`;
 }
 
 function getMiracleTargetOptions(mid) {
@@ -620,7 +620,7 @@ function createMiracleTargetControls(miracle, village, button, costInfo) {
     const label = document.createElement("label");
     label.className = "miracle-target";
     const labelText = document.createElement("span");
-    labelText.textContent = "襲撃テーブル";
+    labelText.textContent = "襲撃テーブル:";
 
     const select = document.createElement("select");
     select.id = "riotRaidTable";
@@ -635,15 +635,28 @@ function createMiracleTargetControls(miracle, village, button, costInfo) {
       select.appendChild(option);
     });
 
+    // 選んだテーブルから引かれる襲撃の内訳。未選択の間は出さない。
     const preview = document.createElement("div");
     preview.className = "miracle-preview";
-    preview.textContent = "選んだ襲撃テーブルから、重みに従って襲撃を1件抽選します。";
+    const updatePreview = () => {
+      const breakdown = getRaidTableBreakdown(village, select.value);
+      preview.hidden = breakdown.length === 0;
+      if (preview.hidden) return;
+      const title = document.createElement("div");
+      title.textContent = "襲撃者の内訳";
+      preview.replaceChildren(title, ...breakdown.map(({ name, percent }) => {
+        const row = document.createElement("div");
+        row.textContent = `${name}　${percent}%`;
+        return row;
+      }));
+    };
 
     const updateButton = () => {
       const reason = getMiracleBlockReason(costInfo, village, miracle.id);
       const ready = Boolean(select.value);
       button.disabled = Boolean(reason) || !ready;
       button.textContent = reason || (ready ? "行使" : "襲撃テーブルを選んでください");
+      updatePreview();
     };
     select.addEventListener("change", updateButton);
 
@@ -666,19 +679,19 @@ function createMiracleTargetControls(miracle, village, button, costInfo) {
   const preview = document.createElement("div");
   preview.className = "miracle-preview";
 
+  // 秘宝と同じく、見出しの下にプルダウンを置く。見出しの右端に絞り込みを置く。
   const addControl = (labelText, select) => {
     const label = document.createElement("label");
     label.className = "miracle-target";
-    const span = document.createElement("span");
-    span.textContent = labelText;
-    label.appendChild(span);
-    label.appendChild(createStatusDetailSelectRow(select, () => findMiracleTargetById(select.value, village), village));
+    const resolvePerson = value => findMiracleTargetById(value, village);
+    label.appendChild(createTargetLabelHeader(labelText, select, resolvePerson));
+    label.appendChild(createStatusDetailSelectRow(select, () => resolvePerson(select.value), village));
     controls.appendChild(label);
     return label;
   };
 
-  const singleRow = addControl(targetCount === 2 ? "対象A" : "対象", targetA);
-  if (targetB) addControl("対象B", targetB);
+  const singleRow = addControl(targetCount === 2 ? "対象A:" : "対象を選択:", targetA);
+  if (targetB) addControl("対象B:", targetB);
 
   const refresh = () => updateMiracleActionButton(miracle.id, button, village, costInfo, preview);
 
@@ -785,6 +798,8 @@ function createMiracleItem(miracle, village, selectedId) {
     button.textContent = miracle.id === "18" ? "襲撃テーブル選択" : "対象選択";
     button.onclick = () => setSelectedMiracle(miracle.id, village);
   } else {
+    // 行使そのものを行うボタンだけ金色にする。対象選択や行使不可のボタンは軽銀のまま。
+    button.classList.add("miracle-invoke-button");
     button.textContent = "行使";
     button.onclick = () => {
       const select = document.getElementById("miracleSelect");

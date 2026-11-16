@@ -50,12 +50,14 @@ import { isChaosAlchemyAvailable } from "./chaosAlchemy.js";
 import { getWinterMaterialRequirement } from "./domain/winterMaterials.js";
 import { getPopulationCount, getUncountedPopulationCount } from "./domain/speciesTraits.js";
 import { isUnassignedActionVillager } from "./domain/rules.js";
-import { IMPAIRING_TRAITS, INCAPACITATING_TRAITS, getTraitEmphasisClass } from "./domain/traitEmphasis.js";
+import { getTraitEmphasisClass } from "./domain/traitEmphasis.js";
 import { showDictionaryEntry } from "./dictionary.js";
 import { combinedDictionaryData } from "./data/dictionaryData.js";
 import { getVillagerFoodConsumption } from "./util.js";
 import { applyPortraitToElement } from "./data/portraitAtlas.js";
-import { hasHobbyMateRelationship, hasLoverRelationship, hasSpouseRelationship } from "./relationships.js";
+import { hasHobbyMateRelationship } from "./relationships.js";
+import { getPresentPersonMarks, getVillagerJobLabel, MARK_FILTER_ANY, matchesVillagerFilter } from "./domain/villagerFilter.js";
+import { getPersonMark } from "./personMarks.js";
 import { getCaptives } from "./captives.js";
 import { getTutorialWarnings } from "./tutorial.js";
 import { applyVillageScaleArtClass, getVillageScaleProgressLabel, getVillageScaleTitle } from "./villageScale.js";
@@ -153,20 +155,13 @@ function getTermTooltip(label, category) {
   return lines.join("\n");
 }
 
-// 村人一覧の絞り込み。傷病は、赤と青で強調している状態異常をまとめて拾う。
-const AILMENT_FILTER_TRAITS = new Set([...INCAPACITATING_TRAITS, ...IMPAIRING_TRAITS]);
-
+// 村人一覧の絞り込み。条件の判定は domain/villagerFilter.js にまとめてある。
 function getFilterValue(id) {
   return document.getElementById(id)?.value || "";
 }
 
 function isFilterChecked(id) {
   return document.getElementById(id)?.checked === true;
-}
-
-function hasAilmentTrait(person) {
-  const traits = [...(person?.bodyTraits || []), ...(person?.mindTraits || [])];
-  return traits.some(trait => AILMENT_FILTER_TRAITS.has(trait));
 }
 
 // 初期表示の並び。役職持ちを先頭に、この順で並べる。同役職の中では元の並びを保つ。
@@ -183,16 +178,6 @@ function getRoleDisplayRank(person) {
   const index = VILLAGE_ROLE_DISPLAY_ORDER.indexOf(role);
   // 将来追加される役職は「その他」として、既定の役職の後・なしの前に置く。
   return index >= 0 ? index : VILLAGE_ROLE_DISPLAY_ORDER.length;
-}
-
-/** 自由入力の特性検索。肉体特性と精神特性のどれかに含まれれば拾う。 */
-function matchesTraitQuery(person, query) {
-  const traits = [...(person?.bodyTraits || []), ...(person?.mindTraits || [])];
-  return traits.some(trait => String(trait).includes(query));
-}
-
-function getVillagerJobLabel(person) {
-  return getActionDisplayName(person?.action) || "なし";
 }
 
 /** 今いる村人から選択肢を作り直す。選んでいた値が消えたら「すべて」へ戻す。 */
@@ -215,32 +200,41 @@ function refreshFilterOptions(selectId, values, allLabel) {
   select.value = options.includes(current) ? current : "";
 }
 
-function filterVillagers(villagers) {
-  const bodySex = getFilterValue("filterBodySex");
-  const spiritSex = getFilterValue("filterSpiritSex");
-  const race = getFilterValue("filterRace");
-  const job = getFilterValue("filterJob");
-  const traitQuery = getFilterValue("filterTrait").trim();
-  const needsAilment = isFilterChecked("filterAilment");
-  const needsLover = isFilterChecked("filterLover");
-  const needsSpouse = isFilterChecked("filterMarried");
+/** マークの選択肢。「あり」の後に、今いる村人に付いているマークを選択画面の並びで出す。 */
+function refreshMarkFilterOptions(villagers) {
+  const select = document.getElementById("filterMark");
+  if (!select) return;
+  const current = select.value;
+  const marks = getPresentPersonMarks(villagers);
+  select.innerHTML = "";
+  [["", "マーク：すべて"], [MARK_FILTER_ANY, "マーク：あり"], ...marks.map(mark => [mark, `マーク：${mark}`])]
+    .forEach(([value, label]) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      select.appendChild(option);
+    });
+  select.value = current === MARK_FILTER_ANY || marks.includes(current) ? current : "";
+}
 
-  return villagers.filter(person => {
-    if (bodySex && person.bodySex !== bodySex) return false;
-    if (spiritSex && person.spiritSex !== spiritSex) return false;
-    if (race && (person.race || "人間") !== race) return false;
-    if (job && getVillagerJobLabel(person) !== job) return false;
-    if (traitQuery && !matchesTraitQuery(person, traitQuery)) return false;
-    if (needsAilment && !hasAilmentTrait(person)) return false;
-    if (needsLover && !hasLoverRelationship(person)) return false;
-    if (needsSpouse && !hasSpouseRelationship(person)) return false;
-    return true;
-  });
+function filterVillagers(villagers) {
+  const criteria = {
+    bodySex: getFilterValue("filterBodySex"),
+    spiritSex: getFilterValue("filterSpiritSex"),
+    race: getFilterValue("filterRace"),
+    job: getFilterValue("filterJob"),
+    mark: getFilterValue("filterMark"),
+    traitQuery: getFilterValue("filterTrait").trim(),
+    ailment: isFilterChecked("filterAilment"),
+    lover: isFilterChecked("filterLover"),
+    married: isFilterChecked("filterMarried")
+  };
+  return villagers.filter(person => matchesVillagerFilter(person, criteria));
 }
 
 /** 絞り込みを解除する。呼び出し側で updateUI を回して表を引き直す。 */
 export function resetVillagerFilter() {
-  ["filterBodySex", "filterSpiritSex", "filterRace", "filterJob"].forEach(id => {
+  ["filterBodySex", "filterSpiritSex", "filterRace", "filterJob", "filterMark"].forEach(id => {
     const select = document.getElementById(id);
     if (select) select.value = "";
   });
@@ -971,6 +965,13 @@ function appendIdentityCells(row, person) {
   appendPortraitCell(row, person);
 
   const nameCell = appendTextCell(row, person.name);
+  const mark = getPersonMark(person);
+  if (mark) {
+    const markSpan = document.createElement("span");
+    markSpan.className = "person-mark";
+    markSpan.textContent = mark;
+    nameCell.appendChild(markSpan);
+  }
   nameCell.style.cursor = "pointer";
   nameCell.onclick = () => openConversationFor(person);
 
@@ -1306,6 +1307,7 @@ export function updateUI(v) {
   const villagers = Array.isArray(v.villagers) ? v.villagers : [];
   refreshFilterOptions("filterRace", villagers.map(person => person.race || "人間"), "種族：すべて");
   refreshFilterOptions("filterJob", villagers.map(getVillagerJobLabel), "仕事：すべて");
+  refreshMarkFilterOptions(villagers);
   const shownVillagers = filterVillagers(villagers)
     .sort((a, b) => getRoleDisplayRank(a) - getRoleDisplayRank(b));
   const filterCount = document.getElementById("villagerFilterCount");

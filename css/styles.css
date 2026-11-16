@@ -3875,11 +3875,10 @@ body.status-detail-open #friendshipDetailModal { z-index: 12501; }
   box-shadow: inset 0 1px 3px rgba(55, 62, 70, 0.14);
 }
 
+/* 秘宝と同じく、見出しの下にプルダウンを置く */
 .miracle-target {
   display: grid;
-  grid-template-columns: 56px 1fr;
-  gap: 8px;
-  align-items: center;
+  gap: 6px;
   font-size: 0.9em;
 }
 
@@ -3993,6 +3992,20 @@ body.status-detail-open #friendshipDetailModal { z-index: 12501; }
 
 .miracle-button:not(:disabled):hover {
   background: linear-gradient(180deg, #dde3e7, #b2bac1);
+}
+
+/* 行使・使用そのものを行うボタンは金の金具にする（奇跡の「行使」、秘宝の「使う」）。 */
+.miracle-button.miracle-invoke-button:not(:disabled),
+.secret-treasure-actions button.secret-treasure-use-button:not(:disabled) {
+  background: linear-gradient(180deg, #f8e7a6 0%, #e3c463 55%, #c9a544 100%);
+  border-color: #fff3c4 #8f6c18 #8f6c18 #f3dd8e;
+  color: #2b2005;
+  text-shadow: 0 1px 0 rgba(255, 245, 200, 0.6);
+}
+
+.miracle-button.miracle-invoke-button:not(:disabled):hover,
+.secret-treasure-actions button.secret-treasure-use-button:not(:disabled):hover {
+  background: linear-gradient(180deg, #f2dc8a 0%, #d8b54e 55%, #b99434 100%);
 }
 
 /* 押せないボタンにこそ解放条件が入る。読める濃さを確保する。 */
@@ -5379,6 +5392,80 @@ body.status-detail-open #friendshipDetailModal { z-index: 12501; }
   min-height: 1.2em;
 }
 
+/* 奇跡・秘宝の対象の見出し。右端に絞り込みボタンを置く。 */
+.target-label-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.target-label-header .target-filter-button {
+  flex: none;
+  margin: 0;
+  padding: 1px 8px;
+  font-size: 0.85em;
+}
+/* 奇跡・秘宝の対象の絞り込み画面。奇跡・秘宝の画面より上、詳細ステータスより下に出す。 */
+.target-filter-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 11000;
+}
+.target-filter-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(760px, calc(100vw - 32px));
+  max-height: 90vh;
+  padding: 18px;
+  z-index: 11001;
+}
+.target-filter-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-family: "Yu Gothic", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+  font-size: 0.88rem;
+}
+.target-filter-controls input[type="search"] {
+  width: 9em;
+}
+.target-filter-controls label {
+  white-space: nowrap;
+}
+.target-filter-count {
+  margin-left: auto;
+  color: #545c64;
+}
+.target-filter-list {
+  display: grid;
+  gap: 4px;
+  min-height: 3em;
+  overflow-y: auto;
+  padding: 8px;
+  background: #fdfdfe;
+  border: 1px solid #a0a6ad;
+  border-radius: 2px;
+  box-shadow: inset 0 1px 3px rgba(55, 62, 70, 0.14);
+  font-size: 0.9rem;
+}
+.silver-ledger-modal button.target-filter-choice {
+  padding: 5px 8px;
+  text-align: left;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+.silver-ledger-modal button.target-filter-choice.is-selected {
+  border-color: #4f565d;
+  box-shadow: 0 0 0 2px #5d656d;
+}
 /* 人物のマーク（⭐や♥などの目印）。名前や年齢の右に添える。 */
 .person-mark {
   margin-left: 0.4em;
