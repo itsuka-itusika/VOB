@@ -3,13 +3,17 @@
 // 元のプルダウンの選択肢をそのまま並べ、選んだ値をプルダウンへ戻して change を送る。
 
 import { applyPortraitToElement } from "./data/portraitAtlas.js";
+import { openPersonStatusDetailModal } from "./personStatusDetail.js";
 import { getPresentPersonMarks, getVillagerJobLabel, MARK_FILTER_ANY, matchesVillagerFilter } from "./domain/villagerFilter.js";
 
 const OVERLAY_ID = "targetFilterOverlay";
 const MODAL_ID = "targetFilterModal";
 
-/** 「対象を選択:」などの見出し。右端に絞り込みボタンを置く。resolvePerson は選択肢の値から人物を引く。 */
-export function createTargetLabelHeader(text, select, resolvePerson) {
+/**
+ * 「対象を選択:」などの見出し。右端に絞り込みボタンを置く。resolvePerson は選択肢の値から人物を引く。
+ * village は各候補の「詳細」から開く詳細ステータスに渡す。
+ */
+export function createTargetLabelHeader(text, select, resolvePerson, village) {
   const header = document.createElement("div");
   header.className = "target-label-header";
   const span = document.createElement("span");
@@ -20,7 +24,7 @@ export function createTargetLabelHeader(text, select, resolvePerson) {
   button.textContent = "絞り込み";
   button.addEventListener("click", event => {
     event.preventDefault();
-    openTargetFilterModal(select, resolvePerson);
+    openTargetFilterModal(select, resolvePerson, village);
   });
   header.append(span, button);
   return header;
@@ -55,7 +59,7 @@ function getSortedValues(values) {
   return [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, "ja"));
 }
 
-export function openTargetFilterModal(select, resolvePerson) {
+export function openTargetFilterModal(select, resolvePerson, village = null) {
   if (typeof document === "undefined" || !select) return;
   closeTargetFilterModal();
 
@@ -149,6 +153,14 @@ export function openTargetFilterModal(select, resolvePerson) {
       return;
     }
     list.replaceChildren(...shown.map(entry => {
+      // 左端の「詳細」で詳細ステータスを開く。この画面は閉じずに上へ重ねる。
+      const row = document.createElement("div");
+      row.className = "target-filter-row";
+      const detailButton = document.createElement("button");
+      detailButton.type = "button";
+      detailButton.className = "target-filter-detail-button";
+      detailButton.textContent = "詳細";
+      detailButton.addEventListener("click", () => openPersonStatusDetailModal(entry.person, { village }));
       const button = document.createElement("button");
       button.type = "button";
       button.className = `target-filter-choice${entry.value === select.value ? " is-selected" : ""}`;
@@ -160,7 +172,8 @@ export function openTargetFilterModal(select, resolvePerson) {
       text.textContent = entry.label;
       button.append(portrait, text);
       button.addEventListener("click", () => pick(entry.value));
-      return button;
+      row.append(detailButton, button);
+      return row;
     }));
   };
 

@@ -798,7 +798,7 @@ function renderTargetSelect(village, definition, container) {
       label.className = "secret-treasure-target-label";
       label.innerHTML = `<select id="secretTreasureTargetSelect${suffix}"></select>`;
       const select = label.querySelector("select");
-      label.prepend(createTargetLabelHeader(`対象${suffix}:`, select, resolvePerson));
+      label.prepend(createTargetLabelHeader(`対象${suffix}:`, select, resolvePerson, village));
       const emptyOption = document.createElement("option");
       emptyOption.value = "";
       emptyOption.textContent = "(選択)";
@@ -818,7 +818,7 @@ function renderTargetSelect(village, definition, container) {
     label.className = "secret-treasure-target-label";
     label.innerHTML = `<select id="secretTreasureTargetSelect"></select>`;
     const select = label.querySelector("select");
-    label.prepend(createTargetLabelHeader("対象を選択:", select, resolvePerson));
+    label.prepend(createTargetLabelHeader("対象を選択:", select, resolvePerson, village));
     displayList.forEach(({ person, index }) => {
       const option = document.createElement("option");
       option.value = String(index);

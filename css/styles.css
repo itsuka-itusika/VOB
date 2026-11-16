@@ -5456,7 +5456,20 @@ body.status-detail-open #friendshipDetailModal { z-index: 12501; }
   box-shadow: inset 0 1px 3px rgba(55, 62, 70, 0.14);
   font-size: 0.9rem;
 }
+/* 左端に「詳細」、その右に候補を選ぶボタンを並べる */
+.target-filter-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+.silver-ledger-modal button.target-filter-detail-button {
+  flex: none;
+  padding: 0 8px;
+  font-size: 0.85rem;
+}
 .silver-ledger-modal button.target-filter-choice {
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 8px;

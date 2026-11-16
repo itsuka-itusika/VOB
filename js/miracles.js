@@ -684,7 +684,7 @@ function createMiracleTargetControls(miracle, village, button, costInfo) {
     const label = document.createElement("label");
     label.className = "miracle-target";
     const resolvePerson = value => findMiracleTargetById(value, village);
-    label.appendChild(createTargetLabelHeader(labelText, select, resolvePerson));
+    label.appendChild(createTargetLabelHeader(labelText, select, resolvePerson, village));
     label.appendChild(createStatusDetailSelectRow(select, () => resolvePerson(select.value), village));
     controls.appendChild(label);
     return label;

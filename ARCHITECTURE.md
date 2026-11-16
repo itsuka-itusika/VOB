@@ -88,7 +88,7 @@
 - `js/personMarks.js`
   - 人物のマーク（⭐や♥などの目印）。会話モーダルと個人記録の「マーク」ボタンから選ぶ画面を開き、人物の `mark` に保存する。選べる記号は `js/data/personMarkData.js`。会話の年齢の右、個人記録・詳細ステータスの見出しの右、村人一覧の名前の右、奇跡・秘宝の対象の選択肢の名前の右に表示する。以前の文字の記号で付けたマークは `PERSON_MARK_ALIASES` で絵文字に読み替える。
 - `js/targetFilterModal.js`
-  - 奇跡・秘宝の対象の見出し（`createTargetLabelHeader`）の右端に置く「絞り込み」と、その画面。元のプルダウンの選択肢を小さな顔と並べ、村人一覧と同じ条件に名前の検索を加えて絞り込み、選んだ値をプルダウンへ戻して `change` を送る。
+  - 奇跡・秘宝の対象の見出し（`createTargetLabelHeader`）の右端に置く「絞り込み」と、その画面。元のプルダウンの選択肢を小さな顔と並べ（左端の「詳細」で詳細ステータスを上に重ねて開く）、村人一覧と同じ条件に名前の検索を加えて絞り込み、選んだ値をプルダウンへ戻して `change` を送る。
 - `js/domain/villagerFilter.js`
   - 村人一覧の絞り込み条件の判定（`matchesVillagerFilter`）。村人一覧（`js/ui.js`）と対象の絞り込み画面で共有する。マークの「あり」は `MARK_FILTER_ANY`。
 - `js/personStatusDetail.js`
