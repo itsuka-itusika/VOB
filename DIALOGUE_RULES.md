@@ -18,7 +18,7 @@
 - `statusLines.js`: 健康、疲労、消耗、襲撃中など。
 - `conditionLines.js`: 負傷、疫病、飢餓、凍え、精神状態など。
 - `seasonLines.js`: 春、夏、秋、冬の季節会話。
-- `jobLines.js`: preferredAction に応じた会話。
+- `jobLines.js`: preferredAction に応じた会話。「あんまだ」「写本をしています」のように仕事の名前を名乗るだけの文は書かない。その仕事の具体的な一場面（客とのやり取り、道具、失敗、手応え）を、本人の性格が出る言葉で話させる。
 - `reproductionLines.js`: 妊娠、臨月、産褥、成人化など。
 - `exchangeLines.js`: 肉体交換への反応。交換の奇跡と落雷による肉体交換で共有する。
 - `exchangeSituationLines.js`: 入れ替わった身体の年齢・性別・種族・能力と、交換後半年以内の違和感に応じた通常会話。
