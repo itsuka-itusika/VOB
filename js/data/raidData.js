@@ -1128,7 +1128,7 @@ export const RAIDER_TYPES = [
     ]
   },
   {
-    // 翼人盗賊団の肉体。精神は「翼人盗賊」と入れ替わるため、単独では現れない。
+    // 翼人盗賊団の肉体（翼人兵相当）。精神は「翼人盗賊」と入れ替わるため、単独では現れない。
     type: "翼人盗賊の肉体",
     weight: 0,
     minCount: 1,
@@ -1161,7 +1161,8 @@ export const RAIDER_TYPES = [
     dialogues: []
   },
   {
-    type: "翼人盗賊頭の肉体",
+    // 翼人盗賊団の上位翼人の肉体。盗賊頭と、上位翼人の体を得た翼人盗賊が持つ。
+    type: "翼人盗賊の上位翼人の肉体",
     weight: 0,
     minCount: 1,
     maxCount: 1,
@@ -1952,8 +1953,8 @@ export const RAID_MODULES = [
       { raiderType: "餓狼", minCount: 2, maxCount: 2 }
     ],
     bodySwap: {
-      minCount: 2,
-      maxCount: 3,
+      minCount: 3,
+      maxCount: 4,
       bodyRaiderTypes: ["聖騎士", "聖女", "上位翼人"],
       // 入れ替わりに頓着しない魔物たちのひと言。精神側の口調で引く。
       dialoguesBySpeechType: {
@@ -2033,8 +2034,9 @@ export const RAID_MODULES = [
     },
     representative: { raiderType: "翼人盗賊頭", role: "leader" },
     enemyGroups: [
-      { raiderType: "翼人盗賊頭", minCount: 1, maxCount: 1, bodyRaiderTypes: ["翼人盗賊頭の肉体"] },
-      { raiderType: "翼人盗賊", minCount: 6, maxCount: 7, bodyRaiderTypes: ["翼人盗賊の肉体"] }
+      { raiderType: "翼人盗賊頭", minCount: 1, maxCount: 1, bodyRaiderTypes: ["翼人盗賊の上位翼人の肉体"] },
+      { raiderType: "翼人盗賊", minCount: 3, maxCount: 3, bodyRaiderTypes: ["翼人盗賊の上位翼人の肉体"] },
+      { raiderType: "翼人盗賊", minCount: 2, maxCount: 3, bodyRaiderTypes: ["翼人盗賊の肉体"] }
     ],
     defense: { surviveTurns: 5 },
     failurePenalty: {
