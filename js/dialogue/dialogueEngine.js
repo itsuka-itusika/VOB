@@ -522,6 +522,17 @@ export function getReincarnationTalkKey(character, village) {
   return "sameBody";
 }
 
+/** 同じ故人から転生した片割れ（死者の書を使った双子）が、村人か捕虜として村にいるか。 */
+function hasReincarnatedTwinInVillage(character, village) {
+  const departedId = character?.reincarnatedFromId;
+  if (departedId == null) return false;
+  const people = [
+    ...(Array.isArray(village?.villagers) ? village.villagers : []),
+    ...(Array.isArray(village?.captives) ? village.captives : [])
+  ];
+  return people.some(person => person !== character && person?.reincarnatedFromId === departedId);
+}
+
 // 元捕虜が加入してから3ヶ月以内かを、加入月の記録から判定する。
 export function getFormerCaptiveKey(character, village) {
   const joinMonth = getAbsoluteMonth(character?.formerCaptiveJoinYear, character?.formerCaptiveJoinMonth);
@@ -609,6 +620,14 @@ export function collectConversationCandidates({ character, village, context = {}
       key: reincarnationTalkKey,
       priority: CONVERSATION_PRIORITY.SEVERE
     }, sharedContext);
+    // 双子として転生し、片割れが村にいる間は、片割れの話も同じ重みで混ぜる。
+    if (hasReincarnatedTwinInVillage(character, village)) {
+      addCandidate(candidates, character, {
+        scene: "reincarnation",
+        key: "twinSibling",
+        priority: CONVERSATION_PRIORITY.SEVERE
+      }, sharedContext);
+    }
   }
 
   const exchangeSituationKey = getExchangeSituationKey(character, village);

@@ -478,14 +478,18 @@ export function recordPregnancyHistory(village, mother, father, options = {}) {
 export function recordBirthHistory(village, mother, child, options = {}) {
   if (!mother || !child) return;
   const special = options.geneticFatherUnknown || child.race === "半神";
+  // 双子は1人ずつ記録し、「双子」の札で見分ける。
+  const twinLabel = options.twin ? "双子の" : "";
   addHistoryEvent(village, {
     type: HISTORY_EVENT_TYPES.BIRTH,
-    title: special ? `${child.name}、神秘の子として生まれる` : `${child.name}、生まれる`,
+    title: special
+      ? `${child.name}、${twinLabel}神秘の子として生まれる`
+      : `${child.name}、${options.twin ? "双子として" : ""}生まれる`,
     text: special
-      ? `${mother.name}が${child.name}を産み、神秘の子が生まれた。`
-      : `${mother.name}が${child.name}を産んだ。`,
+      ? `${mother.name}が${twinLabel}${child.name}を産み、神秘の子が生まれた。`
+      : `${mother.name}が${twinLabel}${child.name}を産んだ。`,
     people: [mother, options.spouse, child].filter(Boolean),
-    tags: special ? ["出生", "神秘の出生"] : ["出生"]
+    tags: ["出生", ...(special ? ["神秘の出生"] : []), ...(options.twin ? ["双子"] : [])]
   });
 }
 
@@ -744,8 +748,9 @@ function getVillageHistoryText(event) {
       break;
     case HISTORY_EVENT_TYPES.BIRTH: {
       const childName = event.people[event.people.length - 1] || "";
-      if (event.tags.includes("神秘の出生") && personA && childName) return `${personA}が${childName}を産み、神秘の子が生まれた。`;
-      if (personA && childName) return `${personA}が${childName}を産んだ。`;
+      const twinLabel = event.tags.includes("双子") ? "双子の" : "";
+      if (event.tags.includes("神秘の出生") && personA && childName) return `${personA}が${twinLabel}${childName}を産み、神秘の子が生まれた。`;
+      if (personA && childName) return `${personA}が${twinLabel}${childName}を産んだ。`;
       break;
     }
     case HISTORY_EVENT_TYPES.BODY_EXCHANGE:
@@ -833,8 +838,9 @@ function getPersonalHistoryText(event, personName, personId = null) {
     case HISTORY_EVENT_TYPES.BIRTH: {
       const motherName = event.people[0] || "";
       const childName = event.people[event.people.length - 1] || "";
-      if (eventPersonAtIs(event, -1, personName, personId) && motherName) return `${motherName}の子として生まれる。`;
-      if (eventPersonAtIs(event, 0, personName, personId) && childName) return `${childName}を産む。`;
+      const twinLabel = event.tags.includes("双子") ? "双子の" : "";
+      if (eventPersonAtIs(event, -1, personName, personId) && motherName) return `${motherName}の${twinLabel ? "双子の一人" : "子"}として生まれる。`;
+      if (eventPersonAtIs(event, 0, personName, personId) && childName) return `${twinLabel}${childName}を産む。`;
       return toPersonalTense(event.text);
     }
     case HISTORY_EVENT_TYPES.VILLAGER_JOIN: {

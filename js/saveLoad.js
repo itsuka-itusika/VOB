@@ -60,6 +60,9 @@ function normalizePregnancyState(pregnancy) {
   if (Array.isArray(next.inheritedBodyTraits)) {
     next.inheritedBodyTraits = normalizeBodyTraitList(next.inheritedBodyTraits);
   }
+  if (Array.isArray(next.twin?.inheritedBodyTraits)) {
+    next.twin.inheritedBodyTraits = normalizeBodyTraitList(next.twin.inheritedBodyTraits);
+  }
   if (next.motherSnapshot && Array.isArray(next.motherSnapshot.bodyTraits)) {
     next.motherSnapshot.bodyTraits = normalizeBodyTraitList(next.motherSnapshot.bodyTraits);
   }

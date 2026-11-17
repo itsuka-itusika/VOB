@@ -963,19 +963,63 @@ function processPendingGoldenRainPregnancies(village) {
   village.pendingGoldenRainPregnancies = remaining;
 }
 
+// 双子。妊娠した時に決めて pregnancy.twin に持ち、出産するまで明かさない。
+export const TWIN_TYPE_IDENTICAL = "identical";
+export const TWIN_TYPE_FRATERNAL = "fraternal";
+const TWIN_IDENTICAL_CHANCE = 0.03;
+const TWIN_FRATERNAL_CHANCE = 0.02;
+// 転生した双子の名は、前世の名に全角の通し番号を付ける（スミス１、スミス２）。
+const TWIN_NAME_NUMBERS = ["１", "２"];
+
+function rollTwinType() {
+  const roll = Math.random();
+  if (roll < TWIN_IDENTICAL_CHANCE) return TWIN_TYPE_IDENTICAL;
+  if (roll < TWIN_IDENTICAL_CHANCE + TWIN_FRATERNAL_CHANCE) return TWIN_TYPE_FRATERNAL;
+  return "";
+}
+
+/** 子1人分の生まれ持つもの（性別・種族・素質・受け継ぐ特性）を決める。 */
+function rollChildGenetics(motherSnapshot, fatherSnapshot, options = {}) {
+  const childSex = decideChildSex();
+  const childRace = decidePregnancyChildRace(childSex, motherSnapshot, fatherSnapshot, options);
+  return {
+    childSex,
+    childRace,
+    potentialStats: buildPotentialStats(motherSnapshot, fatherSnapshot, childSex, childRace),
+    inheritedBodyTraits: [
+      ...rollInheritedTraits({ motherSnapshot, fatherSnapshot, childSex }),
+      ...(Array.isArray(options.inheritedBodyTraits) ? options.inheritedBodyTraits : [])
+    ],
+    inheritedMindTraits: Array.isArray(options.inheritedMindTraits)
+      ? [...new Set(options.inheritedMindTraits)]
+      : []
+  };
+}
+
+/**
+ * 双子の2人目の情報。一卵性は1人目と同じものを持つため種類だけを残す。
+ * 二卵性は別に抽選し、神秘の妊娠の半神と加護は1人目だけが受ける。
+ */
+function rollTwinData(twinType, motherSnapshot, fatherSnapshot, options) {
+  if (twinType === TWIN_TYPE_IDENTICAL) return { type: TWIN_TYPE_IDENTICAL };
+  const ordinaryOptions = {
+    ...options,
+    humanChildRace: null,
+    inheritedBodyTraits: [],
+    inheritedMindTraits: []
+  };
+  return {
+    type: TWIN_TYPE_FRATERNAL,
+    ...rollChildGenetics(motherSnapshot, fatherSnapshot, ordinaryOptions)
+  };
+}
+
 function startPregnancy(village, mother, father, options = {}) {
   const motherSnapshot = snapshotParent(mother);
   const fatherSnapshot = options.fatherSnapshot || snapshotParent(father);
-  const childSex = decideChildSex();
-  const childRace = decidePregnancyChildRace(childSex, motherSnapshot, fatherSnapshot, options);
-  const potentialStats = buildPotentialStats(motherSnapshot, fatherSnapshot, childSex, childRace);
-  const inheritedBodyTraits = [
-    ...rollInheritedTraits({ motherSnapshot, fatherSnapshot, childSex }),
-    ...(Array.isArray(options.inheritedBodyTraits) ? options.inheritedBodyTraits : [])
-  ];
-  const inheritedMindTraits = Array.isArray(options.inheritedMindTraits)
-    ? [...new Set(options.inheritedMindTraits)]
-    : [];
+  const { childSex, childRace, potentialStats, inheritedBodyTraits, inheritedMindTraits } =
+    rollChildGenetics(motherSnapshot, fatherSnapshot, options);
+  const twinType = rollTwinType();
 
   mother.pregnancy = {
     months: 0,
@@ -989,7 +1033,8 @@ function startPregnancy(village, mother, father, options = {}) {
     potentialStats,
     inheritedBodyTraits,
     inheritedMindTraits,
-    fullTermApplied: false
+    fullTermApplied: false,
+    ...(twinType ? { twin: rollTwinData(twinType, motherSnapshot, fatherSnapshot, options) } : {})
   };
   addUnique(mother.bodyTraits, "妊娠");
   recordPregnancyHistory(village, mother, father, {
@@ -1021,6 +1066,11 @@ function giveBirth(village, mother) {
 
   // 命名が決まるまで村へは加えない。母体の変化だけは先に確定させる。
   applyPostpartumToMother(mother);
+  const twinType = getTwinType(data);
+  if (twinType) {
+    giveTwinBirth(village, mother, data, twinType);
+    return;
+  }
   const child = createNewbornChild(village, data);
   // 死者の書で魂を宿した子は、名前が使える限り前世の名を受け継ぐ。
   const inheritedName = data.reincarnation?.name && !getChildNameError(data.reincarnation.name, village)
@@ -1032,6 +1082,60 @@ function giveBirth(village, mother) {
   showBirthModal(village, mother, getBirthSpouse(mother, data, village), child, childName => {
     finalizeBirth(village, mother, data, child, childName);
   }, { inheritedName, childLine });
+}
+
+function getTwinType(data) {
+  const type = data?.twin?.type;
+  return type === TWIN_TYPE_IDENTICAL || type === TWIN_TYPE_FRATERNAL ? type : "";
+}
+
+/** 2人目の生まれ持つもの。一卵性は1人目と同じ、二卵性は妊娠時に別に決めたもの。 */
+function getSecondTwinData(data, twinType) {
+  if (twinType === TWIN_TYPE_IDENTICAL) return data;
+  const { type, ...genetics } = data.twin;
+  return { ...data, ...genetics };
+}
+
+/**
+ * 転生した双子の名。前世の名に通し番号を付ける。前世の名が使えない時や、
+ * 番号付きの名がすでに使われている時は空にして、通常の命名に任せる。
+ */
+function getTwinInheritedNames(data, village) {
+  const baseName = data.reincarnation?.name || "";
+  if (!baseName || !CHILD_NAME_PATTERN.test(baseName)) return ["", ""];
+  return TWIN_NAME_NUMBERS.map(number => {
+    const name = `${baseName}${number}`;
+    return isNameReserved(name, village) ? "" : name;
+  });
+}
+
+/** 双子の出産。2人を続けて名付け、1人ずつ村へ加える。産褥は1回だけ。 */
+function giveTwinBirth(village, mother, data, twinType) {
+  const first = createNewbornChild(village, data);
+  const secondData = getSecondTwinData(data, twinType);
+  const second = createNewbornChild(village, secondData);
+  if (twinType === TWIN_TYPE_IDENTICAL) {
+    // 同じ身体に育つため、大人の身体特性と顔も1人目にそろえる。
+    second.adultBodyTraits = [...(first.adultBodyTraits || [])];
+    second.adultPortraitFile = first.adultPortraitFile;
+  }
+
+  const spouse = getBirthSpouse(mother, data, village);
+  const inheritedNames = getTwinInheritedNames(data, village);
+  const childLineFor = child => data.reincarnation
+    ? getDialogueLine({ character: child, scene: "reincarnation", key: "twinBirth" })
+    : "";
+  // 二卵性の2人目は神秘の子ではない（半神と加護は1人目だけ）。遺伝父が不明なのは変わらない。
+  const secondIsOrdinary = twinType === TWIN_TYPE_FRATERNAL;
+  [[first, data, false], [second, secondData, secondIsOrdinary]].forEach(([child, childData, ordinary], index) => {
+    showBirthModal(village, mother, spouse, child, childName => {
+      finalizeBirth(village, mother, childData, child, childName, { twinType, ordinaryMysticTwin: ordinary });
+    }, {
+      inheritedName: inheritedNames[index],
+      childLine: childLineFor(child),
+      twin: { type: twinType, index }
+    });
+  });
 }
 
 /** 赤子を名前なしで生成する。名前と bodyOwner は命名確定時に入れる。 */
@@ -1094,7 +1198,7 @@ function applyReincarnatedSpirit(child, reincarnation) {
 }
 
 /** 命名確定後の出産処理。ここで初めて子が村へ加わる。 */
-function finalizeBirth(village, mother, data, child, childName) {
+function finalizeBirth(village, mother, data, child, childName, { twinType = "", ordinaryMysticTwin = false } = {}) {
   child.name = childName;
   child.bodyOwner = childName;
   child.bodyOwnerId = child.id;
@@ -1130,7 +1234,8 @@ function finalizeBirth(village, mother, data, child, childName) {
   village.villagers.push(child);
   recordBirthHistory(village, mother, child, {
     spouse,
-    geneticFatherUnknown: !!data.geneticFatherUnknown
+    geneticFatherUnknown: !!data.geneticFatherUnknown && !ordinaryMysticTwin,
+    twin: !!twinType
   });
   village.log(`${mother.name}が${child.name}を出産しました。人口上限+1`);
   if (data.reincarnation) {
@@ -1278,9 +1383,11 @@ function showAdultModal(village, character, { title = "成人", message = "" } =
   });
 }
 
-function getBirthLine(character, role) {
+function getBirthLine(character, role, { twins = false } = {}) {
   if (!character) return "";
-  const key = role === "母" ? "birthParent" : "birthPartner";
+  const key = role === "母"
+    ? (twins ? "birthParentTwins" : "birthParent")
+    : (twins ? "birthPartnerTwins" : "birthPartner");
   return getDialogueLine({
     character,
     scene: "reproduction",
@@ -1291,7 +1398,7 @@ function getBirthLine(character, role) {
 
 const CHILD_NAME_MAX_LENGTH = 8;
 // 関係文字列とログが名前をそのまま埋め込むため、使える文字を絞る。
-const CHILD_NAME_PATTERN = /^[0-9A-Za-z\u3041-\u3096\u30A1-\u30FA\u30FC\u4E00-\u9FFF々・＝]+$/;
+const CHILD_NAME_PATTERN = /^[0-9A-Za-z０-９\u3041-\u3096\u30A1-\u30FA\u30FC\u4E00-\u9FFF々・＝]+$/;
 
 /** 未命名の赤子の呼び名 */
 function getUnnamedChildLabel(child) {
@@ -1319,17 +1426,32 @@ function getChildNameError(name, village) {
   return "";
 }
 
-function showBirthModal(village, mother, father, child, onNamed, { inheritedName = "", childLine = "" } = {}) {
+function getBirthMessage(village, mother, child, twin) {
+  const childLabel = child.bodySex === "男" ? "男児" : "女児";
+  const captiveNote = isCaptive(mother, village) ? "子は村で育てられることになりました。" : "";
+  if (!twin) return `${mother.name}が${childLabel}を産みました。${captiveNote}`;
+  if (twin.index === 0) {
+    const twinLabel = twin.type === TWIN_TYPE_IDENTICAL ? "一卵性" : "二卵性";
+    return `${mother.name}が${twinLabel}の双子を産みました。一人目は${childLabel}です。${captiveNote}`;
+  }
+  return twin.type === TWIN_TYPE_IDENTICAL
+    ? `二人目は${childLabel}です。一人目と瓜二つの顔立ちをしています。`
+    : `二人目は${childLabel}です。`;
+}
+
+/** twin: 双子の時の { type, index }。2人目の画面では親のひと言を省く。 */
+function showBirthModal(village, mother, father, child, onNamed, { inheritedName = "", childLine = "", twin = null } = {}) {
+  const showParents = !twin || twin.index === 0;
   enqueueReproductionModal(onClosed => {
     const overlay = document.createElement("div");
     overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;";
     const modal = document.createElement("div");
     modal.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;max-width:520px;width:calc(100% - 32px);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.35);z-index:9999;";
     modal.innerHTML = `
-      <h2>出産</h2>
-      <p>${mother.name}が${child.bodySex === "男" ? "男児" : "女児"}を産みました。${isCaptive(mother, village) ? "子は村で育てられることになりました。" : ""}</p>
-      ${renderPortraitLine(mother, getBirthLine(mother, "母"))}
-      ${father ? renderPortraitLine(father, getBirthLine(father, "父")) : ""}
+      <h2>${twin ? "双子の出産" : "出産"}</h2>
+      <p>${getBirthMessage(village, mother, child, twin)}</p>
+      ${showParents ? renderPortraitLine(mother, getBirthLine(mother, "母", { twins: !!twin })) : ""}
+      ${showParents && father ? renderPortraitLine(father, getBirthLine(father, "父", { twins: !!twin })) : ""}
       ${renderPortraitLine(child, childLine || "……すやすや眠っている。", getUnnamedChildLabel(child))}
       ${inheritedName ? `
       <div data-birth-inherit>
