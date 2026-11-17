@@ -44,22 +44,31 @@ export function closeClothoSkeinModal() {
   document.getElementById(MODAL_ID)?.remove();
 }
 
-/** 結果とセリフで使う呼び方（男の子／女の子の双子 など）。 */
-function getChildLabel(childSex, twinType) {
-  const child = childSex === "男" ? "男の子" : "女の子";
-  return twinType ? `${child}の双子` : child;
+function getSexLabel(sex) {
+  return sex === "男" ? "男の子" : "女の子";
 }
 
-function getFateText(childSex, twinType) {
-  const child = childSex === "男" ? "男の子" : "女の子";
-  if (twinType === TWIN_TYPE_IDENTICAL) return `一卵性の双子の${child}`;
-  if (twinType === TWIN_TYPE_FRATERNAL) return `二卵性の双子の${child}`;
-  return child;
+/** 双子の性別の呼び方。二卵性で性別が違う時は「男の子と女の子」。 */
+function getTwinSexLabel(childSex, secondChildSex) {
+  return childSex === secondChildSex
+    ? getSexLabel(childSex)
+    : `${getSexLabel(childSex)}と${getSexLabel(secondChildSex)}`;
 }
 
-function renderChoiceGroup(name, legend, choices, checkedValue) {
+/** 結果とセリフで使う呼び方（男の子／女の子の双子／男の子と女の子の双子 など）。 */
+function getChildLabel(childSex, twinType, secondChildSex) {
+  return twinType ? `${getTwinSexLabel(childSex, secondChildSex)}の双子` : getSexLabel(childSex);
+}
+
+function getFateText(childSex, twinType, secondChildSex) {
+  if (twinType === TWIN_TYPE_IDENTICAL) return `一卵性の双子の${getSexLabel(childSex)}`;
+  if (twinType === TWIN_TYPE_FRATERNAL) return `二卵性の双子の${getTwinSexLabel(childSex, secondChildSex)}`;
+  return getSexLabel(childSex);
+}
+
+function renderChoiceGroup(name, legend, choices, checkedValue, { hidden = false } = {}) {
   return `
-    <fieldset class="clotho-choice-group">
+    <fieldset class="clotho-choice-group" data-clotho-group="${name}" ${hidden ? "hidden" : ""}>
       <legend>${legend}</legend>
       ${choices.map(choice => `
         <label><input type="radio" name="${name}" value="${choice.value}" ${choice.value === checkedValue ? "checked" : ""}> ${choice.label}</label>
@@ -68,16 +77,16 @@ function renderChoiceGroup(name, legend, choices, checkedValue) {
   `;
 }
 
-function applyFate(village, mother, childSex, twinType) {
-  if (!applyClothoFate(mother, { childSex, twinType })) return false;
-  const fateText = getFateText(childSex, twinType);
+function applyFate(village, mother, childSex, twinType, secondChildSex) {
+  if (!applyClothoFate(mother, { childSex, twinType, secondChildSex })) return false;
+  const fateText = getFateText(childSex, twinType, secondChildSex);
   village.log(`【秘宝】クロトの糸束により、${mother.name}のお腹の子は${fateText}として生まれる定めとなりました`);
   showMiracleResultModal(
     village,
     "クロトの糸束",
     `糸束がほどけて${mother.name}のお腹へ吸い込まれ、${fateText}として生まれる定めが紡がれました。`,
     [mother],
-    { dialogue: { scene: "secretTreasure", key: "clothoSkein", context: { childLabel: getChildLabel(childSex, twinType) } } }
+    { dialogue: { scene: "secretTreasure", key: "clothoSkein", context: { childLabel: getChildLabel(childSex, twinType, secondChildSex) } } }
   );
   updateUI(village);
   return true;
@@ -105,6 +114,7 @@ export function openClothoSkeinModal(village, mother, { onChosen = null } = {}) 
     <p class="gs-note">${escapeHtml(mother.name)}のお腹の子の生まれ方と性別を定めます。</p>
     ${renderChoiceGroup("clothoBirth", "生まれ方", BIRTH_CHOICES, "")}
     ${renderChoiceGroup("clothoSex", "性別", SEX_CHOICES, null)}
+    ${renderChoiceGroup("clothoSecondSex", "二人目の性別", SEX_CHOICES, null, { hidden: true })}
     <div class="gs-buttons">
       <button type="button" data-clotho-confirm disabled>定める</button>
       <button type="button" data-clotho-cancel>やめる</button>
@@ -113,16 +123,25 @@ export function openClothoSkeinModal(village, mother, { onChosen = null } = {}) 
   document.body.append(overlay, modal);
 
   const confirmButton = modal.querySelector("[data-clotho-confirm]");
+  const firstSexGroup = modal.querySelector('[data-clotho-group="clothoSex"]');
+  const secondSexGroup = modal.querySelector('[data-clotho-group="clothoSecondSex"]');
   const getChecked = name => modal.querySelector(`input[name="${name}"]:checked`)?.value ?? null;
-  modal.querySelectorAll('input[name="clothoSex"]').forEach(input => {
-    input.addEventListener("change", () => { confirmButton.disabled = !getChecked("clothoSex"); });
-  });
+  const isFraternal = () => getChecked("clothoBirth") === TWIN_TYPE_FRATERNAL;
+  // 二卵性の時だけ、二人目の性別を別に選ばせる。
+  const refresh = () => {
+    const fraternal = isFraternal();
+    secondSexGroup.hidden = !fraternal;
+    firstSexGroup.querySelector("legend").textContent = fraternal ? "一人目の性別" : "性別";
+    confirmButton.disabled = !getChecked("clothoSex") || (fraternal && !getChecked("clothoSecondSex"));
+  };
+  modal.querySelectorAll("input[type=radio]").forEach(input => input.addEventListener("change", refresh));
   confirmButton.addEventListener("click", () => {
     const childSex = getChecked("clothoSex");
     const twinType = getChecked("clothoBirth") || "";
-    if (!childSex || !canUseClothoSkeinOn(mother)) return;
+    const secondChildSex = twinType === TWIN_TYPE_FRATERNAL ? getChecked("clothoSecondSex") : childSex;
+    if (!childSex || !secondChildSex || !canUseClothoSkeinOn(mother)) return;
     closeClothoSkeinModal();
-    if (!applyFate(village, mother, childSex, twinType)) return;
+    if (!applyFate(village, mother, childSex, twinType, secondChildSex)) return;
     if (typeof onChosen === "function") onChosen();
   });
   modal.querySelector("[data-clotho-cancel]").addEventListener("click", closeClothoSkeinModal);

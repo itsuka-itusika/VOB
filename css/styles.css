@@ -5551,6 +5551,10 @@ body.status-detail-open #friendshipDetailModal { z-index: 12501; }
   border: 1px solid #aab0b7;
   border-radius: 2px;
 }
+/* display 指定が hidden 属性の既定値に勝つため、非表示を明示する。 */
+.clotho-choice-group[hidden] {
+  display: none;
+}
 .clotho-choice-group legend {
   padding: 0 4px;
   color: #545c64;

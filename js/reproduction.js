@@ -1069,6 +1069,10 @@ function changeFetusSex(genetics, newSex, data) {
   };
 }
 
+function isChildSex(value) {
+  return value === "男" || value === "女";
+}
+
 function pickFetusGenetics(data) {
   const { childSex, childRace, potentialStats, inheritedBodyTraits, inheritedMindTraits } = data;
   return { childSex, childRace, potentialStats, inheritedBodyTraits, inheritedMindTraits };
@@ -1078,10 +1082,12 @@ function pickFetusGenetics(data) {
  * 秘宝「クロトの糸束」。お腹の子の性別と、双子かどうかを定める。
  * いまの胎児をもとに性別を付け替え、二卵性の2人目はすでにいればそれを、いなければ新たに作る。
  * twinType: "" は双子にしない、TWIN_TYPE_IDENTICAL / TWIN_TYPE_FRATERNAL は双子にする。
+ * secondChildSex: 二卵性の2人目の性別。省くと1人目と同じにする。
  */
-export function applyClothoFate(mother, { childSex, twinType = "" }) {
+export function applyClothoFate(mother, { childSex, twinType = "", secondChildSex = childSex }) {
   const data = mother?.pregnancy;
-  if (!data || (childSex !== "男" && childSex !== "女")) return false;
+  if (!data || !isChildSex(childSex)) return false;
+  if (twinType === TWIN_TYPE_FRATERNAL && !isChildSex(secondChildSex)) return false;
   Object.assign(data, changeFetusSex(pickFetusGenetics(data), childSex, data));
   if (twinType === TWIN_TYPE_IDENTICAL) {
     data.twin = { type: TWIN_TYPE_IDENTICAL };
@@ -1089,8 +1095,8 @@ export function applyClothoFate(mother, { childSex, twinType = "" }) {
     const { type, ...existing } = data.twin?.type === TWIN_TYPE_FRATERNAL ? data.twin : {};
     const second = existing.potentialStats
       ? existing
-      : rollChildGenetics(data.motherSnapshot, data.fatherSnapshot, { forcedChildSex: childSex });
-    data.twin = { type: TWIN_TYPE_FRATERNAL, ...changeFetusSex(second, childSex, data) };
+      : rollChildGenetics(data.motherSnapshot, data.fatherSnapshot, { forcedChildSex: secondChildSex });
+    data.twin = { type: TWIN_TYPE_FRATERNAL, ...changeFetusSex(second, secondChildSex, data) };
   } else {
     delete data.twin;
   }
