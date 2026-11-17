@@ -26,6 +26,11 @@ export const PORTRAIT_ATLAS_SHEETS = {
     "cols": 8,
     "rows": 2
   },
+  "angelthief-1": {
+    "url": "images/atlas/angelthief-1.webp",
+    "cols": 8,
+    "rows": 4
+  },
   "arachnid-1": {
     "url": "images/atlas/arachnid-1.webp",
     "cols": 8,
@@ -1147,6 +1152,161 @@ export const PORTRAIT_ATLAS_MAP = {
     "sheet": "arachnid-1",
     "col": 1,
     "row": 1
+  },
+  "ANGELTHIEF1.png": {
+    "sheet": "angelthief-1",
+    "col": 0,
+    "row": 0
+  },
+  "ANGELTHIEF2.png": {
+    "sheet": "angelthief-1",
+    "col": 1,
+    "row": 0
+  },
+  "ANGELTHIEF3.png": {
+    "sheet": "angelthief-1",
+    "col": 2,
+    "row": 0
+  },
+  "ANGELTHIEF4.png": {
+    "sheet": "angelthief-1",
+    "col": 3,
+    "row": 0
+  },
+  "ANGELTHIEF5.png": {
+    "sheet": "angelthief-1",
+    "col": 4,
+    "row": 0
+  },
+  "ANGELTHIEF6.png": {
+    "sheet": "angelthief-1",
+    "col": 5,
+    "row": 0
+  },
+  "ANGELTHIEF7.png": {
+    "sheet": "angelthief-1",
+    "col": 6,
+    "row": 0
+  },
+  "ANGELTHIEF8.png": {
+    "sheet": "angelthief-1",
+    "col": 7,
+    "row": 0
+  },
+  "ANGELTHIEF9.png": {
+    "sheet": "angelthief-1",
+    "col": 0,
+    "row": 1
+  },
+  "ANGELTHIEF10.png": {
+    "sheet": "angelthief-1",
+    "col": 1,
+    "row": 1
+  },
+  "ANGELTHIEF11.png": {
+    "sheet": "angelthief-1",
+    "col": 2,
+    "row": 1
+  },
+  "ANGELTHIEF12.png": {
+    "sheet": "angelthief-1",
+    "col": 3,
+    "row": 1
+  },
+  "ANGELTHIEF13.png": {
+    "sheet": "angelthief-1",
+    "col": 4,
+    "row": 1
+  },
+  "ANGELTHIEF14.png": {
+    "sheet": "angelthief-1",
+    "col": 5,
+    "row": 1
+  },
+  "ANGELTHIEF15.png": {
+    "sheet": "angelthief-1",
+    "col": 6,
+    "row": 1
+  },
+  "ANGELTHIEF16.png": {
+    "sheet": "angelthief-1",
+    "col": 7,
+    "row": 1
+  },
+  "ANGELTHIEF17.png": {
+    "sheet": "angelthief-1",
+    "col": 0,
+    "row": 2
+  },
+  "ANGELTHIEF18.png": {
+    "sheet": "angelthief-1",
+    "col": 1,
+    "row": 2
+  },
+  "ANGELTHIEF19.png": {
+    "sheet": "angelthief-1",
+    "col": 2,
+    "row": 2
+  },
+  "ANGELTHIEF20.png": {
+    "sheet": "angelthief-1",
+    "col": 3,
+    "row": 2
+  },
+  "ANGELTHIEF21.png": {
+    "sheet": "angelthief-1",
+    "col": 4,
+    "row": 2
+  },
+  "ANGELTHIEF22.png": {
+    "sheet": "angelthief-1",
+    "col": 5,
+    "row": 2
+  },
+  "ANGELTHIEF23.png": {
+    "sheet": "angelthief-1",
+    "col": 6,
+    "row": 2
+  },
+  "ANGELTHIEF24.png": {
+    "sheet": "angelthief-1",
+    "col": 7,
+    "row": 2
+  },
+  "ANGELTHIEF25.png": {
+    "sheet": "angelthief-1",
+    "col": 0,
+    "row": 3
+  },
+  "ANGELTHIEF26.png": {
+    "sheet": "angelthief-1",
+    "col": 1,
+    "row": 3
+  },
+  "ANGELTHIEF27.png": {
+    "sheet": "angelthief-1",
+    "col": 2,
+    "row": 3
+  },
+  "ANGELTHIEF28.png": {
+    "sheet": "angelthief-1",
+    "col": 3,
+    "row": 3
+  },
+  "ANGELTHIEF29.png": {
+    "sheet": "angelthief-1",
+    "col": 4,
+    "row": 3
+  },
+  "ANGELTHIEF30.png": {
+    "sheet": "angelthief-1",
+    "col": 5,
+    "row": 3
+  },
+  "ANGELTHIEF31.png": {
+    "sheet": "angelthief-1",
+    "col": 6,
+    "row": 3
   },
   "ARCHANGEL1.png": {
     "sheet": "archangel-1",

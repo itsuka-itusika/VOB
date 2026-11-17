@@ -63,6 +63,7 @@ const NUMBERED_PORTRAIT_LIMITS = new Map([
   ["WOLF", 6],
   ["CYCLOPS", 4],
   ["ANGEL_FIGHTER", 16],
+  ["ANGELTHIEF", 31],
   ["ARCHANGEL", 13],
   ["CENTAUR", 9],
   ["MINOTAUR", 4],
@@ -119,6 +120,7 @@ const PORTRAIT_GROUP_FOLDERS = new Map([
   ["WOLF", "wolf"],
   ["CYCLOPS", "cyclops"],
   ["ANGEL_FIGHTER", "angel_fighter"],
+  ["ANGELTHIEF", "angelthief"],
   ["ARCHANGEL", "archangel"],
   ["CENTAUR", "centaur"],
   ["MINOTAUR", "minotaur"],
@@ -167,7 +169,7 @@ function getLegacyArachnidPortraitKey(value) {
 }
 
 function getNumberedPortraitParts(key) {
-  const match = key.match(/^(ANGEL_FIGHTER|HOLY_KNIGHT|ELITE_NOMAD|INQUISITOR|ARCHANGEL|SPHINX_M|SPHINX_F|MINOTAUR|CENTAUR|ARMORED|ARACHNID|CYCLOPS|KNIGHT|ALSEID|EQUINA|SATYR|MAENAD|NEREID|DRYAD|SAINT|ELITE|HARPY|ANGEL|NOMAD|BAN|GOB|WOLF|GG|MA|MB|MC|MD|ME|BB|A|C|D)(\d+)\.png$/i);
+  const match = key.match(/^(ANGEL_FIGHTER|ANGELTHIEF|HOLY_KNIGHT|ELITE_NOMAD|INQUISITOR|ARCHANGEL|SPHINX_M|SPHINX_F|MINOTAUR|CENTAUR|ARMORED|ARACHNID|CYCLOPS|KNIGHT|ALSEID|EQUINA|SATYR|MAENAD|NEREID|DRYAD|SAINT|ELITE|HARPY|ANGEL|NOMAD|BAN|GOB|WOLF|GG|MA|MB|MC|MD|ME|BB|A|C|D)(\d+)\.png$/i);
   if (!match) return null;
 
   return {

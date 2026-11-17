@@ -12,6 +12,9 @@ const WINGED_RAIDER_HOBBIES = [
   "歌唱", "詩作", "読書", "占い", "人間観察", "手芸"
 ];
 
+// 亜人騎士団の肉体の候補。5人に重ならないよう配り、6種のうち1種は出ない。
+const DEMIHUMAN_KNIGHT_BODY_TYPES = ["キュクロプス", "スフィンクス", "ミノタウロス", "ハーピーの長", "ゴブリンリーダー", "上位翼人"];
+
 export const RAIDER_TYPES = [
   {
     type: "野盗",
@@ -887,6 +890,7 @@ export const RAIDER_TYPES = [
     ]
   },
   {
+    // 遥か東方の騎馬帝国の前哨部隊。前衛で斬り込みながら、騎射心得で馬上から矢も放つ。
     type: "騎馬兵団兵",
     displayType: "騎馬兵",
     weight: 0,
@@ -899,29 +903,294 @@ export const RAIDER_TYPES = [
       job: "騎馬兵団",
       action: "襲撃"
     },
-    raidPosition: "middle",
+    raidPosition: "front",
     portraits: numberedPortraits("ELITE_NOMAD", 20),
     ranges: {
-      hp: [85, 110],
+      hp: [80, 100],
       mp: [65, 85],
       happiness: [40, 60],
-      str: [22, 28],
-      vit: [18, 25],
-      dex: [22, 30],
+      str: [21, 26],
+      vit: [18, 24],
+      dex: [22, 28],
       mag: [5, 14],
       chr: [12, 24],
       int: [18, 26],
       ind: [20, 28],
       eth: [8, 16],
-      cou: [24, 30],
+      cou: [23, 29],
       sexdr: [8, 20]
     },
-    mindTraits: ["歴戦"],
+    mindTraits: ["歴戦", "騎射心得"],
     dialogues: [
       "第一列、射て。第二列、回り込め。",
       "一度退いても終わりではない。次の波が来る。",
-      "この村は兵站に使える。焼きすぎるな、奪い尽くせ。"
+      "この村は兵站に使える。焼きすぎるな、奪い尽くせ。",
+      "我らは先触れにすぎぬ。帝国の本隊は、まだ地平の向こうだ。",
+      "馬を止めるな。射って、斬って、また駆けよ。"
     ]
+  },
+  {
+    // 亜人騎士団の肉体の一つ。単独では現れない。
+    type: "ミノタウロス",
+    weight: 0,
+    minCount: 1,
+    maxCount: 1,
+    race: "ミノタウロス",
+    forcedSex: "男",
+    ageRange: { min: 20, max: 40 },
+    params: {
+      job: "ミノタウロス",
+      action: "襲撃"
+    },
+    raidPosition: "front",
+    portraits: numberedPortraits("MINOTAUR", 4),
+    ranges: {
+      hp: [120, 140],
+      mp: [50, 75],
+      happiness: [40, 65],
+      str: [26, 31],
+      vit: [22, 27],
+      dex: [10, 16],
+      mag: [3, 8],
+      chr: [3, 10],
+      int: [4, 10],
+      ind: [8, 16],
+      eth: [4, 12],
+      cou: [22, 28],
+      sexdr: [15, 25]
+    },
+    forcedBodyTraits: ["牛頭"],
+    replaceBodyTraits: true,
+    hobbies: ["狩り", "喧嘩", "散歩", "日光浴"],
+    dialogues: [
+      "ブモォォ！角の前に立つものは、みな吹き飛ぶ！",
+      "迷い込んだのは、お前たちのほうだ。",
+      "柵も門も、この角で突き崩す！"
+    ]
+  },
+  {
+    // 亜人騎士団の聖騎士。魔物の肉体へ移されたことを、異端を討つための試練と受け止めている。
+    type: "亜人騎士",
+    displayType: "聖騎士",
+    weight: 0,
+    minCount: 3,
+    maxCount: 3,
+    race: "人間",
+    forcedSex: "男",
+    ageRange: { min: 24, max: 35 },
+    params: {
+      job: "亜人騎士",
+      action: "襲撃"
+    },
+    raidPosition: "front",
+    portraits: numberedPortraits("HOLY_KNIGHT", 8),
+    ranges: {
+      hp: [80, 100],
+      mp: [80, 95],
+      happiness: [20, 40],
+      str: [24, 29],
+      vit: [20, 25],
+      dex: [18, 24],
+      mag: [18, 25],
+      chr: [18, 25],
+      int: [16, 24],
+      ind: [18, 25],
+      eth: [22, 30],
+      cou: [20, 27],
+      sexdr: [3, 12]
+    },
+    mindTraits: ["狂信"],
+    dialogues: [
+      "この醜き身も、主が与えたもうた剣。異端を討つには十分だ。",
+      "魔物の血が騒ぐ……否、これは試練だ。祈りで抑えてみせる。",
+      "姿など問題ではない。心が主のものである限り、我は聖騎士だ。",
+      "異端の村よ、見よ。この呪いすら、汝らを滅ぼす力に変えてくれる。",
+      "この爪も牙も、おぞましい……。だが主は、この身にも剣を握らせてくださった。"
+    ]
+  },
+  {
+    // 亜人騎士団の聖女。
+    type: "亜人聖女",
+    displayType: "聖女",
+    weight: 0,
+    minCount: 2,
+    maxCount: 2,
+    race: "人間",
+    forcedSex: "女",
+    ageRange: { min: 18, max: 25 },
+    params: {
+      job: "亜人聖女",
+      action: "襲撃"
+    },
+    raidPosition: "front",
+    raidTargeting: "frontFirst",
+    portraits: numberedPortraits("SAINT", 21),
+    ranges: {
+      hp: [60, 90],
+      mp: [85, 98],
+      happiness: [20, 40],
+      str: [8, 15],
+      vit: [12, 20],
+      dex: [12, 20],
+      mag: [18, 28],
+      chr: [18, 30],
+      int: [18, 26],
+      ind: [18, 26],
+      eth: [22, 30],
+      cou: [16, 24],
+      sexdr: [3, 10]
+    },
+    mindTraits: ["神聖", "狂信"],
+    dialogues: [
+      "この身が魔に堕ちて見えましょうとも、祈りは少しも曇っておりません。",
+      "鏡を見るたびに震えました。けれど、これも異端を清めるための試練です。",
+      "穢れた器に宿されたのは、主の御心。ならば、この腕で罰を下しましょう。",
+      "憐れまないでください。わたくしは今、かつてないほど主の近くにおります。"
+    ]
+  },
+  {
+    // 翼人盗賊団。粗野な盗賊・傭兵が、魂の揺らぎで翼人の肉体を得た。
+    type: "翼人盗賊",
+    weight: 0,
+    minCount: 6,
+    maxCount: 7,
+    race: "人間",
+    forcedSex: "男",
+    ageRange: { min: 20, max: 40 },
+    params: {
+      job: "翼人盗賊",
+      action: "襲撃"
+    },
+    raidPosition: "front",
+    portraits: numberedPortraits("BAN", 20),
+    ranges: {
+      hp: [60, 80],
+      mp: [55, 75],
+      happiness: [70, 90],
+      str: [16, 22],
+      vit: [14, 22],
+      dex: [12, 20],
+      mag: [5, 12],
+      chr: [5, 15],
+      int: [6, 16],
+      ind: [4, 12],
+      eth: [1, 8],
+      cou: [24, 30],
+      sexdr: [18, 28]
+    },
+    mindTraits: ["戦慣れ"],
+    dialogues: [
+      "見ろよこの翼！ 空から村を見下ろす気分は最高だぜ！",
+      "前の体は傷だらけだったが、こいつは軽い、速い、おまけに綺麗ときた。",
+      "この体なら矢も届かねえ。蔵の中身をまとめていただくぜ！",
+      "女を抱けねえのだけが惜しいがな……まあ、金と酒で埋め合わせるさ。",
+      "天使の顔で脅すと、みんな面白いほど固まるんだよなあ。"
+    ]
+  },
+  {
+    type: "翼人盗賊頭",
+    displayType: "盗賊頭",
+    role: "leader",
+    weight: 0,
+    minCount: 1,
+    maxCount: 1,
+    race: "人間",
+    forcedSex: "男",
+    ageRange: { min: 28, max: 45 },
+    params: {
+      job: "翼人盗賊",
+      action: "襲撃"
+    },
+    raidPosition: "front",
+    raidTargeting: "frontFirst",
+    portraits: numberedPortraits("BAN", 20),
+    ranges: {
+      hp: [70, 90],
+      mp: [60, 80],
+      happiness: [75, 95],
+      str: [18, 24],
+      vit: [16, 24],
+      dex: [14, 22],
+      mag: [6, 14],
+      chr: [8, 18],
+      int: [12, 20],
+      ind: [8, 16],
+      eth: [1, 8],
+      cou: [26, 32],
+      sexdr: [16, 26]
+    },
+    mindTraits: ["首長", "歴戦"],
+    dialogues: [
+      "野郎ども……いや、今は見た目だけは天使さまか。ハハッ、稼ぎ時だ！",
+      "幾重の翼ってのは伊達じゃねえ。この体を手に入れてから、負けた覚えがねえんだ。",
+      "神さまの使いに見えるだろう？ 中身は昔のままの盗賊だがな！",
+      "おとなしく差し出せば、この綺麗な顔で笑ってやるよ。"
+    ]
+  },
+  {
+    // 翼人盗賊団の肉体。精神は「翼人盗賊」と入れ替わるため、単独では現れない。
+    type: "翼人盗賊の肉体",
+    weight: 0,
+    minCount: 1,
+    maxCount: 1,
+    race: "翼人",
+    forcedSex: "女",
+    ageRange: { min: 18, max: 32 },
+    params: {
+      job: "翼人兵",
+      action: "襲撃"
+    },
+    raidPosition: "front",
+    portraits: numberedPortraits("ANGELTHIEF", 31),
+    ranges: {
+      hp: [70, 90],
+      mp: [85, 97],
+      happiness: [55, 75],
+      str: [16, 23],
+      vit: [16, 23],
+      dex: [16, 23],
+      mag: [22, 27],
+      chr: [20, 28],
+      int: [16, 24],
+      ind: [16, 24],
+      eth: [22, 30],
+      cou: [22, 26],
+      sexdr: [3, 8]
+    },
+    forcedBodyTraits: ["飛行", "光輪"],
+    dialogues: []
+  },
+  {
+    type: "翼人盗賊頭の肉体",
+    weight: 0,
+    minCount: 1,
+    maxCount: 1,
+    race: "翼人",
+    forcedSex: "女",
+    ageRange: { min: 100, max: 300 },
+    params: {
+      job: "上位翼人",
+      action: "襲撃"
+    },
+    raidPosition: "front",
+    portraits: numberedPortraits("ANGELTHIEF", 31),
+    ranges: {
+      hp: [80, 100],
+      mp: [90, 99],
+      happiness: [65, 85],
+      str: [18, 25],
+      vit: [18, 25],
+      dex: [16, 22],
+      mag: [28, 36],
+      chr: [25, 35],
+      int: [24, 30],
+      ind: [20, 28],
+      eth: [25, 35],
+      cou: [22, 30],
+      sexdr: [3, 10]
+    },
+    forcedBodyTraits: ["飛行", "光輪"],
+    dialogues: []
   },
   {
     type: "黙示録の騎士・支配",
@@ -1083,7 +1352,8 @@ function createCompositeRaiderRaid({
   introDialogues = [],
   defense = null,
   successRewards = null,
-  failurePenalty = null
+  failurePenalty = null,
+  bodySwap = null
 }) {
   return {
     id,
@@ -1093,6 +1363,7 @@ function createCompositeRaiderRaid({
     avoidance,
     representative,
     introDialogues,
+    bodySwap,
     defense: {
       ...cloneRaidRules(DEFAULT_RAID_DEFENSE),
       ...(defense || {})
@@ -1629,15 +1900,22 @@ export const RAID_MODULES = [
     ]
   }),
   createCompositeRaiderRaid({
+    // 遥か東方の騎馬帝国の前哨部隊。黙示録クリア後の襲撃テーブルに出る。
     id: "cavalry-corps",
     name: "騎馬兵団の襲撃",
     warningName: "騎馬兵団",
     weight: 6,
+    avoidance: {
+      type: "resourcePayment",
+      label: "貢納を差し出す",
+      resources: [
+        { resource: "food", rate: 0.4, minAmount: 250 },
+        { resource: "funds", rate: 0.4, minAmount: 500 }
+      ]
+    },
     representative: { raiderType: "騎馬兵団兵" },
     enemyGroups: [
-      { raiderType: "騎馬兵団兵", minCount: 4, maxCount: 6 },
-      { raiderType: "強遊牧民", minCount: 2, maxCount: 3 },
-      { raiderType: "セントール", minCount: 1, maxCount: 2 }
+      { raiderType: "騎馬兵団兵", minCount: 6, maxCount: 7 }
     ],
     defense: { surviveTurns: 5 },
     failurePenalty: {
@@ -1650,8 +1928,123 @@ export const RAID_MODULES = [
     },
     introDialogues: [
       "偵察は終わった。ここからは兵団の戦だ。",
-      "一波を退けても次が来る。兵站の整った軍を侮るな。",
-      "高い士気と馬上の弓で、この村を包囲する。"
+      "東の帝国は、天の災厄を退けた村の噂を聞いた。貢ぎを差し出すか、我らの蹄に踏まれるかだ。",
+      "我らは前哨にすぎぬ。だが、この村ひとつを落とすには十分すぎる。"
+    ]
+  }),
+  createCompositeRaiderRaid({
+    // 魂の境界が弱まり、魔物の群れの一部が聖騎士・聖女・上位翼人の肉体に入れ替わったまま押し寄せる。
+    // 入れ替わった者は、精神が魔物・肉体が聖なる者の側だけが残る。
+    id: "monster-stampede-chaos",
+    name: "モンスター・スタンビード（混沌）",
+    warningName: "モンスター・スタンビード（混沌）",
+    weight: 0,
+    representative: [
+      { raiderType: "ゴブリンリーダー", role: "leader" },
+      { raiderType: "ハーピーの長", role: "leader" }
+    ],
+    enemyGroups: [
+      { raiderType: "ゴブリンリーダー", minCount: 1, maxCount: 1 },
+      { raiderType: "ゴブリン射手", minCount: 2, maxCount: 2 },
+      { raiderType: "キュクロプス", minCount: 1, maxCount: 1 },
+      { raiderType: "ハーピーの長", minCount: 1, maxCount: 1 },
+      { raiderType: "ミノタウロス", minCount: 1, maxCount: 1 },
+      { raiderType: "餓狼", minCount: 2, maxCount: 2 }
+    ],
+    bodySwap: {
+      minCount: 2,
+      maxCount: 3,
+      bodyRaiderTypes: ["聖騎士", "聖女", "上位翼人"],
+      // 入れ替わりに頓着しない魔物たちのひと言。精神側の口調で引く。
+      dialoguesBySpeechType: {
+        "ゴブリン": [
+          "キヒヒ！なんか体がでかくなったのだ！ よく分からんが、強いからいいのだ！",
+          "この体、光る輪っかが付いてるのだ。邪魔だけど、殴れば同じなのだ！",
+          "前の体より背が高いのだ！ 上から殴れるのだ！"
+        ],
+        "ハーピー": [
+          "あら、翼の形が違うわね。でも飛べるならどっちでもいいわ！",
+          "人間の騎士の体なんて重たいけど……力はあるのね。気に入ったわ！",
+          "キャハハ！ どの体だって、光るものを奪うのに困りはしないのよ！"
+        ],
+        "狼": [
+          "ガルル……。（慣れない二本の脚で立ち、それでも牙をむいて唸っている）",
+          "グルルル……！（鎧の重さなど気にもせず、獲物の匂いだけを追っている）"
+        ],
+        "乱暴": [
+          "ウオォ……体が小さくなった……。でも、腹は減ったままだ……！",
+          "目が二つある……変な感じだ……。まあいい、潰す……！"
+        ]
+      }
+    },
+    defense: { surviveTurns: 5 },
+    failurePenalty: {
+      foodRate: 0.3,
+      fundsRate: 0.3,
+      buildingDamage: true,
+      severeInjury: true
+    },
+    introDialogues: [
+      "魔物の奔流の中に、鎧をまとった騎士や光輪を戴く翼人の姿が混じっている。だが、その目は獣のものだ。",
+      "聖騎士の体で牙をむき、翼人の体で棍棒を振り上げる――魂の入れ替わった群れが、気にも留めず押し寄せる。",
+      "七つの災厄の後、魂の境界はほつれたままだ。乱れた群れが、村を目がけて駆けてくる。"
+    ]
+  }),
+  createCompositeRaiderRaid({
+    // 聖騎士3・聖女2。魂の揺らぎで魔物の肉体へ移されたが、狂信によって異端を討つ試練と受け止めている。
+    id: "demihuman-knights",
+    name: "亜人騎士団の襲撃",
+    warningName: "亜人騎士団",
+    weight: 0,
+    representative: [
+      { raiderType: "亜人騎士" },
+      { raiderType: "亜人聖女" }
+    ],
+    enemyGroups: [
+      { raiderType: "亜人騎士", minCount: 3, maxCount: 3, bodyRaiderTypes: DEMIHUMAN_KNIGHT_BODY_TYPES },
+      { raiderType: "亜人聖女", minCount: 2, maxCount: 2, bodyRaiderTypes: DEMIHUMAN_KNIGHT_BODY_TYPES }
+    ],
+    defense: { surviveTurns: 5 },
+    failurePenalty: {
+      foodRate: 0.4,
+      fundsRate: 0.4,
+      security: 20,
+      buildingDamage: true,
+      severeInjury: true
+    },
+    introDialogues: [
+      "単眼の巨人、牛頭の戦士、翼ある獣――魔物の姿をした者たちが、聖征の旗を掲げて進んでくる。",
+      "「この身は呪われた。だが呪いもまた、異端を砕くために与えられた剣である」",
+      "「姿を変えられようと、祈りは変わらぬ。異端の村よ、今度こそ悔い改めよ」"
+    ]
+  }),
+  createCompositeRaiderRaid({
+    // 粗野な盗賊・傭兵が、魂の揺らぎで翼人の肉体を得た一団。首領は上位翼人の肉体を持つ。
+    id: "winged-bandits",
+    name: "翼人盗賊団の襲撃",
+    warningName: "翼人盗賊団",
+    weight: 0,
+    avoidance: {
+      type: "resourcePayment",
+      resource: "funds",
+      label: "金を払う",
+      rate: 0.5,
+      minAmount: 400
+    },
+    representative: { raiderType: "翼人盗賊頭", role: "leader" },
+    enemyGroups: [
+      { raiderType: "翼人盗賊頭", minCount: 1, maxCount: 1, bodyRaiderTypes: ["翼人盗賊頭の肉体"] },
+      { raiderType: "翼人盗賊", minCount: 6, maxCount: 7, bodyRaiderTypes: ["翼人盗賊の肉体"] }
+    ],
+    defense: { surviveTurns: 5 },
+    failurePenalty: {
+      foodRate: 0.2,
+      fundsRate: 0.4
+    },
+    introDialogues: [
+      "光輪を戴いた翼人たちが舞い降りる。だが、その口から出たのは下卑た笑い声だった。",
+      "「天使さまのお通りだ！ ……なんてな。金目のものを出しな！」",
+      "「いい体だろう？ 拾いもんだが、空から村を襲うにはもってこいでな」"
     ]
   }),
   createCompositeRaiderRaid({
@@ -1753,6 +2146,9 @@ export const RAID_MODULES = [
 ];
 
 const RAID_MODULE_BY_ID = new Map(RAID_MODULES.map(raid => [raid.id, raid]));
+
+// 黙示録クリア後の村だけが引く襲撃テーブル。規模・異端の別は問わない。
+export const POST_APOCALYPSE_RAID_TABLE_ID = "post-apocalypse";
 
 export const RAID_SCALE_TABLES = [
   {
@@ -1866,6 +2262,19 @@ export const RAID_SCALE_TABLES = [
       { raidId: "horse-nomad-raid", weight: 10 },
       { raidId: "cyclops-band", weight: 10 },
       { raidId: "sphinx-visit", weight: 5 }
+    ]
+  },
+  {
+    id: POST_APOCALYPSE_RAID_TABLE_ID,
+    label: "七災を越えた村",
+    requiresApocalypseCleared: true,
+    entries: [
+      { raidId: "monster-stampede", weight: 10 },
+      { raidId: "sphinx-visit", weight: 5 },
+      { raidId: "monster-stampede-chaos", weight: 10 },
+      { raidId: "demihuman-knights", weight: 10 },
+      { raidId: "winged-bandits", weight: 10 },
+      { raidId: "cavalry-corps", weight: 10 }
     ]
   }
 ];

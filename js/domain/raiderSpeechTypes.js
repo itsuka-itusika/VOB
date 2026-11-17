@@ -7,16 +7,21 @@ const ROUGH_RAIDER_TYPES = new Set([
   "強遊牧民",
   "セントール",
   "傭兵",
-  "騎馬兵団兵"
+  "騎馬兵団兵",
+  "ミノタウロス",
+  "翼人盗賊",
+  "翼人盗賊頭"
 ]);
 const POLITE_MALE_RAIDER_TYPES = new Set([
   "下級騎士",
   "重装兵",
   "上級騎士",
-  "聖騎士"
+  "聖騎士",
+  "亜人騎士"
 ]);
 const POLITE_FEMALE_RAIDER_TYPES = new Set([
   "聖女",
+  "亜人聖女",
   "翼人兵",
   "上位翼人"
 ]);

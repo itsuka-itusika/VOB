@@ -17,6 +17,7 @@ import { updateUI } from "./ui.js";
 import { clampValue, randChoice, randInt } from "./util.js";
 import { getVillageScaleStage } from "./villageScale.js";
 import { clearDefeatedRaidEnemies, getCaptives } from "./captives.js";
+import { doExchange } from "./exchange.js";
 import { RAID_MENTAL_TRAIT_REACTIONS } from "./data/dialogue/raidStartLines.js";
 
 const AVOIDANCE_RESOURCE_LABELS = {
@@ -50,7 +51,10 @@ function getVillageScaleStageIndex(village) {
 function getRaidTableForVillage(village) {
   const stageIndex = getVillageScaleStageIndex(village);
   const villageTraits = Array.isArray(village?.villageTraits) ? village.villageTraits : [];
+  // 黙示録クリア後は、規模・異端を問わず専用テーブルだけを引く。
+  const apocalypseCleared = village?.apocalypseCleared === true;
   return RAID_SCALE_TABLES.find(table => {
+    if (!!table.requiresApocalypseCleared !== apocalypseCleared) return false;
     if (table.requiredVillageTrait && !villageTraits.includes(table.requiredVillageTrait)) return false;
     if (table.excludedVillageTrait && villageTraits.includes(table.excludedVillageTrait)) return false;
     if (Array.isArray(table.scaleStageIndexes)) {
@@ -113,6 +117,12 @@ function cloneEnemyGroupTraitOptions(group, fallbackGroup = null) {
   }
   if (Array.isArray(mindTraitChances)) {
     options.mindTraitChances = mindTraitChances.map(entry => ({ ...entry }));
+  }
+  const bodyRaiderTypes = Array.isArray(group?.bodyRaiderTypes)
+    ? group.bodyRaiderTypes
+    : fallbackGroup?.bodyRaiderTypes;
+  if (Array.isArray(bodyRaiderTypes)) {
+    options.bodyRaiderTypes = [...bodyRaiderTypes];
   }
   return options;
 }
@@ -709,6 +719,62 @@ function consumeMessengerPass(village) {
 /**
  * 襲撃イベント開始を修正
  */
+// 黙示録の後、魂の境界が弱まって入れ替わったまま現れる襲撃者。
+// 本来の襲撃者と肉体側の襲撃者を作ってから交換し、精神側（本来の襲撃者）だけを残す。
+const RAIDER_BODY_EXCHANGE_SOURCE = "魂の揺らぎ";
+const SAINT_GLOW_BODY_TRAIT = "聖女の輝き";
+const TRANSIENT_EXCHANGE_KEYS = [
+  "lastBodyExchangeSourceRace",
+  "lastBodyExchangeTargetRace",
+  "lastBodyExchangeReturnedToOwnBody",
+  "lastBodyExchangeFromOwnBody"
+];
+
+/** 肉体の候補を、なるべく重ならないように配る。候補を使い切ったら配り直す。 */
+function createBodyTypeDealer() {
+  const decks = new Map();
+  return pool => {
+    const key = pool.join("|");
+    if (!decks.get(key)?.length) {
+      decks.set(key, [...pool].sort(() => Math.random() - 0.5));
+    }
+    return decks.get(key).pop();
+  };
+}
+
+/** 肉体側を作って交換する。捨てる肉体側の名前を返し、作れなければ空文字。 */
+function exchangeRaiderBody(village, spirit, bodyTypeName, existingNames) {
+  const bodyType = getRaiderTypeByType(bodyTypeName);
+  if (!spirit || !bodyType) return "";
+  // 翼人兵の襲撃と同じく、聖女でない肉体にはランダムな聖女の輝きを付けない。
+  const isSaintBody = (bodyType.forcedBodyTraits || []).includes(SAINT_GLOW_BODY_TRAIT);
+  const body = createRaidEnemy(village, bodyType, existingNames, {
+    excludedBodyTraits: isSaintBody ? [] : [SAINT_GLOW_BODY_TRAIT]
+  });
+  // 仮の村を渡して、交換の告知と村史を残さず、襲撃者としての行動だけを整えさせる。
+  const stubVillage = { raidEnemies: [spirit, body], captives: [], log() {} };
+  doExchange(spirit, body, stubVillage, true, RAIDER_BODY_EXCHANGE_SOURCE, { recordHistory: false });
+  // 交換直後の反応用の一時情報は、村で起きた交換ではないため残さない。
+  TRANSIENT_EXCHANGE_KEYS.forEach(key => delete spirit[key]);
+  return body.name;
+}
+
+/** 襲撃の一部の者だけを入れ替える（モンスター・スタンビード（混沌））。 */
+function applyRaidBodySwap(village, raidDefinition, dealBodyType, getUsedNames, discardedBodyNames) {
+  const rule = raidDefinition?.bodySwap;
+  const pool = Array.isArray(rule?.bodyRaiderTypes) ? rule.bodyRaiderTypes : [];
+  if (pool.length === 0) return;
+  const candidates = [...village.raidEnemies].sort(() => Math.random() - 0.5);
+  const count = Math.min(candidates.length, randInt(rule.minCount ?? 1, rule.maxCount ?? rule.minCount ?? 1));
+  candidates.slice(0, count).forEach(enemy => {
+    const bodyName = exchangeRaiderBody(village, enemy, dealBodyType(pool), getUsedNames());
+    if (!bodyName) return;
+    discardedBodyNames.push(bodyName);
+    const lines = rule.dialoguesBySpeechType?.[enemy.speechType];
+    if (Array.isArray(lines) && lines.length > 0) enemy.raiderDialogues = [...lines];
+  });
+}
+
 export function startRaidEvent(village, options = {}) {
   const pendingRaid = options.pendingRaid || null;
   const raidDefinition = options.raidDefinition ||
@@ -742,21 +808,27 @@ export function startRaidEvent(village, options = {}) {
   clearDefeatedRaidEnemies(village);
   village.currentRaid = createRaidState(raidDefinition);
 
+  const dealBodyType = createBodyTypeDealer();
+  // 入れ替わりで捨てる肉体側の名前も、同じ襲撃の中では重ねない。
+  const discardedBodyNames = [];
+  const getUsedNames = () => [
+    ...village.villagers.map(person => person.name),
+    ...getCaptives(village).map(person => person.name),
+    ...village.raidEnemies.map(person => person.name),
+    ...discardedBodyNames
+  ];
   enemyGroups.forEach(group => {
     for (let i = 0; i < group.count; i++) {
-      const existingNames = [
-        ...village.villagers.map(person => person.name),
-        ...getCaptives(village).map(person => person.name),
-        ...village.raidEnemies.map(person => person.name)
-      ];
-      village.raidEnemies.push(createRaidEnemy(
-        village,
-        group.raiderType,
-        existingNames,
-        group
-      ));
+      const existingNames = getUsedNames();
+      const enemy = createRaidEnemy(village, group.raiderType, existingNames, group);
+      if (Array.isArray(group.bodyRaiderTypes) && group.bodyRaiderTypes.length > 0) {
+        const bodyName = exchangeRaiderBody(village, enemy, dealBodyType(group.bodyRaiderTypes), getUsedNames());
+        if (bodyName) discardedBodyNames.push(bodyName);
+      }
+      village.raidEnemies.push(enemy);
     }
   });
+  applyRaidBodySwap(village, raidDefinition, dealBodyType, getUsedNames, discardedBodyNames);
 
   const enemyCount = village.raidEnemies.length;
 

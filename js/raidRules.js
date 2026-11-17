@@ -19,6 +19,9 @@ export const RAID_COMBAT_ACTIONS = [ACTION_DEFEND, ACTION_FORTIFY, ACTION_SHOOT,
 export const RAID_BASE_FRONTLINER_SLOTS = 6;
 export const RAID_TRAP_MAKER_SLOTS = 3;
 export const RAID_MIDDLE_INCOMING_DAMAGE_MULTIPLIER = 1.2;
+// 騎射心得: 迎撃（襲撃者は前衛）の時だけ、この確率で中衛と同じ順番に射撃も行う。
+export const MOUNTED_ARCHERY_MIND_TRAIT = "騎射心得";
+export const MOUNTED_ARCHERY_CHANCE = 0.4;
 export const RAID_CANNON_INCOMING_DAMAGE_MULTIPLIER = 1.5;
 
 const RAID_COMMON_UNABLE_MIND_TRAITS = ["無垢", "萌芽", "襲撃者", "訪問者"];
@@ -238,6 +241,11 @@ export function estimateRaidActionDamage(person, action, village = null) {
     const physical = Math.max(0, Math.floor((stat("str") * stat("cou") / 400) * 50 - averageVitality));
     const magical = Math.max(0, Math.floor((stat("mag") * stat("cou") / 400) * 25));
     base = Math.max(physical, magical);
+    // 騎射心得は迎撃の時だけ、確率で射撃も加わる。想定はその期待値で見る。
+    if (action === ACTION_DEFEND && traitList(person, "mindTraits").includes(MOUNTED_ARCHERY_MIND_TRAIT)) {
+      const shot = Math.max(0, Math.floor((stat("dex") * stat("cou") / 400) * 50 - averageVitality * 1.2));
+      base += Math.floor(shot * getRangedTraitMultiplier(person, ACTION_SHOOT) * MOUNTED_ARCHERY_CHANCE);
+    }
   } else if (action === ACTION_SHOOT) {
     base = Math.max(0, Math.floor((stat("dex") * stat("cou") / 400) * 50 - averageVitality * 1.2));
     base = Math.floor(base * getRangedTraitMultiplier(person, ACTION_SHOOT));

@@ -34,7 +34,12 @@ export const CAPTIVE_SOCIAL_COEFFICIENTS = Object.freeze({
   "スフィンクス": 0.2,
   "翼人兵": 0.06,
   "上位翼人": 0.04,
-  "騎馬兵団兵": 0.06
+  "騎馬兵団兵": 0.06,
+  "ミノタウロス": 0.2,
+  "亜人騎士": 0.06,
+  "亜人聖女": 0.06,
+  "翼人盗賊": 0.2,
+  "翼人盗賊頭": 0.1
 });
 // エクイナがセントールの捕虜を懐柔・誘惑する時の基礎係数倍率。
 export const CAPTIVE_EQUINA_CENTAUR_MULTIPLIER = 2;

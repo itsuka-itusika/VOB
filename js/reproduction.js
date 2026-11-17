@@ -39,7 +39,7 @@ import { getDialogueLine } from "./dialogue/dialogueEngine.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
 import { isCaptive } from "./captives.js";
 
-const HUMANOID_RACES = new Set(["人間", "ゴブリン", "ハーピー", "半神", "キュクロプス", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド", "エクイナ", "サテュロス", "メナド", "セントール"]);
+const HUMANOID_RACES = new Set(["人間", "ゴブリン", "ハーピー", "半神", "キュクロプス", "ミノタウロス", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド", "エクイナ", "サテュロス", "メナド", "セントール"]);
 const FEMALE_FIXED_RACES = new Set(["ハーピー", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド", "エクイナ", "メナド"]);
 const LONG_LIVED_RACES = new Set(["ドライアド", "ネレイド", "アルセイド", "翼人"]);
 const RACE_BODY_TRAITS = {
@@ -51,6 +51,7 @@ const RACE_BODY_TRAITS = {
   "アラクニド": ["糸吐き"],
   "スフィンクス": ["人面獣身", "飛行"],
   "キュクロプス": ["巨人", "単眼"],
+  "ミノタウロス": ["牛頭"],
   "ハーピー": ["飛行", "澄んだ声"],
   "エクイナ": ["健脚"],
   "サテュロス": ["山羊角", "通る声"],

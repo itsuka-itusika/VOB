@@ -41,7 +41,9 @@ import {
   getRaidMiddleSlotCount,
   applyOffensiveTraitDamage,
   isPacifistFighter,
-  isRaidCombatAction
+  isRaidCombatAction,
+  MOUNTED_ARCHERY_CHANCE,
+  MOUNTED_ARCHERY_MIND_TRAIT
 } from "./raidRules.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { HARD_AFTEREFFECT_CHANCE, HARD_SEVERE_TO_FATAL_RATE, isHardMode } from "./domain/difficulty.js";
@@ -720,6 +722,9 @@ export function proceedRaidAction(village) {
     case "COMBAT":
       actionResult = doOneCombatAction(action, village);
       break;
+    case "MOUNTED_SHOT":
+      actionResult = doMountedShotAction(action, village);
+      break;
     case "FORTIFY_GROUP":
       actionResult = doFortifyGroupAction(action, village);
       break;
@@ -880,7 +885,13 @@ function createCombatActions(village) {
   ));
   const cannonUnits = sortByCourage(allUnits.filter(unit => isCannonUnit(unit, village)));
   const actions = fortifyUnits.length > 0 ? [{ type: "FORTIFY_GROUP", actors: fortifyUnits }] : [];
-  return actions.concat(middleUnits.concat(frontUnits, cannonUnits).map(unit => {
+  // 騎射心得を持つ迎撃の者は、確率で中衛と同じ順番に射撃も行う。中衛と勇気順に並べる。
+  const mountedShooters = frontUnits.filter(unit => isMountedArcher(unit, village) && Math.random() < MOUNTED_ARCHERY_CHANCE);
+  const middleActions = sortByCourage([...middleUnits, ...mountedShooters].map(unit => ({ unit, cou: unit.cou })))
+    .map(entry => middleUnits.includes(entry.unit)
+      ? { type: "COMBAT", actor: entry.unit }
+      : { type: "MOUNTED_SHOT", actor: entry.unit });
+  return actions.concat(middleActions, frontUnits.concat(cannonUnits).map(unit => {
     const isWarLightPillar = village.currentRaid?.id === APOCALYPSE_GRAND_CRUSADE_ID &&
       village.raidTurnCount === WAR_LIGHT_PILLAR_TURN &&
       unit?.raiderType === APOCALYPSE_WAR_RAIDER_TYPE;
@@ -1011,6 +1022,39 @@ function doOneCombatAction(action, village) {
   } else if (!isRanged && canCounterAttack(target, village)) {
     doCounterAttack(target, actor, village, result);
   }
+  return result;
+}
+
+/** 騎射心得の対象か。迎撃に立つ村人と、前衛の襲撃者だけ。籠城・中衛・後衛では射たない。 */
+function isMountedArcher(unit, village) {
+  if (!hasTrait(unit, MOUNTED_ARCHERY_MIND_TRAIT)) return false;
+  if (isEnemyUnit(unit, village)) return getCombatPosition(unit, village) === RAID_POSITION_FRONT;
+  return unit?.action === ACTION_DEFEND;
+}
+
+/** 騎射心得の射撃。威力は通常の射撃と同じで、反撃は受けない。 */
+function doMountedShotAction(action, village) {
+  const actor = action.actor;
+  const result = createRaidActionResult(actor);
+  if (shouldSkipDefeatedEnemyAction(actor, village) || !canActInCombat(actor, village)) return result;
+
+  const target = selectTarget(actor, village);
+  if (!target) return result;
+  const attackResult = calcRangedDamage(actor, target);
+  const label = getAttackLogLabel(actor, village, attackResult, true);
+  addRaidActionLog(result, `【騎射】${actor.name}は馬上から矢を放った！`);
+  let dmg = applyOffensiveTraitModifiers(actor, attackResult.damage, label, result);
+  dmg = applyIncomingDamageModifiers(dmg, target, village);
+
+  const saltPillarShattered = applyRaidDamage(target, dmg);
+  if (!isEnemyUnit(actor, village)) {
+    recordRaidFriendshipDamage(village, actor, dmg);
+    addVillageRecord(village, actor, "raidDamage", dmg);
+  }
+  addRaidDamageAnimation(result, actor, target, dmg, false, "騎射");
+  addRaidActionLog(result, `${label}${actor.name}の騎射→${target.name}に ${dmg}ダメージ`);
+  if (saltPillarShattered) addSaltPillarShatterLog(result, target);
+  if (target.hp <= 0) handleCombatDefeat(target, village, result);
   return result;
 }
 
@@ -1443,6 +1487,7 @@ function fightRaidWithoutModal(village) {
     village.currentActionIndex = 0;
     for (const action of village.raidActionQueue) {
       if (action.type === "COMBAT") doOneCombatAction(action, village);
+      else if (action.type === "MOUNTED_SHOT") doMountedShotAction(action, village);
       else if (action.type === "FORTIFY_GROUP") doFortifyGroupAction(action, village);
       else if (action.type === "WAR_LIGHT_PILLAR") doWarLightPillarAction(action, village);
       else if (action.type === "CONQUEST_JUDGMENT_LIGHT") doConquestJudgmentLightAction(action, village);
@@ -1936,6 +1981,7 @@ const RAID_BADGE_TRAITS = [
   { trait: "月の巫女", label: "月の巫女", title: "射撃のダメージ1.5倍" },
   { trait: "月の加護", label: "月の加護", title: "射撃のダメージ1.2倍" },
   { trait: "狙撃心得", label: "狙撃心得", title: "射撃・火砲のダメージ1.2倍" },
+  { trait: MOUNTED_ARCHERY_MIND_TRAIT, label: "騎射", title: `迎撃（前衛）の時、${Math.round(MOUNTED_ARCHERY_CHANCE * 100)}%で中衛と同じ順番に射撃も行う` },
   { trait: "歴戦", label: "歴戦", title: "与ダメージ1.2倍" },
   { trait: "戦慣れ", label: "戦慣れ", title: "与ダメージ1.1倍" },
   { trait: "非戦主義", label: "非戦", title: "攻撃も反撃も行わない" },

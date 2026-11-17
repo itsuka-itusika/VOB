@@ -75,7 +75,7 @@ const RAID_FRONTLINE_MIN_DAMAGE_SHARE = 1 / 3;
 const RAID_JOIN_HP_OUTNUMBERED = 50;
 const RAID_JOIN_HP_ADVANTAGE = 65;
 // この種族が混じる襲撃は一撃が重く、耐えられる者がほとんど出ないため常に緩い基準を使う。
-const RAID_HEAVY_HITTER_RACES = new Set(["キュクロプス", "スフィンクス"]);
+const RAID_HEAVY_HITTER_RACES = new Set(["キュクロプス", "スフィンクス", "ミノタウロス"]);
 
 
 const JOB_NONE = ACTION_NONE;
