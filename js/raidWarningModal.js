@@ -240,12 +240,7 @@ function getRaidWarningLine({ representative, introDialogues, raidName }) {
   return `${raidName || "襲撃者"}が村に近づいています。`;
 }
 
+/** 告知の見出しに出す代表者の名前。名前に肩書が付いているため、型名は添えない。 */
 function getRepresentativeDisplayName(representative, fallbackName) {
-  const name = representative?.name || fallbackName || "襲撃者";
-  const raiderType = String(representative?.raiderType || "").trim();
-  if (/^《.+》$/.test(name)) return name;
-  if (!raiderType || name === raiderType || name.startsWith(`${raiderType}の`)) {
-    return name;
-  }
-  return `${raiderType}（${name}）`;
+  return representative?.name || fallbackName || "襲撃者";
 }

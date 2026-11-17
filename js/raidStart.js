@@ -824,6 +824,9 @@ export function startRaidEvent(village, options = {}) {
       if (Array.isArray(group.bodyRaiderTypes) && group.bodyRaiderTypes.length > 0) {
         const bodyName = exchangeRaiderBody(village, enemy, dealBodyType(group.bodyRaiderTypes), getUsedNames());
         if (bodyName) discardedBodyNames.push(bodyName);
+        // 入れ替わった先の種族に専用のひと言があれば、そちらを話す。
+        const bodyLines = group.raiderType.dialoguesByBodyRace?.[enemy.race];
+        if (bodyName && Array.isArray(bodyLines) && bodyLines.length > 0) enemy.raiderDialogues = [...bodyLines];
       }
       village.raidEnemies.push(enemy);
     }
