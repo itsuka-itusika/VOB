@@ -36,6 +36,7 @@ const PERMANENT_MIND_TRAIT_ADDS = Object.freeze({
   "ニート": { ind: -2 },
   "狂信": { cou: 10 },
   "餓狼": { cou: 8 },
+  "激昂": { cou: 10 },
   "古代知識": { mag: 5 },
   "聖霊の加護": { int: 3, ind: 3, eth: 3, cou: 3 },
   "秘蹟：剣": { str: 10 },

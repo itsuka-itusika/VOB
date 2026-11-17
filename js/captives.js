@@ -50,6 +50,7 @@ const CAPTIVITY_LOST_MIND_TRAITS = Object.freeze([
   "秘蹟：剣",
   "秘蹟：盾",
   "秘蹟：光",
+  "激昂",
   MAGIC_BARRIER_MIND_TRAIT
 ]);
 export const MAX_CAPTIVES = 3;

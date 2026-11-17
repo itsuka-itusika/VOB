@@ -759,6 +759,19 @@ function exchangeRaiderBody(village, spirit, bodyTypeName, existingNames) {
   return body.name;
 }
 
+/**
+ * 入れ替わった者のひと言から、今の体と本来の型に合うものだけを選ぶ。
+ * 文字列の行はいつでも、{ text, bodyTypes, spiritTypes } の行は条件に合う時だけ話す。
+ */
+function selectSwappedRaiderLines(lines, enemy, bodyTypeName) {
+  if (!Array.isArray(lines)) return [];
+  return lines
+    .filter(line => typeof line === "string" ||
+      ((!line.bodyTypes || line.bodyTypes.includes(bodyTypeName)) &&
+        (!line.spiritTypes || line.spiritTypes.includes(enemy.raiderType))))
+    .map(line => (typeof line === "string" ? line : line.text));
+}
+
 /** 襲撃の一部の者だけを入れ替える（モンスター・スタンビード（混沌））。 */
 function applyRaidBodySwap(village, raidDefinition, dealBodyType, getUsedNames, discardedBodyNames) {
   const rule = raidDefinition?.bodySwap;
@@ -767,11 +780,12 @@ function applyRaidBodySwap(village, raidDefinition, dealBodyType, getUsedNames, 
   const candidates = shuffleArray(village.raidEnemies);
   const count = Math.min(candidates.length, randInt(rule.minCount ?? 1, rule.maxCount ?? rule.minCount ?? 1));
   candidates.slice(0, count).forEach(enemy => {
-    const bodyName = exchangeRaiderBody(village, enemy, dealBodyType(pool), getUsedNames());
+    const bodyTypeName = dealBodyType(pool);
+    const bodyName = exchangeRaiderBody(village, enemy, bodyTypeName, getUsedNames());
     if (!bodyName) return;
     discardedBodyNames.push(bodyName);
-    const lines = rule.dialoguesBySpeechType?.[enemy.speechType];
-    if (Array.isArray(lines) && lines.length > 0) enemy.raiderDialogues = [...lines];
+    const lines = selectSwappedRaiderLines(rule.dialoguesBySpeechType?.[enemy.speechType], enemy, bodyTypeName);
+    if (lines.length > 0) enemy.raiderDialogues = lines;
   });
 }
 
