@@ -914,12 +914,12 @@ export const RAIDER_TYPES = [
       vit: [18, 24],
       dex: [22, 28],
       mag: [5, 14],
-      chr: [12, 24],
-      int: [18, 26],
-      ind: [20, 28],
+      chr: [9, 20],
+      int: [10, 28],
+      ind: [12, 22],
       eth: [8, 16],
       cou: [23, 29],
-      sexdr: [8, 20]
+      sexdr: [14, 26]
     },
     mindTraits: ["歴戦", "騎射心得"],
     dialogues: [
