@@ -62,6 +62,7 @@ import {
 import { findTradedSlave, isEnslaved, isSlaveOf } from "../domain/slaveTrade.js";
 import {
   CAPTIVE_JOIN_LINES,
+  filterLinesForBody,
   CAPTIVE_RELEASE_LINES,
   FORMER_CAPTIVE_LINES
 } from "../data/dialogue/captiveLines.js";
@@ -366,7 +367,11 @@ export function getDialogueLines({ character, scene, key, context = {} }) {
     case "tutorial":
       return selectToneLines(TUTORIAL_LINES[key], character, context);
     case "captiveJoin":
-      return asLineArray(CAPTIVE_JOIN_LINES[key] || CAPTIVE_JOIN_LINES.default, context);
+    {
+      // 加入した時点の肉体に合う行だけを使う。合う行がなければ共通の行で受ける。
+      const joinLines = filterLinesForBody(CAPTIVE_JOIN_LINES[key], character);
+      return asLineArray(joinLines.length > 0 ? joinLines : CAPTIVE_JOIN_LINES.default, context);
+    }
     case "captiveRelease":
       return selectToneLines(CAPTIVE_RELEASE_LINES, character, context);
     case "formerCaptive":
