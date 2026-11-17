@@ -40,6 +40,8 @@ export const TONE_PROFILES = {
   // スフィンクス用。専用の文がない場面は中性的へ落ちるため、穴が空かない。
   "スフィンクス": { family: "cool", gender: "female", fallback: ["中性的", "cool", "neutralFemale", "female", "default"] },
 
+  // 翼人盗賊用。翼人の体にいる時だけこの口調になり、ほかの体では乱暴として話す（resolveWingedBanditTone）。
+  "翼人盗賊": { family: "rough", gender: "male", fallback: ["乱暴", "rough", "bold", "male", "default"] },
   // ミノタウロス用。専用の文がない場面は乱暴へ落ちるため、穴が空かない。
   "ミノタウロス": { family: "rough", gender: "male", fallback: ["乱暴", "rough", "bold", "male", "default"] },
   "老人": { family: "elder", gender: "male", fallback: ["elder", "male", "default"] },
@@ -60,8 +62,14 @@ export function getDefaultToneForCharacter(character) {
   return character?.spiritSex === "女" ? DEFAULT_FEMALE_TONE : DEFAULT_MALE_TONE;
 }
 
+// 翼人の体を得た盗賊の口調。翼と光輪を前提に話すため、翼人の体にいる間だけ使う。
+const WINGED_BANDIT_TONE = "翼人盗賊";
+function resolveWingedBanditTone(tone, character) {
+  return tone === WINGED_BANDIT_TONE && character?.race !== "翼人" ? "乱暴" : tone;
+}
+
 export function resolveStoredSpeechType(character) {
-  return character?.speechType || getDefaultToneForCharacter(character);
+  return resolveWingedBanditTone(character?.speechType, character) || getDefaultToneForCharacter(character);
 }
 
 export function resolveDialogueTone(character) {
@@ -71,7 +79,7 @@ export function resolveDialogueTone(character) {
   if (mindTraits.includes("無垢")) return "赤子";
   if (mindTraits.includes("萌芽")) return spiritSex === "女" ? "女児" : "男児";
 
-  return normalizeDialogueTone(character?.speechType) || (spiritSex === "女" ? DEFAULT_FEMALE_TONE : DEFAULT_MALE_TONE);
+  return resolveWingedBanditTone(normalizeDialogueTone(character?.speechType), character) || (spiritSex === "女" ? DEFAULT_FEMALE_TONE : DEFAULT_MALE_TONE);
 }
 
 export function getToneLookupKeys(tone, character = null) {
