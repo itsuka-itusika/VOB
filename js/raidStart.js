@@ -14,7 +14,7 @@ import { syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
 import { clearRaidWarningModal, showRaidWarningModal } from "./raidWarningModal.js";
 import { MESSENGER_PASS_SECRET_TREASURE_ID } from "./data/tutorialData.js";
 import { updateUI } from "./ui.js";
-import { clampValue, randChoice, randInt } from "./util.js";
+import { clampValue, randChoice, randInt, shuffleArray } from "./util.js";
 import { getVillageScaleStage } from "./villageScale.js";
 import { clearDefeatedRaidEnemies, getCaptives } from "./captives.js";
 import { doExchange } from "./exchange.js";
@@ -736,7 +736,7 @@ function createBodyTypeDealer() {
   return pool => {
     const key = pool.join("|");
     if (!decks.get(key)?.length) {
-      decks.set(key, [...pool].sort(() => Math.random() - 0.5));
+      decks.set(key, shuffleArray(pool));
     }
     return decks.get(key).pop();
   };
@@ -764,7 +764,7 @@ function applyRaidBodySwap(village, raidDefinition, dealBodyType, getUsedNames, 
   const rule = raidDefinition?.bodySwap;
   const pool = Array.isArray(rule?.bodyRaiderTypes) ? rule.bodyRaiderTypes : [];
   if (pool.length === 0) return;
-  const candidates = [...village.raidEnemies].sort(() => Math.random() - 0.5);
+  const candidates = shuffleArray(village.raidEnemies);
   const count = Math.min(candidates.length, randInt(rule.minCount ?? 1, rule.maxCount ?? rule.minCount ?? 1));
   candidates.slice(0, count).forEach(enemy => {
     const bodyName = exchangeRaiderBody(village, enemy, dealBodyType(pool), getUsedNames());

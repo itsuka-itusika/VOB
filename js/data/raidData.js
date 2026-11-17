@@ -12,8 +12,9 @@ const WINGED_RAIDER_HOBBIES = [
   "歌唱", "詩作", "読書", "占い", "人間観察", "手芸"
 ];
 
-// 亜人騎士団の肉体の候補。5人に重ならないよう配り、6種のうち1種は出ない。
-const DEMIHUMAN_KNIGHT_BODY_TYPES = ["キュクロプス", "スフィンクス", "ミノタウロス", "ハーピーの長", "ゴブリンリーダー", "上位翼人"];
+// 亜人騎士団の肉体の候補。各種族を2枚ずつ入れた札から配り、同じ種族は2人までにする。
+const DEMIHUMAN_KNIGHT_BODY_SPECIES = ["キュクロプス", "スフィンクス", "ミノタウロス", "ハーピーの長", "ゴブリンリーダー", "上位翼人", "ドライアド"];
+const DEMIHUMAN_KNIGHT_BODY_TYPES = [...DEMIHUMAN_KNIGHT_BODY_SPECIES, ...DEMIHUMAN_KNIGHT_BODY_SPECIES];
 
 export const RAIDER_TYPES = [
   {
@@ -969,6 +970,39 @@ export const RAIDER_TYPES = [
     ]
   },
   {
+    // 亜人騎士団の肉体の一つ。訪問者のドライアドと同じ能力の幅で、単独では現れない。
+    type: "ドライアド",
+    weight: 0,
+    minCount: 1,
+    maxCount: 1,
+    race: "ドライアド",
+    forcedSex: "女",
+    ageRange: { min: 18, max: 25 },
+    params: {
+      job: "ドライアド",
+      action: "襲撃"
+    },
+    raidPosition: "front",
+    portraits: numberedPortraits("DRYAD", 18),
+    ranges: {
+      hp: [50, 75],
+      mp: [80, 100],
+      happiness: [65, 90],
+      str: [5, 20],
+      vit: [5, 20],
+      dex: [8, 16],
+      mag: [20, 30],
+      chr: [18, 27],
+      int: [5, 16],
+      ind: [5, 16],
+      eth: [12, 20],
+      cou: [12, 16],
+      sexdr: [3, 8]
+    },
+    forcedBodyTraits: ["緑の指", "光合成"],
+    dialogues: []
+  },
+  {
     // 亜人騎士団の聖騎士。魔物の肉体へ移されたことを、異端を討つための試練と受け止めている。
     type: "亜人騎士",
     displayType: "聖騎士",
@@ -996,7 +1030,7 @@ export const RAIDER_TYPES = [
       int: [16, 24],
       ind: [18, 25],
       eth: [22, 30],
-      cou: [20, 27],
+      cou: [16, 22],
       sexdr: [3, 12]
     },
     mindTraits: ["狂信"],
@@ -1013,8 +1047,8 @@ export const RAIDER_TYPES = [
     type: "亜人聖女",
     displayType: "聖女",
     weight: 0,
-    minCount: 2,
-    maxCount: 2,
+    minCount: 3,
+    maxCount: 3,
     race: "人間",
     forcedSex: "女",
     ageRange: { min: 18, max: 25 },
@@ -1037,7 +1071,7 @@ export const RAIDER_TYPES = [
       int: [18, 26],
       ind: [18, 26],
       eth: [22, 30],
-      cou: [16, 24],
+      cou: [12, 20],
       sexdr: [3, 10]
     },
     mindTraits: ["神聖", "狂信"],
@@ -1992,7 +2026,7 @@ export const RAID_MODULES = [
     ]
   }),
   createCompositeRaiderRaid({
-    // 聖騎士3・聖女2。魂の揺らぎで魔物の肉体へ移されたが、狂信によって異端を討つ試練と受け止めている。
+    // 聖騎士3・聖女3。魂の揺らぎで魔物の肉体へ移されたが、狂信によって異端を討つ試練と受け止めている。
     id: "demihuman-knights",
     name: "亜人騎士団の襲撃",
     warningName: "亜人騎士団",
@@ -2003,7 +2037,7 @@ export const RAID_MODULES = [
     ],
     enemyGroups: [
       { raiderType: "亜人騎士", minCount: 3, maxCount: 3, bodyRaiderTypes: DEMIHUMAN_KNIGHT_BODY_TYPES },
-      { raiderType: "亜人聖女", minCount: 2, maxCount: 2, bodyRaiderTypes: DEMIHUMAN_KNIGHT_BODY_TYPES }
+      { raiderType: "亜人聖女", minCount: 3, maxCount: 3, bodyRaiderTypes: DEMIHUMAN_KNIGHT_BODY_TYPES }
     ],
     defense: { surviveTurns: 5 },
     failurePenalty: {
@@ -2036,7 +2070,7 @@ export const RAID_MODULES = [
     enemyGroups: [
       { raiderType: "翼人盗賊頭", minCount: 1, maxCount: 1, bodyRaiderTypes: ["翼人盗賊の上位翼人の肉体"] },
       { raiderType: "翼人盗賊", minCount: 3, maxCount: 3, bodyRaiderTypes: ["翼人盗賊の上位翼人の肉体"] },
-      { raiderType: "翼人盗賊", minCount: 2, maxCount: 3, bodyRaiderTypes: ["翼人盗賊の肉体"] }
+      { raiderType: "翼人盗賊", minCount: 2, maxCount: 2, bodyRaiderTypes: ["翼人盗賊の肉体"] }
     ],
     defense: { surviveTurns: 5 },
     failurePenalty: {
