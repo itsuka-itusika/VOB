@@ -40,6 +40,8 @@ export const TONE_PROFILES = {
   // スフィンクス用。専用の文がない場面は中性的へ落ちるため、穴が空かない。
   "スフィンクス": { family: "cool", gender: "female", fallback: ["中性的", "cool", "neutralFemale", "female", "default"] },
 
+  // ミノタウロス用。専用の文がない場面は乱暴へ落ちるため、穴が空かない。
+  "ミノタウロス": { family: "rough", gender: "male", fallback: ["乱暴", "rough", "bold", "male", "default"] },
   "老人": { family: "elder", gender: "male", fallback: ["elder", "male", "default"] },
   "狼": { family: "wolf", gender: "beast", fallback: ["wolf"] },
   "ゴブリン": { family: "goblin", gender: "monster", fallback: ["goblin"] }

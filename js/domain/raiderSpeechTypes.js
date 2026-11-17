@@ -8,7 +8,6 @@ const ROUGH_RAIDER_TYPES = new Set([
   "セントール",
   "傭兵",
   "騎馬兵団兵",
-  "ミノタウロス",
   "翼人盗賊",
   "翼人盗賊頭"
 ]);
@@ -27,7 +26,7 @@ const POLITE_FEMALE_RAIDER_TYPES = new Set([
 ]);
 const HARPY_RAIDER_TYPES = new Set(["ハーピー", "ハーピーの長"]);
 // 種族そのものに結びついた口調。精神側に残るため、身体が変わっても引き継がれる。
-const SPECIES_SPEECH_TYPES = new Set(["狼", "ゴブリン", "ハーピー", "スフィンクス"]);
+const SPECIES_SPEECH_TYPES = new Set(["狼", "ゴブリン", "ハーピー", "スフィンクス", "ミノタウロス"]);
 
 /** 種族に結びついた口調か。成長処理で人間の口調へ書き換えないために使う。 */
 export function isSpeciesSpeechType(speechType) {
@@ -45,5 +44,6 @@ export function getRaiderSpeechType(person) {
   if (POLITE_FEMALE_RAIDER_TYPES.has(raiderType)) return "丁寧Ｆ";
   if (HARPY_RAIDER_TYPES.has(raiderType)) return "ハーピー";
   if (raiderType === "スフィンクス") return "スフィンクス";
+  if (raiderType === "ミノタウロス") return "ミノタウロス";
   return "";
 }
