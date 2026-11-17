@@ -116,5 +116,6 @@ export const ADVENTURER_QUEST_BASE_SUCCESS_RATES = {
   [MESSENGER_PASS_SECRET_TREASURE_ID]: 30,
   goblin_statue: 30,
   lachesis_lot: 30,
-  book_of_the_dead: 25
+  book_of_the_dead: 25,
+  clotho_skein: 30
 };

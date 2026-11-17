@@ -39,6 +39,7 @@ import { canUseBookOfTheDeadOn, getReincarnationCandidates, openBookOfTheDeadMod
 import { createStatusDetailSelectRow } from "./personStatusDetail.js";
 import { getPersonMark } from "./personMarks.js";
 import { createTargetLabelHeader } from "./targetFilterModal.js";
+import { canUseClothoSkeinOn, openClothoSkeinModal } from "./clothoSkein.js";
 
 const SEASON_TRAITS_TO_REMOVE = ["夏", "秋", "冬", "冷夏", "飛蝗", "厳冬"];
 const BAD_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "凍え", "疫病", "産褥", "危篤"];
@@ -52,6 +53,7 @@ export const LACHESIS_LOT_SECRET_TREASURE_ID = "lachesis_lot";
 export const LACHESIS_LEDGER_SECRET_TREASURE_ID = "lachesis_ledger";
 export const BOOK_OF_THE_DEAD_SECRET_TREASURE_ID = "book_of_the_dead";
 export const ARCADIA_NECTAR_SECRET_TREASURE_ID = "arcadia_nectar";
+export const CLOTHO_SKEIN_SECRET_TREASURE_ID = "clotho_skein";
 const SECRET_TREASURE_SELL_PRICES = {
   persephone_statue: 300,
   abundance_horn: 300,
@@ -75,7 +77,8 @@ const SECRET_TREASURE_SELL_PRICES = {
   [LACHESIS_LOT_SECRET_TREASURE_ID]: 100,
   [LACHESIS_LEDGER_SECRET_TREASURE_ID]: 500,
   [BOOK_OF_THE_DEAD_SECRET_TREASURE_ID]: 200,
-  [ARCADIA_NECTAR_SECRET_TREASURE_ID]: 300
+  [ARCADIA_NECTAR_SECRET_TREASURE_ID]: 300,
+  [CLOTHO_SKEIN_SECRET_TREASURE_ID]: 100
 };
 const DISABLED_RANDOM_SECRET_TREASURE_IDS = new Set([
   PINECONE_STAFF_SECRET_TREASURE_ID
@@ -192,7 +195,8 @@ function applyArcadiaNectar(village) {
 /** 所持している秘宝を1つ取り除く。対象を別画面で選ぶ秘宝が、選び終えた時に呼ぶ。 */
 function consumeSecretTreasureById(village, id) {
   const secretTreasures = ensureSecretTreasures(village);
-  const index = secretTreasures.findIndex(entry => getSecretTreasureDefinition(entry)?.id === id);
+  // 末尾の1個を取り除き、同じ秘宝が残る時は秘宝画面での並び位置を保つ。
+  const index = secretTreasures.findLastIndex(entry => getSecretTreasureDefinition(entry)?.id === id);
   if (index >= 0) secretTreasures.splice(index, 1);
   village.secretTreasures = secretTreasures;
 }
@@ -671,6 +675,22 @@ export const SECRET_TREASURES = [
     desc: "酒気の霞で村を覆い保護し、村特性「加護」を1年付与する。加護の間は通常襲撃が発生しない。",
     sellPrice: SECRET_TREASURE_SELL_PRICES[ARCADIA_NECTAR_SECRET_TREASURE_ID],
     use: applyArcadiaNectar
+  },
+  {
+    id: CLOTHO_SKEIN_SECRET_TREASURE_ID,
+    name: "クロトの糸束",
+    desc: "妊娠・臨月の村人がいる時使用可能。生まれてくる子の性別と、双子として生まれるかを定める。",
+    sellPrice: SECRET_TREASURE_SELL_PRICES[CLOTHO_SKEIN_SECRET_TREASURE_ID],
+    target: "villager",
+    targetFilter: canUseClothoSkeinOn,
+    targetBlockedReason: "妊娠・臨月の村人が必要です",
+    use: (village, target) => {
+      closeSecretTreasureModal();
+      openClothoSkeinModal(village, target, {
+        onChosen: () => consumeSecretTreasureById(village, CLOTHO_SKEIN_SECRET_TREASURE_ID)
+      });
+      return false;
+    }
   }
 ];
 

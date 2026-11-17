@@ -6,7 +6,7 @@ export const CHAOS_ALCHEMY_KILN_FLAG = "hasChaosAlchemyKiln";
 export const CHAOS_ALCHEMY_RECIPES = [
   {
     techCost: 400,
-    treasureIds: ["grotesque_portrait", "pan_flute", "goblin_statue", "lachesis_lot"]
+    treasureIds: ["grotesque_portrait", "pan_flute", "goblin_statue", "lachesis_lot", "clotho_skein"]
   },
   {
     techCost: 800,

@@ -461,6 +461,14 @@ function inheritStat(mother, father, stat, variance) {
   return Math.max(1, Math.round(base * randFloat(1 - variance, 1 + variance)));
 }
 
+// 子の素質の性差補正。性別ごとに、この能力を1.12倍する。ハーピーは器用を0.55倍にする。
+const SEX_STAT_BONUS_RATE = 1.12;
+const SEX_STAT_BONUS_KEYS = {
+  "男": ["str", "vit", "cou", "sexdr"],
+  "女": ["mag", "chr", "eth"]
+};
+const HARPY_DEX_RATE = 0.55;
+
 function buildPotentialStats(motherSnapshot, fatherSnapshot, childSex, race) {
   const stats = {};
   PHYSICAL_STATS.forEach(stat => {
@@ -470,19 +478,12 @@ function buildPotentialStats(motherSnapshot, fatherSnapshot, childSex, race) {
     stats[stat] = inheritStat(motherSnapshot, fatherSnapshot, stat, 0.4);
   });
 
-  if (childSex === "男") {
-    stats.str = Math.round(stats.str * 1.12);
-    stats.vit = Math.round(stats.vit * 1.12);
-    stats.cou = Math.round(stats.cou * 1.12);
-    stats.sexdr = Math.round(stats.sexdr * 1.12);
-  } else {
-    stats.mag = Math.round(stats.mag * 1.12);
-    stats.chr = Math.round(stats.chr * 1.12);
-    stats.eth = Math.round(stats.eth * 1.12);
-  }
+  SEX_STAT_BONUS_KEYS[childSex === "男" ? "男" : "女"].forEach(stat => {
+    stats[stat] = Math.round(stats[stat] * SEX_STAT_BONUS_RATE);
+  });
 
   if (race === "ハーピー") {
-    stats.dex = Math.max(1, Math.round(stats.dex * 0.55));
+    stats.dex = Math.max(1, Math.round(stats.dex * HARPY_DEX_RATE));
   }
 
   [...PHYSICAL_STATS, ...MENTAL_STATS].forEach(stat => {
@@ -980,7 +981,7 @@ function rollTwinType() {
 
 /** 子1人分の生まれ持つもの（性別・種族・素質・受け継ぐ特性）を決める。 */
 function rollChildGenetics(motherSnapshot, fatherSnapshot, options = {}) {
-  const childSex = decideChildSex();
+  const childSex = options.forcedChildSex || decideChildSex();
   const childRace = decidePregnancyChildRace(childSex, motherSnapshot, fatherSnapshot, options);
   return {
     childSex,
@@ -1012,6 +1013,88 @@ function rollTwinData(twinType, motherSnapshot, fatherSnapshot, options) {
     type: TWIN_TYPE_FRATERNAL,
     ...rollChildGenetics(motherSnapshot, fatherSnapshot, ordinaryOptions)
   };
+}
+
+// 受け継ぐ特性のうち性別で形が変わるもの。母の巫女の力は、女児には巫女、男児には加護として出る。
+const PRIESTESS_TO_BLESSING_TRAITS = [
+  ["大地の巫女", "大地の加護"],
+  ["月の巫女", "月の加護"],
+  ["太陽の巫女", "太陽の加護"],
+  ["梟の巫女", "梟の加護"]
+];
+const FEMALE_ONLY_INHERITED_TRAITS = ["聖女の輝き"];
+
+function convertInheritedTraitsForSex(traits, newSex) {
+  return (Array.isArray(traits) ? traits : [])
+    .map(trait => {
+      const pair = PRIESTESS_TO_BLESSING_TRAITS.find(([priestess, blessing]) => trait === priestess || trait === blessing);
+      if (!pair) return trait;
+      return newSex === "男" ? pair[1] : pair[0];
+    })
+    .filter(trait => newSex === "女" || !FEMALE_ONLY_INHERITED_TRAITS.includes(trait));
+}
+
+/** 神秘の妊娠で宿った子か。人間として生まれるなら半神になる。 */
+function hasDivineBlessing(genetics) {
+  return (genetics.inheritedBodyTraits || []).includes(THUNDER_BLESSING_TRAIT) ||
+    (genetics.inheritedMindTraits || []).includes(HOLY_SPIRIT_BLESSING_TRAIT);
+}
+
+/**
+ * 胎児の性別を付け替える。いまの素質から性差補正を外して新しい性別の補正をかけ、
+ * 種族（母の種族と性別で決まる）と、性別で形が変わる受け継ぐ特性も合わせる。
+ */
+function changeFetusSex(genetics, newSex, data) {
+  if (!genetics.potentialStats || genetics.childSex === newSex) return { ...genetics, childSex: newSex };
+  let childRace = decideChildRace(newSex, data.motherSnapshot, data.fatherSnapshot);
+  if (childRace === "人間" && hasDivineBlessing(genetics)) childRace = "半神";
+  const stats = { ...genetics.potentialStats };
+  (SEX_STAT_BONUS_KEYS[genetics.childSex] || []).forEach(stat => {
+    stats[stat] = Math.round(stats[stat] / SEX_STAT_BONUS_RATE);
+  });
+  SEX_STAT_BONUS_KEYS[newSex].forEach(stat => {
+    stats[stat] = Math.round(stats[stat] * SEX_STAT_BONUS_RATE);
+  });
+  if (genetics.childRace === "ハーピー" && childRace !== "ハーピー") stats.dex = Math.round(stats.dex / HARPY_DEX_RATE);
+  if (genetics.childRace !== "ハーピー" && childRace === "ハーピー") stats.dex = Math.round(stats.dex * HARPY_DEX_RATE);
+  [...PHYSICAL_STATS, ...MENTAL_STATS].forEach(stat => {
+    stats[stat] = clampValue(stats[stat], 1, 60);
+  });
+  return {
+    ...genetics,
+    childSex: newSex,
+    childRace,
+    potentialStats: stats,
+    inheritedBodyTraits: convertInheritedTraitsForSex(genetics.inheritedBodyTraits, newSex)
+  };
+}
+
+function pickFetusGenetics(data) {
+  const { childSex, childRace, potentialStats, inheritedBodyTraits, inheritedMindTraits } = data;
+  return { childSex, childRace, potentialStats, inheritedBodyTraits, inheritedMindTraits };
+}
+
+/**
+ * 秘宝「クロトの糸束」。お腹の子の性別と、双子かどうかを定める。
+ * いまの胎児をもとに性別を付け替え、二卵性の2人目はすでにいればそれを、いなければ新たに作る。
+ * twinType: "" は双子にしない、TWIN_TYPE_IDENTICAL / TWIN_TYPE_FRATERNAL は双子にする。
+ */
+export function applyClothoFate(mother, { childSex, twinType = "" }) {
+  const data = mother?.pregnancy;
+  if (!data || (childSex !== "男" && childSex !== "女")) return false;
+  Object.assign(data, changeFetusSex(pickFetusGenetics(data), childSex, data));
+  if (twinType === TWIN_TYPE_IDENTICAL) {
+    data.twin = { type: TWIN_TYPE_IDENTICAL };
+  } else if (twinType === TWIN_TYPE_FRATERNAL) {
+    const { type, ...existing } = data.twin?.type === TWIN_TYPE_FRATERNAL ? data.twin : {};
+    const second = existing.potentialStats
+      ? existing
+      : rollChildGenetics(data.motherSnapshot, data.fatherSnapshot, { forcedChildSex: childSex });
+    data.twin = { type: TWIN_TYPE_FRATERNAL, ...changeFetusSex(second, childSex, data) };
+  } else {
+    delete data.twin;
+  }
+  return true;
 }
 
 function startPregnancy(village, mother, father, options = {}) {

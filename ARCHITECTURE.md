@@ -91,6 +91,8 @@
   - 奇跡・秘宝の対象の見出し（`createTargetLabelHeader`）の右端に置く「検索」と、その画面。元のプルダウンの選択肢を小さな顔と並べ（右端の「詳細」で詳細ステータスを上に重ねて開く）、村人一覧と同じ条件に名前の検索を加えて絞り込み、選んだ値をプルダウンへ戻して `change` を送る。
 - `js/domain/villagerFilter.js`
   - 村人一覧の絞り込み条件の判定（`matchesVillagerFilter`）。村人一覧（`js/ui.js`）と対象の検索画面で共有する。マークの「あり」は `MARK_FILTER_ANY`。
+- `js/clothoSkein.js`
+  - 秘宝「クロトの糸束」の選択画面。妊娠・臨月の村人のお腹の子について、生まれ方（通常・一卵性・二卵性）と性別を選ばせ、`js/reproduction.js` の `applyClothoFate` で胎児の情報を書き換える。性別を変える時は、素質の性差補正を付け替え、母の種族と性別で決まる種族（神秘の妊娠の子は人間なら半神）と、巫女⇔加護のように性別で形が変わる受け継ぐ特性を合わせる。二卵性の2人目は、すでにいればそれを、いなければ新たに作り、選んだ性別にそろえる。
 - `js/personStatusDetail.js`
   - 神籤・死者の書・転生の選択画面と、奇跡・秘宝の対象のプルダウン（`createStatusDetailSelectRow` で右に「詳細」ボタンを置く）から開く詳細ステータス画面。中身は個人記録と同じ `js/history.js` の `renderPersonalRecordHtml` / `bindPersonalRecordContent` で描き、人物欄と個人史の間にステータスと特性の表を挟む。村の人物は名前の入口・家系図・好感度の詳細も個人記録どおりに動き、開いた画面は `body.status-detail-open` の間だけ詳細ステータスより上に出す。帳簿の記録は村を渡さず、写しておいた `history` を個人史に出す（名前の入口とボタンは無い）。
 - `js/chaosAlchemy.js`
