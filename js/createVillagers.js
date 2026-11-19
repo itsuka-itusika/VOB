@@ -1601,7 +1601,9 @@ function getSlaveBaseType(slaveType) {
     ranges: raiderType.ranges,
     forcedBodyTraits: raiderType.forcedBodyTraits,
     // 狂信は奴隷に落とされた時点で折れている。信仰そのもの（神聖）は残る。
-    forcedMindTraits: (raiderType.mindTraits || []).filter(trait => trait !== "狂信"),
+    // ミノタウロスの激昂も、囚われの旅で冷めている。
+    forcedMindTraits: (raiderType.mindTraits || []).filter(trait => trait !== "狂信" && trait !== "激昂"),
+    hobbies: raiderType.hobbies,
     portraits: raiderType.portraits,
     speechType: getRaiderSpeechType(slaveType)
   };
@@ -1621,12 +1623,16 @@ function buildSlaveVisitor(existingNames = [], village = null) {
   }, existingNames, village);
   slave.slaveType = slaveType;
   if (baseType.speechType) slave.speechType = baseType.speechType;
-  // 肉体特性は同じ種族の襲撃者に揃える。キュクロプスは巨人・単眼だけを持ち、
+  // 肉体特性は同じ種族の襲撃者に揃える。キュクロプスは巨人・単眼だけ、ミノタウロスは牛頭だけを持ち、
   // 聖女の輝きは翼人兵には付かない。
-  if (slaveType === "キュクロプス") {
+  if (slaveType === "キュクロプス" || slaveType === "ミノタウロス") {
     slave.bodyTraits = [...baseType.forcedBodyTraits];
   } else if (slaveType === "翼人兵") {
     slave.bodyTraits = slave.bodyTraits.filter(trait => trait !== "聖女の輝き");
+  }
+  // ミノタウロスは襲撃者と同じ専用の趣味から選ぶ。
+  if (slaveType === "ミノタウロス") {
+    slave.hobby = randChoice(baseType.hobbies);
   }
   syncEffectiveStats(slave);
   return slave;

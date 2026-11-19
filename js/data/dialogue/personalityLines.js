@@ -301,13 +301,6 @@ export const PERSONALITY_LINES = {
       "急いで答えろと言われると、困る。一晩くれ。一晩あれば、ちゃんと答える。"
     ]
   },
-  "mazeBuilding": {
-    "ミノタウロス": [
-      "村の外れに、石を積んで道を曲げている。よそ者は迷う。……おれは迷わん。おれが作ったからな。",
-      "子どもらが迷路で遊んでいる。出口で待っていたら、泣かれた。……顔が怖いらしい。ブモ。",
-      "まっすぐな道は、すぐ終わる。曲がった道は、ずっと歩ける。……昔いた所も、そうだった。"
-    ]
-  },
   "strengthContest": {
     "ミノタウロス": [
       "力比べは喧嘩とは違う。決まりを守って押す。負けたら、負けたと言う。……それで、相手と分かり合える。",
@@ -1308,11 +1301,6 @@ export const PERSONALITY_TOPICS = [
     "key": "rumination",
     "field": "hobby",
     "value": "反芻"
-  },
-  {
-    "key": "mazeBuilding",
-    "field": "hobby",
-    "value": "迷路づくり"
   },
   {
     "key": "strengthContest",

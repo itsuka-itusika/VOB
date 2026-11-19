@@ -5,7 +5,7 @@ export const SLAVE_TRADER_TYPE = "奴隷商人";
 export const SLAVE_TITLE = "奴隷";
 export const FREED_SLAVE_TITLE = "解放奴隷";
 export const SLAVE_TRAIT = "隷属";
-export const SLAVE_TYPES = ["キュクロプス", "セントール", "エクイナ", "ドライアド", "翼人兵", "聖女"];
+export const SLAVE_TYPES = ["キュクロプス", "セントール", "エクイナ", "ドライアド", "翼人兵", "聖女", "ミノタウロス"];
 export const SLAVE_PRICE_MIN = 150;
 export const SLAVE_PRICE_MAX = 300;
 
