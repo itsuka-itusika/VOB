@@ -477,9 +477,12 @@ export function recordPregnancyHistory(village, mother, father, options = {}) {
 
 export function recordBirthHistory(village, mother, child, options = {}) {
   if (!mother || !child) return;
-  const special = options.geneticFatherUnknown || child.race === "半神";
+  const fatherUnknown = !!options.geneticFatherUnknown;
+  // 神秘の妊娠でも、二卵性の2人目は神秘の子ではない。遺伝父が不明なことだけを札に残す。
+  const special = (fatherUnknown && !options.ordinaryMysticTwin) || child.race === "半神";
   // 双子は1人ずつ記録し、「双子」の札で見分ける。
   const twinLabel = options.twin ? "双子の" : "";
+  const fatherUnknownText = fatherUnknown && !special ? "遺伝上の父は分からない。" : "";
   addHistoryEvent(village, {
     type: HISTORY_EVENT_TYPES.BIRTH,
     title: special
@@ -487,9 +490,14 @@ export function recordBirthHistory(village, mother, child, options = {}) {
       : `${child.name}、${options.twin ? "双子として" : ""}生まれる`,
     text: special
       ? `${mother.name}が${twinLabel}${child.name}を産み、神秘の子が生まれた。`
-      : `${mother.name}が${twinLabel}${child.name}を産んだ。`,
+      : `${mother.name}が${twinLabel}${child.name}を産んだ。${fatherUnknownText}`,
     people: [mother, options.spouse, child].filter(Boolean),
-    tags: ["出生", ...(special ? ["神秘の出生"] : []), ...(options.twin ? ["双子"] : [])]
+    tags: [
+      "出生",
+      ...(special ? ["神秘の出生"] : []),
+      ...(fatherUnknown ? ["遺伝父不明"] : []),
+      ...(options.twin ? ["双子"] : [])
+    ]
   });
 }
 
@@ -750,6 +758,7 @@ function getVillageHistoryText(event) {
       const childName = event.people[event.people.length - 1] || "";
       const twinLabel = event.tags.includes("双子") ? "双子の" : "";
       if (event.tags.includes("神秘の出生") && personA && childName) return `${personA}が${twinLabel}${childName}を産み、神秘の子が生まれた。`;
+      if (event.tags.includes("遺伝父不明") && personA && childName) return `${personA}が${twinLabel}${childName}を産んだ。遺伝上の父は分からない。`;
       if (personA && childName) return `${personA}が${twinLabel}${childName}を産んだ。`;
       break;
     }

@@ -1324,7 +1324,8 @@ function finalizeBirth(village, mother, data, child, childName, { twinType = "",
   village.villagers.push(child);
   recordBirthHistory(village, mother, child, {
     spouse,
-    geneticFatherUnknown: !!data.geneticFatherUnknown && !ordinaryMysticTwin,
+    geneticFatherUnknown: !!data.geneticFatherUnknown,
+    ordinaryMysticTwin,
     twin: !!twinType
   });
   village.log(`${mother.name}が${child.name}を出産しました。人口上限+1`);
