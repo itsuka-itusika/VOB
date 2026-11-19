@@ -1896,6 +1896,11 @@ section h2 {
   font-weight: bold;
   letter-spacing: 0;
 }
+/* 詳細ステータスで、肖像の下に置くマークのボタン。 */
+.status-detail-mark-button {
+  justify-self: center;
+  padding: 2px 14px;
+}
 .personal-history-portrait-controls {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -5542,21 +5547,33 @@ body.status-detail-open #friendshipDetailModal { z-index: 12501; }
 .clotho-skein-modal {
   width: min(420px, calc(100vw - 32px));
 }
+/* 選択肢の枠は、奇跡・秘宝のカードと同じ軽銀のプレートにする。 */
 .clotho-choice-group {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 16px;
   margin: 12px 0;
-  padding: 8px 12px 10px;
-  border: 1px solid #aab0b7;
+  padding: 10px 14px 12px;
+  background: linear-gradient(165deg, #eef1f3 0%, #dfe4e8 48%, #d4dade 74%, #e8ebee 100%);
+  border: 3px solid;
+  border-color: #fafbfc #8d949b #7f868d #edf0f2;
   border-radius: 2px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -2px 5px rgba(55, 62, 70, 0.16),
+    0 3px 10px rgba(55, 62, 70, 0.20);
+  color: #2f353b;
 }
 /* display 指定が hidden 属性の既定値に勝つため、非表示を明示する。 */
 .clotho-choice-group[hidden] {
   display: none;
 }
+/* 見出しは枠線の上に載せず、プレートの中の1行目に置く。 */
 .clotho-choice-group legend {
-  padding: 0 4px;
+  float: left;
+  width: 100%;
+  padding: 0;
+  margin-bottom: 2px;
   color: #545c64;
   font-size: 0.88rem;
 }

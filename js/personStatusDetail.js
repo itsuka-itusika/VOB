@@ -3,7 +3,7 @@
 // 個人記録そのものに、人物欄と個人史の間へステータスと特性を挟んだもの。閉じると元の選択画面に戻る。
 
 import { bindPersonalRecordContent, renderDictionaryTermList, renderPersonalRecordHtml } from "./history.js";
-import { renderRecordTitle } from "./personMarks.js";
+import { openPersonMarkPicker, renderRecordTitle } from "./personMarks.js";
 
 const OVERLAY_ID = "personStatusDetailOverlay";
 const MODAL_ID = "personStatusDetailModal";
@@ -75,8 +75,34 @@ export function openPersonStatusDetailModal(person, { name = "", village = null,
   document.body.appendChild(modal);
   document.body.classList.add(OPEN_BODY_CLASS);
   bindPersonalRecordContent(body, village, shown);
+  appendMarkButton(modal, person, shown, village);
   modal.querySelector("[data-close-status-detail]").addEventListener("click", closePersonStatusDetailModal);
   overlay.addEventListener("click", closePersonStatusDetailModal);
+}
+
+// 村にいる人物（村人・捕虜・訪問者）だけ、肖像の下にマークのボタンを置く。帳簿の記録や故人には付けない。
+function isVillageResident(village, person) {
+  return [village?.villagers, village?.captives, village?.visitors]
+    .some(list => Array.isArray(list) && list.includes(person));
+}
+
+function appendMarkButton(modal, person, shown, village) {
+  if (!isVillageResident(village, person)) return;
+  const area = modal.querySelector(".personal-history-portrait-area");
+  if (!area) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "status-detail-mark-button";
+  button.textContent = "マーク";
+  button.title = `${person.name}にマークを付ける`;
+  button.addEventListener("click", () => openPersonMarkPicker(person, {
+    onChange: async () => {
+      renderRecordTitle(modal.querySelector(".modal-header"), shown.name || "不明", person);
+      const { updateUI } = await import("./ui.js");
+      updateUI(village);
+    }
+  }));
+  area.appendChild(button);
 }
 
 /**
