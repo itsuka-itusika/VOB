@@ -12,6 +12,13 @@ const WINGED_RAIDER_HOBBIES = [
   "歌唱", "詩作", "読書", "占い", "人間観察", "手芸"
 ];
 
+// ミノタウロスの趣味。力と食と、ひとつの事をじっくり繰り返す気質に寄せる。
+// 反芻・迷路づくり・力比べはミノタウロス専用。
+const MINOTAUR_HOBBIES = [
+  "狩り", "喧嘩", "散歩", "日光浴", "筋トレ", "ドカ食い",
+  "反芻", "迷路づくり", "力比べ"
+];
+
 // 亜人騎士団の肉体の候補。各種族を2枚ずつ入れた札から配り、同じ種族は2人までにする。
 const DEMIHUMAN_KNIGHT_BODY_SPECIES = ["キュクロプス", "スフィンクス", "ミノタウロス", "ハーピーの長", "ゴブリンリーダー", "上位翼人", "ドライアド"];
 const DEMIHUMAN_KNIGHT_BODY_TYPES = [...DEMIHUMAN_KNIGHT_BODY_SPECIES, ...DEMIHUMAN_KNIGHT_BODY_SPECIES];
@@ -964,7 +971,7 @@ export const RAIDER_TYPES = [
     replaceBodyTraits: true,
     // 襲撃中は怒りに我を忘れている。捕虜になると冷める。
     mindTraits: ["激昂"],
-    hobbies: ["狩り", "喧嘩", "散歩", "日光浴"],
+    hobbies: MINOTAUR_HOBBIES,
     dialogues: [
       "ブモォォ！角の前に立つものは、みな吹き飛ぶ！",
       "迷い込んだのは、お前たちのほうだ。",

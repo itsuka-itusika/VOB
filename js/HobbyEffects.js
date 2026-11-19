@@ -175,6 +175,15 @@ export class HobbyEffects {
       case "人間観察":
         msg = this.applyPeopleWatching(p);
         break;
+      case "反芻":
+        msg = this.applyRumination(p);
+        break;
+      case "迷路づくり":
+        msg = this.applyMazeBuilding(p, v);
+        break;
+      case "力比べ":
+        msg = this.applyStrengthContest(p, v);
+        break;
       default:
         msg = `(趣味[${h}]:追加効果なし)`;
         break;
@@ -668,6 +677,34 @@ export class HobbyEffects {
     p.mp = clampValue(p.mp + 8, 0, 100);
     v.tech = clampValue(v.tech + gain, 0, 99999);
     return `(謎掛け:メンタル+8,技術+${gain}${this.maybeRaiseStat(p, "int", 0.3)})`;
+  }
+
+  // その日の出来事を、何度も噛み直すように思い返す。急がず考えるぶん心が落ち着く。
+  static applyRumination(p) {
+    p.mp = clampValue(p.mp + 15, 0, 100);
+    return `(反芻:メンタル+15${this.maybeRaiseStat(p, "int", 0.3)})`;
+  }
+
+  // 石や柴を積んで、入り組んだ小道をこしらえる。よそ者が迷うので、村の守りにも少し役立つ。
+  static applyMazeBuilding(p, v) {
+    p.hp = clampValue(p.hp - 8, 0, 100);
+    v.security = clampValue(v.security + 3, 0, 100);
+    return `(迷路づくり:体力-8,治安+3${this.maybeRaiseStat(p, "str", 0.15)}${this.maybeRaiseStat(p, "int", 0.2)})`;
+  }
+
+  // 喧嘩と違い、決まりを守って押し合う。相手がいれば互いに認め合う。
+  static applyStrengthContest(p, v) {
+    p.hp = clampValue(p.hp - 8, 0, 100);
+    const rivals = getActiveVillagers(v).filter(x =>
+      x !== p && (Number(x.bodyAge) || 0) >= 12 && (Number(x.str) || 0) >= 15);
+    if (rivals.length === 0) {
+      return `(力比べ:体力-8,相手がいなかった${this.maybeRaiseStat(p, "str", 0.2)})`;
+    }
+    const rival = rivals[randInt(0, rivals.length - 1)];
+    rival.hp = clampValue(rival.hp - 5, 0, 100);
+    adjustFriendshipScore(p, rival, 3);
+    adjustFriendshipScore(rival, p, 3);
+    return `(力比べ:体力-8,${rival.name}の体力-5,双方好感度+3${this.maybeRaiseStat(p, "str", 0.3)}${this.maybeRaiseStat(p, "cou", 0.15)})`;
   }
 
   static applyPeopleWatching(p) {
