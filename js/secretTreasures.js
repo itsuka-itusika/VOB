@@ -37,7 +37,7 @@ import { getSummonableLachesisEntries, hasLachesisEntries } from "./lachesisLedg
 import { applyLachesisLedger, openLachesisLotModal } from "./lachesisTreasures.js";
 import { canUseBookOfTheDeadOn, getReincarnationCandidates, openBookOfTheDeadModal } from "./bookOfTheDead.js";
 import { createStatusDetailSelectRow } from "./personStatusDetail.js";
-import { getPersonMark } from "./personMarks.js";
+import { getPersonMark, setPersonOptionLabel } from "./personMarks.js";
 import { createTargetLabelHeader } from "./targetFilterModal.js";
 import { canUseClothoSkeinOn, openClothoSkeinModal } from "./clothoSkein.js";
 
@@ -826,7 +826,7 @@ function renderTargetSelect(village, definition, container) {
       displayList.forEach(({ person, index }) => {
         const option = document.createElement("option");
         option.value = String(index);
-        option.textContent = optionLabel(person);
+        setPersonOptionLabel(option, person, optionLabel);
         select.appendChild(option);
       });
       createStatusDetailSelectRow(select, () => resolvePerson(select.value), village);
@@ -842,7 +842,7 @@ function renderTargetSelect(village, definition, container) {
     displayList.forEach(({ person, index }) => {
       const option = document.createElement("option");
       option.value = String(index);
-      option.textContent = optionLabel(person);
+      setPersonOptionLabel(option, person, optionLabel);
       select.appendChild(option);
     });
     createStatusDetailSelectRow(select, () => resolvePerson(select.value), village);

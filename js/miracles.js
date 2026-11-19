@@ -20,7 +20,7 @@ import { getRaidTableBreakdown, getSelectableRaidTables, startRaidEvent } from "
 import { getRaiderIncomingDamageMultiplier } from "./raidRules.js";
 import { completeTutorialTask } from "./tutorial.js";
 import { createStatusDetailSelectRow } from "./personStatusDetail.js";
-import { getPersonMark } from "./personMarks.js";
+import { getPersonMark, setPersonOptionLabel } from "./personMarks.js";
 import { createTargetLabelHeader } from "./targetFilterModal.js";
 import { isWarCouncilOpen, refreshWarCouncil } from "./warCouncil.js";
 import { getCaptives, normalizeCaptive } from "./captives.js";
@@ -873,7 +873,7 @@ function createVillagerSelect(id, village, options = {}) {
   const addOption = (person) => {
     const opp = document.createElement("option");
     opp.value = person.id;
-    opp.textContent = formatMiracleOptionLabel(person, detailKind);
+    setPersonOptionLabel(opp, person, target => formatMiracleOptionLabel(target, detailKind));
     sel.appendChild(opp);
   };
 

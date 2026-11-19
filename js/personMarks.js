@@ -6,6 +6,24 @@ import { PERSON_MARK_ALIASES, PERSON_MARK_GROUPS, PERSON_MARKS } from "./data/pe
 
 const OVERLAY_ID = "personMarkOverlay";
 const MODAL_ID = "personMarkModal";
+// マークを付け替えた時に送る文書イベント。開いたままの「検索」画面が一覧を書き直す。
+export const PERSON_MARK_CHANGE_EVENT = "personmarkchange";
+
+// 奇跡・秘宝の対象の選択肢と、その表示名の作り方。マークを付け替えた時に、開いたままの選択肢も書き直す。
+const personOptionLabels = new WeakMap();
+
+/** 人物を指す選択肢の表示名を書き、マークの付け替えで書き直せるよう作り方を控える。 */
+export function setPersonOptionLabel(option, person, format) {
+  option.textContent = format(person);
+  personOptionLabels.set(option, { person, format });
+}
+
+function refreshPersonOptionLabels(person) {
+  document.querySelectorAll("option").forEach(option => {
+    const entry = personOptionLabels.get(option);
+    if (entry?.person === person) option.textContent = entry.format(person);
+  });
+}
 
 /** 付いているマーク。以前の文字の記号は絵文字に読み替え、一覧に無い値は出さない。 */
 export function getPersonMark(person) {
@@ -67,6 +85,8 @@ export function openPersonMarkPicker(person, { onChange = null } = {}) {
   const apply = mark => {
     person.mark = mark;
     closePersonMarkPicker();
+    refreshPersonOptionLabels(person);
+    document.dispatchEvent(new CustomEvent(PERSON_MARK_CHANGE_EVENT, { detail: { person } }));
     if (typeof onChange === "function") onChange();
   };
   modal.querySelectorAll("[data-person-mark]").forEach(button => {

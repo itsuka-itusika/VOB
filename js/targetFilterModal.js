@@ -5,6 +5,7 @@
 import { applyPortraitToElement } from "./data/portraitAtlas.js";
 import { openPersonStatusDetailModal } from "./personStatusDetail.js";
 import { getPresentPersonMarks, getVillagerJobLabel, MARK_FILTER_ANY, matchesVillagerFilter } from "./domain/villagerFilter.js";
+import { PERSON_MARK_CHANGE_EVENT } from "./personMarks.js";
 
 const OVERLAY_ID = "targetFilterOverlay";
 const MODAL_ID = "targetFilterModal";
@@ -30,7 +31,12 @@ export function createTargetLabelHeader(text, select, resolvePerson, village) {
   return header;
 }
 
+// 開いている間だけ、マークの付け替えで一覧を書き直す。
+let removeMarkChangeListener = null;
+
 export function closeTargetFilterModal() {
+  removeMarkChangeListener?.();
+  removeMarkChangeListener = null;
   document.getElementById(OVERLAY_ID)?.remove();
   document.getElementById(MODAL_ID)?.remove();
 }
@@ -65,7 +71,7 @@ export function openTargetFilterModal(select, resolvePerson, village = null) {
 
   const entries = [...select.options]
     .filter(option => option.value !== "" && !option.disabled)
-    .map(option => ({ value: option.value, label: option.textContent, person: resolvePerson(option.value) }))
+    .map(option => ({ value: option.value, option, person: resolvePerson(option.value) }))
     .filter(entry => entry.person);
   const people = entries.map(entry => entry.person);
 
@@ -89,8 +95,9 @@ export function openTargetFilterModal(select, resolvePerson, village = null) {
     getSortedValues(people.map(person => person.race || "人間")).map(value => [value, value]));
   const job = createFilterSelect("仕事で絞り込み", "仕事：すべて",
     getSortedValues(people.map(getVillagerJobLabel)).map(value => [value, value]));
-  const mark = createFilterSelect("マークで絞り込み", "マーク：すべて",
-    [[MARK_FILTER_ANY, "マーク：あり"], ...getPresentPersonMarks(people).map(value => [value, `マーク：${value}`])]);
+  const getMarkChoices = () =>
+    [[MARK_FILTER_ANY, "マーク：あり"], ...getPresentPersonMarks(people).map(value => [value, `マーク：${value}`])];
+  const mark = createFilterSelect("マークで絞り込み", "マーク：すべて", getMarkChoices());
   const trait = document.createElement("input");
   trait.type = "search";
   trait.placeholder = "特性を検索";
@@ -169,7 +176,8 @@ export function openTargetFilterModal(select, resolvePerson, village = null) {
       portrait.className = "target-filter-portrait";
       applyPortraitToElement(portrait, entry.person);
       const text = document.createElement("span");
-      text.textContent = entry.label;
+      // 表示名は元の選択肢から毎回読む。マークを付け替えると選択肢の側が書き直される。
+      text.textContent = entry.option.textContent;
       button.append(portrait, text);
       button.addEventListener("click", () => pick(entry.value));
       row.append(button, detailButton);
@@ -188,6 +196,17 @@ export function openTargetFilterModal(select, resolvePerson, village = null) {
   });
   closeButton.addEventListener("click", closeTargetFilterModal);
   overlay.addEventListener("click", closeTargetFilterModal);
+
+  // マークの絞り込みの選択肢も、今いる人物のマークで作り直す。選んでいた値は残せる時だけ残す。
+  const onMarkChange = () => {
+    const selected = mark.value;
+    const fresh = createFilterSelect("", "マーク：すべて", getMarkChoices());
+    mark.replaceChildren(...fresh.options);
+    mark.value = [...mark.options].some(option => option.value === selected) ? selected : "";
+    render();
+  };
+  document.addEventListener(PERSON_MARK_CHANGE_EVENT, onMarkChange);
+  removeMarkChangeListener = () => document.removeEventListener(PERSON_MARK_CHANGE_EVENT, onMarkChange);
 
   render();
   name.focus();
