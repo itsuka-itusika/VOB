@@ -1896,9 +1896,9 @@ section h2 {
   font-weight: bold;
   letter-spacing: 0;
 }
-/* 詳細ステータスで、肖像の下に置くマークのボタン。 */
+/* 詳細ステータスで、肖像の下に左寄せで置くマークのボタン。 */
 .status-detail-mark-button {
-  justify-self: center;
+  justify-self: start;
   padding: 2px 14px;
 }
 .personal-history-portrait-controls {
