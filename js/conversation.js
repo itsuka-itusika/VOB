@@ -1161,7 +1161,7 @@ function handleSlavePurchase(trader, slave) {
   refreshJobTable(slave, theVillage);
 
   theVillage.log(`${trader.name}に資金${price}を支払い、${joinedName}を買い取りました。${slave.name}が村人になりました。`);
-  const saleLine = getDialogueLine({ character: trader, scene: "slaveSale" });
+  const saleLine = getDialogueLine({ character: trader, scene: "slaveSale", key: slave.slaveType });
   if (saleLine) theVillage.log(`${trader.name}「${saleLine}」`);
   closeSlavePurchaseModal();
   closeConversationModal();

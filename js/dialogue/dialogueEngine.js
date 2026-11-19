@@ -56,7 +56,9 @@ import {
   SLAVE_LINES,
   SLAVE_PURCHASE_JOIN_LINES,
   SLAVE_TRADER_EXCHANGED_LINES,
+  SLAVE_TRADER_PITCH_LINES,
   SLAVE_TRADER_SALE_LINES,
+  SLAVE_TRADER_SALE_LINES_BY_TYPE,
   SLAVE_TRADER_SOLD_LINES
 } from "../data/dialogue/slaveTradeLines.js";
 import { findTradedSlave, isEnslaved, isSlaveOf } from "../domain/slaveTrade.js";
@@ -236,8 +238,12 @@ export function getSlaveTradeExchangeLines(character, partner = null, context = 
     return typeLines ? asLineArray(typeLines, context) : selectToneLines(SLAVE_EXCHANGE_LINES.byTone, character, context);
   }
   if (character?.slaveTrade && character.lastBodyExchangeFromOwnBody) {
-    const lines = isSlaveOf(partner, character) ? SLAVE_TRADER_EXCHANGE_LINES.withSlave : SLAVE_TRADER_EXCHANGE_LINES.other;
-    return asLineArray(lines, context);
+    if (!isSlaveOf(partner, character)) return asLineArray(SLAVE_TRADER_EXCHANGE_LINES.other, context);
+    // 奴隷が生まれ持った体を離れた時だけ、その種族の体に入った文を使う。
+    const typeLines = partner.lastBodyExchangeFromOwnBody
+      ? SLAVE_TRADER_EXCHANGE_LINES.withSlaveByType[partner.slaveType]
+      : null;
+    return asLineArray(typeLines || SLAVE_TRADER_EXCHANGE_LINES.withSlave, context);
   }
   return [];
 }
@@ -389,7 +395,7 @@ export function getDialogueLines({ character, scene, key, context = {} }) {
     case "freedSlaveJoin":
       return getSlaveTypeLines(FREED_SLAVE_JOIN_LINES, key, character, context);
     case "slaveSale":
-      return asLineArray(SLAVE_TRADER_SALE_LINES, context);
+      return asLineArray(SLAVE_TRADER_SALE_LINES_BY_TYPE[key] || SLAVE_TRADER_SALE_LINES, context);
     default:
       return [];
   }
@@ -562,7 +568,11 @@ function getSlaveTradeVisitorLine(character, village, context) {
   }
   if (!character?.slaveTrade) return null;
   if (hasDifferentBodyOwner(character)) return pickDialogueLine(SLAVE_TRADER_EXCHANGED_LINES, context);
-  if (!findTradedSlave(village, character)) return pickDialogueLine(SLAVE_TRADER_SOLD_LINES, context);
+  const slave = findTradedSlave(village, character);
+  if (!slave) return pickDialogueLine(SLAVE_TRADER_SOLD_LINES, context);
+  // 連れている奴隷の種族に口上があれば、共通の文と半々で話す。
+  const pitchLines = SLAVE_TRADER_PITCH_LINES[slave.slaveType];
+  if (pitchLines && Math.random() < 0.5) return pickDialogueLine(pitchLines, context);
   return null;
 }
 
