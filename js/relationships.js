@@ -230,7 +230,6 @@ function isLoverCandidate(lineageIndex, a, b) {
     && !hasBodyTrait(b, "人面獣身")
     && getPairFriendshipMinimum(a, b) >= 30
     && b.bodySex === expectedBodySex
-    && b.spiritAge >= 16
     && b.bodyAge >= 16
     && b.bodyAge >= a.bodyAge - 10
     && b.bodyAge <= a.spiritAge + 8;
