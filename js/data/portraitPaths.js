@@ -13,7 +13,10 @@ const LEGACY_ARACHNID_PORTRAIT_FILES = [
   "Arachnid/ChatGPT Image 2026年6月4日 01_44_46.png",
   "Arachnid/ChatGPT Image 2026年6月4日 01_44_58.png"
 ];
-export const ARACHNID_PORTRAIT_FILES = Array.from({ length: 5 }, (_, index) => `ARACHNID${index + 1}.png`);
+export const ARACHNID_PORTRAIT_FILES = Array.from({ length: 16 }, (_, index) => `ARACHNID${index + 1}.png`);
+export const FAIRY_PORTRAIT_FILES = Array.from({ length: 16 }, (_, index) => `FAIRY${index + 1}.png`);
+export const GORGON_PORTRAIT_FILES = Array.from({ length: 15 }, (_, index) => `GORGON${index + 1}.png`);
+export const MANTICORE_PORTRAIT_FILES = Array.from({ length: 11 }, (_, index) => `MANTICORE${index + 1}.png`);
 export const HARPY_PORTRAIT_FILES = Array.from({ length: 12 }, (_, index) => `HARPY${index + 1}.png`);
 export const CYCLOPS_PORTRAIT_FILES = Array.from({ length: 4 }, (_, index) => `CYCLOPS${index + 1}.png`);
 export const WINGED_PORTRAIT_FILES = Array.from({ length: 16 }, (_, index) => `ANGEL${index + 1}.png`);
@@ -74,7 +77,10 @@ const NUMBERED_PORTRAIT_LIMITS = new Map([
   ["ELITE", 22],
   ["HOLY_KNIGHT", 8],
   ["INQUISITOR", 11],
-  ["ARACHNID", 5],
+  ["ARACHNID", 16],
+  ["FAIRY", 16],
+  ["GORGON", 15],
+  ["MANTICORE", 11],
   ["ANGEL", 16],
   ["ALSEID", 13],
   ["DRYAD", 18],
@@ -98,7 +104,7 @@ const AGE_VARIANT_PORTRAIT_LIMITS = {
   young: new Map([
     ["MA", 16], ["MB", 24], ["MC", 55], ["MD", 30], ["ME", 22],
     ["A", 32], ["BB", 29], ["C", 33], ["D", 62], ["EQUINA", 18],
-    ["ALSEID", 13], ["ANGEL", 16], ["ARACHNID", 5], ["CENTAUR", 9],
+    ["ALSEID", 13], ["ANGEL", 16], ["ARACHNID", 16], ["CENTAUR", 9], ["GORGON", 15],
     ["DRYAD", 18], ["HARPY", 12], ["MAENAD", 16], ["NEREID", 15]
   ])
 };
@@ -132,6 +138,9 @@ const PORTRAIT_GROUP_FOLDERS = new Map([
   ["HOLY_KNIGHT", "holy_knight"],
   ["INQUISITOR", "Inquisitor"],
   ["ARACHNID", "arachnid"],
+  ["FAIRY", "fairy"],
+  ["GORGON", "gorgon"],
+  ["MANTICORE", "manticore"],
   ["ANGEL", "angel"],
   ["ALSEID", "alseid"],
   ["DRYAD", "dryad"],
@@ -169,7 +178,7 @@ function getLegacyArachnidPortraitKey(value) {
 }
 
 function getNumberedPortraitParts(key) {
-  const match = key.match(/^(ANGEL_FIGHTER|ANGELTHIEF|HOLY_KNIGHT|ELITE_NOMAD|INQUISITOR|ARCHANGEL|SPHINX_M|SPHINX_F|MINOTAUR|CENTAUR|ARMORED|ARACHNID|CYCLOPS|KNIGHT|ALSEID|EQUINA|SATYR|MAENAD|NEREID|DRYAD|SAINT|ELITE|HARPY|ANGEL|NOMAD|BAN|GOB|WOLF|GG|MA|MB|MC|MD|ME|BB|A|C|D)(\d+)\.png$/i);
+  const match = key.match(/^(ANGEL_FIGHTER|ANGELTHIEF|HOLY_KNIGHT|ELITE_NOMAD|INQUISITOR|ARCHANGEL|SPHINX_M|SPHINX_F|MANTICORE|MINOTAUR|CENTAUR|ARMORED|ARACHNID|CYCLOPS|KNIGHT|ALSEID|EQUINA|GORGON|FAIRY|SATYR|MAENAD|NEREID|DRYAD|SAINT|ELITE|HARPY|ANGEL|NOMAD|BAN|GOB|WOLF|GG|MA|MB|MC|MD|ME|BB|A|C|D)(\d+)\.png$/i);
   if (!match) return null;
 
   return {

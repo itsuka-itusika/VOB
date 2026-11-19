@@ -34,7 +34,7 @@ export const PORTRAIT_ATLAS_SHEETS = {
   "arachnid-1": {
     "url": "images/atlas/arachnid-1.webp",
     "cols": 8,
-    "rows": 2
+    "rows": 4
   },
   "archangel-1": {
     "url": "images/atlas/archangel-1.webp",
@@ -250,6 +250,21 @@ export const PORTRAIT_ATLAS_SHEETS = {
     "url": "images/atlas/sphinx_M-1.webp",
     "cols": 6,
     "rows": 1
+  },
+  "fairy-1": {
+    "url": "images/atlas/fairy-1.webp",
+    "cols": 8,
+    "rows": 2
+  },
+  "gorgon-1": {
+    "url": "images/atlas/gorgon-1.webp",
+    "cols": 8,
+    "rows": 4
+  },
+  "manticore-1": {
+    "url": "images/atlas/manticore-1.webp",
+    "cols": 8,
+    "rows": 2
   }
 };
 export const PORTRAIT_ATLAS_MAP = {
@@ -8377,5 +8392,400 @@ export const PORTRAIT_ATLAS_MAP = {
     "sheet": "sphinx_M-1",
     "col": 5,
     "row": 0
+  },
+  "ARACHNID6.png": {
+    "sheet": "arachnid-1",
+    "col": 2,
+    "row": 1
+  },
+  "ARACHNID7.png": {
+    "sheet": "arachnid-1",
+    "col": 3,
+    "row": 1
+  },
+  "ARACHNID8.png": {
+    "sheet": "arachnid-1",
+    "col": 4,
+    "row": 1
+  },
+  "ARACHNID9.png": {
+    "sheet": "arachnid-1",
+    "col": 5,
+    "row": 1
+  },
+  "ARACHNID10.png": {
+    "sheet": "arachnid-1",
+    "col": 6,
+    "row": 1
+  },
+  "ARACHNID11.png": {
+    "sheet": "arachnid-1",
+    "col": 7,
+    "row": 1
+  },
+  "ARACHNID12.png": {
+    "sheet": "arachnid-1",
+    "col": 0,
+    "row": 2
+  },
+  "ARACHNID13.png": {
+    "sheet": "arachnid-1",
+    "col": 1,
+    "row": 2
+  },
+  "ARACHNID14.png": {
+    "sheet": "arachnid-1",
+    "col": 2,
+    "row": 2
+  },
+  "ARACHNID15.png": {
+    "sheet": "arachnid-1",
+    "col": 3,
+    "row": 2
+  },
+  "ARACHNID16.png": {
+    "sheet": "arachnid-1",
+    "col": 4,
+    "row": 2
+  },
+  "ARACHNID6_young.png": {
+    "sheet": "arachnid-1",
+    "col": 5,
+    "row": 2
+  },
+  "ARACHNID7_young.png": {
+    "sheet": "arachnid-1",
+    "col": 6,
+    "row": 2
+  },
+  "ARACHNID8_young.png": {
+    "sheet": "arachnid-1",
+    "col": 7,
+    "row": 2
+  },
+  "ARACHNID9_young.png": {
+    "sheet": "arachnid-1",
+    "col": 0,
+    "row": 3
+  },
+  "ARACHNID10_young.png": {
+    "sheet": "arachnid-1",
+    "col": 1,
+    "row": 3
+  },
+  "ARACHNID11_young.png": {
+    "sheet": "arachnid-1",
+    "col": 2,
+    "row": 3
+  },
+  "ARACHNID12_young.png": {
+    "sheet": "arachnid-1",
+    "col": 3,
+    "row": 3
+  },
+  "ARACHNID13_young.png": {
+    "sheet": "arachnid-1",
+    "col": 4,
+    "row": 3
+  },
+  "ARACHNID14_young.png": {
+    "sheet": "arachnid-1",
+    "col": 5,
+    "row": 3
+  },
+  "ARACHNID15_young.png": {
+    "sheet": "arachnid-1",
+    "col": 6,
+    "row": 3
+  },
+  "ARACHNID16_young.png": {
+    "sheet": "arachnid-1",
+    "col": 7,
+    "row": 3
+  },
+  "FAIRY1.png": {
+    "sheet": "fairy-1",
+    "col": 0,
+    "row": 0
+  },
+  "FAIRY2.png": {
+    "sheet": "fairy-1",
+    "col": 1,
+    "row": 0
+  },
+  "FAIRY3.png": {
+    "sheet": "fairy-1",
+    "col": 2,
+    "row": 0
+  },
+  "FAIRY4.png": {
+    "sheet": "fairy-1",
+    "col": 3,
+    "row": 0
+  },
+  "FAIRY5.png": {
+    "sheet": "fairy-1",
+    "col": 4,
+    "row": 0
+  },
+  "FAIRY6.png": {
+    "sheet": "fairy-1",
+    "col": 5,
+    "row": 0
+  },
+  "FAIRY7.png": {
+    "sheet": "fairy-1",
+    "col": 6,
+    "row": 0
+  },
+  "FAIRY8.png": {
+    "sheet": "fairy-1",
+    "col": 7,
+    "row": 0
+  },
+  "FAIRY9.png": {
+    "sheet": "fairy-1",
+    "col": 0,
+    "row": 1
+  },
+  "FAIRY10.png": {
+    "sheet": "fairy-1",
+    "col": 1,
+    "row": 1
+  },
+  "FAIRY11.png": {
+    "sheet": "fairy-1",
+    "col": 2,
+    "row": 1
+  },
+  "FAIRY12.png": {
+    "sheet": "fairy-1",
+    "col": 3,
+    "row": 1
+  },
+  "FAIRY13.png": {
+    "sheet": "fairy-1",
+    "col": 4,
+    "row": 1
+  },
+  "FAIRY14.png": {
+    "sheet": "fairy-1",
+    "col": 5,
+    "row": 1
+  },
+  "FAIRY15.png": {
+    "sheet": "fairy-1",
+    "col": 6,
+    "row": 1
+  },
+  "FAIRY16.png": {
+    "sheet": "fairy-1",
+    "col": 7,
+    "row": 1
+  },
+  "GORGON1.png": {
+    "sheet": "gorgon-1",
+    "col": 0,
+    "row": 0
+  },
+  "GORGON2.png": {
+    "sheet": "gorgon-1",
+    "col": 1,
+    "row": 0
+  },
+  "GORGON3.png": {
+    "sheet": "gorgon-1",
+    "col": 2,
+    "row": 0
+  },
+  "GORGON4.png": {
+    "sheet": "gorgon-1",
+    "col": 3,
+    "row": 0
+  },
+  "GORGON5.png": {
+    "sheet": "gorgon-1",
+    "col": 4,
+    "row": 0
+  },
+  "GORGON6.png": {
+    "sheet": "gorgon-1",
+    "col": 5,
+    "row": 0
+  },
+  "GORGON7.png": {
+    "sheet": "gorgon-1",
+    "col": 6,
+    "row": 0
+  },
+  "GORGON8.png": {
+    "sheet": "gorgon-1",
+    "col": 7,
+    "row": 0
+  },
+  "GORGON9.png": {
+    "sheet": "gorgon-1",
+    "col": 0,
+    "row": 1
+  },
+  "GORGON10.png": {
+    "sheet": "gorgon-1",
+    "col": 1,
+    "row": 1
+  },
+  "GORGON11.png": {
+    "sheet": "gorgon-1",
+    "col": 2,
+    "row": 1
+  },
+  "GORGON12.png": {
+    "sheet": "gorgon-1",
+    "col": 3,
+    "row": 1
+  },
+  "GORGON13.png": {
+    "sheet": "gorgon-1",
+    "col": 4,
+    "row": 1
+  },
+  "GORGON14.png": {
+    "sheet": "gorgon-1",
+    "col": 5,
+    "row": 1
+  },
+  "GORGON15.png": {
+    "sheet": "gorgon-1",
+    "col": 6,
+    "row": 1
+  },
+  "GORGON1_young.png": {
+    "sheet": "gorgon-1",
+    "col": 7,
+    "row": 1
+  },
+  "GORGON2_young.png": {
+    "sheet": "gorgon-1",
+    "col": 0,
+    "row": 2
+  },
+  "GORGON3_young.png": {
+    "sheet": "gorgon-1",
+    "col": 1,
+    "row": 2
+  },
+  "GORGON4_young.png": {
+    "sheet": "gorgon-1",
+    "col": 2,
+    "row": 2
+  },
+  "GORGON5_young.png": {
+    "sheet": "gorgon-1",
+    "col": 3,
+    "row": 2
+  },
+  "GORGON6_young.png": {
+    "sheet": "gorgon-1",
+    "col": 4,
+    "row": 2
+  },
+  "GORGON7_young.png": {
+    "sheet": "gorgon-1",
+    "col": 5,
+    "row": 2
+  },
+  "GORGON8_young.png": {
+    "sheet": "gorgon-1",
+    "col": 6,
+    "row": 2
+  },
+  "GORGON9_young.png": {
+    "sheet": "gorgon-1",
+    "col": 7,
+    "row": 2
+  },
+  "GORGON10_young.png": {
+    "sheet": "gorgon-1",
+    "col": 0,
+    "row": 3
+  },
+  "GORGON11_young.png": {
+    "sheet": "gorgon-1",
+    "col": 1,
+    "row": 3
+  },
+  "GORGON12_young.png": {
+    "sheet": "gorgon-1",
+    "col": 2,
+    "row": 3
+  },
+  "GORGON13_young.png": {
+    "sheet": "gorgon-1",
+    "col": 3,
+    "row": 3
+  },
+  "GORGON14_young.png": {
+    "sheet": "gorgon-1",
+    "col": 4,
+    "row": 3
+  },
+  "GORGON15_young.png": {
+    "sheet": "gorgon-1",
+    "col": 5,
+    "row": 3
+  },
+  "MANTICORE1.png": {
+    "sheet": "manticore-1",
+    "col": 0,
+    "row": 0
+  },
+  "MANTICORE2.png": {
+    "sheet": "manticore-1",
+    "col": 1,
+    "row": 0
+  },
+  "MANTICORE3.png": {
+    "sheet": "manticore-1",
+    "col": 2,
+    "row": 0
+  },
+  "MANTICORE4.png": {
+    "sheet": "manticore-1",
+    "col": 3,
+    "row": 0
+  },
+  "MANTICORE5.png": {
+    "sheet": "manticore-1",
+    "col": 4,
+    "row": 0
+  },
+  "MANTICORE6.png": {
+    "sheet": "manticore-1",
+    "col": 5,
+    "row": 0
+  },
+  "MANTICORE7.png": {
+    "sheet": "manticore-1",
+    "col": 6,
+    "row": 0
+  },
+  "MANTICORE8.png": {
+    "sheet": "manticore-1",
+    "col": 7,
+    "row": 0
+  },
+  "MANTICORE9.png": {
+    "sheet": "manticore-1",
+    "col": 0,
+    "row": 1
+  },
+  "MANTICORE10.png": {
+    "sheet": "manticore-1",
+    "col": 1,
+    "row": 1
+  },
+  "MANTICORE11.png": {
+    "sheet": "manticore-1",
+    "col": 2,
+    "row": 1
   }
 };

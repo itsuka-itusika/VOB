@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import math
 import re
@@ -79,6 +80,89 @@ def write_manifest(sheets: dict[str, dict[str, object]],
     MANIFEST_PATH.write_text(content, encoding="utf-8", newline="\n")
 
 
+def read_manifest() -> tuple[dict, dict]:
+    content = MANIFEST_PATH.read_text(encoding="utf-8")
+    sheets = re.search(r"export const PORTRAIT_ATLAS_SHEETS = (\{.*?\});", content, re.S)
+    portraits = re.search(r"export const PORTRAIT_ATLAS_MAP = (\{.*?\});", content, re.S)
+    if not sheets or not portraits:
+        raise RuntimeError(f"Invalid atlas manifest: {MANIFEST_PATH}")
+    return json.loads(sheets[1]), json.loads(portraits[1])
+
+
+def update_groups(selected_groups: list[str]) -> None:
+    """Update selected groups, keeping existing IDs, tile positions and other sheets."""
+    sheets, portraits = read_manifest()
+    outputs: dict[Path, Image.Image] = {}
+    for group in dict.fromkeys(selected_groups):
+        if not re.fullmatch(r"[A-Za-z0-9_]+", group):
+            raise ValueError(f"Invalid portrait group: {group}")
+        source_folder = SOURCE_ROOT / group
+        sources = sorted(source_folder.rglob("*.png"), key=source_sort_key)
+        if not sources or group in SOURCE_ONLY_GROUPS or group in MISC_GROUPS:
+            raise ValueError(f"No updatable portrait sources: {source_folder}")
+        sheet_pattern = re.compile(rf"^{re.escape(group)}-(\d+)$")
+        group_sheets = {key: value for key, value in sheets.items() if sheet_pattern.fullmatch(key)}
+        cols = next(iter(group_sheets.values()))["cols"] if group_sheets else min(MAX_COLS, len(sources))
+        if any(sheet["cols"] != cols for sheet in group_sheets.values()):
+            raise RuntimeError(f"Mixed column counts in group: {group}")
+        capacity = cols * MAX_ROWS
+        tiles: dict[int, Image.Image] = {}
+        positions: dict[str, int] = {}
+        for sheet_id, metadata in group_sheets.items():
+            sheet_number = int(sheet_pattern.fullmatch(sheet_id)[1])
+            with Image.open(REPO_ROOT / metadata["url"]) as source:
+                sheet_image = source.convert("RGBA")
+            for key, entry in portraits.items():
+                if entry["sheet"] != sheet_id:
+                    continue
+                col, row = entry["col"], entry["row"]
+                index = (sheet_number - 1) * capacity + row * cols + col
+                if index in tiles:
+                    raise RuntimeError(f"Duplicate atlas slot: {sheet_id}/{col}/{row}")
+                positions[key] = index
+                tiles[index] = sheet_image.crop((col * TILE_SIZE, row * TILE_SIZE,
+                                                 (col + 1) * TILE_SIZE, (row + 1) * TILE_SIZE))
+        next_index = max(tiles, default=-1) + 1
+        seen_keys: set[str] = set()
+        for path in sources:
+            key = runtime_key(path)
+            if key is None or key in seen_keys:
+                raise RuntimeError(f"Duplicate or invalid portrait key: {path}")
+            seen_keys.add(key)
+            if key in portraits and key not in positions:
+                raise RuntimeError(f"Portrait key belongs to another group: {key}")
+            with Image.open(path) as source:
+                if source.size != (TILE_SIZE, TILE_SIZE):
+                    raise ValueError(f"Incremental source must be 256x256: {path}")
+                tile = source.convert("RGBA")
+            if key not in positions:
+                positions[key] = next_index
+                next_index += 1
+            tiles[positions[key]] = tile
+        for sheet_offset in range(math.ceil(next_index / capacity)):
+            chunk = {index % capacity: tile for index, tile in tiles.items()
+                     if index // capacity == sheet_offset}
+            if not chunk:
+                continue
+            rows = max(chunk) // cols + 1
+            canvas = Image.new("RGBA", (cols * TILE_SIZE, rows * TILE_SIZE), (0, 0, 0, 0))
+            for index, tile in chunk.items():
+                canvas.paste(tile, ((index % cols) * TILE_SIZE, (index // cols) * TILE_SIZE))
+            sheet_id = f"{group}-{sheet_offset + 1}"
+            output = ATLAS_ROOT / f"{sheet_id}.webp"
+            outputs[output] = canvas
+            sheets[sheet_id] = {"url": output.relative_to(REPO_ROOT).as_posix(), "cols": cols, "rows": rows}
+        for key, index in positions.items():
+            portraits[key] = {"sheet": f"{group}-{index // capacity + 1}",
+                              "col": index % cols, "row": (index % capacity) // cols}
+        print(f"{group}: {len(positions)} portraits")
+    # Lossless encoding preserves decoded pixels of existing tiles when extending a sheet.
+    for path, canvas in outputs.items():
+        canvas.save(path, "WEBP", lossless=True, method=6, exact=True)
+    write_manifest(sheets, portraits)
+    print(f"Updated atlas sheets: {len(outputs)}; runtime entries: {len(portraits)}")
+
+
 def build() -> None:
     groups: dict[str, list[Path]] = defaultdict(list)
     for path in SOURCE_ROOT.rglob("*.png"):
@@ -86,6 +170,14 @@ def build() -> None:
 
     if not groups:
         raise RuntimeError(f"PNG portrait not found: {SOURCE_ROOT}")
+
+    if MANIFEST_PATH.exists():
+        _, existing_portraits = read_manifest()
+        available_keys = {runtime_key(path) for sources in groups.values() for path in sources}
+        missing_keys = existing_portraits.keys() - available_keys
+        if missing_keys:
+            raise RuntimeError("Full rebuild requires every original PNG. "
+                               "Use --groups to update selected groups while preserving existing atlases.")
 
     ATLAS_ROOT.mkdir(parents=True, exist_ok=True)
     for old_sheet in ATLAS_ROOT.glob("*.webp"):
@@ -158,4 +250,10 @@ def build() -> None:
 
 
 if __name__ == "__main__":
-    build()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--groups", nargs="+", help="Update only these source folders, preserving existing tiles")
+    args = parser.parse_args()
+    if args.groups:
+        update_groups(args.groups)
+    else:
+        build()

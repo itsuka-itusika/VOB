@@ -241,15 +241,18 @@
 - 村人、訪問者、襲撃者は可能な限り同じ人物生成・顔グラ参照システムで扱う。襲撃者として登場した人物グループを村人側でも使えるよう、顔グラの分類は役割ではなく見た目・種族などの選択グループを基準にする。
 - 特殊種族画像は `angel/` や `alseid/` のような選択グループフォルダに置き、論理IDは `ANGEL1.png` のような大文字prefix連番にする。旧アラクニド論理IDは読込時に `ARACHNID1.png` 形式へ正規化する。
 - `ALIGNMENT.png`、`WAR.png`、`WOLF_PUP.png` は `images/atlas/special-1.webp` の256pxタイルを優先表示する。既存の `misc-1.webp` を再圧縮せずに特殊顔を差し替えられるよう、この対応は `js/data/portraitAtlas.js` に置く。
+- アラクニドは `ARACHNID1.png`〜`ARACHNID16.png` と対応する幼児版を持つ。1〜5番は既存画像、6〜16番は2026-11-20追加分。フェアリーは `FAIRY1.png`〜`FAIRY16.png`（春・夏・秋・冬の順に各4枚）、ゴーゴンは `GORGON1.png`〜`GORGON15.png` と対応する幼児版、マンティコアは `MANTICORE1.png`〜`MANTICORE11.png` を登録している。元ファイルとの対応は `docs/portrait-assets-20261120.json` にある。顔素材の登録と、新種族の出現・能力設定は別に扱う。
 
 ### 顔グラフィックの追加と生成
 
 1. 原本PNGを `images/portraits/<選択グループ>/` へ置く。年齢差分は同グループの `old/` または `young/` に置く。
 2. 新しい連番や選択グループを増やした場合は、`js/data/portraitPaths.js` の上限・フォルダ対応も更新する。
-3. リポジトリルートで `python tools/atlas/build_portrait_atlas.py` を実行する。
+3. リポジトリルートで `python tools/atlas/build_portrait_atlas.py --groups arachnid fairy gorgon manticore` のように、更新する原本フォルダ名を指定する。既存の論理IDとタイル座標を保持して追加・更新し、指定していないシートには触れない。更新シートはロスレスWebPにして、既存タイルの復号後の画素も保持する。
 4. 更新された `images/atlas/*.webp` と `js/data/portraitAtlas.generated.js` を原本PNGと一緒にコミットする。
 
 生成ツールは256pxタイルを最大8×8で詰め、各シートを2048×2048以下のWebPとして出力する。`children/` と `sample/` は原本確認用としてシートには含めるが、同名の現行顔IDを上書きしないようランタイムマップから除外する。`CHILD_SHADOW.svg` と `CHILD_SHADOW_BABY.svg` はアトラス化せず、そのまま表示する。
+
+現在のリポジトリには既存顔グラすべての原本PNGが残っていないため、通常は `--groups` で追加分を更新する。このモードの原本はあらかじめ256×256に揃える。引数なしの全再生成は、既存マップに対応する原本がすべて揃っている場合だけ実行でき、不足時は既存アトラスを削除する前に停止する。
 
 配布用zipは `tools/` のスクリプトで作る。どちらも `index.html` / `css` / `js` / `images` だけを入れ、顔原本PNGは含めずアトラスと上記SVG 2枚だけを含める。ゲームから読み込まない `js/data/dialogue/basicConversationLines.js`（旧会話の文面の保管用）も外し、同梱するJSがこれを参照していたら書き出しを止める。zip内の `index.html` からはGoogleアナリティクスのタグを外し、除去できたかを検証する。`--no-images` を付けると `images/` を外した軽いzipになり、画像は手で足す前提になる。zipの書き出しと計測タグの除去は `package_itch.py` に置き、夢現向けはそれを読み込んで使う。
 
