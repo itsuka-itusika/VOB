@@ -254,8 +254,7 @@ function hasBodyTrait(person, trait) {
  */
 export function doMarriageCheck(village) {
   const candidates = village.villagers.filter(x=>
-    x.spiritAge>=18
-    && !isSaltPillar(x)
+    !isSaltPillar(x)
     && hasLoverRelationship(x)
     && !checkHasRelationship(x,"既婚")
   );
@@ -269,6 +268,8 @@ export function doMarriageCheck(village) {
   candidates.forEach(a => {
     const b = candidateById.get(getRelationshipTargetId(a, "恋人"));
     if (!b || getRelationshipTargetId(b, "恋人") !== a.id) return;
+    // どちらか一方が精神年齢18以上なら結婚判定の対象にする。
+    if (a.spiritAge < 18 && b.spiritAge < 18) return;
     const pairKey = [a.id, b.id].sort((x, y) => x - y).join("-");
     if (seenPairs.has(pairKey)) return;
     seenPairs.add(pairKey);
