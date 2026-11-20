@@ -529,6 +529,17 @@ export function handleApocalypseRaidResult(village, raidId, isSuccess) {
   return true;
 }
 
+/**
+ * 回復系の奇跡・秘宝で石化を解く。塩の柱は解かない。解いたら true を返す。
+ */
+export function releasePetrification(person, village) {
+  if (getStoneBodyTrait(person) !== PETRIFIED_TRAIT) return false;
+  person.bodyTraits = person.bodyTraits.filter(trait => trait !== PETRIFIED_TRAIT);
+  person.saltPillarMonths = 0;
+  refreshAfterSaltPillarRecovery(person, village, PETRIFIED_TRAIT);
+  return true;
+}
+
 export function advanceSaltPillarMonths(village) {
   getSaltPillarResidents(village).forEach(person => {
     person.saltPillarMonths = Math.max(0, Number(person.saltPillarMonths) || 0) + 1;

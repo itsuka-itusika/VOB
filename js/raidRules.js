@@ -51,7 +51,7 @@ const RAID_DOUBLE_DAMAGE_BODY_TRAITS = ["疫病", "負傷", "過労", "産褥"];
 // 近接攻撃（反撃を含む）が当たったときの、種族固有の追加効果。
 // ゴーゴンの邪眼は相手を石化させて戦闘から外し、マンティコアの毒尾は毒を与える。
 export const PETRIFYING_GAZE_TRAIT = "邪眼";
-export const PETRIFYING_GAZE_CHANCE = 0.25;
+export const PETRIFYING_GAZE_CHANCE = 0.4;
 export const POISON_TAIL_TRAIT = "毒尾";
 export const POISON_TAIL_CHANCE = 0.4;
 // 毒は戦闘ターンの終わりごとに体力を削る。月初の分は js/events.js が扱う。

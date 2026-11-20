@@ -15,7 +15,8 @@ import { resolveDialogueTone } from "./data/dialogue/toneProfiles.js";
 import { getBodyReturnReactionLines, getBodyExchangeSourceRaceLines, getDemihumanKnightHumanBodyLines, getDialogueLine, getSlaveTradeExchangeLines } from "./dialogue/dialogueEngine.js";
 import { BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
 import { getVisitorArrivalLine } from "./data/dialogue/visitorLines.js";
-import { getActiveVillagers, getStoneBodyTrait, isSaltPillar, SALT_PILLAR_TRAIT } from "./domain/apocalypseRules.js";
+import { getActiveVillagers, getStoneBodyTrait, isPetrified, isSaltPillar, PETRIFIED_TRAIT, SALT_PILLAR_TRAIT } from "./domain/apocalypseRules.js";
+import { releasePetrification } from "./apocalypse.js";
 import { getRaidTableBreakdown, getSelectableRaidTables, startRaidEvent } from "./raidStart.js";
 import { getRaiderIncomingDamageMultiplier } from "./raidRules.js";
 import { completeTutorialTask } from "./tutorial.js";
@@ -90,9 +91,9 @@ export const MIRACLES = [
   {id:"1",  name:"豊穣の奇跡(100)", cost:100, desc:"今月のみ、農作業・伐採・狩猟・漁・採集の成果と醸造の食料獲得2倍"},
   {id:"2",  name:"マナの奇跡(40)",  cost:40,  desc:"食料+80"},
   {id:"3",  name:"クピドの奇跡(80)", cost:80, desc:"2人を強制結婚(条件無視)"},
-  {id:"4",  name:`宴会の奇跡(人数×${FEAST_COST_PER_PERSON})`, cost:-1, desc:"全員体力/メンタル+20,幸福+20,飢餓/凍え/失望/絶望解除 (資金×人数分も要)"},
-  {id:"5",  name:`狂宴の奇跡(人数×${REVEL_COST_PER_PERSON})`, cost:-2, desc:"全員体力/メンタル全回復,幸福+50,飢餓/凍え/失望/絶望解除,倫理↓,好色+15"},
-  {id:"6",  name:"癒しの奇跡(80)", cost:80, desc:"1人の負傷/重体/疫病/疲労等回復,体力+50"},
+  {id:"4",  name:`宴会の奇跡(人数×${FEAST_COST_PER_PERSON})`, cost:-1, desc:"全員体力/メンタル+20,幸福+20,飢餓/凍え/石化/失望/絶望解除 (資金×人数分も要)"},
+  {id:"5",  name:`狂宴の奇跡(人数×${REVEL_COST_PER_PERSON})`, cost:-2, desc:"全員体力/メンタル全回復,幸福+50,飢餓/凍え/石化/失望/絶望解除,倫理↓,好色+15"},
+  {id:"6",  name:"癒しの奇跡(80)", cost:80, desc:"1人の負傷/重体/疫病/疲労/石化等回復,体力+50"},
   {id:"20", name:"清拭の奇跡(60)", cost:60, desc:"3ヶ月間、村特性「清浄」を付与し、疫病の感染と重体の危篤化を防ぐ"},
   {id:"16", name:"酒杯の奇跡(50)", cost:50, desc:"1人の心労/抑鬱/失望/絶望回復,メンタル+50,幸福+30,酩酊付与"},
   {id:"7",  name:"戦神の奇跡(80)", cost:80, desc:"1人に火星の加護(3ヶ月,筋力/耐久/勇気+7,知力/勤勉/倫理*0.2)"},
@@ -188,10 +189,15 @@ export function onSelectMiracleChange(village) {
   }
 }
 
-/** 宴会・狂宴の費用を数える人数。効果が届かない塩の柱は数えない。 */
+/** 宴会・狂宴の費用を数える人数。効果が届かない塩の柱は数えない。石化は宴で解けるため数える。 */
 function countFeastCostTargets(village) {
   const villagers = Array.isArray(village?.villagers) ? village.villagers : [];
-  return villagers.filter(person => !isSaltPillar(person)).length;
+  return villagers.filter(canReceiveBodyRecovery).length;
+}
+
+/** 体を癒す奇跡・秘宝が届くか。石の体のうち、石化は解けるが塩の柱は解けない。 */
+function canReceiveBodyRecovery(person) {
+  return !isSaltPillar(person) || isPetrified(person);
 }
 
 function getMiracleCostInfo(miracle, village) {
@@ -305,12 +311,13 @@ function getMiracleMultiTargetIds(mid) {
 }
 
 // 癒し・酒杯が取り除くデバフ特性。選択リストの表示と効果処理で同じ並びを使う。
-const HEAL_MIRACLE_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "疫病", "産褥", "凍え", "毒"];
+// 石化は解く処理が別（releasePetrification）だが、並べ替えとプレビューのために先頭に置く。
+const HEAL_MIRACLE_BODY_TRAITS = [PETRIFIED_TRAIT, "負傷", "重体", "疲労", "過労", "飢餓", "疫病", "産褥", "凍え", "毒"];
 const GOBLET_MIRACLE_MIND_TRAITS = ["心労", "抑鬱", DISAPPOINTMENT_TRAIT, DESPAIR_TRAIT];
-const NECTAR_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "疫病", "毒"];
+const NECTAR_BODY_TRAITS = [PETRIFIED_TRAIT, "負傷", "重体", "疲労", "過労", "疫病", "毒"];
 const NECTAR_MIND_TRAITS = ["心労", "抑鬱"];
 // 蛇の巻き付いた杖が解除する状態異常。襲撃の後遺症まで癒せるのはこの秘宝だけ。
-export const SERPENT_STAFF_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "疫病", "産褥", "凍え", "毒", "危篤", "隻腕", "隻眼", "古傷"];
+export const SERPENT_STAFF_BODY_TRAITS = [PETRIFIED_TRAIT, "負傷", "重体", "疲労", "過労", "飢餓", "疫病", "産褥", "凍え", "毒", "危篤", "隻腕", "隻眼", "古傷"];
 export const SERPENT_STAFF_MIND_TRAITS = ["心労", "抑鬱", DISAPPOINTMENT_TRAIT, DESPAIR_TRAIT, "トラウマ"];
 
 const MIRACLE_CONDITION_SORTS = {
@@ -882,7 +889,7 @@ function createVillagerSelect(id, village, options = {}) {
   if (conditionSort) {
     const targets = village.villagers
       .concat(getCaptives(village))
-      .filter(vv => !isSaltPillar(vv));
+      .filter(vv => options.conditionSort === "body" ? canReceiveBodyRecovery(vv) : !isSaltPillar(vv));
     sortByMiracleCondition(targets, conditionSort).forEach(addOption);
     return sel;
   }
@@ -947,7 +954,8 @@ const MULTI_TARGET_MIRACLE_HANDLERS = {
 };
 
 function isMiracleMultiTargetValid(mid, person, village) {
-  if (!person || isSaltPillar(person)) return false;
+  if (!person) return false;
+  if (isSaltPillar(person) && !(mid === "6" && isPetrified(person))) return false;
   if (mid === "11") return village.villagers.includes(person);
   return village.villagers.includes(person) || getCaptives(village).includes(person);
 }
@@ -1063,7 +1071,9 @@ export function performMiracle(village) {
       let feastRecoveredCount = 0;
       let feastHeavyDrinkerCount = 0;
       let feastNeedRecoveredCount = 0;
+      let feastPetrifiedCount = 0;
       village.villagers.forEach(p=>{
+        if (releasePetrification(p, village)) feastPetrifiedCount++;
         if (isSaltPillar(p)) return;
         const hpRecovery = getAlcoholMiracleRecoveryAmount(p, 20);
         const mpRecovery = getAlcoholMiracleRecoveryAmount(p, 20);
@@ -1075,7 +1085,7 @@ export function performMiracle(village) {
         if (clearBanquetBodyTraits(p, village)) feastNeedRecoveredCount++;
         if (clearHopeLossByMiracle(p, village).length > 0) feastRecoveredCount++;
       });
-      village.log(`【宴会】全員体力/メンタル+20,幸福+20(費用:${cost})${feastHeavyDrinkerCount > 0 ? `,酒豪${feastHeavyDrinkerCount}人は回復量1.5倍` : ""}${feastNeedRecoveredCount > 0 ? `,飢餓・凍え${feastNeedRecoveredCount}人解除` : ""}${feastRecoveredCount > 0 ? `,失望・絶望${feastRecoveredCount}人解除` : ""}`);
+      village.log(`【宴会】全員体力/メンタル+20,幸福+20(費用:${cost})${feastHeavyDrinkerCount > 0 ? `,酒豪${feastHeavyDrinkerCount}人は回復量1.5倍` : ""}${feastNeedRecoveredCount > 0 ? `,飢餓・凍え${feastNeedRecoveredCount}人解除` : ""}${feastPetrifiedCount > 0 ? `,石化${feastPetrifiedCount}人解除` : ""}${feastRecoveredCount > 0 ? `,失望・絶望${feastRecoveredCount}人解除` : ""}`);
       showMiracleResultModal(village, "宴会の奇跡", "村中に賑やかな宴が開かれました。", getActiveVillagers(village));
       break;
 
@@ -1085,7 +1095,9 @@ export function performMiracle(village) {
       let revelRecoveredCount = 0;
       let revelHeavyDrinkerCount = 0;
       let revelNeedRecoveredCount = 0;
+      let revelPetrifiedCount = 0;
       village.villagers.forEach(p=>{
+        if (releasePetrification(p, village)) revelPetrifiedCount++;
         if (isSaltPillar(p)) return;
         // 体力とメンタルは全回復するため、酒豪の倍率は幸福度にだけ効く。
         const happinessRecovery = getAlcoholMiracleRecoveryAmount(p, 50);
@@ -1101,7 +1113,7 @@ export function performMiracle(village) {
           syncEffectiveStats(p);
         }
       });
-      village.log(`【狂宴】全員体力/メンタル全回復,幸福+50,狂乱付与(倫理*0.2,好色+15)${revelHeavyDrinkerCount > 0 ? `,酒豪${revelHeavyDrinkerCount}人は幸福度の回復量1.5倍` : ""}${revelNeedRecoveredCount > 0 ? `,飢餓・凍え${revelNeedRecoveredCount}人解除` : ""}${revelRecoveredCount > 0 ? `,失望・絶望${revelRecoveredCount}人解除` : ""}`);
+      village.log(`【狂宴】全員体力/メンタル全回復,幸福+50,狂乱付与(倫理*0.2,好色+15)${revelHeavyDrinkerCount > 0 ? `,酒豪${revelHeavyDrinkerCount}人は幸福度の回復量1.5倍` : ""}${revelNeedRecoveredCount > 0 ? `,飢餓・凍え${revelNeedRecoveredCount}人解除` : ""}${revelPetrifiedCount > 0 ? `,石化${revelPetrifiedCount}人解除` : ""}${revelRecoveredCount > 0 ? `,失望・絶望${revelRecoveredCount}人解除` : ""}`);
       showMiracleResultModal(village, "狂宴の奇跡", "理性を揺らす熱気が村を満たしました。", getActiveVillagers(village));
       break;
 
@@ -1147,7 +1159,7 @@ export function performMiracle(village) {
             refundMiracleMana(village, cost);
             return;
           }
-          if (isSaltPillar(vA)) {
+          if (!canReceiveBodyRecovery(vA)) {
             village.log(`【癒しの奇跡】${getStoneBodyTrait(vA)}は治療できません`);
             refundMiracleMana(village, cost);
             return;
@@ -1312,6 +1324,7 @@ function forceMarriage(a,b,v) {
 /** 癒し: 負傷など回復 */
 function healMiracle(p,v,{ showModal = true } = {}) {
   let recoveredTraits = [];
+  if (releasePetrification(p, v)) recoveredTraits.push(PETRIFIED_TRAIT);
 
   HEAL_MIRACLE_BODY_TRAITS.forEach(trait => {
     if (p.bodyTraits.includes(trait)) {

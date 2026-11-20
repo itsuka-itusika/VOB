@@ -71,7 +71,7 @@
   - 異端・自治集落・神威Lv5による黄金像建立イベントの月初判定と建築解放モーダルを扱う。
 - js/apocalypse.js / js/domain/apocalypseRules.js
   - 黄金像完成後の黙示録状態、七災厄の月初進行、塩の柱、専用襲撃開始、黄金像破壊・敗北中断・七災厄の完了処理を扱う。第七の災厄を越えた時は塩の柱を解除し、村人へ専用称号を付与して、クリア済みフラグと神威Lv6を解放する。
-  - `isSaltPillar` は「石の体」（塩の柱と、ゴーゴンの邪眼による石化）を判定する。行動不能・会話・消費・襲撃除外・3か月での回復は両者で共通にし、文言と黙示録固有の処理（第五の災厄での付与、四騎士撃退での解除は塩の柱だけ）を `getStoneBodyTrait` で分ける。
+  - `isSaltPillar` は「石の体」（塩の柱と、ゴーゴンの邪眼による石化）を判定する。行動不能・会話・消費・襲撃除外・3か月での回復は両者で共通にし、文言と黙示録固有の処理（第五の災厄での付与、四騎士撃退での解除は塩の柱だけ）を `getStoneBodyTrait` で分ける。石化だけは回復系の奇跡（癒し・宴会・狂宴）と秘宝（アンブロシア・ネクタル・蛇の巻き付いた杖）で解け、`releasePetrification` が月数と行動を戻す。
 - `js/reproduction.js`
   - 妊娠、出産、産褥、成人化、成長段階を扱う。遺伝に使う親の能力は `snapshotParent` が潜在値から作る。身体能力は `bodyPotentialStats`、精神能力は `mindPotentialStats` を見て、潜在値を持たない相手だけ現在の基礎値を渡す。子が思春期に入った月には `teachParentMindTraits` が走り、村にいる続柄の母・父から `ゴブリン兵法`・`狙撃心得` を必ず、`森の知恵`・`海の知恵` を50%で受け継ぐ。クロノスの秘薬と時空のうねりが使う `growPersonToAdultAge` は思春期を飛ばすため、飛ばした場合だけ同じ判定を1度行う。`giveBirth` は赤子を作って出産モーダルを出すだけで、名前・関係・村史・村人への追加は命名確定後の `finalizeBirth` で行う。双子は妊娠時に `rollTwinType` で決め、`pregnancy.twin`（`type` が `identical` / `fraternal`。二卵性は2人目の性別・種族・素質・受け継ぐ特性も持つ）に残す。出産時は `giveTwinBirth` が2人を作り、出産モーダルを2回続けて出す。一卵性の2人目は1人目の `adultBodyTraits` と `adultPortraitFile` にそろえる。死者の書の `pregnancy.reincarnation` は2人とも受け、前世の名に全角の通し番号を付ける。`twin` を持たない既存セーブの妊娠は1人として扱う。黄金の雨と告天使の絵画による翌月の神秘的な妊娠予約も、保存互換性のため `pendingGoldenRainPregnancies` 上で種別を分けて処理する。予約は `targetBodyOwnerId`（肉体の元の持ち主のID）で肉体に紐づけ、肉体交換ではその身体を得た人物へ移る。IDを持たない旧保存データは `targetBodyOwner` / `targetName` の名前で読み替える。
 - `js/relationships.js`

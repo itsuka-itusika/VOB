@@ -28,7 +28,8 @@ import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { MESSENGER_PASS_SECRET_TREASURE_ID } from "./data/tutorialData.js";
 import { getCaptives } from "./captives.js";
 import { getDialogueLine } from "./dialogue/dialogueEngine.js";
-import { getActiveVillagers, getVillagersIncludingSaltPillar } from "./domain/apocalypseRules.js";
+import { getActiveVillagers, getVillagersIncludingSaltPillar, isPetrified, PETRIFIED_TRAIT } from "./domain/apocalypseRules.js";
+import { releasePetrification } from "./apocalypse.js";
 import { FOUR_LEGGED_TRAIT } from "./domain/speciesTraits.js";
 import { checkWishCompletion } from "./wishes.js";
 import { GAME_MODE_GOBLIN, GAME_MODE_NORMAL, isGoblinMode } from "./domain/gameMode.js";
@@ -203,6 +204,8 @@ function consumeSecretTreasureById(village, id) {
 
 function restoreBadStatus(person, village, options = {}) {
   const recovered = [];
+  // 石化は月数と行動の戻し方が他の状態異常と違うため、専用の処理で解く。
+  if (releasePetrification(person, village)) recovered.push(PETRIFIED_TRAIT);
   const excludedTraits = Array.isArray(options.excludeTraits) ? options.excludeTraits : [];
   const includedBodyTraits = Array.isArray(options.includeBodyTraits) ? options.includeBodyTraits : BAD_BODY_TRAITS;
   const includedMindTraits = Array.isArray(options.includeMindTraits) ? options.includeMindTraits : BAD_MIND_TRAITS;
@@ -466,9 +469,10 @@ export const SECRET_TREASURES = [
   {
     id: "ambrosia",
     name: "アンブロシア",
-    desc: "指定した村人1名の体力を100にし、負傷・重体・産褥・毒などの状態異常を解除して行動可能にする。危篤は解除できない。",
+    desc: "指定した村人1名の体力を100にし、負傷・重体・産褥・毒・石化などの状態異常を解除して行動可能にする。危篤は解除できない。",
     sellPrice: SECRET_TREASURE_SELL_PRICES.ambrosia,
     target: "villager",
+    curesPetrification: true,
     targetDetailKind: "body",
     use: (village, target) => {
       const recovered = restoreBadStatus(target, village, { fullHp: true, excludeTraits: ["危篤"] });
@@ -479,9 +483,10 @@ export const SECRET_TREASURES = [
   {
     id: "nectar",
     name: "ネクタル",
-    desc: "指定した村人1名の体力とメンタルを40回復し、負傷・重体・疲労・過労・疫病・毒・心労・抑鬱を解除する。",
+    desc: "指定した村人1名の体力とメンタルを40回復し、負傷・重体・疲労・過労・疫病・毒・石化・心労・抑鬱を解除する。",
     sellPrice: SECRET_TREASURE_SELL_PRICES.nectar,
     target: "villager",
+    curesPetrification: true,
     targetDetailKind: "nectar",
     use: (village, target) => {
       target.hp = clampValue((Number(target.hp) || 0) + 40, 0, 100);
@@ -510,9 +515,10 @@ export const SECRET_TREASURES = [
   {
     id: "serpent_staff",
     name: "蛇の巻き付いた杖",
-    desc: "指定した村人1名の負傷・重体・産褥・疫病・毒・危篤・失望・絶望などの状態異常と、襲撃の後遺症である隻腕・隻眼・古傷・トラウマを解除し、体力・メンタルが33以下なら34まで回復する。",
+    desc: "指定した村人1名の負傷・重体・産褥・疫病・毒・石化・危篤・失望・絶望などの状態異常と、襲撃の後遺症である隻腕・隻眼・古傷・トラウマを解除し、体力・メンタルが33以下なら34まで回復する。",
     sellPrice: SECRET_TREASURE_SELL_PRICES.serpent_staff,
     target: "villager",
+    curesPetrification: true,
     targetDetailKind: "serpentStaff",
     use: (village, target) => {
       const recovered = restoreBadStatus(target, village, {
@@ -751,7 +757,10 @@ function getSecretTreasureLabel(entry) {
 }
 
 function getTargetCandidates(village, definition) {
-  const villagers = getVillagers(village, definition.includeSaltPillar === true);
+  // 石化を解ける秘宝は、石化した村人も対象に並べる。
+  const villagers = definition.curesPetrification
+    ? getVillagersIncludingSaltPillar(village).filter(person => getActiveVillagers(village).includes(person) || isPetrified(person))
+    : getVillagers(village, definition.includeSaltPillar === true);
   let candidates = [];
   if (definition.target === "childVillager") {
     candidates = villagers.filter(person => (Number(person.bodyAge) || 0) <= 15 || (Number(person.spiritAge) || 0) <= 15);

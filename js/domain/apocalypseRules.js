@@ -11,6 +11,11 @@ export function isApocalypseActive(village) {
 }
 
 /** 塩の柱か、それに準じる石化か。石の体として、行動・消費・会話などを同じに扱う。 */
+/** 邪眼による石化か。塩の柱と違い、回復系の奇跡・秘宝で解ける。 */
+export function isPetrified(person) {
+  return getStoneBodyTrait(person) === PETRIFIED_TRAIT;
+}
+
 export function isSaltPillar(person) {
   return getStoneBodyTrait(person) !== "";
 }
