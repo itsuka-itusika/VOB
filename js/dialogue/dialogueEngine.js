@@ -47,6 +47,7 @@ import {
   BODY_RETURN_REACTION_LINES,
   BODY_EXCHANGE_SOURCE_RACE_LINES,
   BODY_EXCHANGE_REACTION_LINES,
+  DEMIHUMAN_KNIGHT_HUMAN_BODY_LINES,
   SLAVE_EXCHANGE_LINES,
   SLAVE_TRADER_EXCHANGE_LINES
 } from "../data/dialogue/exchangeLines.js";
@@ -246,6 +247,16 @@ export function getSlaveTradeExchangeLines(character, partner = null, context = 
     return asLineArray(typeLines || SLAVE_TRADER_EXCHANGE_LINES.withSlave, context);
   }
   return [];
+}
+
+// 亜人騎士団が、交換で魔物の体から人間系の体へ移ったときの反応。人間系どうしの交換では話さない。
+const DEMIHUMAN_KNIGHT_HUMAN_RACES = new Set(["人間", "半神"]);
+
+export function getDemihumanKnightHumanBodyLines(character, context = {}) {
+  const lines = DEMIHUMAN_KNIGHT_HUMAN_BODY_LINES[character?.raiderType];
+  if (!lines || !DEMIHUMAN_KNIGHT_HUMAN_RACES.has(character.race)) return [];
+  if (DEMIHUMAN_KNIGHT_HUMAN_RACES.has(character.lastBodyExchangeSourceRace)) return [];
+  return asLineArray(lines, context);
 }
 
 // 交換前は別の身体、交換後は本人の身体になった者だけが帰還の反応を話す。
