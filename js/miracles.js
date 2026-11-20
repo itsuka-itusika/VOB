@@ -1474,9 +1474,8 @@ function rareGuestMiracle(v) {
   v.log(`【稀人の奇跡】${newVisitor.name}が来訪(訪問者)`);
   const arrivalLine = getVisitorArrivalLine(newVisitor, v);
   if (arrivalLine) v.log(`${newVisitor.name}「${arrivalLine}」`);
-  const message = arrivalLine
-    ? `${newVisitor.name}が村を訪れました。<br>「${arrivalLine}」`
-    : `${newVisitor.name}が村を訪れました。`;
+  // ひと言は顔つきの欄で専用のセリフを話すため、本文には来訪だけを書く。来訪のひと言はログに残す。
+  const message = `${newVisitor.name}が村を訪れました。`;
   showMiracleResultModal(v, "稀人の奇跡", message, [newVisitor]);
 }
 
