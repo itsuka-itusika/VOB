@@ -245,7 +245,8 @@
 - 村人、訪問者、襲撃者は可能な限り同じ人物生成・顔グラ参照システムで扱う。襲撃者として登場した人物グループを村人側でも使えるよう、顔グラの分類は役割ではなく見た目・種族などの選択グループを基準にする。
 - 特殊種族画像は `angel/` や `alseid/` のような選択グループフォルダに置き、論理IDは `ANGEL1.png` のような大文字prefix連番にする。旧アラクニド論理IDは読込時に `ARACHNID1.png` 形式へ正規化する。
 - `ALIGNMENT.png`、`WAR.png`、`WOLF_PUP.png` は `images/atlas/special-1.webp` の256pxタイルを優先表示する。既存の `misc-1.webp` を再圧縮せずに特殊顔を差し替えられるよう、この対応は `js/data/portraitAtlas.js` に置く。
-- アラクニドは `ARACHNID1.png`〜`ARACHNID16.png` と対応する幼児版を持つ。1〜5番は既存画像、6〜16番は2026-11-20追加分。フェアリーは `FAIRY1.png`〜`FAIRY16.png`（春・夏・秋・冬の順に各4枚）、ゴーゴンは `GORGON1.png`〜`GORGON15.png` と対応する幼児版、マンティコアは `MANTICORE1.png`〜`MANTICORE11.png` を登録している。元ファイルとの対応は `docs/portrait-assets-20261120.json` にある。顔素材の登録と、新種族の出現・能力設定は別に扱う。
+- 灰色の石像素材は `images/portraits/stone/STONE1.png`〜`STONE4.png` を原本とし、`images/atlas/stone-1.webp` の横4列・各256pxタイルで参照できる。塩像4種に対応する色調差分として素材・画像IDを登録している。
+- アラクニドは `ARACHNID1.png`〜`ARACHNID16.png` と対応する幼児版を持つ。1〜5番は既存画像、6〜16番は2026-11-20追加分。フェアリーは `FAIRY1.png`〜`FAIRY16.png`（春・夏・秋・冬の順に各4枚）と対応する幼児版、ゴーゴンは `GORGON1.png`〜`GORGON15.png` と対応する幼児版、マンティコアは `MANTICORE1.png`〜`MANTICORE11.png` を登録している。元ファイルとの対応は `docs/portrait-assets-20261120.json` にある。顔素材の登録と、新種族の出現・能力設定は別に扱う。
 
 ### 顔グラフィックの追加と生成
 

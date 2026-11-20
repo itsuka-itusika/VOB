@@ -254,7 +254,7 @@ export const PORTRAIT_ATLAS_SHEETS = {
   "fairy-1": {
     "url": "images/atlas/fairy-1.webp",
     "cols": 8,
-    "rows": 2
+    "rows": 4
   },
   "gorgon-1": {
     "url": "images/atlas/gorgon-1.webp",
@@ -265,6 +265,11 @@ export const PORTRAIT_ATLAS_SHEETS = {
     "url": "images/atlas/manticore-1.webp",
     "cols": 8,
     "rows": 2
+  },
+  "stone-1": {
+    "url": "images/atlas/stone-1.webp",
+    "cols": 4,
+    "rows": 1
   }
 };
 export const PORTRAIT_ATLAS_MAP = {
@@ -8787,5 +8792,105 @@ export const PORTRAIT_ATLAS_MAP = {
     "sheet": "manticore-1",
     "col": 2,
     "row": 1
+  },
+  "FAIRY1_young.png": {
+    "sheet": "fairy-1",
+    "col": 0,
+    "row": 2
+  },
+  "FAIRY2_young.png": {
+    "sheet": "fairy-1",
+    "col": 1,
+    "row": 2
+  },
+  "FAIRY3_young.png": {
+    "sheet": "fairy-1",
+    "col": 2,
+    "row": 2
+  },
+  "FAIRY4_young.png": {
+    "sheet": "fairy-1",
+    "col": 3,
+    "row": 2
+  },
+  "FAIRY5_young.png": {
+    "sheet": "fairy-1",
+    "col": 4,
+    "row": 2
+  },
+  "FAIRY6_young.png": {
+    "sheet": "fairy-1",
+    "col": 5,
+    "row": 2
+  },
+  "FAIRY7_young.png": {
+    "sheet": "fairy-1",
+    "col": 6,
+    "row": 2
+  },
+  "FAIRY8_young.png": {
+    "sheet": "fairy-1",
+    "col": 7,
+    "row": 2
+  },
+  "FAIRY9_young.png": {
+    "sheet": "fairy-1",
+    "col": 0,
+    "row": 3
+  },
+  "FAIRY10_young.png": {
+    "sheet": "fairy-1",
+    "col": 1,
+    "row": 3
+  },
+  "FAIRY11_young.png": {
+    "sheet": "fairy-1",
+    "col": 2,
+    "row": 3
+  },
+  "FAIRY12_young.png": {
+    "sheet": "fairy-1",
+    "col": 3,
+    "row": 3
+  },
+  "FAIRY13_young.png": {
+    "sheet": "fairy-1",
+    "col": 4,
+    "row": 3
+  },
+  "FAIRY14_young.png": {
+    "sheet": "fairy-1",
+    "col": 5,
+    "row": 3
+  },
+  "FAIRY15_young.png": {
+    "sheet": "fairy-1",
+    "col": 6,
+    "row": 3
+  },
+  "FAIRY16_young.png": {
+    "sheet": "fairy-1",
+    "col": 7,
+    "row": 3
+  },
+  "STONE1.png": {
+    "sheet": "stone-1",
+    "col": 0,
+    "row": 0
+  },
+  "STONE2.png": {
+    "sheet": "stone-1",
+    "col": 1,
+    "row": 0
+  },
+  "STONE3.png": {
+    "sheet": "stone-1",
+    "col": 2,
+    "row": 0
+  },
+  "STONE4.png": {
+    "sheet": "stone-1",
+    "col": 3,
+    "row": 0
   }
 };

@@ -393,5 +393,85 @@
     "key": "FAIRY16.png",
     "source": "FAIRY/WINTER.jpg quadrant 4",
     "path": "images/portraits/fairy/FAIRY16.png"
+  },
+  {
+    "key": "FAIRY1_young.png",
+    "source": "FAIRY/young/FAIRY1_young.png (FAIRY1.png childhood variant, 2026-11-21)",
+    "path": "images/portraits/fairy/young/FAIRY1_young.png"
+  },
+  {
+    "key": "FAIRY2_young.png",
+    "source": "FAIRY/young/FAIRY2_young.png (FAIRY2.png childhood variant, 2026-11-21)",
+    "path": "images/portraits/fairy/young/FAIRY2_young.png"
+  },
+  {
+    "key": "FAIRY3_young.png",
+    "source": "FAIRY/young/FAIRY3_young.png (FAIRY3.png childhood variant, 2026-11-21)",
+    "path": "images/portraits/fairy/young/FAIRY3_young.png"
+  },
+  {
+    "key": "FAIRY4_young.png",
+    "source": "FAIRY/young/FAIRY4_young.png (FAIRY4.png childhood variant, 2026-11-21)",
+    "path": "images/portraits/fairy/young/FAIRY4_young.png"
+  },
+  {
+    "key": "FAIRY5_young.png",
+    "source": "FAIRY/young/FAIRY5_young.png (FAIRY5.png childhood variant, 2026-11-21)",
+    "path": "images/portraits/fairy/young/FAIRY5_young.png"
+  },
+  {
+    "key": "FAIRY6_young.png",
+    "source": "FAIRY/young/FAIRY6_young.png (FAIRY6.png childhood variant, 2026-11-21)",
+    "path": "images/portraits/fairy/young/FAIRY6_young.png"
+  },
+  {
+    "key": "FAIRY7_young.png",
+    "source": "FAIRY/young/FAIRY7_young.png (FAIRY7.png childhood variant, 2026-11-21)",
+    "path": "images/portraits/fairy/young/FAIRY7_young.png"
+  },
+  {
+    "key": "FAIRY8_young.png",
+    "source": "FAIRY/young/FAIRY8_young.png (FAIRY8.png childhood variant, 2026-11-21)",
+    "path": "images/portraits/fairy/young/FAIRY8_young.png"
+  },
+  {
+    "key": "FAIRY9_young.png",
+    "source": "FAIRY/young/FAIRY9_young.png (FAIRY9.png childhood variant, 2026-11-21)",
+    "path": "images/portraits/fairy/young/FAIRY9_young.png"
+  },
+  {
+    "key": "FAIRY10_young.png",
+    "source": "FAIRY/young/FAIRY10_young.png (FAIRY10.png childhood variant, 2026-11-21)",
+    "path": "images/portraits/fairy/young/FAIRY10_young.png"
+  },
+  {
+    "key": "FAIRY11_young.png",
+    "source": "FAIRY/young/FAIRY11_young.png (FAIRY11.png childhood variant, 2026-11-21)",
+    "path": "images/portraits/fairy/young/FAIRY11_young.png"
+  },
+  {
+    "key": "FAIRY12_young.png",
+    "source": "FAIRY/young/FAIRY12_young.png (FAIRY12.png childhood variant, 2026-11-21)",
+    "path": "images/portraits/fairy/young/FAIRY12_young.png"
+  },
+  {
+    "key": "FAIRY13_young.png",
+    "source": "FAIRY/young/FAIRY13_young.png (FAIRY13.png childhood variant, 2026-11-21)",
+    "path": "images/portraits/fairy/young/FAIRY13_young.png"
+  },
+  {
+    "key": "FAIRY14_young.png",
+    "source": "FAIRY/young/FAIRY14_young.png (FAIRY14.png childhood variant, 2026-11-21)",
+    "path": "images/portraits/fairy/young/FAIRY14_young.png"
+  },
+  {
+    "key": "FAIRY15_young.png",
+    "source": "FAIRY/young/FAIRY15_young.png (FAIRY15.png childhood variant, 2026-11-21)",
+    "path": "images/portraits/fairy/young/FAIRY15_young.png"
+  },
+  {
+    "key": "FAIRY16_young.png",
+    "source": "FAIRY/young/FAIRY16_young.png (FAIRY16.png childhood variant, 2026-11-21)",
+    "path": "images/portraits/fairy/young/FAIRY16_young.png"
   }
 ]
