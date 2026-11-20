@@ -279,7 +279,7 @@ const FAIRY_VISITOR_TYPE = {
   type: FAIRY_RACE,
   displayType: "旅人",
   forcedSex: "女",
-  ageRange: { min: 18, max: 25 },
+  ageRange: { min: 16, max: 20 },
   params: {
     job: "旅人",
     action: "訪問",
