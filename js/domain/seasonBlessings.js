@@ -9,7 +9,7 @@ function fairyPortraits(first, last) {
   return Array.from({ length: last - first + 1 }, (_, index) => `FAIRY${first + index}.png`);
 }
 
-// 北風の加護だけは、季節を問わず冬の資材（燃料）を消費しない（js/util.js）。
+// 北風の加護だけは、冬の資材（燃料）を消費せず（js/util.js）、資材が尽きても凍えない（js/events.js）。
 export const NORTH_WIND_BLESSING_TRAIT = "北風の加護";
 
 const SEASON_BLESSINGS = [

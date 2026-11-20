@@ -7,6 +7,7 @@ import { processRaidScheduleAtMonthStart } from "./raidSchedule.js";
 import { RandomEvents } from "./RandomEvents.js";
 import {
   isSeasonBlessingInEffect,
+  NORTH_WIND_BLESSING_TRAIT,
   SEASON_BLESSING_MONTHLY_RECOVERY,
   SEASON_BLESSING_TRAITS
 } from "./domain/seasonBlessings.js";
@@ -898,6 +899,10 @@ export function doMonthStartProcess(v, simulationOptions = {}) {
       if (isSaltPillar(p)) return;
       if (Array.isArray(p.bodyTraits) && p.bodyTraits.includes(FOUR_LEGGED_TRAIT)) {
         v.log(`${p.name}は狼の耐寒性で凍えを免れた`);
+        return;
+      }
+      if (Array.isArray(p.bodyTraits) && p.bodyTraits.includes(NORTH_WIND_BLESSING_TRAIT)) {
+        v.log(`${p.name}は北風の加護により凍えを免れた`);
         return;
       }
 
