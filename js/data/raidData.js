@@ -1080,8 +1080,9 @@ export const RAIDER_TYPES = [
     raidPosition: "front",
     portraits: numberedPortraits("MANTICORE", 11),
     // 狼を基準に筋力・耐久・魔力を高め、魅力を大きく下げる。精神側の能力は狼と同じ。
+    // 体力は、ドライアドに代えて肉体候補を3種族に増やした亜人騎士団の難しさを、増やす前に揃える値にしている。
     ranges: {
-      hp: [110, 140],
+      hp: [160, 190],
       mp: [50, 70],
       happiness: [40, 60],
       str: [21, 26],
