@@ -35,6 +35,7 @@ import {
 import {
   ACTION_MASSAGE_FEMALE,
   ACTION_MASSAGE_MALE,
+  ACTION_PETRIFIED,
   ACTION_SALT_PILLAR,
   getActionDisplayName,
   normalizeActionForPerson,
@@ -116,7 +117,7 @@ export function handleAllVillagerJobs(village) {
 
       let roll = randInt(1, 100);
       // サボり判定
-      if (roll <= saboProb && p.action !== "休養" && p.action !== "余暇" && p.action !== "なし" && p.action !== "揺籃" && p.action !== "迎撃" && p.action !== "籠城" && p.action !== "射撃" && p.action !== "火砲" && p.action !== "罠作成" && p.action !== "療養" && p.action !== "臨終" && p.action !== ACTION_SALT_PILLAR) {
+      if (roll <= saboProb && p.action !== "休養" && p.action !== "余暇" && p.action !== "なし" && p.action !== "揺籃" && p.action !== "迎撃" && p.action !== "籠城" && p.action !== "射撃" && p.action !== "火砲" && p.action !== "罠作成" && p.action !== "療養" && p.action !== "臨終" && p.action !== ACTION_SALT_PILLAR && p.action !== ACTION_PETRIFIED) {
         doSabori(p, village);
       } else {
         doJobAction(p, village, secretTreasureFlags);
@@ -251,6 +252,9 @@ function doJobAction(p, v, secretTreasureFlags = null) {
       break;
     case ACTION_SALT_PILLAR:
       v.log(`${p.name}は塩の柱となり、動かない`);
+      break;
+    case ACTION_PETRIFIED:
+      v.log(`${p.name}は石と化し、動かない`);
       break;
     case "休養":
       doRestJob(p, v);

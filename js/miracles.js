@@ -8,14 +8,14 @@ import { canExchangeBody, doExchange } from "./exchange.js";
 import { createRandomVisitor, createRandomVisitorOfType, createVisitorGroup, isRareVisitorTypeAvailable, EXCLUSIVE_BODY_TRAITS, EXCLUSIVE_MIND_TRAITS } from "./createVillagers.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
-import { syncEffectiveStats } from "./domain/statLayers.js";
+import { syncEffectiveStats, syncSeasonBlessingStats } from "./domain/statLayers.js";
 import { recordDepartedVillager, recordMarriageHistory, recordVillagerLeaveHistory } from "./history.js";
 import { clearHopeLossTraits, DESPAIR_TRAIT, DISAPPOINTMENT_TRAIT } from "./domain/despair.js";
 import { resolveDialogueTone } from "./data/dialogue/toneProfiles.js";
 import { getBodyReturnReactionLines, getBodyExchangeSourceRaceLines, getDemihumanKnightHumanBodyLines, getDialogueLine, getSlaveTradeExchangeLines } from "./dialogue/dialogueEngine.js";
 import { BODY_EXCHANGE_REACTION_LINES } from "./data/dialogue/exchangeLines.js";
 import { getVisitorArrivalLine } from "./data/dialogue/visitorLines.js";
-import { getActiveVillagers, isSaltPillar, SALT_PILLAR_TRAIT } from "./domain/apocalypseRules.js";
+import { getActiveVillagers, getStoneBodyTrait, isSaltPillar, SALT_PILLAR_TRAIT } from "./domain/apocalypseRules.js";
 import { getRaidTableBreakdown, getSelectableRaidTables, startRaidEvent } from "./raidStart.js";
 import { getRaiderIncomingDamageMultiplier } from "./raidRules.js";
 import { completeTutorialTask } from "./tutorial.js";
@@ -305,12 +305,12 @@ function getMiracleMultiTargetIds(mid) {
 }
 
 // 癒し・酒杯が取り除くデバフ特性。選択リストの表示と効果処理で同じ並びを使う。
-const HEAL_MIRACLE_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "疫病", "産褥", "凍え"];
+const HEAL_MIRACLE_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "疫病", "産褥", "凍え", "毒"];
 const GOBLET_MIRACLE_MIND_TRAITS = ["心労", "抑鬱", DISAPPOINTMENT_TRAIT, DESPAIR_TRAIT];
-const NECTAR_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "疫病"];
+const NECTAR_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "疫病", "毒"];
 const NECTAR_MIND_TRAITS = ["心労", "抑鬱"];
 // 蛇の巻き付いた杖が解除する状態異常。襲撃の後遺症まで癒せるのはこの秘宝だけ。
-export const SERPENT_STAFF_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "疫病", "産褥", "凍え", "危篤", "隻腕", "隻眼", "古傷"];
+export const SERPENT_STAFF_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "疫病", "産褥", "凍え", "毒", "危篤", "隻腕", "隻眼", "古傷"];
 export const SERPENT_STAFF_MIND_TRAITS = ["心労", "抑鬱", DISAPPOINTMENT_TRAIT, DESPAIR_TRAIT, "トラウマ"];
 
 const MIRACLE_CONDITION_SORTS = {
@@ -322,7 +322,7 @@ const MIRACLE_CONDITION_SORTS = {
 const POSITION_MIND_TRAITS = ["捕虜", "訪問者", "襲撃者"];
 // 交換の奇跡の選択リストに出す、肉体側の状態異常。重い順に並べる。
 const EXCHANGE_MIRACLE_BODY_TRAITS = [
-  "塩の柱", "危篤", "重体", "疫病", "負傷", "臨月", "産褥", "過労", "疲労", "飢餓", "凍え", "曝露"
+  "塩の柱", "石化", "危篤", "重体", "疫病", "負傷", "臨月", "産褥", "過労", "疲労", "飢餓", "凍え", "曝露", "毒"
 ];
 // 奇跡ごとに、選択リストとプレビューへ出す情報の種類。指定がない奇跡は種族・性別・年齢だけを出す。
 const MIRACLE_TARGET_DETAIL_KINDS = {
@@ -1131,7 +1131,7 @@ export function performMiracle(village) {
             return;
           }
           if (isSaltPillar(vA) || isSaltPillar(vB)) {
-            village.log("【クピド】塩の柱状態の村人は対象外です");
+            village.log(`【クピド】${getStoneBodyTrait(isSaltPillar(vA) ? vA : vB)}状態の村人は対象外です`);
             refundMiracleMana(village, cost);
             return;
           }
@@ -1148,7 +1148,7 @@ export function performMiracle(village) {
             return;
           }
           if (isSaltPillar(vA)) {
-            village.log("【癒しの奇跡】塩の柱は治療できません");
+            village.log(`【癒しの奇跡】${getStoneBodyTrait(vA)}は治療できません`);
             refundMiracleMana(village, cost);
             return;
           }
@@ -1214,6 +1214,7 @@ export function performMiracle(village) {
           if (!village.villageTraits.includes("春")) {
             village.villageTraits.push("春");
           }
+          syncSeasonBlessingStats(village);
           village.log("【常春の奇跡】春に固定");
           showMiracleResultModal(village, "常春の奇跡", "村に穏やかな春の気配が定着しました。", village.villagers);
           break;
@@ -1441,7 +1442,8 @@ const RARE_GUEST_MIRACLE_TYPES = [
   "アラクニド",
   "エクイナ",
   "サテュロス",
-  "メナド"
+  "メナド",
+  "妖精"
 ];
 
 function rareGuestMiracle(v) {

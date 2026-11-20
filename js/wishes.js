@@ -28,7 +28,7 @@ const CHILD_BODY_TRAITS = new Set(["赤子", "幼児", "少年", "少女"]);
 const RAID_AFTEREFFECT_BODY_TRAITS = new Set(["隻腕", "隻眼", "古傷"]);
 // 願望の能力条件は、狂乱や火星の加護のような当月限りの増減を除いた永続値で見る。
 const stat = (person, key) => getPermanentStat(person, key);
-const MONSTER_RACES = new Set(["ゴブリン", "ハーピー", "スフィンクス", "ミノタウロス", "キュクロプス", "サイクロプス"]);
+const MONSTER_RACES = new Set(["ゴブリン", "ハーピー", "スフィンクス", "ミノタウロス", "キュクロプス", "サイクロプス", "ゴーゴン", "マンティコア"]);
 const RARE_RACES = new Set([
   "レア種族",
   "翼人",
@@ -41,7 +41,8 @@ const RARE_RACES = new Set([
   "サテュロス",
   "サトゥロス",
   "メナド",
-  "メナス"
+  "メナス",
+  "妖精"
 ]);
 const RESEARCH_MIND_TRAITS = new Set(["マッド", "天才肌", "学者肌", "好奇心旺盛"]);
 const WISH_REQUESTER_EXCLUDED_MIND_TRAITS = new Set(["野生", "無垢", "神聖"]);
@@ -66,9 +67,11 @@ const HUMANOID_RACES = new Set([
   "エクイナ",
   "サテュロス",
   "メナド",
-  "セントール"
+  "セントール",
+  "妖精",
+  "ゴーゴン"
 ]);
-const LONG_LIVED_RACES = new Set(["ドライアド", "ネレイド", "アルセイド", "翼人"]);
+const LONG_LIVED_RACES = new Set(["ドライアド", "ネレイド", "アルセイド", "翼人", "妖精"]);
 const PRIORITY_MODAL_SELECTORS = [
   "#actionPhaseModal",
   "#seasonChangeDialog",

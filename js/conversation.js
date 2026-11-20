@@ -25,7 +25,7 @@ import {
   normalizeFormerCaptive,
   releaseCaptive
 } from "./captives.js";
-import { isSaltPillar } from "./domain/apocalypseRules.js";
+import { getStoneBodyTrait, isSaltPillar, PETRIFIED_TRAIT } from "./domain/apocalypseRules.js";
 import { getPersonMark, openPersonMarkPicker } from "./personMarks.js";
 import {
   buyMerchantSecretTreasure,
@@ -41,6 +41,7 @@ import {
 import { findTradedSlave, freeSlave, isEnslaved, SLAVE_TRAIT } from "./domain/slaveTrade.js";
 
 const SALT_PILLAR_CONVERSATION_LINE = "………（塩の柱は黙して何も語らない）";
+const PETRIFIED_CONVERSATION_LINE = "………（石と化した体は黙して何も語らない）";
 const SEDUCTION_MIN_LUST = 18;
 const TARGET_LUST_MULTIPLIER_MAX = 1.5;
 
@@ -115,7 +116,10 @@ function openCharacterLineModal(person, { scene, key = "" }) {
 
 function createConversationStatusHtml(character) {
   if (isSaltPillar(character)) {
-    return `<p><strong></strong> ${SALT_PILLAR_CONVERSATION_LINE}</p>`;
+    const silence = getStoneBodyTrait(character) === PETRIFIED_TRAIT
+      ? PETRIFIED_CONVERSATION_LINE
+      : SALT_PILLAR_CONVERSATION_LINE;
+    return `<p><strong></strong> ${silence}</p>`;
   }
   if (isCaptive(character, theVillage)) {
     return `

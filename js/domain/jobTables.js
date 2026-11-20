@@ -15,7 +15,7 @@ import {
 } from "../raidRules.js";
 import { syncEffectiveStats } from "./statLayers.js";
 import { FOUR_LEGGED_TRAIT, IMMATURE_MIND_TRAIT, isWolf, WILD_MIND_TRAIT } from "./speciesTraits.js";
-import { isSaltPillar } from "./apocalypseRules.js";
+import { getStoneBodyTrait, isSaltPillar, PETRIFIED_TRAIT } from "./apocalypseRules.js";
 
 export const ACTION_NONE = "なし";
 export const ACTION_REST = "休養";
@@ -24,12 +24,14 @@ export const ACTION_HEAL = "療養";
 export const ACTION_LAST_MOMENTS = "臨終";
 export const ACTION_CRADLE = "揺籃";
 export const ACTION_SALT_PILLAR = "塩柱";
+// 邪眼で石と化した者の固定行動。塩柱に準じる。
+export const ACTION_PETRIFIED = "石像";
 export const ACTION_MASSAGE_MALE = "あんま男";
 export const ACTION_MASSAGE_FEMALE = "あんま女";
 export const MASSAGE_ACTIONS = [ACTION_MASSAGE_MALE, ACTION_MASSAGE_FEMALE];
 
 const TEMPORARY_ACTIONS = new Set([ACTION_REST, ACTION_LEISURE]);
-const FORCED_ACTIONS = new Set([ACTION_HEAL, ACTION_LAST_MOMENTS, ACTION_SALT_PILLAR]);
+const FORCED_ACTIONS = new Set([ACTION_HEAL, ACTION_LAST_MOMENTS, ACTION_SALT_PILLAR, ACTION_PETRIFIED]);
 const NON_PREFERRED_ACTIONS = new Set([
   ACTION_NONE,
   ACTION_REST,
@@ -37,6 +39,7 @@ const NON_PREFERRED_ACTIONS = new Set([
   ACTION_HEAL,
   ACTION_LAST_MOMENTS,
   ACTION_SALT_PILLAR,
+  ACTION_PETRIFIED,
   ACTION_DEFEND,
   ACTION_FORTIFY,
   ACTION_SHOOT,
@@ -313,6 +316,11 @@ function preservePreferredBeforeRestriction(person) {
   }
 }
 
+/** 石の体の固定行動。塩の柱は塩柱、石化は石像。 */
+export function getStoneBodyAction(person) {
+  return getStoneBodyTrait(person) === PETRIFIED_TRAIT ? ACTION_PETRIFIED : ACTION_SALT_PILLAR;
+}
+
 export function applyForcedActionRestriction(person) {
   if (!person) return { restricted: false, changed: false, reason: "" };
 
@@ -325,9 +333,10 @@ export function applyForcedActionRestriction(person) {
   const mindTraits = traitList(person, "mindTraits");
 
   if (isSaltPillar(person)) {
+    const stoneAction = getStoneBodyAction(person);
     preservePreferredBeforeRestriction(person);
-    setTables(person, [], [ACTION_SALT_PILLAR]);
-    person.action = ACTION_SALT_PILLAR;
+    setTables(person, [], [stoneAction]);
+    person.action = stoneAction;
     return {
       restricted: true,
       changed: beforePreferred !== person.preferredAction ||
@@ -335,8 +344,8 @@ export function applyForcedActionRestriction(person) {
         beforeAction !== person.action ||
         beforeJobTable !== person.jobTable.join("\u0001") ||
         beforeActionTable !== person.actionTable.join("\u0001"),
-      reason: "塩の柱",
-      action: ACTION_SALT_PILLAR
+      reason: getStoneBodyTrait(person),
+      action: stoneAction
     };
   }
 

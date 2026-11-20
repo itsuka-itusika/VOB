@@ -3,7 +3,7 @@ import { syncEffectiveStats } from "./domain/statLayers.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { GOBLIN_MODE_CAPTIVE_SOCIAL_MULTIPLIER, isGoblinMode, isGoblinRaider } from "./domain/gameMode.js";
 import { getRaiderSpeechType } from "./domain/raiderSpeechTypes.js";
-import { ACTION_SALT_PILLAR } from "./domain/jobTables.js";
+import { getStoneBodyAction } from "./domain/jobTables.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
 import { MAGIC_BARRIER_MIND_TRAIT } from "./raidRules.js";
 
@@ -136,7 +136,7 @@ export function normalizeCaptive(person) {
   person.job = ACTION_CAPTIVE;
   person.preferredAction = ACTION_CAPTIVE;
   person.jobTable = [ACTION_CAPTIVE];
-  person.action = isSaltPillar(person) ? ACTION_SALT_PILLAR : ACTION_CAPTIVE;
+  person.action = isSaltPillar(person) ? getStoneBodyAction(person) : ACTION_CAPTIVE;
   person.actionTable = [person.action];
   person.assignmentLocked = true;
   syncEffectiveStats(person);

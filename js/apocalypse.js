@@ -4,8 +4,10 @@ import { clearRaidWarningModal } from "./raidWarningModal.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import {
   APOCALYPSE_TRAIT,
+  PETRIFIED_TRAIT,
   SALT_PILLAR_DURATION_MONTHS,
   SALT_PILLAR_TRAIT,
+  getStoneBodyTrait,
   getActiveVillagers,
   isApocalypseActive,
   isSaltPillar
@@ -72,15 +74,15 @@ function getSaltPillarResidents(village) {
   return [...new Set([...(village.villagers || []), ...getCaptives(village)])].filter(isSaltPillar);
 }
 
-function refreshAfterSaltPillarRecovery(person, village) {
+function refreshAfterSaltPillarRecovery(person, village, stoneTrait = SALT_PILLAR_TRAIT) {
   syncEffectiveStats(person);
   if (isCaptive(person, village)) {
     normalizeCaptive(person);
   } else {
     refreshJobTable(person, village);
   }
-  recordApocalypsePersonalHistory(village, person, "塩の柱から元に戻った。", {
-    tags: ["塩の柱", "回復"]
+  recordApocalypsePersonalHistory(village, person, `${stoneTrait}から元に戻った。`, {
+    tags: [stoneTrait, "回復"]
   });
 }
 
@@ -480,7 +482,9 @@ function completeApocalypse(village) {
   village.apocalypseStarted = false;
   village.apocalypseStage = 0;
   village.apocalypseCleared = true;
-  const restoredSaltPillars = getSaltPillarResidents(village);
+  // 七つの災厄の終わりで解けるのは塩の柱だけ。邪眼の石化はそのまま月日を待つ。
+  const restoredSaltPillars = getSaltPillarResidents(village)
+    .filter(person => getStoneBodyTrait(person) === SALT_PILLAR_TRAIT);
   restoredSaltPillars.forEach(person => {
     person.bodyTraits = person.bodyTraits.filter(trait => trait !== SALT_PILLAR_TRAIT);
     person.saltPillarMonths = 0;
@@ -529,10 +533,13 @@ export function advanceSaltPillarMonths(village) {
   getSaltPillarResidents(village).forEach(person => {
     person.saltPillarMonths = Math.max(0, Number(person.saltPillarMonths) || 0) + 1;
     if (person.saltPillarMonths < SALT_PILLAR_DURATION_MONTHS) return;
-    person.bodyTraits = person.bodyTraits.filter(trait => trait !== SALT_PILLAR_TRAIT);
+    const stoneTrait = getStoneBodyTrait(person);
+    person.bodyTraits = person.bodyTraits.filter(trait => trait !== stoneTrait);
     person.saltPillarMonths = 0;
-    refreshAfterSaltPillarRecovery(person, village);
-    village.log(`${person.name}の塩の身体が崩れ、人の姿へ戻った。`);
+    refreshAfterSaltPillarRecovery(person, village, stoneTrait);
+    village.log(stoneTrait === PETRIFIED_TRAIT
+      ? `${person.name}の石化が解け、元の姿へ戻った。`
+      : `${person.name}の塩の身体が崩れ、人の姿へ戻った。`);
   });
 }
 

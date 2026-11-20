@@ -43,7 +43,13 @@ import {
   isPacifistFighter,
   isRaidCombatAction,
   MOUNTED_ARCHERY_CHANCE,
-  MOUNTED_ARCHERY_MIND_TRAIT
+  MOUNTED_ARCHERY_MIND_TRAIT,
+  PETRIFYING_GAZE_CHANCE,
+  PETRIFYING_GAZE_TRAIT,
+  POISON_COMBAT_TURN_DAMAGE,
+  POISON_TAIL_CHANCE,
+  POISON_TAIL_TRAIT,
+  POISON_TRAIT
 } from "./raidRules.js";
 import { refreshJobTable } from "./domain/jobTables.js";
 import { HARD_AFTEREFFECT_CHANCE, HARD_SEVERE_TO_FATAL_RATE, isHardMode } from "./domain/difficulty.js";
@@ -51,7 +57,7 @@ import { syncEffectiveStats } from "./domain/statLayers.js";
 import { updateUI } from "./ui.js";
 import { applyRaidFriendshipResults, recordRaidFriendshipDamage, startRaidFriendshipTracking } from "./relationships.js";
 import { handleApocalypseRaidResult } from "./apocalypse.js";
-import { isSaltPillar } from "./domain/apocalypseRules.js";
+import { getStoneBodyTrait, isSaltPillar, PETRIFIED_TRAIT } from "./domain/apocalypseRules.js";
 import { grantTitle } from "./titles.js";
 import { addVillageRecord } from "./records.js";
 import { checkWishCompletion } from "./wishes.js";
@@ -610,7 +616,9 @@ function applyRaidDamage(target, damage) {
 }
 
 function addSaltPillarShatterLog(result, target) {
-  addRaidActionLog(result, `【塩の柱】${target.name}の塩の柱は砕け散った！`);
+  const stoneTrait = getStoneBodyTrait(target);
+  const body = stoneTrait === PETRIFIED_TRAIT ? "石の体" : "塩の柱";
+  addRaidActionLog(result, `【${stoneTrait}】${target.name}の${body}は砕け散った！`);
 }
 
 function scheduleDefeatedEnemyDeparture(enemy) {
@@ -1019,8 +1027,11 @@ function doOneCombatAction(action, village) {
 
   if (target.hp<=0) {
     handleCombatDefeat(target, village, result);
-  } else if (!isRanged && canCounterAttack(target, village)) {
-    doCounterAttack(target, actor, village, result);
+  } else if (!isRanged) {
+    const petrified = applyMeleeHitEffects(actor, target, village, result);
+    if (!petrified && canCounterAttack(target, village)) {
+      doCounterAttack(target, actor, village, result);
+    }
   }
   return result;
 }
@@ -1171,7 +1182,66 @@ function doCounterAttack(counterActor, target, village, result) {
   if (saltPillarShattered) addSaltPillarShatterLog(result, target);
   if (target.hp<=0) {
     handleCombatDefeat(target, village, result);
+  } else {
+    applyMeleeHitEffects(counterActor, target, village, result);
   }
+}
+
+/**
+ * 近接攻撃（反撃を含む）が当たって相手が立っているときの追加効果。
+ * 邪眼は相手を石化させて戦闘から外し、毒尾は毒を与える。石化させたら true を返す。
+ */
+function applyMeleeHitEffects(attacker, target, village, result) {
+  if (!target || target.hp <= 0) return false;
+  if (hasTrait(attacker, PETRIFYING_GAZE_TRAIT) && canBePetrified(target) &&
+    Math.random() < PETRIFYING_GAZE_CHANCE) {
+    petrifyRaidUnit(target, village, result);
+    return true;
+  }
+  if (hasTrait(attacker, POISON_TAIL_TRAIT) && !hasTrait(target, POISON_TRAIT) &&
+    Math.random() < POISON_TAIL_CHANCE) {
+    target.bodyTraits.push(POISON_TRAIT);
+    addRaidActionLog(result, `　　→ ${target.name}は毒尾に刺され、毒に冒された！`);
+  }
+  return false;
+}
+
+// 黙示録の四騎士は肉体交換と同じく、邪眼でも石にならない。
+function canBePetrified(target) {
+  return !target.exchangeImmune && !isSaltPillar(target);
+}
+
+/**
+ * 石化させて戦闘から外す。石の体は塩の柱に準じ、3か月で元に戻る。
+ * 襲撃者は倒した者と同じく撃退に数え、村人は行動できない者として戦列に残す。
+ */
+function petrifyRaidUnit(target, village, result) {
+  target.bodyTraits.push(PETRIFIED_TRAIT);
+  target.saltPillarMonths = 0;
+  addRaidActionLog(result, `　　→ ${target.name}は邪眼に睨まれ、石と化した！`);
+  addRaidDepartureAnimation(result, target, "石化");
+  if (isEnemyUnit(target, village)) {
+    target.hp = 0;
+    recordDefeatedRaidEnemy(village, target);
+    scheduleDefeatedEnemyDeparture(target);
+    return;
+  }
+  syncEffectiveStats(target);
+  refreshJobTable(target, village);
+}
+
+/** 戦闘ターンの終わりに、毒に冒された者の体力を削る。倒れた者は通常の戦闘と同じく離脱する。 */
+function applyPoisonAtTurnEnd(village) {
+  const result = createRaidActionResult();
+  [...getVillageCombatants(village), ...getAliveEnemies(village)]
+    .filter(unit => unit.hp > 0 && hasTrait(unit, POISON_TRAIT))
+    .forEach(unit => {
+      applyRaidDamage(unit, POISON_COMBAT_TURN_DAMAGE);
+      addRaidActionLog(result, `【毒】${unit.name}は毒に蝕まれ、体力-${POISON_COMBAT_TURN_DAMAGE}`);
+      if (unit.hp <= 0) handleCombatDefeat(unit, village, result);
+    });
+  clearPendingRaidDepartures(village);
+  return result;
 }
 
 function handleCombatDefeat(target, village, result) {
@@ -1252,6 +1322,7 @@ function finalizeCombatTurn(village) {
   let logDiv=document.getElementById("raidLogArea");
 
   clearAllRaidStunEffects(village);
+  appendRaidActionLogs(applyPoisonAtTurnEnd(village).logs);
 
   let combatants = getVillageCombatants(village);
   let enemies   = getAliveEnemies(village);
@@ -1497,6 +1568,9 @@ function fightRaidWithoutModal(village) {
       if (getVillageCombatants(village).length === 0) return lose("戦闘部隊全滅");
     }
     clearAllRaidStunEffects(village);
+    applyPoisonAtTurnEnd(village);
+    if (getVillageCombatants(village).length === 0) return lose("戦闘部隊全滅");
+    if (getAliveEnemies(village).length === 0) return win("敵全滅");
     village.raidTurnCount++;
   }
   // 迎撃画面なら撤退を選ぶ場面。
@@ -1986,7 +2060,9 @@ const RAID_BADGE_TRAITS = [
   { trait: "戦慣れ", label: "戦慣れ", title: "与ダメージ1.1倍" },
   { trait: "非戦主義", label: "非戦", title: "攻撃も反撃も行わない" },
   { trait: "不殺", label: "不殺", title: "攻撃も反撃も行わない" },
-  { trait: "光輪", label: "光輪", title: "聖なる攻撃（裁きの光など）を無効化する" }
+  { trait: "光輪", label: "光輪", title: "聖なる攻撃（裁きの光など）を無効化する" },
+  { trait: PETRIFYING_GAZE_TRAIT, label: "邪眼", title: `近接攻撃（反撃を含む）が当たると、${Math.round(PETRIFYING_GAZE_CHANCE * 100)}%で相手を石化させて戦闘から外す` },
+  { trait: POISON_TAIL_TRAIT, label: "毒尾", title: `近接攻撃（反撃を含む）が当たると、${Math.round(POISON_TAIL_CHANCE * 100)}%で相手に毒を与える` }
 ];
 
 function appendRaidUnitNote(meta, text) {
@@ -2057,6 +2133,13 @@ function appendRaidNameCell(row, unit, village = null) {
     blocked.textContent = blockingTrait;
     blocked.title = `${blockingTrait}のため戦えない`;
     meta.appendChild(blocked);
+  }
+  if (hasTrait(unit, POISON_TRAIT)) {
+    const poisoned = document.createElement("span");
+    poisoned.className = "raid-unit-blocked";
+    poisoned.textContent = POISON_TRAIT;
+    poisoned.title = `戦闘ターンの終わりごとに体力-${POISON_COMBAT_TURN_DAMAGE}`;
+    meta.appendChild(poisoned);
   }
 
   // 戦闘に効く特性はバッジで見せる。行動バッジと区別できる配色にする。

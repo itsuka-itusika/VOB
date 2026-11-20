@@ -29,6 +29,7 @@ import {
 import { MERCHANT_SECRET_TREASURE_CHANCE } from "./secretTreasureEvents.js";
 import { getRaiderTypeByType } from "./data/raidData.js";
 import { getRaiderSpeechType } from "./domain/raiderSpeechTypes.js";
+import { applyFairyBlessing, FAIRY_RACE, SEASON_BLESSING_TRAITS } from "./domain/seasonBlessings.js";
 import {
   GOBLIN_ARCHER_VISITOR_CHANCE,
   GOBLIN_ARCHER_VISITOR_MIN_STAGE_INDEX,
@@ -270,6 +271,36 @@ const RARE_VISITOR_TYPES = [
   }
 ];
 
+// 四季を司る小柄な妖精。通常の訪問者表には入らず、稀人の奇跡と奴隷商人の奴隷としてだけ訪れる。
+// 通常の女性村人を基準に、魔力・魅力・器用・好色を高く、筋力・耐久・勤勉・勇気を低くする。
+// 顔グラフィックは、生まれ持った四風の加護に合わせて選ぶ（js/domain/seasonBlessings.js）。
+const FAIRY_VISITOR_TYPE = {
+  type: FAIRY_RACE,
+  displayType: "旅人",
+  forcedSex: "女",
+  ageRange: { min: 18, max: 25 },
+  params: {
+    job: "旅人",
+    action: "訪問",
+    race: FAIRY_RACE
+  },
+  ranges: {
+    hp: [55, 80],
+    mp: [70, 95],
+    happiness: [65, 90],  // 気まぐれで、たいてい機嫌がいい
+    str: [2, 8],
+    vit: [2, 8],
+    dex: [12, 28],
+    mag: [20, 30],
+    chr: [24, 30],
+    int: [3, 16],
+    ind: [2, 10],
+    cou: [1, 8],
+    sexdr: [12, 28]
+  },
+  forcedBodyTraits: ["飛行", "小柄"]
+};
+
 const EQUINA_VISITOR_TYPE = {
   type: "エクイナ",
   displayTypes: [
@@ -436,7 +467,7 @@ const GOAT_PAIR_VISITOR_TYPES = new Map([
   [MAENAD_VISITOR_TYPE.type, MAENAD_VISITOR_TYPE]
 ]);
 
-const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成", "人面獣身"]);
+const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成", "人面獣身", ...SEASON_BLESSING_TRAITS]);
 const NO_AGING_RACES = new Set(["翼人", "アルセイド", "ネレイド", "ドライアド", "スフィンクス"]);
 
 // 名前の予約は村の状態から都度導く。訪問者・襲撃者・捕虜は去れば解放され、
@@ -1302,6 +1333,8 @@ function resolveForcedVisitorType(forcedType, village = null) {
   if (forcedType === RARE_VISITOR_TYPE) return selectRareVisitorType(village);
 
   if (forcedType === EQUINA_VISITOR_TYPE.type) return EQUINA_VISITOR_TYPE;
+  // レア種族と同じく、交換後も訪問者の会話キーを保つ。奴隷の妖精には付けない。
+  if (forcedType === FAIRY_VISITOR_TYPE.type) return { ...FAIRY_VISITOR_TYPE, rareVisitorType: FAIRY_RACE };
   if (forcedType === GOBLIN_VISITOR_TYPE.type) return selectGoblinVisitorType(village);
   if (GOAT_PAIR_VISITOR_TYPES.has(forcedType)) return GOAT_PAIR_VISITOR_TYPES.get(forcedType);
 
@@ -1567,6 +1600,10 @@ function buildVisitorFromType(visitorType, existingNames = [], village = null) {
   visitor.portraitFile = Array.isArray(visitorType.portraits) && visitorType.portraits.length > 0
     ? randChoice(visitorType.portraits)
     : selectPortraitByCharacter(visitor);
+  // 妖精は四風の加護を1つ持ち、顔もその加護の季節に合わせる。
+  if (visitor.race === FAIRY_RACE) {
+    applyFairyBlessing(visitor);
+  }
 
   // 精神性別が設定されていない場合は肉体性別と同じに設定
   if (!visitor.spiritSex) {
@@ -1597,6 +1634,7 @@ const SLAVE_CONDITION_RANGES = {
 
 function getSlaveBaseType(slaveType) {
   if (slaveType === EQUINA_VISITOR_TYPE.type) return EQUINA_VISITOR_TYPE;
+  if (slaveType === FAIRY_VISITOR_TYPE.type) return FAIRY_VISITOR_TYPE;
   const rareEntry = RARE_VISITOR_TYPES.find(entry => entry.type === slaveType);
   if (rareEntry) return rareEntry.visitor;
 

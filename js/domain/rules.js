@@ -18,6 +18,7 @@ export function isRestrictedNoActionVillager(person) {
 
   return bodyTraits.includes("危篤") ||
     bodyTraits.includes("塩の柱") ||
+    bodyTraits.includes("石化") ||
     hasInfantMind(person) ||
     mindTraits.includes("訪問者") ||
     mindTraits.includes("襲撃者") ||

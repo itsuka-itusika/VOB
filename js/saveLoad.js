@@ -4,7 +4,7 @@ import { normalizeGameMode } from "./domain/gameMode.js";
 import { Village, Villager } from "./classes.js";
 import { determineSpeechType } from "./createVillagers.js";
 import { ACTION_NONE, isPreferredActionCandidate, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
-import { getPermanentStat, hydrateStatLayersFromObject, syncEffectiveStats } from "./domain/statLayers.js";
+import { getPermanentStat, hydrateStatLayersFromObject, syncEffectiveStats, syncSeasonBlessingStats } from "./domain/statLayers.js";
 import { syncGoblinSpeciesTraits, syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
 import { normalizePastPortraitFiles } from "./domain/portraitHistory.js";
 import { backfillFoundingHistoryPeople, createArchiveGapHistoryEvent, HISTORY_EVENT_TYPES, normalizeHistoryEvents } from "./history.js";
@@ -642,6 +642,8 @@ function convertObjectToVillage(dataObj) {
   finalizePersonIds(v, dataObj);
   // 人物IDが揃ったあとで、開村の記録に最初の村人を補う。
   backfillFoundingHistoryPeople(v);
+  // 妖精の加護は季節で魔力が変わるため、読み込んだ季節で引き直す。
+  syncSeasonBlessingStats(v);
 
   return v;
 }

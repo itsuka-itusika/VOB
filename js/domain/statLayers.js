@@ -3,6 +3,13 @@ import { ABILITY_STATS, MENTAL_ABILITY_STATS, PHYSICAL_ABILITY_STATS } from "./p
 import { evaluateTitles } from "../titles.js";
 import { IMMATURE_MIND_TRAIT, OLD_WOLF_TRAIT, YOUNG_WOLF_TRAIT } from "./speciesTraits.js";
 import {
+  hasSeasonBlessing,
+  isSeasonBlessingInEffect,
+  SEASON_BLESSING_MAG_RATE,
+  SEASON_BLESSING_TRAITS,
+  setBlessingSeasonTraits
+} from "./seasonBlessings.js";
+import {
   VILLAGE_ROLE_DOCTOR,
   VILLAGE_ROLE_HEADMAN,
   VILLAGE_ROLE_LIBRARIAN,
@@ -13,7 +20,7 @@ import {
 export const STAT_LAYER_VERSION = 2;
 
 const ZERO_STAT_MAP = Object.freeze(Object.fromEntries(ABILITY_STATS.map(stat => [stat, 0])));
-const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成", "人面獣身"]);
+const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成", "人面獣身", ...SEASON_BLESSING_TRAITS]);
 
 const PERMANENT_BODY_TRAIT_ADDS = Object.freeze({
   "巨躯": { str: 10 },
@@ -56,6 +63,8 @@ const TEMP_BODY_TRAIT_EFFECTS = Object.freeze({
   // 襲撃の後遺症。特性がある間だけ実効値へ掛かる。
   "隻腕": { mul: { str: 0.5 } },
   "隻眼": { mul: { dex: 0.5 } },
+  // ゴーゴンは普段から目隠しで邪眼を封じている。
+  "目隠し": { mul: { dex: 0.2 } },
   "凍え": { mul: { str: 0.8, vit: 0.8, dex: 0.8 } },
   "疲労": { mul: { str: 0.8, vit: 0.8, dex: 0.8 } },
   "過労": { mul: { str: 0.25, vit: 0.25, dex: 0.25 } },
@@ -139,6 +148,8 @@ function getTemporaryEffect(person, { includeLegacyAres = false } = {}) {
   bodyTraits.forEach(trait => applyEffect(bodyEffects[trait]));
   mindTraits.forEach(trait => applyEffect(TEMP_MIND_TRAIT_EFFECTS[trait]));
   applyEffect(getPortraitEffect(person));
+  // 妖精の四風の加護は、加護の季節の間だけ魔力を高める。
+  if (isSeasonBlessingInEffect(person)) mul.mag *= SEASON_BLESSING_MAG_RATE;
   return { mul, add };
 }
 
@@ -292,4 +303,16 @@ export function applyGenerationBaseTraitBonuses(person) {
   if (Array.isArray(person?.mindTraits) && person.mindTraits.includes("本の虫")) {
     addBaseStat(person, "int", 8);
   }
+}
+
+/**
+ * 季節が変わったときに呼ぶ。加護の判定に使う季節を更新し、加護を持つ者の能力を引き直す。
+ */
+export function syncSeasonBlessingStats(village) {
+  setBlessingSeasonTraits(village?.villageTraits);
+  ["villagers", "visitors", "captives", "raidEnemies"].forEach(key => {
+    (Array.isArray(village?.[key]) ? village[key] : [])
+      .filter(hasSeasonBlessing)
+      .forEach(person => syncEffectiveStats(person));
+  });
 }

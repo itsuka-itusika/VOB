@@ -23,7 +23,7 @@ import {
 import { clampValue, round3 } from "./util.js";
 import { applyPortraitToElement } from "./data/portraitAtlas.js";
 import { updateUI } from "./ui.js";
-import { addAcquiredStat, syncEffectiveStats } from "./domain/statLayers.js";
+import { addAcquiredStat, syncEffectiveStats, syncSeasonBlessingStats } from "./domain/statLayers.js";
 import { hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { MESSENGER_PASS_SECRET_TREASURE_ID } from "./data/tutorialData.js";
 import { getCaptives } from "./captives.js";
@@ -42,7 +42,7 @@ import { createTargetLabelHeader } from "./targetFilterModal.js";
 import { canUseClothoSkeinOn, openClothoSkeinModal } from "./clothoSkein.js";
 
 const SEASON_TRAITS_TO_REMOVE = ["夏", "秋", "冬", "冷夏", "飛蝗", "厳冬"];
-const BAD_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "凍え", "疫病", "産褥", "危篤"];
+const BAD_BODY_TRAITS = ["負傷", "重体", "疲労", "過労", "飢餓", "凍え", "疫病", "産褥", "毒", "危篤"];
 const BAD_MIND_TRAITS = ["心労", "抑鬱"];
 export const PINECONE_STAFF_SECRET_TREASURE_ID = "pinecone_staff";
 export const DRYAD_FRUIT_SECRET_TREASURE_ID = "dryad_fruit";
@@ -250,6 +250,7 @@ function applyEverSpring(village) {
   village.villageTraits = (village.villageTraits || []).filter(trait => !SEASON_TRAITS_TO_REMOVE.includes(trait));
   village.apocalypseLocustMonths = null;
   if (!village.villageTraits.includes("春")) village.villageTraits.push("春");
+  syncSeasonBlessingStats(village);
   village.log("【秘宝】冥王妃の神像を使いました。村に常春の気配が定着しました");
   showSecretTreasureResult(village, "冥王妃の神像", "村に穏やかな春の気配が定着しました。", getVillagers(village));
 }
@@ -465,7 +466,7 @@ export const SECRET_TREASURES = [
   {
     id: "ambrosia",
     name: "アンブロシア",
-    desc: "指定した村人1名の体力を100にし、負傷・重体・産褥などの状態異常を解除して行動可能にする。危篤は解除できない。",
+    desc: "指定した村人1名の体力を100にし、負傷・重体・産褥・毒などの状態異常を解除して行動可能にする。危篤は解除できない。",
     sellPrice: SECRET_TREASURE_SELL_PRICES.ambrosia,
     target: "villager",
     targetDetailKind: "body",
@@ -478,7 +479,7 @@ export const SECRET_TREASURES = [
   {
     id: "nectar",
     name: "ネクタル",
-    desc: "指定した村人1名の体力とメンタルを40回復し、負傷・重体・疲労・過労・疫病・心労・抑鬱を解除する。",
+    desc: "指定した村人1名の体力とメンタルを40回復し、負傷・重体・疲労・過労・疫病・毒・心労・抑鬱を解除する。",
     sellPrice: SECRET_TREASURE_SELL_PRICES.nectar,
     target: "villager",
     targetDetailKind: "nectar",
@@ -486,7 +487,7 @@ export const SECRET_TREASURES = [
       target.hp = clampValue((Number(target.hp) || 0) + 40, 0, 100);
       target.mp = clampValue((Number(target.mp) || 0) + 40, 0, 100);
       const recovered = restoreBadStatus(target, village, {
-        includeBodyTraits: ["負傷", "重体", "疲労", "過労", "疫病"],
+        includeBodyTraits: ["負傷", "重体", "疲労", "過労", "疫病", "毒"],
         includeMindTraits: ["心労", "抑鬱"]
       });
       village.log(`【秘宝】ネクタルを${target.name}に使いました。体力+40、メンタル+40${recovered.length ? `、${recovered.join("・")}を解除` : ""}`);
@@ -509,7 +510,7 @@ export const SECRET_TREASURES = [
   {
     id: "serpent_staff",
     name: "蛇の巻き付いた杖",
-    desc: "指定した村人1名の負傷・重体・産褥・疫病・危篤・失望・絶望などの状態異常と、襲撃の後遺症である隻腕・隻眼・古傷・トラウマを解除し、体力・メンタルが33以下なら34まで回復する。",
+    desc: "指定した村人1名の負傷・重体・産褥・疫病・毒・危篤・失望・絶望などの状態異常と、襲撃の後遺症である隻腕・隻眼・古傷・トラウマを解除し、体力・メンタルが33以下なら34まで回復する。",
     sellPrice: SECRET_TREASURE_SELL_PRICES.serpent_staff,
     target: "villager",
     targetDetailKind: "serpentStaff",

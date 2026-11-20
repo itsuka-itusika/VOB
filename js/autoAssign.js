@@ -5,6 +5,7 @@ import {
   ACTION_LEISURE,
   ACTION_MASSAGE_FEMALE,
   ACTION_MASSAGE_MALE,
+  ACTION_PETRIFIED,
   ACTION_SALT_PILLAR,
   isTemporaryAction,
   refreshJobTable,
@@ -426,7 +427,7 @@ function chooseAssignment(person, village, context) {
   const currentPreferred = person.preferredAction ||
     (preferredTable.includes(person.job) ? person.job : JOB_NONE);
 
-  if (actionTable.length === 1 && [ACTION_CRADLE, JOB_HEAL, JOB_LAST_MOMENTS, ACTION_SALT_PILLAR].includes(actionTable[0])) {
+  if (actionTable.length === 1 && [ACTION_CRADLE, JOB_HEAL, JOB_LAST_MOMENTS, ACTION_SALT_PILLAR, ACTION_PETRIFIED].includes(actionTable[0])) {
     return {
       preferredAction: actionTable[0] === ACTION_CRADLE ? ACTION_CRADLE : currentPreferred,
       action: actionTable[0]

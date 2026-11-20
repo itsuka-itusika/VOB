@@ -83,7 +83,7 @@ export const CONVERSATION_PRIORITY = {
 };
 
 const SEASON_TRAITS = ["春", "夏", "秋", "冬"];
-const NON_HUMANOID_EXCHANGE_RACES = new Set(["狼", "スフィンクス"]);
+const NON_HUMANOID_EXCHANGE_RACES = new Set(["狼", "スフィンクス", "マンティコア"]);
 
 const BODY_CONDITION_CANDIDATES = [
   { trait: "危篤", scene: "condition", key: "critical", priority: CONVERSATION_PRIORITY.CRITICAL },

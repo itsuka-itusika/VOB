@@ -30,6 +30,7 @@ const RAID_COMMON_UNABLE_MIND_TRAITS = ["無垢", "萌芽", "襲撃者", "訪問
 const RAID_DEFEND_UNABLE_MIND_TRAITS = [...RAID_COMMON_UNABLE_MIND_TRAITS, "思春期", "トラウマ"];
 const RAID_BODY_BLOCK_REASONS = [
   "塩の柱",
+  "石化",
   "赤子",
   YOUNG_WOLF_TRAIT,
   "危篤",
@@ -47,6 +48,15 @@ export function getRaidBlockingBodyTrait(person) {
 
 const RAID_TRIPLE_DAMAGE_BODY_TRAITS = ["赤子", YOUNG_WOLF_TRAIT, "危篤", "重体"];
 const RAID_DOUBLE_DAMAGE_BODY_TRAITS = ["疫病", "負傷", "過労", "産褥"];
+// 近接攻撃（反撃を含む）が当たったときの、種族固有の追加効果。
+// ゴーゴンの邪眼は相手を石化させて戦闘から外し、マンティコアの毒尾は毒を与える。
+export const PETRIFYING_GAZE_TRAIT = "邪眼";
+export const PETRIFYING_GAZE_CHANCE = 0.25;
+export const POISON_TAIL_TRAIT = "毒尾";
+export const POISON_TAIL_CHANCE = 0.4;
+// 毒は戦闘ターンの終わりごとに体力を削る。月初の分は js/events.js が扱う。
+export const POISON_TRAIT = "毒";
+export const POISON_COMBAT_TURN_DAMAGE = 10;
 // 魔力の膜で身を守る精神特性。受けるダメージを減らす。
 export const MAGIC_BARRIER_MIND_TRAIT = "魔法障壁";
 export const MAGIC_BARRIER_INCOMING_DAMAGE_MULTIPLIER = 0.8;
@@ -134,6 +144,7 @@ export function getRaidActionSkipMessage(person, action = "戦闘", options = {}
   const reason = getRaidActionBlockReason(person, action, options);
   const messages = {
     "塩の柱": `${name}は塩の柱と化した身体を動かせず、行動できない。`,
+    "石化": `${name}は石と化した身体を動かせず、行動できない。`,
     "赤子": `${name}は赤子の身体では戦えず、泣き声を上げた。`,
     [YOUNG_WOLF_TRAIT]: `${name}はまだ幼く、身を伏せて戦いをやり過ごした。`,
     "危篤": `${name}は危篤状態で身動きが取れない。`,

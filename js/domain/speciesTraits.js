@@ -7,6 +7,10 @@ export const YOUNG_WOLF_TRAIT = "幼狼";
 export const IMMATURE_MIND_TRAIT = "未成熟";
 export const OLD_WOLF_TRAIT = "老狼";
 export const SHORT_BODY_TRAIT = "短躯";
+// 妖精の小さな体。短躯と同じく、食料・冬資材の消費を4にする。
+// 人間にも同名の体格特性（直接補正なし）があるため、効果は妖精の体の小柄に限る。
+export const SMALL_BODY_TRAIT = "小柄";
+export const FAIRY_RACE = "妖精";
 
 function ensureTraitArray(person, key) {
   if (!Array.isArray(person[key])) person[key] = [];
@@ -31,6 +35,11 @@ export function isWolf(person) {
 
 export function isGoblin(person) {
   return person?.race === GOBLIN_RACE;
+}
+
+export function hasFairySmallBody(person) {
+  return person?.race === FAIRY_RACE &&
+    Array.isArray(person?.bodyTraits) && person.bodyTraits.includes(SMALL_BODY_TRAIT);
 }
 
 export function countsTowardPopulation(person) {

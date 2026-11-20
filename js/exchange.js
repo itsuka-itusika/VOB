@@ -7,7 +7,7 @@ import { isOriginalBodyPortrait, rememberCurrentPortrait } from "./domain/portra
 import { recordBodyExchangeHistory } from "./history.js";
 import { evaluateTitles } from "./titles.js";
 import { isCaptive, normalizeCaptive } from "./captives.js";
-import { SALT_PILLAR_TRAIT, isSaltPillar } from "./domain/apocalypseRules.js";
+import { isSaltPillar } from "./domain/apocalypseRules.js";
 
 const RAID_JOBS = ["野盗", "ゴブリン", "狼", "キュクロプス", "ハーピー"];
 
@@ -19,9 +19,9 @@ function cloneNullableObject(value) {
   return value == null ? null : { ...value };
 }
 
+// 塩の柱・石化の経過月数は、石の体とともに移る。
 function getSaltPillarMonths(person) {
-  const bodyTraits = Array.isArray(person?.bodyTraits) ? person.bodyTraits : [];
-  return bodyTraits.includes(SALT_PILLAR_TRAIT)
+  return isSaltPillar(person)
     ? Math.max(0, Number(person?.saltPillarMonths) || 0)
     : 0;
 }

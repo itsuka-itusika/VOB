@@ -22,6 +22,7 @@ import {
   DRYAD_PORTRAIT_FILES,
   EQUINA_PORTRAIT_FILES,
   GOBLIN_PORTRAIT_FILES,
+  GORGON_PORTRAIT_FILES,
   HARPY_PORTRAIT_FILES,
   MAENAD_PORTRAIT_FILES,
   NEREID_PORTRAIT_FILES,
@@ -38,10 +39,11 @@ import { addRelationship, checkHasRelationship, entryMatchesPerson, getRelations
 import { getDialogueLine } from "./dialogue/dialogueEngine.js";
 import { isSaltPillar } from "./domain/apocalypseRules.js";
 import { isCaptive } from "./captives.js";
+import { applyFairyBlessing, copySeasonBlessing, FAIRY_RACE } from "./domain/seasonBlessings.js";
 
-const HUMANOID_RACES = new Set(["人間", "ゴブリン", "ハーピー", "半神", "キュクロプス", "ミノタウロス", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド", "エクイナ", "サテュロス", "メナド", "セントール"]);
-const FEMALE_FIXED_RACES = new Set(["ハーピー", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド", "エクイナ", "メナド"]);
-const LONG_LIVED_RACES = new Set(["ドライアド", "ネレイド", "アルセイド", "翼人"]);
+const HUMANOID_RACES = new Set(["人間", "ゴブリン", "ハーピー", "半神", "キュクロプス", "ミノタウロス", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド", "エクイナ", "サテュロス", "メナド", "セントール", "妖精", "ゴーゴン"]);
+const FEMALE_FIXED_RACES = new Set(["ハーピー", "翼人", "アルセイド", "ネレイド", "ドライアド", "アラクニド", "エクイナ", "メナド", "妖精", "ゴーゴン"]);
+const LONG_LIVED_RACES = new Set(["ドライアド", "ネレイド", "アルセイド", "翼人", "妖精"]);
 const RACE_BODY_TRAITS = {
   "ゴブリン": ["短躯"],
   "翼人": ["飛行", "光輪"],
@@ -56,7 +58,10 @@ const RACE_BODY_TRAITS = {
   "エクイナ": ["健脚"],
   "サテュロス": ["山羊角", "通る声"],
   "メナド": ["山羊角", "澄んだ声"],
-  "セントール": ["半人半馬"]
+  "セントール": ["半人半馬"],
+  // 妖精の四風の加護は1つだけ選ぶため、applyRaceBodyTraits で付ける。
+  "妖精": ["飛行", "小柄"],
+  "ゴーゴン": ["蛇髪", "邪眼", "目隠し"]
 };
 const CHILD_ADULT_PORTRAITS_BY_RACE = new Map([
   ["ゴブリン", GOBLIN_PORTRAIT_FILES],
@@ -71,6 +76,7 @@ const CHILD_ADULT_PORTRAITS_BY_RACE = new Map([
   ["サテュロス", SATYR_PORTRAIT_FILES],
   ["メナド", MAENAD_PORTRAIT_FILES],
   ["セントール", CENTAUR_PORTRAIT_FILES],
+  ["ゴーゴン", GORGON_PORTRAIT_FILES],
   ["狼", Array.from({ length: 6 }, (_, index) => `WOLF${index + 1}.png`)]
 ]);
 const PHYSICAL_STATS = ["str", "vit", "dex", "mag", "chr"];
@@ -259,11 +265,15 @@ function applyInheritedMindTraits(child, traits) {
 function applyRaceBodyTraits(character) {
   (RACE_BODY_TRAITS[normalizeChildRace(character?.race)] || [])
     .forEach(trait => addUnique(character.bodyTraits, trait));
+  // 加護と、加護に合う顔を選ぶ。子の顔は setChildPortrait が成長段階に合わせて置き直す。
+  if (normalizeChildRace(character?.race) === FAIRY_RACE) applyFairyBlessing(character);
   syncWolfSpeciesTraits(character);
   syncEffectiveStats(character);
 }
 
 function selectAdultPortraitForChild(child, adult) {
+  // 妖精の顔は加護で決まり、applyRaceBodyTraits で選び済み。
+  if (normalizeChildRace(child?.race) === FAIRY_RACE) return adult.portraitFile;
   const portraits = CHILD_ADULT_PORTRAITS_BY_RACE.get(normalizeChildRace(child?.race));
   return Array.isArray(portraits) && portraits.length > 0
     ? randChoice(portraits)
@@ -543,6 +553,7 @@ function buildAdultTemplate(child, potentialStats) {
   assignBodyMindTraits(adult);
   adult.bodyTraits = removeTraits(adult.bodyTraits, ["中年", "老人"]);
   adult.mindTraits = removeTraits(adult.mindTraits, CHILD_MIND_TRAITS);
+  copySeasonBlessing(child, adult);
   applyRaceBodyTraits(adult);
   assignHobby(adult);
   adult.portraitFile = selectAdultPortraitForChild(child, adult);
@@ -1208,6 +1219,8 @@ function giveTwinBirth(village, mother, data, twinType) {
     // 同じ身体に育つため、大人の身体特性と顔も1人目にそろえる。
     second.adultBodyTraits = [...(first.adultBodyTraits || [])];
     second.adultPortraitFile = first.adultPortraitFile;
+    copySeasonBlessing(first, second);
+    syncEffectiveStats(second);
   }
 
   const spouse = getBirthSpouse(mother, data, village);

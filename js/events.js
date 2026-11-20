@@ -6,6 +6,11 @@ import { createRandomVillager, createRandomVisitor, createVisitorGroup } from ".
 import { processRaidScheduleAtMonthStart } from "./raidSchedule.js";
 import { RandomEvents } from "./RandomEvents.js";
 import {
+  isSeasonBlessingInEffect,
+  SEASON_BLESSING_MONTHLY_RECOVERY,
+  SEASON_BLESSING_TRAITS
+} from "./domain/seasonBlessings.js";
+import {
   recordCriticalHistory,
   recordDepartedVillager,
   recordEpidemicHistory,
@@ -35,7 +40,7 @@ import {
 } from "./domain/jobTables.js";
 import { addStoredResource } from "./domain/resourceLimits.js";
 import { getVisitorLimit, hasActiveBuildingFlag } from "./domain/buildingState.js";
-import { syncEffectiveStats } from "./domain/statLayers.js";
+import { syncEffectiveStats, syncSeasonBlessingStats } from "./domain/statLayers.js";
 import { getBalanceSimulationOptions } from "./balance/simulationOptions.js";
 import { FOUR_LEGGED_TRAIT, isWolf, OLD_WOLF_TRAIT, syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
 import {
@@ -70,7 +75,7 @@ import { showRandomEventModal } from "./randomEventModal.js";
 
 const OPENING_RAID_GRACE_YEAR = 1195;
 const OPENING_RAID_GRACE_LAST_MONTH = 6;
-const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成", "人面獣身"]);
+const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成", "人面獣身", ...SEASON_BLESSING_TRAITS]);
 
 const TRAIT_INJURED = "負傷";
 const TRAIT_SERIOUS_INJURY = "重体";
@@ -80,7 +85,7 @@ const TRAIT_EXPOSURE = "曝露";
 const VILLAGE_TRAIT_CLEANLINESS = "清浄";
 const CLEANLINESS_DURATION_MONTHS = 3;
 const BATTLE_DEBUG_BODY_TRAITS_TO_REMOVE = new Set([
-  "負傷", "重体", "危篤", "疲労", "過労", "飢餓", "凍え", "疫病", "曝露", "産褥"
+  "負傷", "重体", "危篤", "疲労", "過労", "飢餓", "凍え", "疫病", "曝露", "産褥", "毒"
 ]);
 const BATTLE_DEBUG_MIND_TRAITS_TO_REMOVE = new Set([
   "心労", "抑鬱", "失望", "絶望", "狂乱"
@@ -164,6 +169,35 @@ function processOldWoundAches(village) {
 
     person.hp = Math.max(1, (Number(person.hp) || 0) - 20);
     village.log(`${person.name}の古傷がいたむ 体力-20`);
+  });
+}
+
+// マンティコアの毒尾で受けた毒は自然には抜けず、月初ごとに体力を削る。
+const TRAIT_POISON = "毒";
+const POISON_MONTH_START_DAMAGE = 20;
+
+function processPoisonMonthStart(village) {
+  getPeopleForFoodAndWinterMaterials(village).forEach(person => {
+    if (isSaltPillar(person)) return;
+    if (!Array.isArray(person.bodyTraits) || !person.bodyTraits.includes(TRAIT_POISON)) return;
+
+    person.hp = Math.max(0, (Number(person.hp) || 0) - POISON_MONTH_START_DAMAGE);
+    village.log(`${person.name}は毒に蝕まれている 体力-${POISON_MONTH_START_DAMAGE}`);
+  });
+}
+
+// 妖精の四風の加護。加護の季節には、毎月体力とメンタルが回復し、村の魔素も満ちる。
+function processSeasonBlessingMonthStart(village) {
+  const amount = SEASON_BLESSING_MONTHLY_RECOVERY;
+  // 上限を超えている者は下げない。
+  const recover = value => Math.max(Number(value) || 0, clampValue((Number(value) || 0) + amount, 0, 100));
+  (village.villagers || []).forEach(person => {
+    if (isSaltPillar(person) || !isSeasonBlessingInEffect(person)) return;
+
+    person.hp = recover(person.hp);
+    person.mp = recover(person.mp);
+    village.mana = clampValue(village.mana + amount, 0, 99999);
+    village.log(`${person.name}の加護の季節が巡った 体力+${amount} メンタル+${amount} 魔素+${amount}`);
   });
 }
 
@@ -433,6 +467,7 @@ export function runMonthStartPhase(village) {
   const monthStartSeason = [3,6,9,12].includes(village.month)
     ? updateSeason(village, { showDialog: false, logChange: false })
     : "";
+  syncSeasonBlessingStats(village);
   doMonthStartProcess(village, simulationOptions);
   if (village.gameOver) return;
   tryTriggerEarnestPrayer(village);
@@ -799,6 +834,8 @@ export function doMonthStartProcess(v, simulationOptions = {}) {
   processFatalWoundMonthStart(v);
   processExposureMonthStart(v);
   processOldWoundAches(v);
+  processPoisonMonthStart(v);
+  processSeasonBlessingMonthStart(v);
 
   // 治安30以下で荒廃状態に
   if (v.security <= 30 && !v.villageTraits.includes("荒廃")) {
