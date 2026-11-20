@@ -9,8 +9,11 @@ function fairyPortraits(first, last) {
   return Array.from({ length: last - first + 1 }, (_, index) => `FAIRY${first + index}.png`);
 }
 
+// 北風の加護だけは、季節を問わず冬の資材（燃料）を消費しない（js/util.js）。
+export const NORTH_WIND_BLESSING_TRAIT = "北風の加護";
+
 const SEASON_BLESSINGS = [
-  { trait: "北風の加護", seasons: ["冬", "厳冬"], portraits: fairyPortraits(13, 16) },
+  { trait: NORTH_WIND_BLESSING_TRAIT, seasons: ["冬", "厳冬"], portraits: fairyPortraits(13, 16) },
   { trait: "西風の加護", seasons: ["春"], portraits: fairyPortraits(1, 4) },
   { trait: "南風の加護", seasons: ["夏", "冷夏"], portraits: fairyPortraits(5, 8) },
   { trait: "東風の加護", seasons: ["秋"], portraits: fairyPortraits(9, 12) }

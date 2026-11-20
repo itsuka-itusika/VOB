@@ -5,7 +5,7 @@ import { Village, Villager } from "./classes.js";
 import { determineSpeechType } from "./createVillagers.js";
 import { ACTION_NONE, isPreferredActionCandidate, refreshJobTable, setPreferredAction } from "./domain/jobTables.js";
 import { getPermanentStat, hydrateStatLayersFromObject, syncEffectiveStats, syncSeasonBlessingStats } from "./domain/statLayers.js";
-import { syncGoblinSpeciesTraits, syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
+import { migrateFairySpiritBodyTrait, syncGoblinSpeciesTraits, syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
 import { normalizePastPortraitFiles } from "./domain/portraitHistory.js";
 import { backfillFoundingHistoryPeople, createArchiveGapHistoryEvent, HISTORY_EVENT_TYPES, normalizeHistoryEvents } from "./history.js";
 import { normalizePortraitKey } from "./data/portraitPaths.js";
@@ -900,6 +900,7 @@ export function convertObjectToVillager(obj) {
   if (syncWolfSpeciesTraits(vill) || syncGoblinSpeciesTraits(vill)) {
     syncEffectiveStats(vill);
   }
+  migrateFairySpiritBodyTrait(vill);
   if (migrateBodyAresToMind && !vill.mindTraits.includes("火星の加護")) {
     vill.mindTraits.push("火星の加護");
     syncEffectiveStats(vill);

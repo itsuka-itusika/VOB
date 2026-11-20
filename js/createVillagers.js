@@ -298,7 +298,7 @@ const FAIRY_VISITOR_TYPE = {
     cou: [1, 8],
     sexdr: [12, 28]
   },
-  forcedBodyTraits: ["飛行", "小柄"]
+  forcedBodyTraits: ["飛行", "精霊体"]
 };
 
 const EQUINA_VISITOR_TYPE = {

@@ -60,7 +60,7 @@ const RACE_BODY_TRAITS = {
   "メナド": ["山羊角", "澄んだ声"],
   "セントール": ["半人半馬"],
   // 妖精の四風の加護は1つだけ選ぶため、applyRaceBodyTraits で付ける。
-  "妖精": ["飛行", "小柄"],
+  "妖精": ["飛行", "精霊体"],
   "ゴーゴン": ["蛇髪", "邪眼", "目隠し"]
 };
 const CHILD_ADULT_PORTRAITS_BY_RACE = new Map([

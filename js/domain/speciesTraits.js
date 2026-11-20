@@ -7,9 +7,10 @@ export const YOUNG_WOLF_TRAIT = "幼狼";
 export const IMMATURE_MIND_TRAIT = "未成熟";
 export const OLD_WOLF_TRAIT = "老狼";
 export const SHORT_BODY_TRAIT = "短躯";
-// 妖精の小さな体。短躯と同じく、食料・冬資材の消費を4にする。
-// 人間にも同名の体格特性（直接補正なし）があるため、効果は妖精の体の小柄に限る。
-export const SMALL_BODY_TRAIT = "小柄";
+// 妖精の体。短躯と同じく、食料・冬資材の消費を4にする。
+export const SPIRIT_BODY_TRAIT = "精霊体";
+// 精霊体は当初「小柄」の名で付けていた。人間の体格特性と同名だったため改めた。
+const LEGACY_FAIRY_BODY_TRAIT = "小柄";
 export const FAIRY_RACE = "妖精";
 
 function ensureTraitArray(person, key) {
@@ -37,9 +38,17 @@ export function isGoblin(person) {
   return person?.race === GOBLIN_RACE;
 }
 
-export function hasFairySmallBody(person) {
-  return person?.race === FAIRY_RACE &&
-    Array.isArray(person?.bodyTraits) && person.bodyTraits.includes(SMALL_BODY_TRAIT);
+/** 旧セーブの妖精が持つ「小柄」を「精霊体」へ置き換える。妖精の体以外の小柄は人間の体格特性なので触れない。 */
+export function migrateFairySpiritBodyTrait(person) {
+  if (person?.race !== FAIRY_RACE) return false;
+  let changed = false;
+  ["bodyTraits", "adultBodyTraits"].forEach(key => {
+    const traits = person[key];
+    if (!Array.isArray(traits) || !traits.includes(LEGACY_FAIRY_BODY_TRAIT)) return;
+    person[key] = [...new Set(traits.map(trait => trait === LEGACY_FAIRY_BODY_TRAIT ? SPIRIT_BODY_TRAIT : trait))];
+    changed = true;
+  });
+  return changed;
 }
 
 export function countsTowardPopulation(person) {
