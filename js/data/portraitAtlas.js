@@ -75,12 +75,38 @@ export function resolvePortraitSprite(character) {
     || getManifestSprite(DEFAULT_PORTRAIT_KEY);
 }
 
+// 妖精は小さな種族なので、大きな表示では枠の中に顔を縮めて描く（css/styles.css の portrait-sprite--fairy）。
+const FAIRY_PORTRAIT_KEY_PATTERN = /^FAIRY\d+(_young)?\.png$/i;
+
+function isFairyPortrait(sprite) {
+  return FAIRY_PORTRAIT_KEY_PATTERN.test(sprite?.key || "");
+}
+
+/** 縮める顔は ::before に描くため、絵を CSS 変数で渡し、本体の背景画像は消す。 */
+function getFairyLayerStyles(styles, sprite) {
+  // CSS 変数の url() は使う側のスタイルシート基準で解決されるため、ページ基準の絶対URLにして渡す。
+  const absoluteUrl = typeof document !== "undefined" ? new URL(sprite.url, document.baseURI).href : sprite.url;
+  return {
+    "--sprite-image": `url("${absoluteUrl}")`,
+    "--sprite-size": styles.backgroundSize,
+    "--sprite-position": styles.backgroundPosition
+  };
+}
+
 export function applyPortraitToElement(element, character) {
   if (!element) return null;
   const sprite = resolvePortraitSprite(character);
   if (!sprite) return null;
 
   const styles = getSpriteStyles(sprite);
+  const fairy = isFairyPortrait(sprite);
+  element.classList.toggle("portrait-sprite--fairy", fairy);
+  if (fairy) {
+    Object.entries(getFairyLayerStyles(styles, sprite)).forEach(([name, value]) => element.style.setProperty(name, value));
+    styles.backgroundImage = "none";
+  } else {
+    ["--sprite-image", "--sprite-size", "--sprite-position"].forEach(name => element.style.removeProperty(name));
+  }
   element.classList.add("portrait-sprite");
   element.setAttribute("role", "img");
   if (!element.hasAttribute("aria-label")) {
@@ -96,7 +122,11 @@ export function getPortraitSpriteHtml(character, { size, alt, extraStyle = "" } 
   const styles = getSpriteStyles(sprite);
   const dimension = Number.isFinite(Number(size)) ? `${Number(size)}px` : String(size || "");
   const dimensionStyle = dimension ? `width:${dimension};height:${dimension};` : "";
-  const style = `${dimensionStyle}background-image:${styles.backgroundImage};background-size:${styles.backgroundSize};background-position:${styles.backgroundPosition};${extraStyle}`;
+  const fairy = isFairyPortrait(sprite);
+  const imageStyle = fairy
+    ? Object.entries(getFairyLayerStyles(styles, sprite)).map(([name, value]) => `${name}:${value};`).join("")
+    : `background-image:${styles.backgroundImage};background-size:${styles.backgroundSize};background-position:${styles.backgroundPosition};`;
+  const style = `${dimensionStyle}${imageStyle}${extraStyle}`;
   const label = alt ?? character?.name ?? "肖像";
-  return `<div class="portrait-sprite" role="img" aria-label="${escapeHtmlAttribute(label)}" style="${escapeHtmlAttribute(style)}"></div>`;
+  return `<div class="portrait-sprite${fairy ? " portrait-sprite--fairy" : ""}" role="img" aria-label="${escapeHtmlAttribute(label)}" style="${escapeHtmlAttribute(style)}"></div>`;
 }
