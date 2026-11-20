@@ -324,7 +324,7 @@ export const VISITOR_TYPES = [
   // 奴隷を連れて訪れる。奴隷は同じ訪問者枠で同行する（js/createVillagers.js）。
   {
     type: "奴隷商人",
-    weight: 0,  // 繁栄した郷村以降の訪問者テーブルでだけ抽選される
+    weight: 0,  // 豊かな村以降の訪問者テーブルでだけ抽選される
     ageRange: { min: 25, max: 45 },
     forcedSex: "男", // 野盗の顔グラフィックを流用するため男性限定
     params: {

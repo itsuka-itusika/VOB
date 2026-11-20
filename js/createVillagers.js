@@ -58,6 +58,19 @@ const DEFAULT_IND_RANGE = [5, 25];
 // 初期村人だけは、働けない者ばかりで詰まないように下限を上げる。
 const INITIAL_VILLAGER_IND_RANGE = [8, 25];
 
+// 辺境の村〜豊かな村の顔ぶれ。豊かな村からは奴隷商人も加わる。
+const FRONTIER_VISITOR_ENTRIES = [
+  { type: "流民", weight: 20 },
+  { type: "旅人", weight: 16 },
+  { type: "棄民", weight: 5 },
+  { type: "巡礼者", weight: 15 },
+  { type: "行商人", weight: 15 },
+  { type: "冒険者", weight: 12 },
+  { type: "学者", weight: 12 },
+  { type: "レア種族", weight: 5 },
+  { type: "エクイナ", weight: 5 }
+];
+
 const VISITOR_TABLES_BY_SCALE = [
   {
     maxStageIndex: 1,
@@ -70,18 +83,12 @@ const VISITOR_TABLES_BY_SCALE = [
     ]
   },
   {
+    maxStageIndex: 3,
+    entries: FRONTIER_VISITOR_ENTRIES
+  },
+  {
     maxStageIndex: 4,
-    entries: [
-      { type: "流民", weight: 20 },
-      { type: "旅人", weight: 16 },
-      { type: "棄民", weight: 5 },
-      { type: "巡礼者", weight: 15 },
-      { type: "行商人", weight: 15 },
-      { type: "冒険者", weight: 12 },
-      { type: "学者", weight: 12 },
-      { type: "レア種族", weight: 5 },
-      { type: "エクイナ", weight: 5 }
-    ]
+    entries: [...FRONTIER_VISITOR_ENTRIES, { type: "奴隷商人", weight: 10 }]
   },
   {
     maxStageIndex: Infinity,
