@@ -106,7 +106,7 @@ export const MIRACLES = [
   {id:"15", name:"市場の奇跡(100)", cost:100, desc:"行商人の訪問者を3人生成"},
   {id:"17", name:"雷霆の奇跡(150)", cost:150, desc:"月1回。襲撃者1体の体力を80減らす。最低1で止まる"},
   {id:"18", name:"騒擾の奇跡(100)", cost:100, desc:"襲撃中でない時、選んだ規模（異端を含む）の襲撃テーブルから、ただちに襲撃を発生させる"},
-  {id:"19", name:"稀人の奇跡(300)", cost:300, desc:"翼人、アルセイド、ネレイド、ドライアド、アラクニド、エクイナ、サテュロス、メナド、妖精、ゴーゴンの訪問者を1人呼ぶ"}
+  {id:"19", name:"稀人の奇跡(300)", cost:300, desc:"珍しい種族の訪問者を1人呼ぶ"}
 ];
 
 const MIRACLE_UNLOCK_ORDER = DIVINE_MIGHT_LEVELS.flatMap(entry => entry.miracleIds);
