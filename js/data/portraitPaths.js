@@ -1,4 +1,4 @@
-import { isSaltPillar } from "../domain/apocalypseRules.js";
+import { isPetrified, isSaltPillar } from "../domain/apocalypseRules.js";
 
 export const DEFAULT_PORTRAIT_KEY = "default.png";
 export const BABY_MALE_PORTRAIT_KEY = "malebaby.png";
@@ -33,6 +33,9 @@ export const GOBLIN_PORTRAIT_FILES = Array.from({ length: 13 }, (_, index) => `G
 const PORTRAIT_ROOT = "images/portraits";
 const SALT_PILLAR_PORTRAIT_FOLDER = "salt";
 const SALT_PILLAR_PORTRAIT_COUNT = 4;
+// 邪眼で石化した者は、塩像ではなく灰色の石像を出す。
+const PETRIFIED_PORTRAIT_FOLDER = "stone";
+const PETRIFIED_PORTRAIT_PREFIX = "STONE";
 const CHILD_SHADOW_PORTRAIT_KEYS = new Set(["CHILD_SHADOW.svg", "CHILD_SHADOW_BABY.svg"]);
 const SYSTEM_PORTRAIT_KEYS = new Set([
   DEFAULT_PORTRAIT_KEY,
@@ -271,8 +274,8 @@ function replaceCharacterPortraitKey(character, field, key) {
 }
 
 /**
- * 塩の柱は本人の顔ではなく塩像を出す。
- * 同じ人物なら常に同じ塩像になるよう、名前と元の顔から番号を決める。
+ * 塩の柱は本人の顔ではなく塩像を、石化は石像を出す。
+ * 同じ人物なら常に同じ像になるよう、名前と元の顔から番号を決める。
  */
 function getSaltPillarPortraitPath(character) {
   const seed = `${character?.name ?? ""}/${character?.portraitFile ?? ""}`;
@@ -281,6 +284,9 @@ function getSaltPillarPortraitPath(character) {
     hash = (hash * 31 + seed.charCodeAt(index)) % 2147483647;
   }
   const number = (hash % SALT_PILLAR_PORTRAIT_COUNT) + 1;
+  if (isPetrified(character)) {
+    return `${PORTRAIT_ROOT}/${PETRIFIED_PORTRAIT_FOLDER}/${PETRIFIED_PORTRAIT_PREFIX}${number}.png`;
+  }
   return `${PORTRAIT_ROOT}/${SALT_PILLAR_PORTRAIT_FOLDER}/SALT${number}.png`;
 }
 
