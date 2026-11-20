@@ -898,7 +898,8 @@ export function doMonthStartProcess(v, simulationOptions = {}) {
     getPeopleForFoodAndWinterMaterials(v).forEach(p=>{
       if (isSaltPillar(p)) return;
       if (Array.isArray(p.bodyTraits) && p.bodyTraits.includes(FOUR_LEGGED_TRAIT)) {
-        v.log(`${p.name}は狼の耐寒性で凍えを免れた`);
+        // 四足歩行は狼とマンティコアが持つ。狼以外は獣として書く。
+        v.log(`${p.name}は${isWolf(p) ? "狼" : "獣"}の耐寒性で凍えを免れた`);
         return;
       }
       if (Array.isArray(p.bodyTraits) && p.bodyTraits.includes(NORTH_WIND_BLESSING_TRAIT)) {
