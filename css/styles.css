@@ -1193,13 +1193,12 @@ tr td:nth-child(25) {
   caret-color: transparent;
 }
 
-/* 妖精の顔。絵は ::before に描き、幅100px以上の大きな表示だけ枠の中で縮めて下寄せにする。 */
+/* 妖精の顔。絵は ::before に描き、枠はそのままに絵だけを縮めて下寄せにする。 */
 :root {
   --fairy-portrait-scale: 0.8;
 }
 .portrait-sprite--fairy {
   position: relative;
-  container-type: inline-size;
 }
 .portrait-sprite--fairy::before {
   content: "";
@@ -1209,16 +1208,13 @@ tr td:nth-child(25) {
   background-size: var(--sprite-size);
   background-position: var(--sprite-position);
   background-repeat: no-repeat;
+  transform: scale(var(--fairy-portrait-scale));
   transform-origin: 50% 100%;
+  /* 元絵の羽が左右の端で切れているため、縮めて枠の内側に出る切れ目をぼかす。 */
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 10%, #000 90%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 10%, #000 90%, transparent 100%);
 }
-@container (min-width: 100px) {
-  .portrait-sprite--fairy::before {
-    transform: scale(var(--fairy-portrait-scale));
-    /* 元絵の羽が左右の端で切れているため、縮めて枠の内側に出る切れ目をぼかす。 */
-    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 10%, #000 90%, transparent 100%);
-    mask-image: linear-gradient(to right, transparent 0, #000 10%, #000 90%, transparent 100%);
-  }
-}
+
 
 .spirit-column {
   display: none;

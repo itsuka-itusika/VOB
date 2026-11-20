@@ -75,7 +75,7 @@ export function resolvePortraitSprite(character) {
     || getManifestSprite(DEFAULT_PORTRAIT_KEY);
 }
 
-// 妖精は小さな種族なので、大きな表示では枠の中に顔を縮めて描く（css/styles.css の portrait-sprite--fairy）。
+// 妖精は小さな種族なので、枠の中に顔を縮めて描く（css/styles.css の portrait-sprite--fairy）。
 const FAIRY_PORTRAIT_KEY_PATTERN = /^FAIRY\d+(_young)?\.png$/i;
 
 function isFairyPortrait(sprite) {
