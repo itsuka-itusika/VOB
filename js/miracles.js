@@ -56,6 +56,7 @@ const EFFECT_RESULT_DIALOGUES = {
   "豊穣の奇跡": { scene: "miracle", key: "abundance" },
   "豊穣の角": { scene: "miracle", key: "abundance" },
   "マナの奇跡": { scene: "miracle", key: "mana" },
+  "稀人の奇跡": { scene: "miracle", key: "rareGuest" },
   "ミダスの奇跡": { scene: "miracle", key: "midas" },
   "アンブロシア": { scene: "secretTreasure", key: "ambrosia" },
   "告天使の絵画": { scene: "secretTreasure", key: "annunciationPainting" },

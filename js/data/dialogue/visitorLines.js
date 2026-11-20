@@ -2,7 +2,7 @@
 
 import { isGoblinMajorityVillage } from "../../domain/gameMode.js";
 import { isEnslaved } from "../../domain/slaveTrade.js";
-import { SEASON_BLESSING_TRAITS } from "../../domain/seasonBlessings.js";
+import { SPIRIT_BODY_TRAIT } from "../../domain/speciesTraits.js";
 import { SLAVE_ARRIVAL_LINES } from "./slaveTradeLines.js";
 
 export const VISITOR_LINES = {
@@ -731,7 +731,7 @@ export function getGoblinVillageVisitorLine(visitor) {
 }
 
 // 肉体側のみで集計。訪問者・捕虜は分母に含めず、空の村は対象外。
-const YOUNG_FEMALE_NO_AGING_TRAITS = new Set(["光輪", "不老", "光合成", "人面獣身", ...SEASON_BLESSING_TRAITS]);
+const YOUNG_FEMALE_NO_AGING_TRAITS = new Set(["光輪", "不老", "光合成", "人面獣身", SPIRIT_BODY_TRAIT]);
 
 export function isYoungFemaleMajorityVillage(village) {
   const villagers = Array.isArray(village?.villagers) ? village.villagers : [];

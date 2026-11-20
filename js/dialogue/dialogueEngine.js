@@ -19,7 +19,7 @@ import { EXCHANGE_SITUATION_LINES } from "../data/dialogue/exchangeSituationLine
 import { SECRET_TREASURE_LINES } from "../data/dialogue/secretTreasureLines.js";
 import { LACHESIS_LINES } from "../data/dialogue/lachesisLines.js";
 import { REINCARNATION_LINES } from "../data/dialogue/reincarnationLines.js";
-import { MIRACLE_RESULT_LINES, THUNDERBOLT_RAIDER_LINES } from "../data/dialogue/miracleLines.js";
+import { MIRACLE_RESULT_LINES, RARE_GUEST_LINES, THUNDERBOLT_RAIDER_LINES } from "../data/dialogue/miracleLines.js";
 import { TUTORIAL_LINES } from "../data/dialogue/tutorialLines.js";
 import {
   getGoblinVillageVisitorLine,
@@ -146,6 +146,11 @@ function getMiracleLines(character, key, context = {}) {
   if (key === "thunderbolt") {
     const raiderLines = THUNDERBOLT_RAIDER_LINES[character?.raiderType];
     if (raiderLines) return asLineArray(raiderLines, context);
+  }
+  // 稀人の奇跡は、呼ばれた種族ごとのひと言。種族の文がなければ口調の共通セリフで受ける。
+  if (key === "rareGuest") {
+    const guestLines = RARE_GUEST_LINES[character?.rareVisitorType || character?.race];
+    return guestLines ? asLineArray(guestLines, context) : selectToneLines(MIRACLE_RESULT_LINES.generic, character, { miracleName: "稀人の奇跡", ...context });
   }
   return selectToneLines(MIRACLE_RESULT_LINES[key], character, context);
 }

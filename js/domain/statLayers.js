@@ -1,12 +1,11 @@
 import { clampValue, round3 } from "../util.js";
 import { ABILITY_STATS, MENTAL_ABILITY_STATS, PHYSICAL_ABILITY_STATS } from "./personSchema.js";
 import { evaluateTitles } from "../titles.js";
-import { IMMATURE_MIND_TRAIT, OLD_WOLF_TRAIT, YOUNG_WOLF_TRAIT } from "./speciesTraits.js";
+import { IMMATURE_MIND_TRAIT, OLD_WOLF_TRAIT, SPIRIT_BODY_TRAIT, YOUNG_WOLF_TRAIT } from "./speciesTraits.js";
 import {
   hasSeasonBlessing,
   isSeasonBlessingInEffect,
   SEASON_BLESSING_MAG_RATE,
-  SEASON_BLESSING_TRAITS,
   setBlessingSeasonTraits
 } from "./seasonBlessings.js";
 import {
@@ -20,7 +19,7 @@ import {
 export const STAT_LAYER_VERSION = 2;
 
 const ZERO_STAT_MAP = Object.freeze(Object.fromEntries(ABILITY_STATS.map(stat => [stat, 0])));
-const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成", "人面獣身", ...SEASON_BLESSING_TRAITS]);
+const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成", "人面獣身", SPIRIT_BODY_TRAIT]);
 
 const PERMANENT_BODY_TRAIT_ADDS = Object.freeze({
   "巨躯": { str: 10 },

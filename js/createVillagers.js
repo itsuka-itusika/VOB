@@ -29,7 +29,8 @@ import {
 import { MERCHANT_SECRET_TREASURE_CHANCE } from "./secretTreasureEvents.js";
 import { getRaiderTypeByType } from "./data/raidData.js";
 import { getRaiderSpeechType } from "./domain/raiderSpeechTypes.js";
-import { applyFairyBlessing, FAIRY_RACE, SEASON_BLESSING_TRAITS } from "./domain/seasonBlessings.js";
+import { applyFairyBlessing, FAIRY_RACE } from "./domain/seasonBlessings.js";
+import { SPIRIT_BODY_TRAIT } from "./domain/speciesTraits.js";
 import {
   GOBLIN_ARCHER_VISITOR_CHANCE,
   GOBLIN_ARCHER_VISITOR_MIN_STAGE_INDEX,
@@ -467,7 +468,7 @@ const GOAT_PAIR_VISITOR_TYPES = new Map([
   [MAENAD_VISITOR_TYPE.type, MAENAD_VISITOR_TYPE]
 ]);
 
-const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成", "人面獣身", ...SEASON_BLESSING_TRAITS]);
+const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成", "人面獣身", SPIRIT_BODY_TRAIT]);
 const NO_AGING_RACES = new Set(["翼人", "アルセイド", "ネレイド", "ドライアド", "スフィンクス"]);
 
 // 名前の予約は村の状態から都度導く。訪問者・襲撃者・捕虜は去れば解放され、

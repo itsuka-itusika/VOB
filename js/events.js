@@ -8,8 +8,7 @@ import { RandomEvents } from "./RandomEvents.js";
 import {
   isSeasonBlessingInEffect,
   NORTH_WIND_BLESSING_TRAIT,
-  SEASON_BLESSING_MONTHLY_RECOVERY,
-  SEASON_BLESSING_TRAITS
+  SEASON_BLESSING_MONTHLY_RECOVERY
 } from "./domain/seasonBlessings.js";
 import {
   recordCriticalHistory,
@@ -43,7 +42,7 @@ import { addStoredResource } from "./domain/resourceLimits.js";
 import { getVisitorLimit, hasActiveBuildingFlag } from "./domain/buildingState.js";
 import { syncEffectiveStats, syncSeasonBlessingStats } from "./domain/statLayers.js";
 import { getBalanceSimulationOptions } from "./balance/simulationOptions.js";
-import { FOUR_LEGGED_TRAIT, isWolf, OLD_WOLF_TRAIT, syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
+import { FOUR_LEGGED_TRAIT, isWolf, OLD_WOLF_TRAIT, SPIRIT_BODY_TRAIT, syncWolfSpeciesTraits } from "./domain/speciesTraits.js";
 import {
   addDisappointmentState,
   clearDisappointmentIfHappinessRecovered,
@@ -76,7 +75,7 @@ import { showRandomEventModal } from "./randomEventModal.js";
 
 const OPENING_RAID_GRACE_YEAR = 1195;
 const OPENING_RAID_GRACE_LAST_MONTH = 6;
-const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成", "人面獣身", ...SEASON_BLESSING_TRAITS]);
+const NO_AGING_BODY_TRAITS = new Set(["光輪", "不老", "光合成", "人面獣身", SPIRIT_BODY_TRAIT]);
 
 const TRAIT_INJURED = "負傷";
 const TRAIT_SERIOUS_INJURY = "重体";
