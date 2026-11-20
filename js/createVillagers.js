@@ -88,7 +88,7 @@ const VISITOR_TABLES_BY_SCALE = [
   },
   {
     maxStageIndex: 4,
-    entries: [...FRONTIER_VISITOR_ENTRIES, { type: "奴隷商人", weight: 10 }]
+    entries: [...FRONTIER_VISITOR_ENTRIES, { type: "奴隷商人", weight: 5 }]
   },
   {
     maxStageIndex: Infinity,
