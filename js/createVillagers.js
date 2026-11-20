@@ -1328,6 +1328,28 @@ function getVisitorDisplayType(visitorType) {
   return selected?.type || visitorType.displayType || visitorType.type;
 }
 
+const GORGON_RACE = "ゴーゴン";
+
+// 稀人の奇跡で訪れるゴーゴンの旅人。能力と姿は襲撃者・奴隷のゴーゴンと同じ定義を借りる。
+function getGorgonVisitorType() {
+  const gorgon = getRaiderTypeByType(GORGON_RACE);
+  return {
+    type: GORGON_RACE,
+    displayType: "旅人",
+    forcedSex: gorgon.forcedSex,
+    ageRange: gorgon.ageRange,
+    params: {
+      job: "旅人",
+      action: "訪問",
+      race: gorgon.race
+    },
+    ranges: gorgon.ranges,
+    forcedBodyTraits: gorgon.forcedBodyTraits,
+    portraits: gorgon.portraits,
+    rareVisitorType: GORGON_RACE
+  };
+}
+
 function resolveForcedVisitorType(forcedType, village = null) {
   if (!forcedType) return null;
   if (forcedType === RARE_VISITOR_TYPE) return selectRareVisitorType(village);
@@ -1335,6 +1357,7 @@ function resolveForcedVisitorType(forcedType, village = null) {
   if (forcedType === EQUINA_VISITOR_TYPE.type) return EQUINA_VISITOR_TYPE;
   // レア種族と同じく、交換後も訪問者の会話キーを保つ。奴隷の妖精には付けない。
   if (forcedType === FAIRY_VISITOR_TYPE.type) return { ...FAIRY_VISITOR_TYPE, rareVisitorType: FAIRY_RACE };
+  if (forcedType === GORGON_RACE) return getGorgonVisitorType();
   if (forcedType === GOBLIN_VISITOR_TYPE.type) return selectGoblinVisitorType(village);
   if (GOAT_PAIR_VISITOR_TYPES.has(forcedType)) return GOAT_PAIR_VISITOR_TYPES.get(forcedType);
 
